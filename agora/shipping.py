@@ -27,15 +27,20 @@ SIZES: dict[str, tuple[float, float]] = {
     "furniture_small": (40.0, 90.0),  # chair, lamp, side table: large parcel
     "furniture": (120.0, 300.0),      # shelf, sofa, table, bed: freight / pallet
     "large_appliance": (150.0, 350.0),  # fridge, washing machine: freight
+    "vehicle": (500.0, 1100.0),       # a car: car transporter / ferry, central EU -> Nordic (no parcel ever)
 }
 SIZE_WORD = {"clothes": "clothing parcel", "small": "small parcel", "phone": "phone", "camera": "camera",
              "laptop": "laptop", "medium": "medium parcel", "bike": "bike", "furniture_small": "small furniture item",
-             "furniture": "furniture item", "large_appliance": "large appliance"}
+             "furniture": "furniture item", "large_appliance": "large appliance", "vehicle": "car"}
 HOW = {"clothes": "parcel", "small": "parcel", "phone": "insured parcel", "camera": "insured parcel",
        "laptop": "insured parcel", "medium": "parcel", "bike": "parcel in a bike box",
-       "furniture_small": "large parcel", "furniture": "freight / pallet", "large_appliance": "freight"}
+       "furniture_small": "large parcel", "furniture": "freight / pallet", "large_appliance": "freight",
+       "vehicle": "car transport (truck or ferry; import tax not included)"}
 
 _SIZE_WORDS: list[tuple[str, re.Pattern[str]]] = [
+    # a car (judge prefixes "car " for a vehicle need): never a parcel; car seats / chargers / covers are not cars
+    ("vehicle", re.compile(r"^\s*(car|auto)\b(?!\s*(seat|charger|cover|mat|wax|polish|radio|holder|mount|parts?|tyres?|tires?|"
+                           r"istuin|laturi|kindersitz))", re.I)),
     ("large_appliance", re.compile(r"\b(fridge|freezer|refrigerator|washing machine|washer|dryer|dishwasher|"
                                    r"cooker|oven|stove|jääkaappi|pesukone|kühlschrank|waschmaschine)\b", re.I)),
     ("bike", re.compile(r"\b(bikes?|bicycles?|e-?bikes?|polkupyörä\w*|pyörä\w*|fahrrad|rennrad|citybike|"

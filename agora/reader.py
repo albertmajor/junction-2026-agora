@@ -1458,6 +1458,10 @@ def wants_list_read(url: str, need: Need, lane: str | None) -> bool:
         return is_service_directory(url, _HINTS.get(url, {}).get("title", ""))
     if direct_site(url, need) is not None:
         return True
+    if vehicle_need_of(need):
+        from agora.marketplaces import car_list_url
+        if car_list_url(url):
+            return True        # a dealer's / aggregator's cars list, whatever lane the search filed it under
     if need.kind != "product" or not _is_list_page(url):
         return False
     if lane in ("used", "refurbished"):
@@ -1592,6 +1596,246 @@ def offers_from_itemlist(data: dict[str, Any], page_url: str, need: Need, hint: 
                     step="jsonld_itemlist", brand=_text(item.get("brand")),
                     in_stock=("instock" in avail or "limitedavailability" in avail) if avail else None))
     return _keep_best(out, need, limit)
+
+
+# --------------------------------------------------------------------------- car list pages (free)
+# eval r1-r4 'volvo v70' / 'bright red car': nettiauto was read with a paid markdown scrape (slow: 'timeout after
+# 5s' on a busy hunt), dealer and aggregator pages were capped at 8 cars or read as ONE car at the price range's
+# low end (mobile.de 'Volvo V70 €989' of 740), and the colour asked for was never looked at. A car list page carries
+# its cars in the plain HTML more often than not: a schema.org ItemList of Car items (nettiauto, autoline, many
+# dealers: colour, km, fuel, gearbox, year) or AutoScout24's Next.js listings. Read them for free, every car on the
+# page, each a vehicle with its facts; the colour is marked per car (a boost the judge can use, never a filter).
+
+CAR_TYPES = {"car", "vehicle", "motorizedbicycle", "motorcycle", "busorcoach"}
+_NEXT_DATA = re.compile(r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
+_YEAR_IN = re.compile(r"\b((?:19[5-9]|20[0-4])\d)\b")
+_SLUG_COLOUR = re.compile(r"-([a-zäöüé]+)-cat_", re.I)      # autoscout24 '/angebote/volvo-v70-...-diesel-schwarz-cat_'
+
+
+def vehicle_need_of(need: Need) -> bool:
+    """A product need for a vehicle itself ('volvo v70', 'bright red car')."""
+    if need.kind != "product":
+        return False
+    try:
+        from agora.need import vehicle_need
+    except ImportError:
+        return False
+    return vehicle_need(need.thing or "")
+
+
+def asked_colours(need: Need) -> set[str]:
+    try:
+        from agora.marketplaces import asked_colours as _asked
+    except ImportError:
+        return set()
+    return _asked(need.thing or "", *(need.must_have or []))
+
+
+def mark_colour(offer: Offer, need: Need, colour_text: str | None = None) -> None:
+    """raw['colour'] (English) from the car's colour field, else its title; raw['colour_match'] True / False when
+    the need asks a colour and the listing names one (unknown colour: no mark, the car stays)."""
+    from agora.marketplaces import colour_of
+    colour = offer.raw.get("colour") or colour_of(colour_text) or colour_of(offer.title)
+    if not colour:
+        return
+    offer.raw["colour"] = colour
+    asked = asked_colours(need)
+    if asked:
+        offer.raw["colour_match"] = colour in asked
+
+
+def _num(v: Any) -> float | None:
+    if isinstance(v, (int, float)):
+        return float(v)
+    digits = re.sub(r"[^\d]", "", str(v or ""))
+    return float(digits) if digits else None
+
+
+def _car_facts(item: dict[str, Any]) -> dict[str, Any]:
+    """schema.org Car -> {km, year, fuel, gearbox, colour_text, body} (only what the item states)."""
+    facts: dict[str, Any] = {}
+    odo = _first(item.get("mileageFromOdometer"))
+    unit = "KMT"
+    if isinstance(odo, dict):
+        odo = _props(odo)
+        unit = str(_text(odo.get("unitCode")) or "KMT").upper()
+        odo = odo.get("value")
+    km = _num(odo)
+    if km is not None:
+        facts["km"] = int(round(km * (1.609 if unit in ("SMI", "MI", "MILE") else 1.0)))
+    for key in ("vehicleModelDate", "productionDate", "dateVehicleFirstRegistered", "modelDate"):
+        m = _YEAR_IN.search(str(_first(item.get(key)) or ""))
+        if m:
+            facts["year"] = int(m.group(1))
+            break
+    else:
+        m = _YEAR_IN.search(_text(item.get("name")) or "")
+        if m:
+            facts["year"] = int(m.group(1))
+    for key, out in (("fuelType", "fuel"), ("vehicleTransmission", "gearbox"), ("color", "colour_text"),
+                     ("bodyType", "body")):
+        v = _text(item.get(key))
+        if v:
+            facts[out] = fence.clean_field(v[:40]) or v[:40]
+    return facts
+
+
+def _car_row_text(title: str, facts: dict[str, Any]) -> str:
+    bits = [title]
+    if facts.get("year") and str(facts["year"]) not in title:
+        bits.append(str(facts["year"]))
+    if facts.get("km") is not None:
+        bits.append(f"{facts['km']:,} km".replace(",", " "))
+    bits += [str(facts[k]) for k in ("fuel", "gearbox", "colour_text") if facts.get(k)]
+    return " · ".join(bits)[:200]
+
+
+def _as_car(o: Offer, need: Need, facts: dict[str, Any], used: bool) -> Offer:
+    o.raw["category"] = "vehicle"             # a Car item on a cars list: a vehicle, cheap or not
+    o.raw["vehicle"] = {k: v for k, v in facts.items() if k != "colour_text"}
+    o.raw["row_text"] = _car_row_text(o.title, facts)
+    if used and o.condition == "new":
+        o.condition = "used"
+    mark_colour(o, need, facts.get("colour_text"))
+    return o
+
+
+def _itemlist_cars(data: dict[str, Any], page_url: str) -> dict[str, dict[str, Any]]:
+    """listing URL -> car facts, for every ItemList element that is a Car / Vehicle."""
+    out: dict[str, dict[str, Any]] = {}
+    for syntax in ("json-ld", "microdata"):
+        for node in _walk(data.get(syntax) or []):
+            if "itemlist" not in _types(node):
+                continue
+            elements = _props(node).get("itemListElement") or []
+            for el in elements if isinstance(elements, list) else [elements]:
+                if not isinstance(el, dict):
+                    continue
+                el = _props(el)
+                item = _props(el.get("item") if isinstance(el.get("item"), dict) else el)
+                if not (_types(item) & CAR_TYPES or item.get("mileageFromOdometer") or item.get("vehicleEngine")):
+                    continue
+                url = listing_url(item.get("url") or el.get("url") or item.get("@id"), page_url)
+                if url:
+                    out[url] = _car_facts(item)
+    return out
+
+
+def _autoscout_cars(page_html: str, page_url: str, need: Need, hint: str | None) -> list[Offer]:
+    """AutoScout24 list pages: __NEXT_DATA__ props.pageProps.listings (20 per page) -> one Offer per car."""
+    import json
+    m = _NEXT_DATA.search(page_html or "")
+    if not m:
+        return []
+    try:
+        listings = json.loads(m.group(1))["props"]["pageProps"]["listings"]
+    except (ValueError, KeyError, TypeError):
+        return []
+    out: list[Offer] = []
+    domain = domain_of(page_url)
+    for li in listings if isinstance(listings, list) else []:
+        if not isinstance(li, dict) or not isinstance(li.get("vehicle"), dict):
+            continue
+        veh, price, loc = li["vehicle"], li.get("price") or {}, li.get("location") or {}
+        track = li.get("tracking") or {}
+        url = listing_url(li.get("url"), page_url)
+        title = " ".join(str(x) for x in (veh.get("make"), veh.get("model"), veh.get("modelVersionInput"))
+                         if x).strip() or str(li.get("title") or "")
+        title = fence.clean_field(title[:160]) or ""
+        formatted = str(price.get("priceFormatted") or "")
+        amount, cur = parse_price(price.get("priceRaw") or formatted, "EUR" if "€" in formatted else None, domain)
+        if not url or not title or amount is None:
+            continue
+        facts: dict[str, Any] = {}
+        km = _num(track.get("mileage") or veh.get("mileageInKm"))
+        if km is not None:
+            facts["km"] = int(km)
+        if y := _YEAR_IN.search(str(track.get("firstRegistration") or "")):
+            facts["year"] = int(y.group(1))
+        for key, out_key in (("fuel", "fuel"), ("transmission", "gearbox")):
+            if veh.get(key):
+                facts[out_key] = str(veh[key])[:40]
+        if cm := _SLUG_COLOUR.search(urlsplit(url).path):
+            facts["colour_text"] = cm.group(1)
+        where = ", ".join(str(x) for x in (loc.get("city"), loc.get("countryCode")) if x) or None
+        imgs = li.get("images") or []
+        offer_type = str(veh.get("offerType") or "").upper()
+        o = _list_offer(url, page_url, title, amount, cur, need, hint, schema_cond=None,
+                        said_cond="new" if offer_type == "N" else "used",
+                        image=_abs_image(imgs[0] if imgs else None, page_url), location=where,
+                        via="jsonld", step="next_data_listings")
+        if loc.get("countryCode"):
+            o.raw["country"] = str(loc["countryCode"]).upper()
+        if offer_type == "N":
+            o.condition = "new"
+        out.append(_as_car(o, need, facts, used=offer_type != "N"))
+    return out
+
+
+def car_page_offers(page_html: str, data: dict[str, Any], page_url: str, need: Need, hint: str | None
+                    ) -> list[Offer]:
+    """Every car a car list page carries in its plain HTML (ItemList of Car items, AutoScout24 listings), each a
+    vehicle offer with its km / year / fuel / colour; the asked colour first (a boost), then the page's own order
+    of best title match. [] when the page holds no such list (the caller falls back to its usual reads)."""
+    cars = _itemlist_cars(data, page_url)
+    out: list[Offer] = []
+    if cars:
+        listed_ = offers_from_itemlist(data, page_url, need, hint, MAX_SPLIT_OFFERS)
+        from agora.marketplaces import used_car_list
+        used_page = used_car_list(page_url) or "nettiauto." in page_url
+        out = [_as_car(o, need, cars[o.url], used=used_page or o.condition != "new")
+               for o in listed_ if o.url in cars]
+    if not out and "__NEXT_DATA__" in (page_html or "") and "autoscout24." in page_url:
+        out = _keep_best(_autoscout_cars(page_html, page_url, need, hint), need, MAX_SPLIT_OFFERS)
+    if not out:
+        # an ItemList of plain Products (autoline.info/-/cars--c1169: 25 cars; eval r4 read its first as the one
+        # offer): every listing on its own, judged as any listing (no 'vehicle' mark: the price floor still applies)
+        items = offers_from_itemlist(data, page_url, need, hint, MAX_SPLIT_OFFERS)
+        out = items if len(items) >= 3 else []
+    return colour_first(out)
+
+
+def list_total(data: dict[str, Any]) -> int | None:
+    """The page's own count of all its results: an ItemList's numberOfItems / an AggregateOffer's offerCount when
+    larger than the list itself (nettiauto's site-wide list: 76,775 cars, 30 on the page)."""
+    best = 0
+    for syntax in ("json-ld", "microdata"):
+        for node in _walk(data.get(syntax) or []):
+            t = _types(node)
+            p = _props(node)
+            if "itemlist" in t:
+                els = p.get("itemListElement")
+                n = _num(p.get("numberOfItems"))
+                if n and n > (len(els) if isinstance(els, list) else 1):
+                    best = max(best, int(n))
+            if "aggregateoffer" in t and (n := _num(p.get("offerCount"))):
+                best = max(best, int(n))
+    return best or None
+
+
+def colour_first(offers: list[Offer]) -> list[Offer]:
+    """The asked colour first, unknown colours next, other colours last (stable: the page's order otherwise)."""
+    rank = {True: 0, None: 1, False: 2}
+    return sorted(offers, key=lambda o: rank[o.raw.get("colour_match")])
+
+
+def aggregate_only(data: dict[str, Any]) -> int | None:
+    """A page whose only price is a range over many offers (an aggregator's model page: mobile.de 'Volvo V70'
+    AggregateOffer lowPrice 990 / offerCount 740, autoscout24 lowPrice 3119 / 223): the offer count, else None.
+    That price is the cheapest of hundreds of cars, not a car (eval r4 read it as one offer)."""
+    count: int | None = None
+    for syntax in ("json-ld", "microdata"):
+        for node in _walk(data.get(syntax) or []):
+            if not (_types(node) & ({"product", "individualproduct", "productmodel"} | CAR_TYPES)):
+                continue
+            for o in _offer_nodes(_props(node)):
+                if "aggregateoffer" not in _types(o):
+                    return None          # a real offer somewhere on the page
+                n = _num(o.get("offerCount"))
+                if n is None or n < 2:
+                    return None
+                count = max(count or 0, int(n))
+    return count
 
 
 # --------------------------------------------------------------------------- direct marketplace pages
@@ -2062,11 +2306,25 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
     list_read = wants_list_read(url, need, lane)    # raw lane: tori's search title never says 'used'
     lane = lane_hint(lane, title)
 
+    vehicle = vehicle_need_of(need)
+
     def listed(offers: list[Offer], via: str) -> tuple[Any, str]:
+        if vehicle:
+            from agora.marketplaces import car_list_url, used_car_list
+            if car_list_url(url):
+                used = used_car_list(url)
+                for o in offers:
+                    o.raw["car_list_page"] = True
+                    if used and o.condition == "new":
+                        o.condition = "used"      # 'vaihtoautot': used cars, whatever the reader guessed
         _finish_list(offers, need)
+        if vehicle:
+            offers = colour_first(offers)
         return (offers if expand_lists else best_offer(offers, need)), via
 
     site = direct_site(url, need)
+    # nettiauto / AutoScout24: the cars are in the plain HTML: a free fetch first, the paid split only if it fails
+    ldlist = site is not None and bool(getattr(site, "ldlist", False))
     free_rec = registry_free(site)
     if free_rec is not None and expand_lists:
         # a source the registry verified readable by plain fetch (vinted, marktplaats, kleinanzeigen ...):
@@ -2090,13 +2348,13 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
                 if getattr(site, "vehicle", False):
                     o.raw["category"] = "vehicle"
             return listed(items, "plain_split")
-    if site is not None and not site.itemlist and not paid:
+    if site is not None and not site.itemlist and not ldlist and not paid:
         return None, "search page: needs a list read"        # no ItemList on this site: skip the free fetch
-    status, html = (0, "") if site is not None and not site.itemlist else await fetch_html(url)
+    status, html = (0, "") if site is not None and not site.itemlist and not ldlist else await fetch_html(url)
     if status in (404, 410):
         return None, f"page gone (HTTP {status})"
     blocked = looks_blocked(status, html)
-    shop_list = False
+    shop_list = aggregate = False
     if html and not blocked and priced_per_period(need) and not list_read:
         plan = period_plan_offer(url, html, need)
         if plan is not None:
@@ -2106,6 +2364,26 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
             return plan, "jsonld"
     if html and not blocked:
         data = await asyncio.to_thread(_extruct, html, url)
+        if vehicle and not (site is not None and site.itemlist and not site.vehicle):
+            # (a goods marketplace's ItemList search, tori's, keeps its own paginated read below)
+            cars = car_page_offers(html, data, url, need, lane)
+            if len(cars) >= (1 if site is not None else 2):
+                contextdev.note_free_read()
+                if site is not None:
+                    market = note_market(url, site, html[:400000], len(cars), 1)
+                    if market.get("total") is None and (n := list_total(data)) and n > len(cars):
+                        market["total"], market["at_least"] = n, False   # nettiauto 'numberOfItems': 76775
+                    cat_page = category_page(url)
+                    for o in cars:
+                        o.raw["site"] = site.key
+                        o.raw["market"] = market
+                        if cat_page:
+                            o.raw["category_page"] = dict(cat_page)
+                return listed(cars, "jsonld")
+            if ldlist and not paid:
+                return None, "search page: needs a list read"    # no cars in the HTML: the paid split may have them
+            if aggregate_only(data):
+                list_read = aggregate = True   # mobile.de / autoscout24 model page: a range over hundreds of cars
         if _is_list_page(url) and need.kind == "product":
             items = offers_from_itemlist(data, url, need, lane, MAX_SPLIT_OFFERS if site is not None else None)
             if items:
@@ -2132,7 +2410,7 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
                     o.raw["fetch_status"] = status
                 return listed(cards, "plain_cards")
         # a list page we can cut with a paid read: its first Product is just some item on it
-        offer = None if (list_read and paid) else offer_from_structured(data, url, need, lane)
+        offer = None if (list_read and paid) or aggregate else offer_from_structured(data, url, need, lane)
         if offer is None and list_read and not paid:
             return None, "search page: needs a list read"
         if offer is not None and is_service(need) and offer.in_stock is False:
@@ -2439,6 +2717,8 @@ def service_unit_from_title(title: str) -> str | None:
 def _finish(offer: Offer, need: Need, search_title: str = "") -> Offer:
     if not offer.title.strip() and search_title:
         offer.title = search_title.split(" | ")[0].strip()   # JSON-LD without a name: use the search title
+    if need.kind == "product" and vehicle_need_of(need):
+        mark_colour(offer, need)               # a colour asked ('bright red car'): marked per listing, never a filter
     if need.kind == "product" and offer.condition in ("used", "refurbished") and not offer.raw.get("grade"):
         # the seller's own grade ("Excellent (9)", "Like new", Back Market "Fair"), shutter count, battery health
         units.apply_grade(offer.raw, units.grade_info(offer.title, str(offer.raw.get("search_text") or ""),

@@ -144,11 +144,14 @@ def test_plumber_berlin_compares_a_standard_call_not_a_radiator_bleed():
     things, v = run(PLUMBER, offers)
     kept = {o.source for t in things for o in t.offers}
     assert "kraft-haustechnik.com" not in kept and "kennstdueinen.de" in kept
-    assert v.headline == ("€60 for a standard 1-hour call (estimate) at gerahome.com, €60/h × 1 h.")
+    # no page states a call-out fee: each gets the trade's typical one, labelled an estimate (never costed as zero)
+    assert v.headline == ("€100 for a standard 1-hour call (estimate) at gerahome.com, €60/h × 1 h + €40 call-out "
+                          "(est.).")
     assert v.best_offer_url == "https://gerahome.com/services/plumbing/in/berlin"
     assert by["kennstdueinen.de"].true_cost is None
     assert by["kennstdueinen.de"].raw["not_comparable"].startswith("price for one specific task")
-    assert by["jesse-berlin.de"].true_cost.total_eur == pytest.approx(113.1)
+    assert by["jesse-berlin.de"].true_cost.sticker_eur == pytest.approx(113.1)
+    assert by["jesse-berlin.de"].true_cost.total_eur == pytest.approx(113.1 + judge.TYPICAL_CALLOUT_EUR)
     assert any(ln.startswith("3 more not compared") and "kennstdueinen.de €35" in ln for ln in v.lines)
     assert not any("€35 per job" in ln for ln in v.lines)
 
@@ -270,6 +273,7 @@ def test_electrician_helsinki_pages_name_the_trade_and_ex_vat_rates_get_vat():
                  url="https://valorasahko.fi/sahkoasentaja-helsinki")
     assert resolve.explain(SPARKY, sskt)[1] is None and resolve.explain(SPARKY, kallio)[1] is None
     _, v = run(SPARKY, [sskt, kallio, valora])
-    assert sskt.true_cost.total_eur == pytest.approx(75.3) and sskt.raw["ex_vat_eur"] == 60
+    assert sskt.true_cost.sticker_eur == pytest.approx(75.3) and sskt.raw["ex_vat_eur"] == 60
     assert "without VAT" in sskt.true_cost.basis
-    assert v.headline.startswith("€61 for a standard 1-hour call (estimate) at kallion-sahko.fi, €61/h × 1 h")
+    assert v.headline.startswith("€101 for a standard 1-hour call (estimate) at kallion-sahko.fi, €61/h × 1 h + €40 "
+                                 "call-out (est.)")

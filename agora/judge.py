@@ -263,7 +263,11 @@ def _market_prices(offers: list[Offer], condition: str) -> list[float]:
     floor = market_floor(offers)
     sel = [x for x in _one_vote_per_listing(offers) if market_condition(x) == condition
            and (p := price_of(x)) is not None and p > 1 and p >= floor and not _disputed(x)
-           and not _list_offer(x) and not x.raw.get("from_price") and not _junk(x) and not x.raw.get("with_lens")]
+           and not _list_offer(x) and not x.raw.get("from_price") and not _junk(x) and not x.raw.get("with_lens")
+           # another audience's item (a men's jacket for women's, told by its description) and a calculator's
+           # estimate never set the typical price; nor does a sold-out deal
+           and not x.raw.get("other_audience") and not x.raw.get("estimate")
+           and not (condition == "service" and sold_out(x))]
     if condition == "service":
         votes: dict[str, list[float]] = {}
         for x in sel:   # one directory page = one voice in the median, however many providers it listed
@@ -1554,18 +1558,58 @@ def _gross_up(o: Offer, need: Need, rate: float | None = None) -> None:
         o.price_eur = round(o.price_eur / (1 - r), 2)
 
 
+def _platform(url: str) -> bool:
+    try:
+        from agora.resolve import _known_platform
+        return _known_platform(url)
+    except Exception:
+        return False
+
+
+_SLD = {"co", "com", "org", "net", "ac", "gov", "or", "ne"}
+
+
+def provider_key(o: Offer) -> str:
+    """Who sells it: the site's own name without its country ending (holvi.com and holvi.fi are one provider,
+    lukro.co.uk is 'lukro'), or the seller's name on a directory / platform / marketplace that lists many."""
+    host = _host(o.url).removeprefix("www.")
+    raw = o.raw if isinstance(o.raw, dict) else {}
+    many = (any(h in host for h in AGGREGATOR_HOSTS) or raw.get("from_list_page") or raw.get("site")
+            or _marketplace_host(host) or _platform(o.url))
+    if many:
+        seller = re.sub(r"\W+", " ", (o.seller or "").lower()).strip()
+        return f"{host}|{seller}" if seller else o.url
+    parts = host.split(".")
+    if len(parts) >= 3 and parts[-2] in _SLD:
+        return parts[-3]
+    return parts[-2] if len(parts) >= 2 else host
+
+
 def _dedupe_service(offers: list[Offer]) -> list[Offer]:
     """One provider's same plan read twice (adcount.fi/en/prices and /en/prices.html, 'EU Sales' €50 both): one
     vote in the median and in 'N plans compared'."""
     seen: set[tuple[str, str, float]] = set()
+    same_provider: set[tuple[str, str, str, float]] = set()
     by_seller: dict[tuple[str, str], Offer] = {}
     out: list[Offer] = []
     for o in offers:
-        key = (_host(o.url).removeprefix("www."), re.sub(r"\W+", " ", (o.title or "").lower()).strip(),
-               round(o.price_eur or o.price or 0, 2))
+        host = _host(o.url).removeprefix("www.")
+        price = round(o.price_eur or o.price or 0, 2)
+        key = (host, re.sub(r"\W+", " ", (o.title or "").lower()).strip(), price)
         if key in seen and key[2]:
             continue
         seen.add(key)
+        # one provider's own site read twice in two languages or on two pages (zoofy.nl 'Schoonmaker voor 2 uur' and
+        # 'Cleaner for two hours' €99; tilitoimistonm.fi /en/pricing and / both €99): one provider, one vote. A
+        # directory / platform / marketplace lists many providers, so there the seller tells them apart.
+        many = (any(h in host for h in AGGREGATOR_HOSTS) or o.raw.get("from_list_page") or o.raw.get("site")
+                or _marketplace_host(host) or _platform(o.url))
+        if price and not many:
+            # ... and one provider on two country domains (holvi.com/fi and holvi.fi, same plan, same price)
+            pk = (provider_key(o), "", (o.unit or "").lower(), price)
+            if pk in same_provider:
+                continue
+            same_provider.add(pk)
         # one restaurant / provider listed by several aggregators (live, lunch: UniCafe Kaivopiha 4 times on
         # lounasmenu.fi, luncher.fi and lunchmenu.fi): one row, its lowest price
         sk = (re.sub(r"\W+", " ", (o.seller or "").lower()).strip(), re.sub(r"\W+", " ", (o.location or "").lower()).strip())
@@ -1630,7 +1674,12 @@ NOT_COMPARABLE = {"fee": "a fee or surcharge, not a price for the job",
                   "task": "price for one specific task, not a standard call",
                   "callout": "call-out / visit fee only, labour extra",
                   "premium": "emergency / urgent / weekend rate, not the standard price",
-                  "extra": "an add-on line (extra hour, gallery, album), not the package"}
+                  "extra": "an add-on line (extra hour, gallery, album), not the package",
+                  "hourly_vs_package": "an hourly rate, not compared with full-day packages",
+                  "one_off": "a fixed one-off job price, not compared with hourly visits",
+                  "tiny_job": "less than one hour of the usual rate: a booking, call or warranty fee, not a clean",
+                  "estimate": "a calculator's estimate for example inputs, not a provider's price",
+                  "sold_out": "sold out or the deal has ended"}
 # 'documentary style wedding photography: 1st hour' €450: the first hour, the following ones cost less
 FIRST_HOUR = re.compile(r"\b(?:1st|first)\s+hour|ensimmäinen\s+tunti|ensimmainen\s+tunti|eka\s+tunti|"
                         r"erste\s+stunde|eerste\s+uur|första\s+timmen|forsta\s+timmen", re.I)
@@ -1670,8 +1719,9 @@ BUNDLE_HOURS = re.compile(r"\b(\d+(?:[.,]5)?)\s*(?:uur|hours?|stunden|tuntia|tim
 
 
 def _directory_key(o: Offer) -> str:
-    """Providers cut from one directory page vote once in a service median (10 yoopies cleaners = 1 voice)."""
-    return o.raw.get("from_list_page") or o.url
+    """Providers cut from one directory page vote once in a service median (10 yoopies cleaners = 1 voice), and
+    one provider's two pages or two country domains are one voice too."""
+    return o.raw.get("from_list_page") or provider_key(o)
 
 
 # how long one job of these services usually is, when the page prices it by the hour and no size is asked
@@ -1682,6 +1732,80 @@ JOB_HOURS: list[tuple[re.Pattern[str], float, str]] = [
     (re.compile(r"haircut|hiustenleik|parturi|barber|friseur|kapper", re.I), 1.0, "one visit"),
     (re.compile(r"moving|movers|muutto|umzug|verhuiz|flytt", re.I), 4.0, "a typical move"),
 ]
+
+
+SOLD_OUT = re.compile(r"\b(?:sold\s+out|uitverkocht|ausverkauft|loppuunmyyty|loppuunmyyt\w*|slutsåld|slutsald|"
+                      r"udsolgt|utsolgt|deal\s+(?:has\s+)?ended|expired|verlopen|abgelaufen|päättynyt|paattynyt)\b", re.I)
+SOLD_OUT_TEXT = re.compile(r"\b(?:sold\s+out|uitverkocht|ausverkauft|loppuunmyyty|loppuunmyyt\w*|slutsåld|slutsald|"
+                           r"udsolgt|utsolgt|deal\s+(?:has\s+)?ended|deal\s+expired|niet\s+meer\s+beschikbaar|"
+                           r"nicht\s+mehr\s+verfügbar|ei\s+enää\s+saatavilla|tarjous\s+on\s+päättynyt)\b", re.I)
+
+
+def sold_out(o: Offer) -> bool:
+    """A deal / slot you can no longer get: the page says out of stock, or the title (or the deal box of the
+    page) says sold out / ended. Per listing: a site's other deals stay."""
+    if o.in_stock is False or SOLD_OUT.search(o.title or ""):
+        return True
+    raw = o.raw if isinstance(o.raw, dict) else {}
+    if raw.get("availability") and re.search(r"outofstock|soldout|discontinued", str(raw["availability"]), re.I):
+        return True
+    return bool(raw.get("deal") or _deal_url(o.url)) and bool(
+        SOLD_OUT_TEXT.search(" ".join(str(raw.get(k) or "")[:400] for k in ("description", "snippet"))))
+
+
+def _deal_url(url: str) -> bool:
+    return bool(re.search(r"socialdeal\.|groupon\.|letsdeal\.|tuplaus\.|/deals?/|/aanbieding", url or "", re.I))
+
+
+# 'no call-out fee' stated: a real zero, never replaced by an estimate
+NO_CALLOUT = re.compile(r"\b(?:no|free|without|zero)\s+(?:call[- ]?out|travel|visit)\s+(?:fee|charge|cost)s?|"
+                        r"ei\s+(?:käynti|kaynti|lähtö|lahto|matka)\w*|(?:käynti|kaynti|lähtö|lahto)maksu\w*\s+0\s*(?:€|eur)|"
+                        r"keine\s+anfahrt\w*|anfahrt\s+(?:kostenlos|gratis|inklusive|inkl)|"
+                        r"geen\s+voorrijkosten|gratis\s+voorrij\w*|ingen\s+(?:framkörning|framkorning|utryckning)\w*",
+                        re.I)
+# a typical call-out / visit fee for an open trade when no provider of the hunt states one (an assumption, shown
+# as such on the receipt)
+TYPICAL_CALLOUT_EUR = 40.0
+
+
+def stated_callout(o: Offer, need: Need) -> float | None:
+    """The call-out / visit fee the provider's page states: its own field, a call-out line of its price list
+    ('Huoltoautokorvaus €35'), or 0 when it says there is none. None = not stated."""
+    raw = o.raw if isinstance(o.raw, dict) else {}
+    c = raw.get("callout_fee")
+    if isinstance(c, (int, float)) and c >= MIN_CALLOUT_EUR:
+        return float(c)
+    from agora import resolve
+    lines = [x for x in raw.get("other_prices") or [] if isinstance(x, dict) and x.get("price_eur")
+             and (x.get("kind") == "callout" or resolve.service_line_kind(need, x.get("title") or "", x.get("unit"))
+                  == "callout") and MIN_CALLOUT_EUR <= float(x["price_eur"]) <= 250]
+    if lines:
+        return float(min(x["price_eur"] for x in lines))
+    text = " ".join(str(x) for x in (o.title, raw.get("description"), raw.get("snippet"), raw.get("search_text")) if x)
+    if NO_CALLOUT.search(text) or (isinstance(c, (int, float)) and c == 0):
+        return 0.0
+    return None
+
+
+def travel_per_km(o: Offer) -> float | None:
+    """The travel charge per km a page states ('Travelling fee €0.46/km'): the provider's own travel terms, so no
+    typical call-out fee is assumed for it (it is not in the total either: the distance is unknown)."""
+    raw = o.raw if isinstance(o.raw, dict) else {}
+    c = raw.get("callout_fee")
+    if isinstance(c, (int, float)) and 0 < c < MIN_CALLOUT_EUR:
+        return float(c)
+    for x in raw.get("other_prices") or []:
+        if isinstance(x, dict) and isinstance(x.get("price_eur"), (int, float)) and 0 < x["price_eur"] < MIN_CALLOUT_EUR \
+                and re.search(r"travel|matka|km|kilometr|anfahrt|voorrij|reise", str(x.get("title") or ""), re.I):
+            return float(x["price_eur"])
+    km = TRAVEL_PER_KM.search(" ".join(str(x) for x in (o.title, raw.get("search_text"), raw.get("description"),
+                                                         raw.get("snippet")) if x))
+    if km:
+        try:
+            return float((km.group(1) or km.group(2) or "").replace(",", "."))
+        except ValueError:
+            return None
+    return None
 
 
 def job_hours(need: Need) -> tuple[float, str] | None:
@@ -1699,6 +1823,10 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
     if p is None or unit not in ("hour", "m2", "job", "visit"):
         return None
     from agora import resolve
+    if sold_out(o):
+        # a sold-out deal or a booked-out slot is not a price you can get (eval r1, socialdeal.nl €19 for 3 h)
+        o.raw["not_comparable"] = NOT_COMPARABLE["sold_out"]
+        return None
     kind = o.raw.get("line_kind") or resolve.service_line_kind(need, o.title or "", o.unit)
     trade = resolve.is_open_trade(need)
     if kind in ("fee", "off_topic", "premium", "extra") or (trade and kind in ("task", "callout")):
@@ -1734,6 +1862,9 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         floor = float(mh) if isinstance(mh, (int, float)) and 0.5 <= mh <= 12 else default   # page's minimum
         if trade and not isinstance(mh, (int, float)) and isinstance(est_mh, (int, float)) and est_mh > floor:
             floor = float(est_mh)
+            o.raw["assumed_min"] = True
+        if trade and not isinstance(mh, (int, float)):
+            o.raw["assumed_min"] = True       # minimum not stated: at the same price a stated one ranks first
         first = FIRST_HOUR.search(o.title or "")
         nxt = None
         if first:
@@ -1794,22 +1925,27 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         bundle = BUNDLE_HOURS.search(o.title or "")
         calc = (f"{bundle.group(1).replace(',', '.')} h for {fmt(rate)}" if bundle else f"fixed price per {unit}")
     receipt.append((label, round(sticker, 2)))
-    callout = o.raw.get("callout_fee") if isinstance(o.raw, dict) else None
+    callout = stated_callout(o, need)
     extras = float(callout) if isinstance(callout, (int, float)) and callout >= MIN_CALLOUT_EUR else 0.0
-    est_callout = o.raw.get("est_callout_fee") if trade and not extras else None
+    est_callout = o.raw.get("est_callout_fee") if trade and callout is None else None
+    o.raw.pop("assumed_terms", None)
     if extras:
         receipt.append(("call-out fee", round(extras, 2)))
         calc += f" + {fmt(extras)} call-out"
     elif isinstance(est_callout, (int, float)) and est_callout > 0:
+        # never costed as zero: a page that states no call-out fee gets the others' usual one (or the trade's
+        # typical one), labelled an estimate, and ranks after a provider stating its terms at the same price
         extras = float(est_callout)
-        receipt.append(("call-out fee (est.: the others' usual, this page states none)", round(extras, 2)))
+        whose = ("typical for the trade" if o.raw.get("est_callout_basis") == "typical"
+                 else "the others' usual")
+        receipt.append((f"call-out fee (est.: {whose}, this page states none)", round(extras, 2)))
         calc += f" + {fmt(extras)} call-out (est.)"
-    km = TRAVEL_PER_KM.search(" ".join(str(x) for x in (o.title, o.raw.get("search_text"), o.raw.get("description"),
-                                                         o.raw.get("snippet")) if x))
-    if km and not extras:
-        rate_km = (km.group(1) or km.group(2) or "").replace(",", ".")
-        basis.append(f"plus travel {rate_km} €/km (stated, not in the total)")
-        o.raw["travel_per_km"] = float(rate_km) if rate_km else None
+        o.raw["assumed_terms"] = True
+        basis.append(f"call-out fee not stated on the page: {fmt(extras)} assumed ({whose}); ask before booking")
+    km = travel_per_km(o)
+    if km is not None and not extras:
+        basis.append(f"plus travel {km:g} €/km (stated, not in the total)")
+        o.raw["travel_per_km"] = km
     if resolve.is_deal(o):
         o.raw["deal"] = True
         basis.append("deal / voucher price: check its conditions (often first booking only)")
@@ -1817,6 +1953,8 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         used_h = hours if unit == "hour" else resolve.TRADE_HOURS
         basis.append(f"estimate: a standard call of {used_h:g} h labour at the stated hourly rate"
                      + (" plus the call-out fee" if extras else "") + "; the real job may take longer")
+    if o.raw.pop("assumed_min", None):
+        o.raw["assumed_terms"] = True
     o.raw["calc"] = calc
     total = sticker + extras
     if o.raw.get("recurring_only"):
@@ -1973,6 +2111,33 @@ def _home() -> str | None:
         return "fi"
 
 
+def _colour_pick(need: Need, pool: list[Offer]) -> tuple[str | None, bool]:
+    """(line, unknown) for a need that asks a colour (cars: reader.mark_colour sets raw colour_match).
+    line None = no colour asked. unknown = no offer in the pool says it is the asked colour."""
+    try:
+        from agora.reader import asked_colours
+        asked = asked_colours(need)
+    except ImportError:
+        return None, False
+    if not asked or not pool or not any("colour_match" in o.raw for o in pool) and not _vehicle(need):
+        return None, False
+    colour = "/".join(sorted(asked))
+    hits = [o for o in pool if o.raw.get("colour_match") is True]
+    if hits:
+        return (f"{len(hits)} of {len(pool)} say they are {colour}; the pick is the cheapest of those "
+                f"(the rest do not state a colour)"), False
+    return (f"none of the {len(pool)} found states its colour as {colour}: colour is not a filter on these "
+            f"sites, check the photos"), True
+
+
+def _vehicle(need: Need) -> bool:
+    try:
+        from agora.resolve import _is_vehicle_need
+        return _is_vehicle_need(need)
+    except ImportError:
+        return False
+
+
 def _shipping_flags(o: Offer, need: Need) -> None:
     """agora.shipping: delivery (pickup / ships), estimated cross-border shipping into shipping_eur, flags."""
     try:
@@ -1980,7 +2145,14 @@ def _shipping_flags(o: Offer, need: Need) -> None:
     except ImportError:
         return
     home = _home()
-    shipping.apply(o, home, need.thing)
+    thing = need.thing or ""
+    try:
+        from agora.resolve import _is_vehicle_need
+        if _is_vehicle_need(need):
+            thing = f"car {thing}"      # a car abroad ships by car transporter, not as a parcel
+    except ImportError:
+        pass
+    shipping.apply(o, home, thing)
     raw = o.raw
     est = raw.get("shipping_est") or {}
     if raw.get("pickup_abroad"):
@@ -2099,18 +2271,22 @@ def _estimate_missing_minimums(need: Need, offers: list[Offer]) -> None:
              and isinstance(o.raw.get("min_hours"), (int, float)) and 0.5 <= o.raw["min_hours"] <= 12]
     # a per-km travel line (€0.46/km) is no call-out fee: fees under MIN_CALLOUT_EUR never vote (live, plumbing:
     # a €1.63 'call-out (est.)' was added to every provider)
-    fees = [float(o.raw["callout_fee"]) for o in offers if isinstance(o.raw.get("callout_fee"), (int, float))
-            and o.raw["callout_fee"] >= MIN_CALLOUT_EUR]
+    stated = {id(o): stated_callout(o, need) for o in offers}
+    fees = [c for c in stated.values() if c is not None and c >= MIN_CALLOUT_EUR]
     for o in offers:
         o.raw.pop("est_min_hours", None)
         o.raw.pop("est_callout_fee", None)
+        o.raw.pop("est_callout_basis", None)
     for o in offers:
         if o.unit != "hour":
             continue
         if known and not isinstance(o.raw.get("min_hours"), (int, float)):
             o.raw["est_min_hours"] = statistics.median(known)
-        if fees and not isinstance(o.raw.get("callout_fee"), (int, float)):
-            o.raw["est_callout_fee"] = statistics.median(fees)
+        if stated[id(o)] is None and travel_per_km(o) is None:
+            # never costed as zero (eval: an unstated call-out beat honest providers): the others' usual fee, else
+            # the trade's typical one
+            o.raw["est_callout_fee"] = statistics.median(fees) if fees else TYPICAL_CALLOUT_EUR
+            o.raw["est_callout_basis"] = "others" if fees else "typical"
 
 
 _NUM_WORDS = {"kaksi": 2, "kolme": 3, "neljä": 4, "nelja": 4, "viisi": 5, "kuusi": 6, "two": 2, "three": 3, "four": 4,
@@ -2204,6 +2380,33 @@ def _need_brand(need: Need) -> str | None:
         return None
 
 
+_AUD_NAME = {"women": "women's", "men": "men's", "kids": "kids'", "pet": "a pet's"}
+
+
+def _audience_clash(need: Need, o: Offer) -> str | None:
+    """Per listing: the audience asked (women / naisten / Damen, men, kids) against the listing's own words, the
+    title first, then its description when the title names none (a 'Talvitakki koko L' whose text says 'miesten').
+    -> 'for men's, you asked women's' or None."""
+    from agora import resolve
+    if not resolve.APPAREL_NEED.search(f"{need.thing} {need.raw}"):
+        return None
+    want = resolve._audience(f"{need.thing} {need.raw} {' '.join(need.must_have)}") & {"women", "men", "kids"}
+    if not want:
+        return None
+    raw = o.raw if isinstance(o.raw, dict) else {}
+    for text in (o.title or "", " ".join(str(raw.get(k) or "")[:600] for k in ("description", "page_description"))):
+        have = resolve._audience(text)
+        if "pet" in have:
+            return "for a pet, not for you"
+        if have & {"women", "men", "kids"}:
+            if have & want:
+                return None
+            other = sorted(have & {"women", "men", "kids"})
+            return (f"for {'/'.join(_AUD_NAME[x] for x in other)}, you asked "
+                    f"{'/'.join(_AUD_NAME[x] for x in sorted(want))}")
+    return None
+
+
 def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                   depreciation: dict[str, Any] | None = None, *, history: bool = False,
                   photos: dict[int, list[Offer]] | None = None, floor: float = 0.0,
@@ -2222,6 +2425,14 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
     mixed = _mixed(need, t)
     brand = _need_brand(need)
     body = asks_body(need)
+    from agora import resolve as _resolve
+    quoted = quote_only(need) is not None
+    for o in t.offers:
+        o.raw.pop("other_audience", None)
+        if _resolve.calculator_estimate(o) or (quoted and _resolve.insurance_estimate(o)):
+            o.raw["estimate"] = "calculator"
+        elif not is_service(need) and (aud := _audience_clash(need, o)):
+            o.raw["other_audience"] = aud
     for o in t.offers:
         # the body asked: a lens kit, whatever the site, is marked before any median is taken, so kits never set the
         # 'typical used' band (live, sony a7 iii body: marktplaats / tori / blocket kits made it €799-€1,000)
@@ -2246,6 +2457,10 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                            f"compared at the gross {fmt(o.price_eur or 0)}")
         if o.raw.get("recurring_only"):
             o.flags.append("recurring-contract price (no one-time price on the page)")
+        if o.raw.get("estimate"):
+            o.flags.append("a calculator's estimate for example inputs, not a quote or an offer")
+        if o.raw.get("other_audience"):
+            o.flags.append(f"{o.raw['other_audience']}: shown, never the pick")
         if (n := seen.get(o.source, 0)) >= 2:
             o.raw["seen_hunts"] = n        # kept for the record; not a flag a shopper needs to read
         if not is_service(need) and not is_periodic(o):
@@ -2263,6 +2478,17 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                 o.flags.append(f"price in {o.currency} on a local provider's page in {need.where}: probably a "
                                "directory's figure, not this provider's; ask them")
     for o in t.offers:
+        if o.raw.get("estimate"):
+            # a calculator's figure for example inputs is nothing you can buy: shown, never costed or ranked (eval r4,
+            # car insurance: 'selkoraha.fi €29/mo overtook service at ayvens.com' on the live leaderboard)
+            o.true_cost, o.haggle = None, None
+            o.raw["not_comparable"] = NOT_COMPARABLE["estimate"]
+            continue
+        if is_service(need) and sold_out(o):
+            # a sold-out deal or an ended offer is no price you can get: never costed, so never ranked
+            o.true_cost, o.haggle = None, None
+            o.raw["not_comparable"] = NOT_COMPARABLE["sold_out"]
+            continue
         if priced_per_period(need):
             o.true_cost = period_cost(o, months)
             continue
@@ -2276,6 +2502,55 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
             continue
         o.true_cost = estimate_true_cost(o, t.offers, months, cat)
         o.haggle = None if is_periodic(o) else make_haggle(o, t.offers, t.name, cat)
+    if is_service(need) and not priced_per_period(need):
+        _separate_unlike(need, t.offers)
+
+
+def _apart(o: Offer, why: str) -> None:
+    o.true_cost = None
+    o.raw["not_comparable"] = NOT_COMPARABLE[why]
+    o.raw["apart_kind"] = why
+
+
+ONE_OFF_JOB_OK = re.compile(r"m2|m²|neliö\w*|sqm|\d\s*(?:-|–)?\s*(?:huone|room|zimmer|kamer)", re.I)
+
+
+def _separate_unlike(need: Need, offers: list[Offer]) -> None:
+    """Like with like in a service comparison:
+    - a wedding (a day's work): packages are compared with packages; hourly rates x an assumed 8 h are listed
+      apart when any package is priced (eval: wedding packages were ranked against €250/h x 2 h);
+    - home cleaning (standard visits at an hourly rate): a fixed one-off job price ('Perussiivous €79',
+      'Calling MrFix' €9.95) is listed apart from rate x hours, and a 'job' under one hour of the usual rate is a
+      booking / warranty fee, not a clean."""
+    from agora import resolve
+    owned = [o for o in offers if o.true_cost is not None]
+    if not owned:
+        return
+    if JOB_HOURS[0][0].search(f"{need.thing} {(need.category or {}).get('label') or ''}"):
+        packages = [o for o in owned if (o.unit or "") == "job" and not o.raw.get("partial_job")]
+        if packages:
+            for o in owned:
+                if (o.unit or "") == "hour":
+                    _apart(o, "hourly_vs_package")
+        return
+    if resolve.service_group(need) is not resolve.CLEANING_GROUP or resolve.is_open_trade(need):
+        return
+    hourly = [o for o in owned if (o.unit or "") == "hour"]
+    if len(hourly) < 2:
+        return
+    rate = statistics.median(price_of(o) or 0 for o in hourly)
+    for o in owned:
+        if (o.unit or "") != "job":
+            continue
+        p = price_of(o) or 0
+        bundle = BUNDLE_HOURS.search(o.title or "")
+        if p < rate and not bundle:
+            # under one hour of the usual rate and no hours named: a booking / warranty fee, not a clean ('3 uur
+            # schoonmaakhulp' €19 names its hours: a (deal) price for a real clean, compared)
+            _apart(o, "tiny_job")
+        elif not (bundle or ONE_OFF_JOB_OK.search(o.title or "")
+                  or fits_job_size(need, o)):
+            _apart(o, "one_off")
 
 
 def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, history: bool = True,
@@ -2310,6 +2585,146 @@ def public_service_note(need: Need) -> str | None:
         return ("No public price list found: this service is usually bought by municipalities and companies "
                 "through tenders. Ask providers for a quote (per portion, per hour or per contract).")
     return None
+
+
+# ---------------------------------------------------------------- quote-only services
+# Insurance and contract / institutional catering are priced per quote: the price depends on the person (the car,
+# the claim-free years, age, home town) or the contract (portions a day, a tender), so no provider lists one. The
+# honest verdict says so and links the main providers instead of 'No priced offers yet. Set a watch' (eval r1-r4:
+# car insurance finland, School catering). A calculator's figure is an estimate, never a quote.
+QUOTE_PROVIDERS: dict[tuple[str, str], list[tuple[str, str]]] = {
+    ("insurance", "fi"): [("If", "https://www.if.fi"), ("OP Pohjola", "https://www.op.fi"),
+                          ("LähiTapiola", "https://www.lahitapiola.fi"), ("Fennia", "https://www.fennia.fi"),
+                          ("Turva", "https://www.turva.fi"), ("Pohjantähti", "https://www.pohjantahti.fi")],
+    ("catering", "fi"): [("Amica (Compass Group)", "https://www.amica.fi"), ("Fazer Food & Co", "https://www.fazer.fi"),
+                         ("Sodexo", "https://www.sodexo.fi")],
+}
+INSURANCE_NEED = re.compile(r"insur\w*|vakuut\w*|versicher\w*|verzeker\w*|försäkr\w*|forsakr\w*|forsikr\w*|assuranc\w*",
+                            re.I)
+CONTRACT_CATERING = re.compile(
+    r"(?:catering|ruokapalvelu\w*|ateriapalvelu\w*|kouluruoka\w*|kouluateri\w*|lounaspalvelu\w*|"
+    r"henkilöstöravintol\w*|henkilostoravintol\w*|verpflegung|gemeinschaftsverpflegung|schoolmaaltijd\w*)", re.I)
+CONTRACT_WHO = re.compile(r"school|koulu\w*|päiväko\w*|paivako\w*|daycare|kindergarten|kita|hospital|sairaala|"
+                          r"staff|henkilöstö\w*|henkilosto\w*|company|corporate|yritys\w*|b2b|contract|sopimus\w*|"
+                          r"tender|kilpailut\w*|canteen|kantiini|institution\w*|municipal|kunta\w*|public|julkinen|"
+                          r"cpv", re.I)
+INSURANCE_DRIVERS = {
+    "car": "the car, your claim-free years (bonus), age, home town and the cover (traffic only, or partial / full kasko)",
+    "home": "the home's size, type and location, the cover and the deductible",
+    "travel": "your age, the trip length and the cover",
+    "pet": "the animal's breed and age and the cover",
+    "life": "your age, health and the sum insured",
+}
+
+
+def _country(need: Need) -> str | None:
+    try:
+        from agora import places
+        return places.country_for(need.where) or _home()
+    except Exception:
+        return _home()
+
+
+def quote_only(need: Need) -> dict[str, Any] | None:
+    """{'kind': 'insurance' | 'catering', 'what', 'drivers', 'providers': [(name, url)]} for a service priced per
+    quote (insurance; school / staff / contract catering), else None."""
+    if not is_service(need):
+        return None
+    cat = need.category or {}
+    text = f"{need.thing} {need.raw} {cat.get('label') or ''} {cat.get('id') or ''}"
+    cc = _country(need) or "fi"
+    if INSURANCE_NEED.search(text):
+        from agora import resolve
+        asked = resolve._fold(f"{need.thing} {cat.get('label') or ''}")
+        sub = next((k for k in INSURANCE_DRIVERS if resolve.INSURANCE_KINDS.get(k) is not None
+                    and resolve.INSURANCE_KINDS[k].search(asked)), None)
+        what = re.sub(r"\s+(?:finland|suomi|helsinki|service)$", "", (need.thing or "insurance").strip(), flags=re.I)
+        return {"kind": "insurance", "what": what or "insurance",
+                "drivers": INSURANCE_DRIVERS.get(sub or "", "you and the cover you choose"),
+                "providers": QUOTE_PROVIDERS.get(("insurance", cc), [])}
+    if CONTRACT_CATERING.search(text) and CONTRACT_WHO.search(text):
+        return {"kind": "catering", "what": (cat.get("label") or need.thing or "catering").strip(),
+                "drivers": "the number of portions a day, the menu and diets, the contract length and delivery",
+                "providers": QUOTE_PROVIDERS.get(("catering", cc), [])}
+    return None
+
+
+def _provider_names(names: list[str]) -> str:
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def quote_lines(q: dict[str, Any]) -> list[str]:
+    """One line per main provider ('If: https://www.if.fi'), for the person to ask for a quote."""
+    return [f"get a quote: {name} {url}" for name, url in q["providers"][:6]]
+
+
+def quote_verdict(need: Need, q: dict[str, Any], estimates: list[Offer], all_offers: list[Offer]) -> Verdict:
+    """No insurer / caterer lists a price: say why, name and link the main providers, show any calculator estimate."""
+    names = [n for n, _ in q["providers"][:4]]
+    public = public_service_note(need) if q["kind"] == "catering" else None
+    if public:
+        head = public
+    else:
+        head = (f"{q['what'][:1].upper()}{q['what'][1:]} is priced by quote, not listed: the price depends on "
+                f"{q['drivers']}.")
+    if names:
+        head += f" Compare quotes from {_provider_names(names)}" + (
+            " (online, a few minutes each)." if q["kind"] == "insurance" else ".")
+    else:
+        head += " Ask two or three providers for a quote."
+    lines = quote_lines(q)
+    best: Offer | None = None
+    if estimates:
+        best = min(estimates, key=lambda o: o.price_eur or 1e12)
+        price = _estimate_price(best)
+        what = _job_title(best) or best.title or "estimate"
+        head += f" A calculator estimates about {price} ({best.source}: {what[:60]}), for its example inputs."
+        lines.insert(0, f"estimate, not a quote: {price} at {best.source} (\u201c{(best.title or '')[:60]}\u201d); "
+                        "enter your own details there or ask the insurers")
+    found = len(all_offers)
+    lines.append(f"{found} page{'s' * (found != 1)} read, no provider lists a price you can buy at"
+                 if not estimates else "the estimate is a calculator's figure for example inputs, not an offer")
+    first_link = q["providers"][0][1] if q["providers"] else None
+    return Verdict(head, best.url if best else first_link, None, "get quotes", lines)
+
+
+def _estimate_price(o: Offer) -> str:
+    """'€350/year (≈ €29/month)' for a calculator's figure (it has no true cost: it is nothing you can buy)."""
+    per = period_of(o)
+    stated = money(o.price if o.price is not None else (o.price_eur or 0), o.currency if o.price is not None else "EUR")
+    if per in PER_MONTH:
+        tail = f" (≈ {fmt((o.price_eur or 0) * PER_MONTH[per])}/month)" if per != "month" and o.price_eur else ""
+        return f"{stated}/{PERIOD_WORD[per]}{tail}"
+    if per:
+        return f"{stated} per {PERIOD_WORD[per]}"
+    return fmt(o.price_eur or 0)
+
+
+def quote_headline(q: dict[str, Any], listed: Offer) -> str:
+    """A quote-priced service that some page lists a price for anyway: lead with how it is priced, show the
+    listed price as an example, name the providers to ask."""
+    what = f"{q['what'][:1].upper()}{q['what'][1:]}"
+    price = _period_price(listed) if period_of(listed) else fmt(_landed(listed))
+    title = _job_title(listed)
+    names = [n for n, _ in q["providers"][:4]]
+    head = (f"{what} is priced by quote: the price depends on {q['drivers']}. Lowest listed price: {price} at "
+            f"{_who(listed)}" + (f" ({title})" if title else "") + ", an example or 'from' price.")
+    if names:
+        head += f" Compare quotes from {_provider_names(names)}."
+    else:
+        head += " Ask two or three providers for a quote."
+    return head
+
+
+def _tc_key(o: Offer) -> float:
+    return o.true_cost.per_month_eur if o.true_cost is not None else 1e12
+
+
+def _svc_key(o: Offer) -> tuple[float, bool, float]:
+    """Cheapest job first; at the same price (to the euro) a provider stating its call-out fee and minimum ranks
+    before one whose terms we assumed."""
+    t = _tc_key(o)
+    return (round(t), bool(o.raw.get("assumed_terms")), t)
 
 
 def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
@@ -2372,16 +2787,26 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         all_offers += t.offers
 
     priced = [o for o in all_offers if o.price_eur is not None]
+    quote = quote_only(need)
+    estimates = [o for o in priced if o.raw.get("estimate")]
+    if quote and not [o for o in priced if not o.raw.get("estimate")]:
+        return quote_verdict(need, quote, estimates, all_offers)
     if not priced:
         if public := public_service_note(need):
             return Verdict(public, None, None, None, [f"{len(all_offers)} offers found, none with a readable price"])
         return Verdict("No priced offers yet. Set a watch and Agora keeps looking.", None, None, None,
                        [f"{len(all_offers)} offers found, none with a readable price"])
     good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False
+            and not (is_service(need) and sold_out(o))
             and not o.raw.get("pickup_abroad")] or [o for o in priced if not o.raw.get("pickup_abroad")] or priced
     # never crowned while a checked one exists: a giveaway-priced one of a mixed bag ('far_under'), or a used
     # listing far under its band whose page told us nothing (pick check: no description to read)
     good = [o for o in good if not o.raw.get("far_under") and not _unchecked_bargain(o, band_of)] or good
+    # a calculator's estimate is shown, never crowned while a provider's own price exists
+    good = [o for o in good if not o.raw.get("estimate")] or good
+    # a listing for another audience (a men's / kids' / dog's jacket when women's was asked), told by its
+    # description when the title says nothing: shown, never the pick
+    good = [o for o in good if not o.raw.get("other_audience")] or good
     good = [o for o in good if not o.raw.get("partial_job") and not o.raw.get("near_floor")] or good
     # a model asked ('dyson v15'): the pick comes from that model's own group, never from a small group of
     # titles naming several models ('Dyson V11 V15': batteries and docks that fit both, live pick €56)
@@ -2434,7 +2859,7 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     cheapest = min(good, key=_landed)
     best_link = min(eu, key=_landed) if eu else cheapest
     owned = [o for o in good if o.true_cost]
-    best_tc = min(owned, key=lambda o: o.true_cost.per_month_eur) if owned else None  # type: ignore[union-attr]
+    best_tc = min(owned, key=_svc_key if is_service(need) else _tc_key) if owned else None
     if is_service(need) and best_tc is not None and best_tc.raw.get("job_what"):
         # a provider's fixed price for exactly this job size beats an hourly rate x a guessed number of hours (live,
         # Umzug Hamburg 2-Zimmer: 'Umzug für kleine 1-2 Zimmer Wohnung (bis 60 m²)' €400 lost to €80/h x 4 h)
@@ -2449,10 +2874,12 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         best_link = best_tc
     elif is_service(need) and best_tc is not None:
         headline = _service_headline(need, best_tc)
-        # cheapest job first; at most 2 lines per site (one directory's ten cleaners do not fill the comparison)
+        # cheapest job first; one line per provider, at most 2 per directory / platform (one directory's ten
+        # cleaners do not fill the comparison, one provider's two pages are not two providers)
         per_site: dict[str, int] = {}
-        for o in sorted(owned, key=lambda o: o.true_cost.per_month_eur):  # type: ignore[union-attr]
-            if len(lines) >= 4 or per_site.get(o.source, 0) >= 2:
+        for o in sorted(owned, key=_svc_key):
+            cap = 2 if any(h in (o.source or "") for h in AGGREGATOR_HOSTS) or o.raw.get("from_list_page") else 1
+            if len(lines) >= 4 or per_site.get(o.source, 0) >= cap:
                 continue
             per_site[o.source] = per_site.get(o.source, 0) + 1
             tc = o.true_cost
@@ -2476,7 +2903,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             lines.append(f"household deduction ({HOUSEHOLD.year}): {HOUSEHOLD.rate:.0%} of labour minus a "
                          f"{fmt(HOUSEHOLD.yearly_excess)} yearly excess per person; this job alone gets "
                          f"{fmt(best_tc.raw.get('deduction_alone_eur') or 0)} back")
-        apart = [o for o in priced if o.true_cost is None and o.raw.get("not_comparable")]
+        apart = [o for o in priced if o.true_cost is None and o.raw.get("not_comparable")
+                 and not (quote and o.raw.get("estimate"))]
         if apart:
             why = sorted({o.raw["not_comparable"] for o in apart})
             shown = ", ".join(f"{o.source} {fmt(o.price_eur or 0)} ({(o.title or '')[:30]})" for o in apart[:3])
@@ -2516,6 +2944,13 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
                       and _landed(o) <= 1.10 * _landed(best_all)]
             if better:
                 best_all = min(better, key=_landed)
+        # a colour asked ('bright red car', live r5): a car that says it is that colour is the pick over a cheaper
+        # one of unknown colour; when none says so, the verdict says the colour is not confirmed
+        colour_line, colour_unknown = _colour_pick(need, sure or good)
+        if colour_line is not None:
+            in_colour = [o for o in (sure or good) if o.raw.get("colour_match") is True]
+            if in_colour:
+                best_all = min(in_colour, key=_landed)
         for o in good:
             extras = _landed(o) - (o.price_eur or 0)
             beat = round(_landed(best_all) - extras, 2)
@@ -2525,6 +2960,10 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         headline = all_in_headline(_headline_pool(good, shown, best_all), best_all, lines, named=_generic_need(need),
                                    titled=_names_more_than_asked(need, best_all), ref=ref)
         lines[0:0] = skipped_lines(priced)
+        if colour_line:
+            lines.insert(0, colour_line)
+        if colour_unknown:
+            headline = headline.rstrip(".") + "; colour not confirmed."
         if ref is not None:
             n_low = sum(1 for o in all_offers if o.raw.get("ref_suspect"))
             lines.append(reference_line(ref, n_low))
@@ -2556,6 +2995,16 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     flagged = [o for o in all_offers if _risky(o)]
     if flagged:
         lines.append(risky_line(flagged))
+    if quote:
+        # the headline says how it is priced (quote_headline); the lines link the providers to ask
+        lines += quote_lines(quote)[:4]
+        if estimates:
+            e = min(estimates, key=lambda o: o.price_eur or 1e12)
+            lines.append(f"calculator estimate (not a quote): {_estimate_price(e)} at {e.source}")
+        # a listed price of a quote-priced service is an example or a 'from' price, never a 'buy now' (eval r4, car
+        # insurance finland: '€373/year at k-auto.fi', a car dealer's add-on, headed the verdict as the price)
+        listed = best_tc or cheapest
+        headline = quote_headline(quote, listed)
 
     pick = best_tc or cheapest
     budget = _budget_eur(need)
@@ -2576,6 +3025,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     if buy_or_wait == "buy now" and grey is not None:
         buy_or_wait = "check the warranty first"
         lines.append(f"{grey.source} may be a grey import (no EU manufacturer warranty): ask before you buy")
+    if quote and buy_or_wait in ("buy now", "check the seller first", "check the warranty first"):
+        buy_or_wait = "get quotes"
 
     vband = band_of.get(id(led)) or band_of.get(id(pick))
     if vband:
@@ -2791,26 +3242,35 @@ def _period_verdict(need: Need, periodic: list[Offer], priced: list[Offer], mont
     best = ranked[0]
     year = _year_total(best)
     headline = f"{_period_price(best)} at {best.source}" + (f" · {year}" if year else "") + "."
-    if len(ranked) > 1:
-        per_site: dict[str, int] = {}
-        shown = 0
-        for o in ranked:
-            if shown >= 5 or per_site.get(o.source, 0) >= 1:
-                continue
-            per_site[o.source] = 1
-            shown += 1
+    # one provider, one voice: its entry plan (eval r4, bookkeeping: tilitoimistonm.fi's /en/pricing and front page,
+    # and a provider's three tiers, were three of '11 monthly plans compared')
+    entry: dict[str, Offer] = {}
+    for o in ranked:
+        entry.setdefault(provider_key(o), o)
+    providers = list(entry.values())
+    if len(providers) > 1:
+        for o in providers[:5]:
             plan = (o.raw.get("plan") or {}).get("name") if isinstance(o.raw.get("plan"), dict) else None
             lines.append(f"{o.source}: {_period_price(o)}" + (f" ({plan})" if plan else ""))
-        med = statistics.median(o.true_cost.per_month_eur for o in ranked)  # type: ignore[union-attr]
+        med = statistics.median(o.true_cost.per_month_eur for o in providers)  # type: ignore[union-attr]
         unit = "/month" if lead == "month" else f" per {PERIOD_WORD.get(lead, lead)}"
-        lines.append(f"{len(ranked)} {GROUP_NOUN.get(lead, 'offers')} compared, median {fmt(med)}{unit}")
+        tiers = f" ({len(ranked)} {GROUP_NOUN.get(lead, 'offers')})" if len(ranked) > len(providers) else ""
+        lines.append(f"{len(providers)} providers compared{tiers}, median of their lowest {fmt(med)}{unit}")
     for g in GROUP_ORDER:
         if g == lead or g not in groups:
             continue
         o = min(groups[g], key=lambda x: x.true_cost.per_month_eur)  # type: ignore[union-attr]
         lines.append(f"{GROUP_NOUN[g]} (not compared with {GROUP_NOUN.get(lead, lead)}): from {_period_price(o)} "
                      f"at {o.source}" + (f", {len(groups[g])} in all" if len(groups[g]) > 1 else ""))
-    loose = len([o for o in priced if o.true_cost is None])
+    quoted = quote_only(need) is not None      # its estimates get their own line (calculator estimate, not a quote)
+    apart = [o for o in priced if o.true_cost is None and o.raw.get("not_comparable")
+             and not (quoted and o.raw.get("estimate"))]
+    if apart:
+        why = sorted({o.raw["not_comparable"] for o in apart})
+        lines.append(f"{len(apart)} more not compared ({'; '.join(why)}): "
+                     + ", ".join(f"{o.source} {fmt(o.price_eur or 0)}" for o in apart[:3]))
+    loose = len([o for o in priced if o.true_cost is None and not o.raw.get("not_comparable")
+                 and not o.raw.get("estimate")])
     if loose:
         lines.append(f"{loose} more offer{'s' * (loose != 1)} without a clear period (per month / hour / project)")
     return headline, best
@@ -2975,5 +3435,5 @@ def pick_candidates(things: list[Thing], k: int = 3) -> list[Offer]:
     product branch): the ones worth a look at their own page before the pick is final."""
     priced = [o for t in things for o in t.offers if o.price_eur is not None]
     good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False
-            and not o.raw.get("pickup_abroad") and not is_periodic(o)]
+            and not o.raw.get("pickup_abroad") and not is_periodic(o) and not o.raw.get("estimate")]
     return sorted(good, key=_landed)[:k]

@@ -36,6 +36,9 @@ class Site:
     bulky_ok: bool = True         # worth it for furniture etc. bought from abroad (no: local pickup only)
     vehicle: bool = False         # a cars category: its listings are vehicles (raw['category'] = 'vehicle')
     browse: str | None = None     # the category page itself, for a generic need ('car': every car, newest first)
+    # its search / model pages carry a schema.org ItemList of the listings in the plain HTML (nettiauto): read free
+    # first (no token), the paid markdown split only when that fetch fails. Planned as paid, so never over-planned.
+    ldlist: bool = False
 
     @property
     def domain(self) -> str:
@@ -97,10 +100,17 @@ _SITES: list[Site] = [
          price_last=True),
     # vehicles: the cars categories (read first for a vehicle need; the general marketplaces still follow while
     # tokens last: every listing is judged on its own). Unverified search URLs are marked verified=False.
+    # tori's cars: checked 14 Nov (eval r5) tori.fi/mobility/search/car answers HTTP 404 (Context.dev and plain
+    # fetch), autot.tori.fi is an empty script shell (404 on every path) and tori's front page links cars to
+    # autovex.fi (a sell-your-car service, no listings). Kept so site_for() still names the old links; never planned.
     Site("tori_autot", "fi", "used", "https://www.tori.fi/mobility/search/car?q={q}", r"/mobility/item/\d+", "fi",
          heading_title=True, verified=False, vehicle=True, browse="https://www.tori.fi/mobility/search/car"),
+    # nettiauto: plain fetch checked 14 Nov (eval r5): nettiauto.com/volvo/v70 and /vaihtoautot answer 200 in 1.8-4.4 s
+    # (~1 MB) with a schema.org CollectionPage > ItemList of 30+ Car items (url, price, color, mileage, year in the
+    # name) and the total in AggregateOffer.offerCount: a free read (ldlist). ?q= and colour parameters are
+    # ignored by the site (color=punainen / color=red / colour=10 gave the same cars), so colour is a boost.
     Site("nettiauto", "fi", "used", "https://www.nettiauto.com/vaihtoautot?q={q}", r"^/[\w-]+/[\w-]+/\d{6,}", "fi",
-         verified=False, vehicle=True, browse="https://www.nettiauto.com/vaihtoautot"),
+         verified=False, vehicle=True, browse="https://www.nettiauto.com/vaihtoautot", ldlist=True),
     Site("autotalli", "fi", "used", "https://www.autotalli.com/vaihtoautot/listaa?hakusana={q}",
          r"/vaihtoautot/tiedot/\d+", "fi", verified=False, vehicle=True,
          browse="https://www.autotalli.com/vaihtoautot/listaa"),
@@ -118,8 +128,11 @@ _SITES: list[Site] = [
          "de", verified=False, vehicle=True, browse="https://www.kleinanzeigen.de/s-autos/c216"),
     Site("marktplaats_auto", "nl", "used", "https://www.marktplaats.nl/l/auto-s/q/{q}/", r"/v/auto-s/", "nl",
          verified=False, vehicle=True, browse="https://www.marktplaats.nl/l/auto-s/"),
+    # AutoScout24: its list pages carry the 20 listings of the page in the plain HTML (Next.js __NEXT_DATA__
+    # pageProps.listings: url, price, make/model, km, first registration, the seller's town; the colour in the
+    # listing's URL slug) and the total in pageProps.numberOfResults (saved 14 Nov, tests/fixtures/cars): free first
     *[Site(f"autoscout24_{cc}", cc, "used", f"https://www.autoscout24.{tld}/lst?atype=C&q={{q}}", rf"/{seg}/[\w-]+",
-           lang, verified=False, vehicle=True, browse=f"https://www.autoscout24.{tld}/lst?atype=C")
+           lang, verified=False, vehicle=True, browse=f"https://www.autoscout24.{tld}/lst?atype=C", ldlist=True)
       for cc, tld, seg, lang in (("de", "de", "angebote", "de"), ("nl", "nl", "aanbod", "nl"),
                                  ("it", "it", "annunci", "it"), ("be", "be", "aanbod", "nl"),
                                  ("at", "at", "angebote", "de"))],
@@ -251,8 +264,19 @@ def site_for(url: str) -> Site | None:
         return s
     if s.listing and re.search(s.listing, parts.path):
         return None                   # one listing, not a search page
+    if s.vehicle and _vehicle_list_path(parts.path):
+        return s                      # a cars site's make / model page (nettiauto.com/volvo/v70, autoscout24 /lst/volvo)
     from agora.discover import is_list_page
     return s if is_list_page(url) else None
+
+
+def _vehicle_list_path(path: str) -> bool:
+    """A cars site's list path: make / model words, no car's own id (nettiauto.com/volvo/v70, /vaihtoautot,
+    autoscout24 /lst/volvo/v70), not its front page or a bare language root (/en)."""
+    segs = [p for p in path.split("/") if p]
+    if not segs or (len(segs) == 1 and len(segs[0]) <= 3):
+        return False
+    return len(segs) <= 4 and not re.search(r"\d{5,}", path)
 
 
 def _own_search(s: Site, parts) -> bool:
@@ -650,6 +674,113 @@ def vehicle_query(thing: str) -> str:
     return " ".join(words).lower()
 
 
+# --------------------------------------------------------------------------- colour (a car's paint, a preference)
+# eval r5 'bright red car': the car sites take no colour in their URL (nettiauto ignores color= / colour=), but
+# nettiauto's JSON-LD names each car's colour ('Punainen') and sellers write it in titles. Colour is a boost: a car
+# that says it is the asked colour goes first, one that says another colour is marked, an unknown one stays.
+_COLOUR_EXTRA: dict[str, tuple[str, ...]] = {
+    "red": ("rouge", "rosso", "rojo", "czerwony", "červená", "tummanpunainen", "viininpunainen", "bordeaux",
+            "burgundy", "maroon", "weinrot", "dunkelrot"),
+    "blue": ("bleu", "blu", "azul", "niebieski", "tummansininen", "dunkelblau", "navy"),
+    "black": ("noir", "nero", "negro", "czarny"),
+    "white": ("weiss", "blanc", "bianco", "blanco", "biały", "helmenvalkoinen"),
+    "silver": ("argent", "argento", "plata", "srebrny"),
+    "grey": ("gray", "gris", "grigio", "szary", "tummanharmaa", "vaaleanharmaa"),
+    "green": ("vert", "verde", "zielony", "tummanvihreä"),
+    "yellow": ("jaune", "giallo", "amarillo", "żółty"),
+    "orange": ("arancione", "naranja", "pomarańczowy"),
+    "brown": ("marron", "marrone", "marrón", "brązowy"),
+}
+# colours that contain an asked one but are another ('vaaleanpunainen' is pink, not red)
+_COLOUR_NOT = {"vaaleanpunainen": "pink", "pinkki": "pink", "pink": "pink", "rosa": "pink", "roze": "pink",
+               "lyserød": "pink", "turkoosi": "turquoise", "turquoise": "turquoise", "türkis": "turquoise",
+               "beige": "beige", "kulta": "gold", "gold": "gold", "violetti": "purple", "purple": "purple",
+               "lila": "purple"}
+
+
+def _colour_names() -> dict[str, str]:
+    try:
+        from agora.need import COLOUR_WORDS
+    except ImportError:
+        COLOUR_WORDS = {}
+    out: dict[str, str] = {}
+    for en, tr in COLOUR_WORDS.items():
+        canon = "grey" if en == "gray" else en
+        out.setdefault(en, canon)
+        for w in tr.values():
+            out.setdefault(w.lower(), canon)
+    for en, words in _COLOUR_EXTRA.items():
+        out.setdefault(en, en)
+        for w in words:
+            out.setdefault(w.lower(), en)
+    out.update(_COLOUR_NOT)
+    return out
+
+
+COLOUR_NAMES = _colour_names()
+_COLOUR_RE = re.compile(r"(?<![\w-])(" + "|".join(re.escape(w) for w in sorted(COLOUR_NAMES, key=len, reverse=True))
+                        + r")(?![\w])", re.I)
+
+
+def colour_of(text: str | None) -> str | None:
+    """The colour a car's colour field or title names, in English ('Punainen' -> 'red', 'Tummanpunainen metallic'
+    -> 'red', 'Vaaleanpunainen' -> 'pink', 'Volvo V70 D4' -> None). The first colour word wins."""
+    m = _COLOUR_RE.search(text or "")
+    return COLOUR_NAMES.get(m.group(1).lower()) if m else None
+
+
+def asked_colours(*texts: str) -> set[str]:
+    """The colours a need asks for ('bright red car' / must_have ['bright red'] -> {'red'})."""
+    out: set[str] = set()
+    for t in texts:
+        for m in _COLOUR_RE.finditer(t or ""):
+            c = COLOUR_NAMES.get(m.group(1).lower())
+            if c:
+                out.add(c)
+    return out
+
+
+# --------------------------------------------------------------------------- car dealers' and aggregators' lists
+# eval r1-r4 'volvo v70': dealer and aggregator pages (kamux.fi/cars/volvo/v/v70, auto1.fi/haku/volvo v70,
+# k-auto.fi/autot/volvo/v70, autouncle.fi/fi/kaytetyt-autot/Volvo/V70, mobile.de/en/car/volvo/v70) list dozens of
+# cars, each its own offer; read as one page they gave one 'Volvo V70' at the cheapest price, or none. A path
+# segment that names a cars list, and no car's own id at the end (rinta-jouppi.com/ajoneuvohaku/volvo/v70/458836).
+_CAR_WORD = (r"vaihtoautot|kaytetyt-autot|autot|ajoneuvot|cars|gebrauchtwagen|autos|occasions|"
+             r"tweedehands-auto\w*|bilar|biler|samochody")
+_CAR_EXACT = r"kaytetyt|car|auto-s|bil|brugt|occasion"       # only as a whole segment ('car-insurance' is no list)
+# a path segment that names a cars list ('vaihtoautot', 'used-and-second-hand-cars', 'kaytetyt-autot')
+_CAR_LIST_SEG = re.compile(rf"/(?:(?:[\w]+-)*(?:{_CAR_WORD})(?:-[\w]+)*|{_CAR_EXACT})(?:/|$)", re.I)
+# pages about cars that list none: insurance, leasing, rental, articles, valuations, 'sell your car'
+_CAR_NOT_LIST = re.compile(r"insurance|vakuut|versicher|verzeker|forsikr|leasing|rental|vuokra|mieten|blog|news|"
+                           r"uutis|artik|guide|opas|review|arvostel|hinta-arvio|valuation|myy-auto|sell|verkaufen|"
+                           r"rahoitus|financ|calculat|laskuri", re.I)
+# a search / list segment: a cars list only on a cars site (auto1.fi/haku, autoscout24 /lst, carandclassic /list),
+# never a general marketplace's search (tori.fi/recommerce/forsale/search)
+_LIST_SEG = re.compile(r"/(?:haku|autohaku|search|suche|zoeken|sok|list|lst)(?:/|$)", re.I)
+_CAR_HOST = re.compile(r"auto|car|bil|motor|vehicle|fahrzeug", re.I)
+_CAR_OWN_ID = re.compile(r"(?:^|[/_-])[a-z]{0,3}\d{5,}(?:[/_-][\w-]*)?/?$", re.I)
+_CAR_ONE = re.compile(r"/(?:vaihtoauto|auto|car|fahrzeug|angebote|aanbod|annunci|offers?|d|item|ilmoitus)/[\w-]*\d{5,}", re.I)
+USED_CAR_WORDS = re.compile(r"vaihtoauto|kaytetty|kaytetyt|used|gebraucht|occasion|tweedehands|begagnad|brugt|"
+                            r"/car/|/lst/|/cars/", re.I)
+
+
+def car_list_url(url: str) -> bool:
+    """A car dealer's or aggregator's list page (many cars), not one car's page and not an article."""
+    parts = urlsplit(url or "")
+    path = parts.path or "/"
+    if not (_CAR_LIST_SEG.search(path) or (_LIST_SEG.search(path) and _CAR_HOST.search(parts.netloc))):
+        return False
+    if _CAR_OWN_ID.search(path.rstrip("/")) or _CAR_ONE.search(path) or _CAR_NOT_LIST.search(path):
+        return False
+    return True
+
+
+def used_car_list(url: str) -> bool:
+    """A car list page whose URL says it lists used cars ('vaihtoautot', 'kaytetyt-autot', 'gebrauchtwagen'):
+    its listings are used whatever a reader guessed ('Volvo V70 2,4D Momentum' read as 'new' in eval r1)."""
+    return car_list_url(url) and bool(USED_CAR_WORDS.search(urlsplit(url).path + "/"))
+
+
 # live 14 Nov: tori / blocket / finn 'mobility' pages and autotalli render their listings with JS (the markdown
 # scrape has none), so they are not planned until a reader handles them; nettiauto's list splits fine
 HOME_VEHICLE: dict[str, tuple[str, ...]] = {
@@ -856,6 +987,9 @@ COUNT_PATTERNS = [
     re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:ogłosze\w*|wyników)", re.I),
     re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:annonces|résultats)\b", re.I),
     re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:results|listings|ads|items)\b", re.I),
+    re.compile(rf"{_COUNT_NUM}\s+kappaletta\b", re.I),                       # nettiauto 'Nettiautossa on 665 kappaletta'
+    re.compile(r'"numberOfResults"\s*:\s*(\d+)'),                               # AutoScout24 __NEXT_DATA__
+    re.compile(r'"offerCount"\s*:\s*"?(\d+)'),                                # schema.org AggregateOffer (car lists)
 ]
 
 

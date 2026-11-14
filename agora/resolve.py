@@ -1178,6 +1178,26 @@ COMPARISON_HOSTS = ("hinta.fi", "mobiili.fi", "hintaopas.fi", "prisjakt.nu", "pr
                     "pricespy.co.nz", "versus.com", "gsmarena.com", "kimovil.com", "puhelinvertailu.com")
 
 
+# a price calculator's result page ('selkoraha.fi/en/calculators/car-insurance-calculator?cv=20000&k=...'): one
+# estimate for the person's inputs, never a list, never a quote (eval r1/r4, car insurance finland: the one Finnish
+# figure, €350/year traffic + kasko, was dropped as a 'search or list page')
+CALCULATOR_URL = re.compile(r"/(?:[\w-]*-)?(?:calculators?|laskuri\w*|rechner\w*|kalkulator\w*|kalkylator\w*|"
+                            r"berekenen|calculette|calcul\w*)(?:[/?#.]|$)", re.I)
+ESTIMATE_TITLE = re.compile(r"\b(?:estimat\w*|arvio\w*|geschätzt\w*|geschatzt\w*|schätzung|schatzung|schatting|"
+                            r"uppskatt\w*|calculat\w*|laskettu|laskuri\w*|berechnet\w*|berekend)\b", re.I)
+
+
+def calculator_estimate(o: Offer) -> bool:
+    """A calculator's estimate for the person's own inputs: kept and labelled an estimate (not a quote, not a list)."""
+    if o.price_eur is None and o.price is None:
+        return False
+    raw = o.raw if isinstance(o.raw, dict) else {}
+    if raw.get("estimate") == "calculator":
+        return True
+    return bool(CALCULATOR_URL.search(o.url or "")) and bool(ESTIMATE_TITLE.search(o.title or "")
+                                                            or CALCULATOR_URL.search(o.url or ""))
+
+
 def not_an_offer(o: Offer) -> str | None:
     """Reason when the page is not one buyable listing: a search/list/category page, a price-comparison
     or news site. Such a page's price belongs to some item on it, so it must never set the market."""
@@ -1196,6 +1216,8 @@ def not_an_offer(o: Offer) -> str | None:
         listy = discover.is_list_page(url)
     except Exception:
         listy = False
+    if calculator_estimate(o):
+        return None            # one estimate for the inputs in its address (the judge labels it an estimate)
     from urllib.parse import urlsplit
     parts = urlsplit(url)
     if listy or LIST_URL.search(parts.path + ("?" + parts.query if parts.query else "")) or CAR_LIST_PATH.search(parts.path):
@@ -1813,17 +1835,25 @@ APPAREL_NEED = re.compile(r"jacket|coat|takki|jakke|jacka|jacke|\bjas\b|kurtka|p
                           r"vest\b|liivi|haalari|overall|toppa|untuva|down\s+jacket|sneakers?|tennarit|hat\b|pipo|"
                           r"gloves?|hanskat|käsineet|scarf|huivi|skirt|hame|blazer|bunda|veste|mantel|manteau", re.I)
 _AUD = {
-    "women": re.compile(r"\b(?:women\w*|woman|ladies|lady|naisten|nais|nainen|damen|dame|dames|dam|kvinde\w*|kvinn\w*|"
-                        r"damsk\w*|female|femme|donna|mujer)\b|\bnais\w+takki", re.I),
-    "men": re.compile(r"\b(?:men|mens|men's|man|miesten|mies|herren|herre|herr|heren|męsk\w*|mesk\w*|męski|meski|"
-                      r"male|homme|uomo|hombre|herrar|mand)\b|\bmies\w+takki", re.I),
-    "kids": re.compile(r"\b(?:kids?|child\w*|lasten|lapsen|lapsille|poikien|tyttöjen|tyttojen|pojan|tytön|tyton|"
+    "women": re.compile(r"\b(?:women\w*|woman|ladies|lady|naisten|nais|nainen|naisille|naiselle|naisen|damen|dame|dames|dam|kvinde\w*|kvinn\w*|"
+                        r"damsk\w*|female|femme|donna|mujer)\b|\bnais\w+takki|"
+                        # compounds: 'Damenjacke', 'Dameswinterjas', 'naistentakki', 'Damjacka'
+                        r"\b(?:damen|dames|naisten|dam)(?:winter|regen|ski|daun|jas|jacke|jacka|mantel|parka|"
+                        r"schuh|stiefel|schoen|laars|takki|kenk|saapp|toppa|untuva)\w*", re.I),
+    "men": re.compile(r"\b(?:men|mens|men's|man|miesten|mies|miehille|miehelle|miehen|herren|herre|herr|heren|męsk\w*|mesk\w*|męski|meski|"
+                      r"male|homme|uomo|hombre|herrar|mand)\b|\bmies\w+takki|"
+                      r"\b(?:herren|heren|miesten|herr)(?:winter|regen|ski|daun|jas|jacke|jacka|mantel|parka|"
+                      r"schuh|stiefel|schoen|laars|takki|kenk|saapp|toppa|untuva)\w*", re.I),
+    "kids": re.compile(r"\b(?:kids?|child\w*|lasten|lapsen|lapsille|lapselle|poikien|tyttöjen|tyttojen|pojan|tytön|tyton|"
                        r"kinder\w*|mädchen|madchen|jungen|junge|jungs|barn\w*|dziec\w*|chłopi\w*|chlopi\w*|dziewcz\w*|"
                        r"girls?|boys?|junior|juniors?|baby|vauva\w*|toddler|taapero\w*|enfant\w*|bambin\w*|niñ\w*)\b"
                        r"|\b(?:gr\.?|größe|grosse|koko|size|str\.?|stl\.?|rozm\.?|rozmiar|maat|taille)\s*:?\s*"
                        r"(?:7[4-9]|[89]\d|1[0-6]\d)(?:\s*/\s*\d{2,3})?\b|\b(?:7[4-9]|[89]\d|1[0-6]\d)\s*cm\b"
                        r"|\b(?:[89]\d|1[0-6]\d)\s*-\s*(?:[89]\d|1[0-7]\d)\b|\b\d{1,2}\s*-\s*\d{1,2}\s*(?:v|vuotta|vuotiaalle|"
-                       r"years?|yrs|y|jahre|j|år|lat|ans)\b|\b\d{1,2}\s*(?:v|vuotiaalle|vuotiaan)\b", re.I),
+                       r"years?|yrs|y|jahre|j|år|lat|ans)\b|\b\d{1,2}\s*(?:v|vuotiaalle|vuotiaan)\b"
+                       # children's-only brands (eval: Reima jackets in 'winter jacket women')
+                       r"|\b(?:reima|lassie\s+by\s+reima|lassie|molo|name\s+it|polarn\s+o\.?\s+pyret|"
+                       r"kinder\w+|lasten\w+|tyttojen\w+|tyttöjen\w+|poikien\w+)\b", re.I),
     "pet": re.compile(r"\b(?:koiran\w*|koiralle|koira|kissan|kissalle|hunde\w*|hund|hond\w*|honden\w*|dog|dogs|doggy|"
                       r"puppy|pies|psa|psów|psow|lemmikin|lemmikille|pet|pets|haustier\w*)\b", re.I),
 }
@@ -1866,7 +1896,11 @@ def product_clash(need: Need, offer: Offer) -> str | None:
             and (m := ADULT_RX.search(f"{offer.title or ''} {_host(offer.url or '')}")):
         return f"an adult product ({m.group(0).strip()}), not a family gift"
     cat = need.category or {}
-    return _product_clash(need.thing or "", " ".join(need.must_have), str(cat.get("id") or ""),
+    # the audience the person typed counts even when the cleaned item text lost it ('naisten talvitakki' ->
+    # thing 'talvitakki'): per listing, a men's / kids' / dog's jacket is never a women's one
+    aud = " ".join(m.group(0) for rx in _AUD.values() if (m := rx.search(need.raw or "")))
+    must = " ".join([*need.must_have, aud]).strip()
+    return _product_clash(need.thing or "", must, str(cat.get("id") or ""),
                           str(cat.get("label") or ""), offer.title or "", is_generic(need))
 
 
@@ -2102,6 +2136,10 @@ def relevance(need: Need, offer: Offer) -> float:
     """0..1: how well this offer answers the need."""
     if not_an_offer(offer) or search_title(need, offer):
         return 0.0
+    if getattr(need, "must_not", None):
+        from agora.need import must_not_hit
+        if must_not_hit(need, f"{offer.title or ''} {(offer.raw or {}).get('search_text') or ''}"):
+            return 0.05            # the person said 'no GTA bundle' and this listing is one
     if kind_mismatch(need, offer) or far_provider(need, offer):
         return 0.05            # a gun for a gunsmith hunt, a repair rate for a product hunt, a US gunsmith
     ns = signature(need.thing)
@@ -2223,12 +2261,14 @@ FEE_LINE = re.compile(
     r"booking fee|boekingskosten|service fee|servicekosten|toimistomaksu|laskutuslisa|invoic\w* fee|"
     r"rechnungsgebuhr|surcharge|zuschlag|aufpreis|toeslag|lisamaksu|lisahinta|add-on|extra charge|"
     r"\bparking|parkeer|parkgebuhr|materialpauschale|kleinmaterial|materiaalikulu|\bper km\b|km-pauschale|"
-    r"kilometer", re.I)
+    r"kilometer|bemiddeling\w*|vermittlungsgebuhr|vermittlungsprovision|valityspalkkio\w*|matching fee|"
+    r"inschrijfkosten|registration fee|warranty fee|garantiekosten", re.I)
 # a call-out / visit fee: added on top of the hourly rate, never a job price on its own
 CALLOUT_LINE = re.compile(
     r"call[- ]?out|visit (?:fee|cost|charge)|^visit\b|house call|travel (?:fee|cost|charge)|anfahrt|fahrtkosten|"
     r"kurzbesuch|hausbesuch|einsatzpauschale|voorrij|starttarief|uitrukkosten|kaynti|matkakulu|lahtomaksu|"
-    r"startavgift|utryckning|framkorning|deplacement|desplazamiento|diritto di chiamata", re.I)
+    r"startavgift|utryckning|framkorning|deplacement|desplazamiento|diritto di chiamata|huoltoauto\w*|"
+    r"ajoneuvokorvau\w*|autokorvau\w*|lahtomaksu\w*|kotikaynti\w*|aloitusmaksu\w*", re.I)
 # a premium rate (emergency, night, weekend, urgent): not the standard price
 PREMIUM_LINE = re.compile(
     r"notdienst|notfall|emergency|urgent|spoed|noodgeval|paivystys|\bkiire|weekend|wochenende|sonntag|sunday|"
@@ -2375,15 +2415,31 @@ def _insurance_clash(need: Need, offer: Offer) -> str | None:
         where = _fold(offer.url or "").replace("/", " ").replace("-", " ") + " " + page
         if not any(INSURANCE_KINDS[k].search(where) for k in want):
             return f"the page does not say it is {want[0]} insurance (no cover named)"
-    # a calculator site's estimate ('Arvioitu autovakuutus') or a leasing customer's add-on is no insurer's price
+    # a leasing customer's add-on is no insurer's price; a calculator's estimate is kept, labelled an estimate
+    # (the judge never crowns it as a quote)
+    if calculator_estimate(offer) or insurance_estimate(offer):
+        return None
     if m := INSURANCE_NOT_A_QUOTE.search(title + " " + _fold(offer.url or "")):
-        return f"not an insurer's own price ({m.group(0).strip()}): an estimate or a leasing add-on"
+        return f"not an insurer's own price ({m.group(0).strip()}): a leasing add-on"
     return None
 
 
-INSURANCE_NOT_A_QUOTE = re.compile(r"\barvioi\w*|\bestimate\w*|\bexample\b|\besimerkki\w*|\bbeispiel\w*|\bleasing\w*|"
-                                   r"\blease\b|\bayvens\b|\bleaseplan\b|\bsixt\s+leasing|\byksityisleasing\w*|"
-                                   r"\bselkoraha\b|\bnffleet\b|\bfleet\b|\bnf\s+fleet", re.I)
+# a leasing customer's add-on (Ayvens, LeasePlan, NF Fleet): no price anyone else can buy
+INSURANCE_NOT_A_QUOTE = re.compile(r"\bleasing\w*|\blease\b|\bayvens\b|\bleaseplan\b|\bsixt\s+leasing|\byksityisleasing\w*|"
+                                   r"\bnffleet\b|\bfleet\b|\bnf\s+fleet", re.I)
+# an estimate or an example premium ('Arvioitu autovakuutus' at selkoraha.fi, 'example price for a 30-year-old'):
+# kept as an estimate offer (the judge labels it, never crowns it), not dropped (r5: calculator estimates count)
+INSURANCE_ESTIMATE = re.compile(r"\barvioi\w*|\barvio\b|\bestimat\w*|\bexample\b|\besimerkki\w*|\bbeispiel\w*|"
+                                r"\bvoorbeeld\w*|\bexempel\w*|\bselkoraha\b|\btypical\s+(?:price|premium|cost)|"
+                                r"\btyypillinen\s+hinta|\bkeskihinta\w*|\baverage\s+(?:price|premium|cost)", re.I)
+
+
+def insurance_estimate(o: Offer) -> bool:
+    """An insurance figure that says it is an estimate / example / average (a calculator or a guide's figure)."""
+    if o.price_eur is None and o.price is None:
+        return False
+    text = _fold(f"{o.title or ''} {o.url or ''}")
+    return bool(INSURANCE_ESTIMATE.search(text)) and not INSURANCE_NOT_A_QUOTE.search(text)
 
 
 DESIGN_NEED = re.compile(r"design\w*|suunnittel\w*|graafi\w*|grafik\w*|gestalt\w*|ontwerp\w*|logo", re.I)
@@ -2640,6 +2696,22 @@ def _service_relevance(need: Need, offer: Offer) -> float:
     return round(min(score, 1.0), 3)
 
 
+def _known_platform(url: str) -> bool:
+    """A booking platform / matching directory (yoojo, trustoo, helpling ...): many providers on one site."""
+    host = _host(url)
+    try:
+        from agora import discover
+        if any(discover.dom_match(host, d) for d in discover.SERVICE_DIRECTORIES):
+            return True
+    except Exception:
+        pass
+    try:
+        from agora.judge import AGGREGATOR_HOSTS
+        return any(h in host for h in AGGREGATOR_HOSTS)
+    except Exception:
+        return False
+
+
 def directory_row(need: Need, offer: Offer) -> bool:
     """The title is only the job word(s) + the site's own brand ('schoonmaakbedrijf – Trustoo', 'Cleaners in Tilburg |
     Helpling'): a directory's or platform's page, not a provider (live, home cleaning tilburg)."""
@@ -2648,8 +2720,12 @@ def directory_row(need: Need, offer: Offer) -> bool:
     host = _host(offer.url or "")
     brand = _fold(host.split(".")[0]) if host else ""
     seller = re.sub(r"\W+", "", _fold(offer.seller or ""))
-    if seller and len(seller) >= 4 and (seller == brand.replace("-", "") or seller in brand):
-        return True        # the seller is the site itself ('Yoojo' at yoojo.nl): the platform's own city page
+    if seller and len(seller) >= 4 and (seller == brand.replace("-", "") or seller in brand) \
+            and _known_platform(offer.url or ""):
+        # the seller is the site itself ('Yoojo' at yoojo.nl): the platform's own city page. A provider's own site
+        # always names itself ('Tilipalvelu Zafar Oy' at tilipalveluzafaroy.fi, 'Adcount' at adcount.fi): that is
+        # one provider, never a directory
+        return True
     if re.search(r"\b(?:gezocht|gesucht|wanted|haetaan|sokes|søges)\s*\?\s*(?:[-|–—].*)?$", offer.title, re.I):
         return True        # 'Schoonmaakster Tilburg gezocht?': a matching site's landing page
     parts = [p.strip() for p in re.split(r"\s+[|–—-]\s+|\s*\|\s*", offer.title) if p.strip()]

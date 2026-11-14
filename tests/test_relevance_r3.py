@@ -340,9 +340,13 @@ def test_a_per_km_fee_is_no_call_out_estimate():
              raw={"callout_fee": 0.46})
     b = shop("Putkimies tuntihinta", 55, "https://manofix.fi/hinnasto", "service", unit="hour")
     J._estimate_missing_minimums(n, [a, b])
-    assert "est_callout_fee" not in b.raw
+    # the €0.46/km travel line never becomes anyone's call-out fee; the page that states it gets no assumed one,
+    # the page stating nothing gets the trade's typical fee, labelled an estimate (r5: never costed as zero)
+    assert "est_callout_fee" not in a.raw
+    assert b.raw["est_callout_fee"] == J.TYPICAL_CALLOUT_EUR and b.raw["est_callout_basis"] == "typical"
     tc = J.service_cost(a, n)
     assert tc is not None and not any("call-out" in lbl for lbl, _ in tc.receipt)
+    assert "0.46 €/km" in tc.basis
 
 
 def test_instalments_are_multiplied():
@@ -369,10 +373,15 @@ def test_a_marketing_agency_is_no_design_subscription():
 
 
 def test_a_calculator_estimate_is_no_insurer_price():
+    # r5: kept as an estimate offer (calculator estimates count), labelled, never crowned or costed as a price
     n = svc("car insurance", "Finland")
     o = shop("Arvioitu autovakuutus (liikennevakuutus + kasko)", 350, "https://selkoraha.fi/autovakuutus", "service",
              unit="year")
-    assert not kept(n, o)
+    assert kept(n, o)
+    v = J.judge(n, R.resolve(n, [o]), history=False)
+    assert o.raw["estimate"] == "calculator" and o.true_cost is None
+    assert v.buy_or_wait == "get quotes" and "is priced by quote" in v.headline
+    assert "A calculator estimates about €350/year" in v.headline
 
 
 # ---------------------------------------------------------------- verdict text
