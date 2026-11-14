@@ -288,6 +288,8 @@ function open(q, slug, { keepError = false, depth = 1 } = {}) {
   emit('reset', { q, slug: S.slug, replay: !!slug, keepError, depth });
   const p = new URLSearchParams({ q });
   if (depth > 1 && !slug) p.set('depth', String(depth));
+  // a hunt started from the category tree: main.js put ?cat=<id> in the page URL; the server hunts inside it
+  if (!slug) { try { const c = new URLSearchParams(location.search).get('cat'); if (c) p.set('cat', c); } catch {} }
   if (slug) { p.set('replay', slug); p.set('speed', String(cfg.speed)); p.set('max_gap', String(cfg.max_gap)); }
   let src;
   try { src = new EventSource('/hunt?' + p.toString()); }

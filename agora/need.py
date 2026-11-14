@@ -83,6 +83,14 @@ SERVICE_WORDS: dict[str, str] = {
     "limpieza": "cleaning", "fontanero": "plumbing", "electricista": "electrician", "mudanza": "moving",
     "pulizie": "cleaning", "idraulico": "plumbing", "elettricista": "electrician", "trasloco": "moving",
     "sprzątanie": "cleaning", "hydraulik": "plumbing", "elektryk": "electrician", "przeprowadzka": "moving",
+    # a gunsmith repairs, services and fits weapons: the trade, never a gun for sale
+    "gunsmith": "gunsmith", "gunsmiths": "gunsmith", "gunsmithing": "gunsmith", "aseseppä": "gunsmith",
+    "aseseppa": "gunsmith", "asesepät": "gunsmith", "asesepän": "gunsmith", "asekorjaamo": "gunsmith",
+    "aseiden huolto": "gunsmith", "aseen huolto": "gunsmith", "büchsenmacher": "gunsmith",
+    "buchsenmacher": "gunsmith", "büchsenmacherei": "gunsmith", "waffenschmied": "gunsmith",
+    "wapensmid": "gunsmith", "geweermaker": "gunsmith", "vapensmed": "gunsmith", "bøssemager": "gunsmith",
+    "børsemaker": "gunsmith", "armurier": "gunsmith", "armero": "gunsmith", "armaiolo": "gunsmith",
+    "rusznikarz": "gunsmith", "puškař": "gunsmith",
 }
 
 # city (any inflection key) -> display name. Finnish case forms included (Helsingissä ...).
@@ -359,10 +367,16 @@ def _classify(text: str) -> dict[str, Any] | None:
 def priced_per_period(need: Need) -> bool:
     """A subscription, retainer or B2B service (bookkeeping, a web developer, a design subscription): its
     offers are plans per month / year / hour / project, compared period with period. Local trades the rules
-    know (cleaning, plumbing ...) keep the job costing (rate x hours)."""
+    know (cleaning, plumbing ...) and local-service categories of the tree (a gunsmith, a tailor) keep the job
+    costing (rate x hours)."""
     if need.kind == "digital":
         return True
     if need.kind != "service":
+        return False
+    cat = need.category or {}
+    if cat.get("path_ids"):
+        if cat.get("kind") == "digital" or cat["path_ids"][0] in TAXO_KIND_ROOTS:
+            return True
         return False
     return not any(detect_service(t or "")[0] for t in (need.thing, need.raw))
 
@@ -482,6 +496,153 @@ def _kind_rules(need: Need, raw: str, conds: list[Condition]) -> None:
             need.conditions = ["service"]
         elif conds:
             need.conditions = conds
+
+
+# ---------------------------------------------------------------- category context (agora.taxonomy)
+# A hunt started from the category tree knows what it is looking for: the node's kind (a gunsmith is a
+# service, never a gun or a manga called 'Gunsmith Cats'), its lanes, size class, where to look, and its
+# labels in the local languages. A typed hunt gets the same context from taxonomy.classify when it is sure.
+
+CLASSIFY_MIN_CONFIDENCE = 0.6
+CLASSIFY_MIN_SCORE = 0.85      # 'sony a7 iii' -> 'Sulphates' (0.71 sure, score 0.72) is no category at all
+FLIP_MIN_SCORE = 1.0           # a typed need becomes a service only on a strong service node...
+FLIP_MIN_MARGIN = 0.3          # ...clearly ahead of the best product node ('sauna' is a thing to buy too)
+NO_FLIP_ROOTS = {"food-drink"}  # 'pizza' is a restaurant node, but a price hunt for pizza is not a trade
+TREE_KINDS = {"service": "service", "digital": "digital"}   # vehicle / property / food / product -> product
+_LANG_OF_LOCAL = {"fi": "fi", "de": "de", "nl": "nl", "se": "sv", "sv": "sv", "dk": "da", "da": "da", "no": "nb",
+                  "nb": "nb", "fr": "fr", "es": "es", "it": "it", "pl": "pl", "pt": "pt", "cz": "cs", "cs": "cs"}
+
+
+def _taxonomy() -> Any | None:
+    try:
+        from agora import taxonomy
+        taxonomy.load()
+        return taxonomy
+    except Exception:
+        return None
+
+
+def category_words(node: dict[str, Any]) -> dict[str, Any]:
+    """The node's names to search with: its labels per language, synonyms, and the trade's local words
+    (agora.discover.SERVICE_LOCAL) when the tree only has an English label ('Gunsmith' -> 'aseseppä')."""
+    labels = {k: v for k, v in (node.get("labels") or {}).items() if isinstance(v, str) and v}
+    svc = detect_service(labels.get("en") or node.get("label") or "")[0]
+    try:
+        from agora.discover import SERVICE_LOCAL
+        local = SERVICE_LOCAL.get(svc or "", {})
+    except Exception:
+        local = {}
+    for key, word in local.items():
+        lang = _LANG_OF_LOCAL.get(key, key)
+        labels.setdefault(lang, word)
+    return {"labels": labels, "synonyms": list(node.get("synonyms") or [])[:12], "service": svc}
+
+
+def category_info(node_id: str, *, source: str = "tree", confidence: float = 1.0) -> dict[str, Any] | None:
+    """A taxonomy node as hunt context (None when the id is unknown or the tree is missing)."""
+    tax = _taxonomy()
+    if tax is None or not node_id:
+        return None
+    nid = tax.load().resolve(str(node_id))
+    node = tax.node(nid) if nid else None
+    if node is None:
+        return None
+    words = category_words(node)
+    domains = [w for w in node.get("where") or [] if w.get("lane") != "comparison"]
+    return {"id": node["id"], "label": node["label"], "path": node["path"], "path_ids": node["path_ids"],
+            "kind": node["kind"], "lanes": node.get("lanes") or [], "size": node.get("size"),
+            "bulky": bool(node.get("bulky")), "domains": domains[:12], "labels": words["labels"],
+            "synonyms": words["synonyms"], "service": words["service"], "source": source,
+            "confidence": round(float(confidence), 3)}
+
+
+def apply_category(need: Need, cat: dict[str, Any]) -> Need:
+    """Fit the need to its category: the kind (service / digital / product), the lanes (conditions) and, for
+    a hunt from the tree, the trade's canonical name so the local-language queries know the job."""
+    need.category = cat
+    tree_kind = TREE_KINDS.get(cat.get("kind") or "", "product")
+    if tree_kind in ("service", "digital"):
+        need.kind = tree_kind          # type: ignore[assignment]
+        need.conditions = ["service"] + (["rental"] if "rental" in need.conditions else [])
+        svc = cat.get("service")
+        if svc and svc not in need.must_have and svc not in need.thing:
+            need.must_have.insert(0, svc)
+        return need
+    need.kind = "product"
+    lanes = [c for c in (cat.get("lanes") or []) if c in ("new", "used", "refurbished", "rental")]
+    asked = [c for c in need.conditions if c != "service"]
+    if not asked or asked == ["new", "refurbished", "used"] or asked == ["service"]:
+        need.conditions = lanes or ["new", "refurbished", "used"]   # type: ignore[assignment]
+    return need
+
+
+def categorize(need: Need, category: str | None = None) -> dict[str, Any] | None:
+    """Attach the category context; returns the `category` event payload {id, path, kind, confidence,
+    source: "tree" | "classified"} or None.
+
+    category given (a hunt from the tree): that node decides the kind, always.
+    Typed text: taxonomy.classify (confidence >= CLASSIFY_MIN_CONFIDENCE), combined with the rules: a need the
+    rules made a service stays one and gains the node's words; a need the rules left a product becomes a
+    service only on a strong, unambiguous service node with no condition words ('used ...') and no object
+    head ('laptop for ...'); otherwise the node is attached only when its kind agrees."""
+    if category:
+        cat = category_info(category, source="tree", confidence=1.0)
+        if cat is None:
+            return None
+        apply_category(need, cat)
+        return _cat_event(cat)
+    tax = _taxonomy()
+    if tax is None:
+        return None
+    try:
+        c = tax.classify(need.raw)
+    except Exception:
+        c = None
+    def weak(x: dict[str, Any] | None) -> bool:
+        return not x or (x.get("confidence") or 0) < CLASSIFY_MIN_CONFIDENCE \
+            or (x.get("score") or 0) < CLASSIFY_MIN_SCORE
+    if weak(c) and need.kind == "service":
+        svc = detect_service(need.raw)[0]
+        try:   # 'aseseppä helsinki', 'wapensmid amsterdam' -> the trade's English name finds the node
+            c2 = tax.classify(svc) if svc else None
+        except Exception:
+            c2 = None
+        c = c2 if not weak(c2) else c
+    if weak(c):
+        return None
+    cat = category_info(c["id"], source="classified", confidence=c.get("confidence") or 0)
+    if cat is None:
+        return None
+    node_kind = TREE_KINDS.get(cat["kind"], "product")
+    if need.kind in ("service", "digital"):
+        if node_kind == "product":
+            return None                 # the rules' words beat a weak product guess
+        need.category = cat
+        if not need.must_have and cat.get("service") and cat["service"] not in need.thing:
+            need.must_have.insert(0, cat["service"])
+        return _cat_event(cat)
+    if node_kind == "product":
+        need.category = cat
+        return _cat_event(cat)
+    # the rules said product, the tree says service: flip only when the tree is sure and nothing says object
+    if need.conditions not in (["new", "refurbished", "used"], ["new"]) or product_head(need.thing) \
+            or vehicle_need(need.thing) or cat["path_ids"][0] in NO_FLIP_ROOTS \
+            or (c.get("score") or 0) < FLIP_MIN_SCORE:
+        return None
+    try:
+        prod = tax.search(c.get("query") or need.thing, limit=1, kind="product")
+    except Exception:
+        prod = []
+    if prod and (c.get("score") or 0) - prod[0]["score"] < FLIP_MIN_MARGIN:
+        return None
+    apply_category(need, cat)
+    return _cat_event(cat)
+
+
+def _cat_event(cat: dict[str, Any]) -> dict[str, Any]:
+    return {"id": cat["id"], "label": cat["label"], "path": cat["path"], "kind": cat["kind"],
+            "confidence": cat["confidence"], "source": cat["source"], "lanes": cat["lanes"],
+            "size": cat.get("size"), "domains": [d["domain"] for d in cat.get("domains") or []][:8]}
 
 
 # ---------------------------------------------------------------- Gemini (optional)

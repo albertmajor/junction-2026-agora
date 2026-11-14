@@ -389,7 +389,7 @@ def pair_images(page_html: str, rows: list[dict], page_url: str = "", title_key:
     nearest link of ANOTHER listing in between ends the claim. An <img> whose alt text matches a row's title
     belongs to that row outright. A row whose own card only holds a placeholder (no_thumbnail.svg, data:)
     gets no image rather than its neighbour's. A photo claimed by more than one row is dropped for all."""
-    out = [dict(r) for r in rows]
+    out = [{**r, "image": r.get("image") or None} for r in rows]
     if not out:
         return out
     paths = [_norm_path(str(r.get("url") or "")) for r in out]

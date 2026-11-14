@@ -113,6 +113,9 @@ SERVICE_LOCAL: dict[str, dict[str, str]] = {
                  "es": "clases particulares", "it": "ripetizioni", "pl": "korepetycje"},
     "massage": {"nl": "massage", "de": "Massage", "fi": "hieronta", "se": "massage", "fr": "massage",
                 "es": "masaje", "it": "massaggio", "pl": "masaż"},
+    "gunsmith": {"fi": "aseseppä", "de": "Büchsenmacher", "nl": "wapensmid", "se": "vapensmed", "dk": "bøssemager",
+                 "no": "børsemaker", "fr": "armurier", "es": "armero", "it": "armaiolo", "pl": "rusznikarz",
+                 "pt": "armeiro", "cz": "puškař"},
 }
 
 # service marketplaces and directories per country: one search page there lists many providers
@@ -360,12 +363,39 @@ def service_name(need: Need) -> str | None:
     return None
 
 
+ISO_OF_LOCAL = {"se": "sv", "dk": "da", "no": "nb", "cz": "cs"}
+
+
+def local_words(need: Need, lang: str | None) -> str | None:
+    """The job in the local language: the trade's word (SERVICE_LOCAL), else the category node's label in that
+    language (a hunt from the tree: 'Gunsmith' -> 'aseseppä'), else None."""
+    if not lang:
+        return None
+    svc = service_name(need)
+    if w := SERVICE_LOCAL.get(svc or "", {}).get(lang):
+        return w
+    labels = (need.category or {}).get("labels") or {}
+    return labels.get(ISO_OF_LOCAL.get(lang, lang)) or None
+
+
 def local_service_query(need: Need, lang: str) -> str:
     """'home cleaning' in Tilburg -> 'schoonmaker Tilburg prijs per uur'."""
-    thing_q = _thing_q(need)
-    svc = service_name(need)
-    words = SERVICE_LOCAL.get(svc or "", {}).get(lang) or thing_q
+    words = local_words(need, lang) or _thing_q(need)
     return re.sub(r"\s+", " ", f"{words} {need.where or ''} {LOCAL[lang]['service']}").strip()
+
+
+def category_sites(need: Need, cc: str | None) -> list[str]:
+    """Where-to-look domains of the need's category node for its service lane: the node's own, and inherited
+    ones of the searched country (tori.fi for Finland; never care.com for a gunsmith)."""
+    cat = need.category or {}
+    out: list[str] = []
+    for d in cat.get("domains") or []:
+        dom = str(d.get("domain") or "")
+        if not dom or d.get("lane") not in ("service", None):
+            continue
+        if d.get("from") == cat.get("id") or (cc and tld(dom) == cc.lower()):
+            out.append(dom)
+    return out
 
 
 def _thing_q(need: Need) -> str:
@@ -377,13 +407,14 @@ def _thing_q(need: Need) -> str:
 def service_market_query(need: Need, cc: str | None) -> tuple[str, str | None, list[str]] | None:
     """One search inside the country's service marketplaces (werkspot, helpling, myhammer ...): their city
     pages list many providers, each read as its own offer. None when the country has none we know."""
-    domains = SERVICE_MARKETS.get(cc or "")
+    domains = list(SERVICE_MARKETS.get(cc or "", ()))
+    domains += [d for d in category_sites(need, cc) if d not in domains]
     if not domains:
         return None
-    lang = lang_of(need, cc)
-    words = SERVICE_LOCAL.get(service_name(need) or "", {}).get(lang or "") or _thing_q(need)
+    lang = lang_of(need, cc) or (_lang(cc) if not need.where else None)
+    words = local_words(need, lang) or _thing_q(need)
     q = re.sub(r"\s+", " ", f"{words} {need.where or ''}").strip()
-    return q, cc, list(domains)
+    return q, cc, domains
 
 
 def is_service_directory(url: str, title: str = "") -> bool:
@@ -550,7 +581,13 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
         return period_plan(need, cc)
     if lane == "service":
         out_s: list[Any] = list(query_plan(need, lane, 2)[:2])
-        market = service_market_query(need, cc)
+        home = home_country() if cc is None else None
+        if cc is None and home and (lang_h := _lang(home)) and len(out_s) < 2:
+            # no place asked: the job in the home country's language, there ('aseseppä hinta' in Finland)
+            words = local_words(need, lang_h)
+            if words:
+                out_s.append((re.sub(r"\s+", " ", f"{words} {LOCAL[lang_h]['service']}").strip(), home))
+        market = service_market_query(need, cc or home)
         if market is not None and avail >= MARKET_MIN_TOKENS:
             out_s.append(market)          # (query, country, include_domains)
         return out_s

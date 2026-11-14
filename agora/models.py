@@ -19,6 +19,9 @@ class Need:
     where: str | None = None         # city / country hint
     conditions: list[Condition] = field(default_factory=lambda: ["new", "refurbished", "used"])
     must_have: list[str] = field(default_factory=list)
+    # the node of agora.taxonomy this need is about (a hunt started from the category tree, or a confident
+    # classification): {id, label, path, kind, lanes, size, domains, words, source, confidence}. None = unknown.
+    category: dict[str, Any] | None = None
 
 
 @dataclass

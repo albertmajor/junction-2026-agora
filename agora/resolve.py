@@ -747,6 +747,8 @@ def relevance(need: Need, offer: Offer) -> float:
     """0..1: how well this offer answers the need."""
     if not_an_offer(offer):
         return 0.0
+    if kind_mismatch(need, offer):
+        return 0.05            # a gun for a gunsmith hunt, a repair rate for a product hunt
     ns = signature(need.thing)
     os_ = signature(offer.title or "", offer.brand)
     title_toks = set(tokenize(offer.title or "")) | os_.words | set(os_.models)
@@ -807,6 +809,13 @@ SERVICE_NOUNS: tuple[frozenset[str], ...] = (
                "handwerker", "allrounder", "talonmies", "remonttimies", "fixare", "hantverkare", "vicevaert",
                "bricoleur", "manitas", "tuttofare", "fachowiec"}),
 )
+GUNSMITH_GROUP = frozenset({"gunsmith", "gunsmiths", "gunsmithing", "aseseppa", "asesepat", "asesepan", "asesepalla",
+                            "asesepalle", "asesepaksi", "asekorjaamo", "asekorjaus", "asehuolto", "asepaja",
+                            "buchsenmacher", "buchsenmacherei", "buchsenmachermeister", "waffenschmied",
+                            "waffenwerkstatt", "wapensmid", "geweermaker", "vapensmed", "bossemager", "bøssemager",
+                            "borsemaker", "børsemaker", "armurier", "armurerie", "armero", "armaiolo", "rusznikarz",
+                            "puskar", "armeiro"})
+SERVICE_NOUNS = SERVICE_NOUNS + (GUNSMITH_GROUP,)
 CLEANING_GROUP, PLUMBER_GROUP, ELECTRICIAN_GROUP, HANDYMAN_GROUP = (SERVICE_NOUNS[1], SERVICE_NOUNS[4],
                                                                     SERVICE_NOUNS[5], SERVICE_NOUNS[6])
 # open-ended trades: the job is unknown until they come, so the fair comparison is a standard call
@@ -903,6 +912,127 @@ def off_topic_reason(need: Need, offer: Offer) -> str | None:
         m = OFF_TOPIC[g].search(_fold(offer.title or "")) if g in OFF_TOPIC else None
         return f"a different service ({m.group(0) if m else 'other'}), not {need.thing}"
     return None
+# ---------------------------------------------------------------- product vs service (per listing)
+# A service need never takes a thing for sale (a gun, a scope, a manga called 'Gunsmith Cats'); a product need
+# never takes a service ad (a repair shop's hourly rate). Judged per listing from its title, description, unit
+# and page type; no site is ever blocked.
+SERVICE_UNITS = {"hour", "h", "job", "visit", "m2", "session", "lesson", "day", "month", "year", "week", "night",
+                 "person", "project"}
+SERVICE_WORDING = re.compile(
+    r"\b(?:services?|servicing|repairs?|repairing|maintenance|installation|install|fitting|mounting|cleaning|"
+    r"overhaul|restoration|refinish\w*|cerakote|bluing|blueing|engraving|alteration\w*|inspection|appointment|"
+    r"workshop|price\s*list|pricelist|rates?|labou?r|per\s+hour|hourly|an\s+hour|/\s?h\b|/\s?hr\b|per\s+job|"
+    r"huolto\w*|korjau\w*|korjaamo\w*|asennu\w*|kiikaroin\w*|tyo|tyot|tyon|tyota|tuntihinta|hinnasto\w*|palvelu\w*|"
+    r"reparatur\w*|wartung|instandsetzung|werkstatt|einschiessen|montage|stundensatz|preisliste|dienstleistung\w*|"
+    r"onderhoud|reparatie\w*|werkplaats|uurtarief|prijslijst|reparation\w*|underhall|verkstad|timpris|prislista|"
+    r"tjanst\w*|entretien|atelier|tarifs?|riparazion\w*|naprawa|serwis)\b", re.I)
+# a thing whose name merely contains the trade's word: books, manga, films, games, merch, toys
+MEDIA_MERCH = re.compile(
+    r"\b(?:manga|anime|comics?|graphic\s+novel|novel|books?|paperback|hardcover|ebook|kirja\w*|sarjakuva\w*|"
+    r"buch|bucher|boek|boeken|bok|bocker|livre|libro|fumetto|ksiazka|komiks|tlumaczenie|tłumaczenie|"
+    r"volume|vol\.?\s*\d|tom\s*\d|band\s*\d|osa\s*\d|dvd|blu-?ray|vhs|film|movie|elokuva|soundtrack|vinyl|"
+    r"\bcd\b|album|video\s*game|ps[2-5]|playstation|xbox|nintendo|switch\s+game|pc\s+game|steam\s+key|"
+    r"board\s*game|lautapeli|brettspiel|poster|julisteet?|t-?shirt|hoodie|paita|sticker|tarra|mug|muki|"
+    r"figure|figuuri|figurine|action\s+figure|lego|toy|lelu|spielzeug|cosplay|costume|keychain|avaimenperä|"
+    r"magazine|lehti|zeitschrift)\b", re.I)
+# a thing for sale: listing wording and, for the gun trade, the guns and parts themselves
+FOR_SALE = re.compile(
+    r"\b(?:for\s+sale|myydaan|myyd\w*|myynnissa|zu\s+verkaufen|verkaufe|te\s+koop|saljes|til\s+salgs|"
+    r"a\s+vendre|se\s+vende|vendo|sprzedam|brand\s+new|new\s+in\s+box|nib|unused|kayttamaton|"
+    r"kaytetty|gebraucht|tweedehands|begagnad|used|shipping|toimitus|versand|in\s+stock|varastossa|"
+    r"add\s+to\s+cart|lisaa\s+ostoskoriin|warenkorb)\b", re.I)
+GUN_ITEMS = re.compile(
+    r"\b(?:rifles?|shotguns?|pistols?|revolvers?|handguns?|airguns?|air\s+rifle|scopes?|riflescope|"
+    r"kivaari\w*|haulikko\w*|pistooli\w*|revolveri\w*|ilmakivaari\w*|kiikaritahtain\w*|kiikari\w*|"
+    r"tahtain\w*|aanenvaimen\w*|vaimennin|lipas|lippaat|patruun\w*|ammo|ammunition|cartridges?|"
+    r"gewehr\w*|buchse|flinte|zielfernrohr|schalldampfer|munition|geweer|jachtgeweer|vapen\b|gevar|"
+    r"stocks?|magazines?|barrels?|holsters?|gun\s+safe|asekaappi|waffenschrank|bipod)\b", re.I)
+# marketplaces of goods only (no service ads): a listing there is a thing unless it states a rate or the work
+GOODS_ONLY = ("vinted.", "ebay.", "backmarket.", "amazon.", "refurbed.", "swappie.", "rebuy.", "momox.", "etsy.",
+              "zalando.", "aliexpress.", "temu.", "wish.com", "huuto.net", "tradera.com", "catawiki.")
+_MARKET_SPLIT = ("contextdev_markdown_split", "contextdev_list", "jsonld_itemlist")
+
+
+def service_label(need: Need) -> str:
+    """How the hunt names the service asked for: 'gunsmith', 'home cleaning'."""
+    cat = need.category or {}
+    if cat.get("label") and cat.get("source") == "tree":
+        return str(cat["label"]).lower()
+    return (need.thing or "").strip() or "that"
+
+
+def _service_signal(offer: Offer, text: str) -> bool:
+    if (offer.unit or "").lower() in SERVICE_UNITS:
+        return True
+    return bool(SERVICE_WORDING.search(text))
+
+
+def _listing_text(offer: Offer) -> str:
+    raw = offer.raw if isinstance(offer.raw, dict) else {}
+    return _fold(" ".join([offer.title or "", str(raw.get("description") or "")[:600],
+                           str(raw.get("search_text") or "")[:300]]))
+
+
+def kind_mismatch(need: Need, offer: Offer) -> str | None:
+    """Reason a listing is the wrong KIND of offer for the need, else None.
+    Service need: a thing for sale (a book / manga / game / merch whose title merely holds the trade's word, a
+    marketplace or product-page listing with no service wording, a gun or part) -> "a product, not a
+    gunsmith service". Product need: a service ad (an hourly / per-job rate, a repair shop's price list)
+    -> "a service, not a <thing>"."""
+    raw = offer.raw if isinstance(offer.raw, dict) else {}
+    title = _fold(offer.title or "")
+    text = _listing_text(offer)
+    if need.kind in ("service", "digital"):
+        if need.kind == "digital":
+            return None
+        label = service_label(need)
+        asked = _fold(f"{need.thing} {' '.join(need.must_have)}")
+        media = MEDIA_MERCH.search(title)
+        if media and not MEDIA_MERCH.search(asked) and (offer.unit or "").lower() not in SERVICE_UNITS:
+            return f"a product, not a {label} service (a book, film or merch item that only shares the name: {media.group(0).strip()})"
+        if _service_signal(offer, title + " " + text):
+            return None
+        gun = GUN_ITEMS.search(title)
+        if gun and not GUN_ITEMS.search(asked):
+            return f"a product, not a {label} service (a gun or part for sale)"
+        goods_only = any(d in (offer.source or "") for d in GOODS_ONLY)
+        g = service_group(need)
+        if not goods_only and g is not None and any(
+                x in set(re.findall(r"\w+", title)) or (len(x) >= 6 and x in title) for x in g):
+            return None           # the listing names the trade itself ('Putzhilfe', 'Aseseppä Virtanen')
+        try:
+            from agora.need import priced_per_period
+            if priced_per_period(need):
+                return None       # a SaaS / B2B plan page looks like a product page: only titles above count
+        except Exception:
+            pass
+        page_product = (offer.read_via == "contextdev_product" or raw.get("step") in _MARKET_SPLIT
+                        or bool(raw.get("grade")) or bool(raw.get("shutter_count"))
+                        or any(raw.get(k) for k in ("gtin14", "gtin13", "gtin12", "gtin8")))
+        try:
+            from agora import discover
+            market = discover.is_marketplace(offer.source or "") and not any(
+                discover.dom_match(offer.source or "", d) for d in discover.SERVICE_DIRECTORIES)
+        except Exception:
+            market = False
+        sale = FOR_SALE.search(text)
+        if goods_only or page_product or market or sale or offer.shipping_eur:
+            return f"a product, not a {label} service"
+        return None
+    if "rental" in need.conditions:
+        return None
+    unit = (offer.unit or "").lower()
+    if offer.condition == "service" or unit in ("hour", "h", "visit", "session", "lesson"):
+        return f"a service, not a {need.thing}"
+    asked = _fold(need.thing)
+    if SERVICE_WORDING.search(asked):
+        return None                    # 'repair kit', 'cleaning robot': the need itself uses the words
+    if re.search(r"\b(?:per\s+hour|hourly|/\s?h\b|tuntihinta|stundensatz|uurtarief|timpris|hinnasto|"
+                 r"price\s*list|preisliste|prijslijst)\b", title) and not re.search(r"\d\s*(?:km|w|wh|mah)\s*/\s?h", title):
+        return f"a service, not a {need.thing}"
+    return None
+
+
 _JOB_SIZE = re.compile(r"^\d+(?:[.,]\d+)?(?:m2|m²|sqm|nelio\w*)?$")
 # a bike shop's motorbike page shares 'pyora' and 'huolto'; a car garage shares 'repair'
 _SERVICE_CLASH = {"bike": re.compile(r"moottori|motor(?:cycle|rad|bike)|\bmopo|skootteri|\bauto(?!ma)|\bcar\b", re.I)}
@@ -952,6 +1082,8 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
     if r >= threshold:
         return r, None
     if why := not_an_offer(offer):
+        return r, why
+    if why := kind_mismatch(need, offer):
         return r, why
     if need.kind == "service":
         return r, off_topic_reason(need, offer) or "not that service (the page does not name the job)"

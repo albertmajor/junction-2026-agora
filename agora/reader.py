@@ -1418,6 +1418,11 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
     out: list[Offer] = []
     said = {"refurbished": "refurbished", "new": "new"}.get(site.lane)
     rows = marketplaces.split_rows(md, page_html, site)
+    try:  # each row gets the photo from its own card (no neighbour's photo, no seller logo)
+        from agora import images as _images
+        rows = _images.pair_rows_for_reader(rows, page_html, page_url)
+    except Exception:
+        pass
     market = note_market(page_url, site, md[:20000], len(rows))
     for row in rows:
         url = listing_url(row["url"], page_url)
@@ -1478,7 +1483,14 @@ def registry_page_url(rec: dict, site: Any, url: str, n: int) -> str | None:
         return None
 
 
-def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | None, site: Any, page: int) -> list[Offer]:
+def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | None, site: Any, page: int,
+                    html: str = "") -> list[Offer]:
+    if html:
+        try:
+            from agora import images as _images
+            rows = _images.pair_rows_for_reader(rows, html, page_url)
+        except Exception:
+            pass
     out: list[Offer] = []
     said = {"refurbished": "refurbished", "new": "new"}.get(getattr(site, "lane", ""))
     for row in rows:
@@ -1487,7 +1499,7 @@ def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | Non
         amount, cur = parse_price(row.get("price"), row.get("currency"), domain_of(page_url))
         if u is None or not title or amount is None:
             continue
-        o = _list_offer(u, page_url, title, amount, cur, need, hint, schema_cond=None, said_cond=said, image=None,
+        o = _list_offer(u, page_url, title, amount, cur, need, hint, schema_cond=None, said_cond=said, image=_abs_image(row.get("image"), page_url),
                         location=None, via="plain_split", step="plain_split")
         o.raw["page"] = page
         if row.get("text"):
@@ -1503,7 +1515,8 @@ async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str
     status, html = await fetch_html(url)
     if status != 200 or not html or looks_blocked(status, html):
         return [], 0
-    first = _rows_to_offers(_src.rows_from_html(html, url, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, 1)
+    first = _rows_to_offers(_src.rows_from_html(html, url, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, 1,
+                           html=html)
     if not first:
         return [], 0
     out, pages = list(first), 1
@@ -1519,7 +1532,8 @@ async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str
             st, h = await fetch_html(u)
         if st != 200 or not h or looks_blocked(st, h):
             return []
-        got = _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, k)
+        got = _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, k,
+                              html=h)
         return [o for o in got if o.url not in seen]
 
     n = 2

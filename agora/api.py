@@ -216,7 +216,7 @@ def api_index() -> dict[str, Any]:
             "GET /reviews?hunt_id=&domains=": "SSE: seller reviews after a hunt (review events, then done)",
             "GET|POST /demo/story/refusal?pause=1.5": "SSE: watcher skips, buys, refuses a hidden fee, catches a tampered log",
             "GET|POST /demo/buy?pause=1.2": "SSE: lie detector, haggle counter-offer, auto-buy under open->closed mandates, proof",
-            "GET /hunt?q=": "SSE stream of hunt Events (optional &max_sources=N caps pages read, &depth=2 reads deeper) (need, lane, source, offer, skip, thing, truecost, verdict, budget, done, error)",
+            "GET /hunt?q=": "SSE stream of hunt Events (optional &max_sources=N caps pages read, &depth=2 reads deeper, &cat=<category id> hunts inside that category) (need, lane, source, offer, skip, thing, truecost, verdict, budget, done, error)",
             "POST /watches": "create a watch {query|need, max_eur|max_price_eur, rule, action, mandate, pinned_urls, use_hunt}",
             "GET /watches": "list watches",
             "POST /watches/{id}/check": "run a watch check now",
@@ -258,6 +258,8 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
                                              "this many seconds (0 = real pace, the honest default)"),
                       depth: int | None = Query(None, ge=1, le=3, description="'Compare more': read deeper "
                                                 "(2-3; more pages, more time)"),
+                      cat: str | None = Query(None, max_length=120, description="category tree node id the hunt "
+                                              "started from (its kind, lanes and local words steer the hunt)"),
                       ) -> StreamingResponse:
     if replay is not None:
         slug = hunt_mod.slugify(q) if replay in ("", "1", "auto", "true") else replay
@@ -270,6 +272,8 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
         kw: dict[str, Any] = {"max_sources": max_sources} if max_sources else {}
         if depth and depth > 1 and replay is None:
             kw = _depth_kwargs(depth, kw)
+        if cat and replay is None and "category" in inspect.signature(hunt_mod.hunt).parameters:
+            kw["category"] = cat
         stream = (hunt_mod.replay(slug, speed, max_gap_ms=max_gap * 1000 if max_gap else None) if replay is not None
                   else hunt_mod.hunt(q, result=res, **kw))
         try:
@@ -281,6 +285,9 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
                 _cut = _module("cutout")
                 if _cut is not None:
                     _cut.remember_event(e)   # live offer photos may be cut out (allowlist guard)
+                _img = _module("images")
+                if _img is not None and hasattr(_img, "remember_event"):
+                    _img.remember_event(e)   # live listing pages may be looked up for their photo
                 yield sse(e)
         finally:
             await stream.aclose()

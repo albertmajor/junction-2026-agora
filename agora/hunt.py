@@ -470,6 +470,7 @@ async def hunt(
     longtail: bool = True,
     depth: int = 1,
     check_pick: bool = True,
+    category: str | None = None,
 ) -> AsyncIterator[Event]:
     """Run one hunt, yielding Events as they happen. Pass `result` to also collect the final objects.
 
@@ -479,7 +480,12 @@ async def hunt(
 
     `depth` ("Compare more", 1-3): 2-3 read deeper. More pages (max_sources x depth, <= 60, unless a cap was
     passed), a longer budget (x1.5 / x2), more free tori pages (reader.READ_DEPTH) and page 2-3 of the paid
-    marketplaces while the shared bucket allows (discover(pages=depth) -> marketplaces.direct_pages)."""
+    marketplaces while the shared bucket allows (discover(pages=depth) -> marketplaces.direct_pages).
+
+    `category` (a node id of agora.taxonomy, from a hunt started in the category tree): the need takes that
+    node's kind (a service node runs service lanes only), lanes, size, where-to-look and local words, and a
+    `category` event {id, path, kind, confidence, source: "tree"} follows the `need` event. Without it a typed
+    need is classified (need.categorize, confidence >= 0.6): source "classified"."""
     t0 = time.monotonic()
     depth = max(1, min(3, int(depth or 1)))
     if depth > 1:
@@ -556,14 +562,24 @@ async def hunt(
             return
         trust_tasks.append(asyncio.create_task(trust_mod.prefetch(list(out.offers), budget_s=3)))
 
-    # 1 NEED
+    # 1 NEED (+ its category: from the tree when the hunt started there, else classified when sure)
+    real_parse = parse_need is getattr(_module("need"), "parse_need", None)
     try:
         need = parse_need(text)
     except Exception as exc:
         yield ev("error", where="need", message=str(exc))
         need = _fallback_parse_need(text)
+    cat_event: dict[str, Any] | None = None
+    need_mod = _module("need")
+    if need_mod is not None and hasattr(need_mod, "categorize") and (category or real_parse):
+        try:
+            cat_event = need_mod.categorize(need, category)
+        except Exception as exc:
+            yield ev("error", where="category", message=f"{type(exc).__name__}: {exc}"[:300])
     out.need = need
     yield ev("need", need=to_dict(need), hunt_id=hunt_id)
+    if cat_event is not None:
+        yield ev("category", **cat_event)
 
     # warm the FX table off the event loop (first use may hit frankfurter.app once a day)
     fx = _module("fx")
