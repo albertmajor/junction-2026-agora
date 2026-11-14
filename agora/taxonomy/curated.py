@@ -557,14 +557,14 @@ SERVICES: dict[str, dict] = {
 # the first node (shallowest) with that label gets them. Mostly shopper words and model names.
 SYNONYMS: dict[str, str] = {
     "Bicycles": "bike, bikes, polkupyörä, pyörä, fahrrad, fiets, cykel, velo",
-    "City Bicycles": "city bike, citybike, kaupunkipyörä, stadsfiets, stadscykel, cityrad, hollandrad, commuter bike",
-    "Mountain Bicycles": "mtb, maastopyörä, mountainbike",
-    "Electric Bicycles": "e-bike, ebike, sähköpyörä, pedelec, elcykel, elektrische fiets",
+    "City Bikes": "city bike, citybike, kaupunkipyörä, stadsfiets, stadscykel, cityrad, hollandrad, commuter bike",
+    "Mountain Bikes": "mtb, maastopyörä, mountainbike",
+    "Electric Bikes": "e-bike, ebike, sähköpyörä, pedelec, elcykel, elektrische fiets",
     "Video Game Consoles": "console, pelikonsoli, spielkonsole, spelkonsol, ps5, ps4, playstation, xbox, nintendo switch, "
                            "switch 2, steam deck",
     "Game Controllers": "controller, gamepad, ohjain, peliohjain, dualsense, dualshock, joy-con, ps5 controller, "
                         "xbox controller",
-    "Mobile Phones": "phone, smartphone, puhelin, älypuhelin, handy, telefoon, mobiltelefon, iphone, samsung galaxy, pixel",
+    "Mobile & Smart Phones": "phone, smartphone, puhelin, älypuhelin, handy, telefoon, mobiltelefon, iphone, samsung galaxy, pixel",
     "Laptops": "notebook, kannettava, läppäri, macbook, chromebook, bärbar dator",
     "Tablet Computers": "tablet, ipad, tabletti, surfplatta",
     "Televisions": "tv, telkkari, televisio, fernseher, televisie, oled, qled",
@@ -572,7 +572,7 @@ SYNONYMS: dict[str, str] = {
     "Sofas": "couch, sohva, sofa, bank, soffa",
     "Washing Machines": "pesukone, waschmaschine, wasmachine, tvättmaskin",
     "Refrigerators": "fridge, jääkaappi, kühlschrank, koelkast, kylskåp",
-    "Strollers": "pram, buggy, rattaat, lastenrattaat, kinderwagen, barnvagn, kinderwagen",
+    "Baby Strollers": "pram, buggy, rattaat, lastenrattaat, kinderwagen, barnvagn, kinderwagen",
     "Cars, Trucks & Vans": "car, auto, cars, used car, käytetty auto, gebrauchtwagen, occasion, begagnad bil",
     "Motorcycles & Scooters": "motorbike, moottoripyörä, motorrad, motor, motorcykel, moped, mopo",
     "Bookcases & Standing Shelves": "bookshelf, kirjahylly, bücherregal, boekenkast, bokhylla, kallax, billy",

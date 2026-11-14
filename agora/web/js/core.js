@@ -225,11 +225,14 @@ export function isSetAside(item) {
   return flags.some(f => SET_ASIDE_RE.test(typeof f === 'string' ? f : JSON.stringify(f)));
 }
 
+const NF = {};
 export function eur(n, { dp } = {}) {
   if (n == null || !isFinite(n)) return '€–';
   const neg = n < 0; const a = Math.abs(n);
   const d = dp != null ? dp : (a < 100 && a % 1 !== 0 ? 2 : 0);
-  const s = a.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  // one formatter per precision: toLocaleString builds a new one per call (hundreds of offers, many labels)
+  const nf = NF[d] || (NF[d] = new Intl.NumberFormat('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const s = nf.format(a);
   return (neg ? '−' : '') + '€' + s;
 }
 

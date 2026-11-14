@@ -11,7 +11,7 @@ from agora import cli
 
 FIX = pathlib.Path(__file__).parent / "fixtures"
 TYPES = {"need", "lane", "source", "offer", "skip", "thing", "truecost", "verdict", "budget", "done", "error", "rank",
-         "late", "depreciation"}
+         "late", "depreciation", "scope", "market"}
 FILES = sorted(FIX.glob("live_*.jsonl"))
 
 

@@ -767,6 +767,8 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   assignLevels(list);
   fitStage(list);
   const seq = order || list.slice().sort((a, b) => a.x - b.x);
+  // read every in-flight position first (one style pass), then write: no read/write thrash per object
+  for (const o of seq) o.from0 = anims(o).length ? getComputedStyle(o.el).transform : undefined;
   const t0 = turnBusyUntil;
   seq.forEach((o, i) => {
     const to = `translate(${o.x.toFixed(1)}px, ${AX}px)`;
@@ -834,14 +836,35 @@ function applyKind(o) {
   o.el.classList.toggle('dot', o.kind !== 'full');
   if (o.el.tabIndex !== 0) o.el.tabIndex = -1;
 }
+// Each object keeps its own animations: element.getAnimations() forces a style pass per call, and with
+// hundreds of offers on the line that was most of the main thread (16 s of a 24 s hunt).
+function oAnim(o, kf, opts) {
+  const a = o.el.animate(kf, opts);
+  (o.anims || (o.anims = [])).push(a);
+  return a;
+}
+function anims(o) {
+  if (!o.anims || !o.anims.length) return [];
+  o.anims = o.anims.filter(a => {
+    const st = a.playState;
+    if (st === 'running' || st === 'pending' || st === 'paused') return true;
+    if (st !== 'finished') return false;
+    const f = a.effect && a.effect.getTiming ? a.effect.getTiming().fill : 'none';
+    return f === 'forwards' || f === 'both';
+  });
+  return o.anims;
+}
 function move(o, to, dur, delay = 0) {
-  if (o.cur === to && !o.el.getAnimations().length) return;
-  const from = o.el.getAnimations().length ? getComputedStyle(o.el).transform : o.cur;
-  o.el.getAnimations().forEach(a => a.cancel());
+  const busy = anims(o).length > 0;
+  const pre = o.from0; o.from0 = undefined;
+  if (o.cur === to && !busy) return;
+  // where it stands mid-glide: read before any write (layout() reads them all in one pass)
+  const from = busy ? (pre !== undefined ? pre : getComputedStyle(o.el).transform) : o.cur;
+  anims(o).forEach(a => a.cancel());
   o.el.style.transform = to;
   o.cur = to;
   if (dur > 0 && from && from !== 'none' && from !== to) {
-    o.el.animate([{ transform: from }, { transform: to }], { duration: dur, delay, easing: EASE, fill: 'backwards' });
+    oAnim(o, [{ transform: from }, { transform: to }], { duration: dur, delay, easing: EASE, fill: 'backwards' });
   }
 }
 function flyIn(o, to) {
@@ -852,9 +875,9 @@ function flyIn(o, to) {
     // the page's reading dot glides to its price and becomes the object
     const f = o.flyFrom; o.flyFrom = null;
     const s0 = o.kind === 'full' ? Math.max(0.06, 8 / faceH(o)) : 0.3;
-    o.el.getAnimations().forEach(a => a.cancel());
+    anims(o).forEach(a => a.cancel());
     o.el.style.transform = to; o.cur = to;
-    o.el.animate([
+    oAnim(o, [
       { transform: `translate(${f.x}px, ${f.y}px) scale(${s0})`, opacity: 1 },
       { transform: `translate(${o.x}px, ${AX}px) scale(${Math.min(1, s0 * 3)})`, opacity: 1, offset: 0.62 },
       { transform: to, opacity: 1 },
@@ -868,9 +891,9 @@ function flyIn(o, to) {
     if (r.width) src = { x: (hit ? r.left + r.width / 2 : r.left + 60) - sr.left, y: r.top + r.height / 2 - sr.top };
   }
   if (!src) src = { x: o.x, y: AX - 160 };
-  o.el.getAnimations().forEach(a => a.cancel());
+  anims(o).forEach(a => a.cancel());
   o.el.style.transform = to; o.cur = to;
-  o.el.animate([
+  oAnim(o, [
     { transform: `translate(${src.x}px, ${src.y}px) scale(.3)`, opacity: 0 },
     { transform: `translate(${o.x}px, ${AX - 24}px) scale(1)`, opacity: 1, offset: 0.72 },
     { transform: to, opacity: 1 },
@@ -902,7 +925,7 @@ function layoutVertical({ dur, stagger, list, rm }) {
     const to = `translate(0px, ${y}px)`;
     label(o);
     if (o.fly && !rm) {
-      o.el.getAnimations().forEach(a => a.cancel());
+      anims(o).forEach(a => a.cancel());
       o.el.style.transform = to; o.cur = to;
       const f = o.flyFrom; o.flyFrom = null;
       if (f) {
@@ -911,7 +934,7 @@ function layoutVertical({ dur, stagger, list, rm }) {
         o.face.animate([{ transform: `translate(${f.x - fl - s0 * fw / 2}px, ${f.y - y - fh / 2}px) scale(${s0})` }, { transform: 'none' }],
           { duration: T_DROP + 100, easing: EASE });
       } else {
-        o.el.animate([{ transform: `translate(0px, ${y - 24}px)`, opacity: 0 }, { transform: to, opacity: 1 }],
+        oAnim(o, [{ transform: `translate(0px, ${y - 24}px)`, opacity: 0 }, { transform: to, opacity: 1 }],
           { duration: T_DROP, easing: EASE, fill: 'backwards' });
       }
     } else move(o, to, rm ? 0 : dur, stagger * i);
@@ -1323,7 +1346,7 @@ function fadeTicks() {
 }
 function fadeOut(o) {
   if (reduced()) { o.el.style.opacity = '0'; return; }
-  o.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+  oAnim(o, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
 }
 function ringWinner() {
   for (const o of objs.values()) o.el.classList.remove('ringed');
@@ -1353,14 +1376,14 @@ function toTray(o, { delay = 0, instant = false, fast = false } = {}) {
   const done = () => { o.el.style.visibility = 'hidden'; addTrayRow(o); };
   if (instant || reduced() || !wasPlaced) { o.el.style.opacity = '0'; done(); return; }
   const from = getComputedStyle(o.el).transform;
-  o.el.getAnimations().forEach(a => a.cancel());
+  anims(o).forEach(a => a.cancel());
   const m = new DOMMatrix(from === 'none' ? undefined : from);
   const tx = m.e, ty = m.f;
   // down and out, under everything else, gone before the winner glides into its place
   o.el.style.zIndex = '0';
   const cap = o.el.querySelector('.ln-cap');
   if (cap) cap.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, delay, fill: 'forwards' });
-  const a = o.el.animate([
+  const a = oAnim(o, [
     { transform: `translate(${tx}px, ${ty}px) rotate(0deg)`, opacity: 1 },
     { transform: `translate(${tx + 4}px, ${ty + 14}px) rotate(8deg)`, opacity: .8, offset: 0.3 },
     { transform: `translate(${tx + 8}px, ${ty + 60}px) rotate(8deg)`, opacity: 0 },
@@ -1659,7 +1682,7 @@ export const line = {
       remove() {
         const done = () => { o.el.remove(); objs.delete(key); layout({ dur: T_DROP }); };
         if (reduced()) return done();
-        o.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).finished.then(done, done);
+        oAnim(o, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).finished.then(done, done);
       },
     };
   },
