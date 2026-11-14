@@ -59,3 +59,14 @@
   .pf-mascot { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .pf-mascot { transition: none; } .pf-word:hover .pf-mascot { transform: none; } }
+
+/* ---------- result, category and other pages: a small footer, shown only once listings are on screen ---------- */
+#app:not([data-phase="start"]) #rule.pf { margin-top: 56px; padding-top: 22px; }
+#app:not([data-phase="start"]) #rule.pf::before { border-radius: 18px 18px 0 0; }
+#app:not([data-phase="start"]) #rule.pf .pf-cols,
+#app:not([data-phase="start"]) #rule.pf .pf-word { display: none; }
+#app:not([data-phase="start"]) #rule.pf .pf-bar { padding: 6px 0 20px; }
+#app:not([data-phase="start"]) #rule.pf .pf-bar::before { display: none; }
+/* while a hunt is still loading, no footer until the first rows of the list have rendered */
+#app[data-phase="hunting"]:not(:has(.lg-r)) #rule.pf,
+#app[data-phase="asking"] #rule.pf { display: none; }
