@@ -68,5 +68,5 @@
 #app:not([data-phase="start"]) #rule.pf .pf-bar { padding: 6px 0 20px; }
 #app:not([data-phase="start"]) #rule.pf .pf-bar::before { display: none; }
 /* while a hunt is still loading, no footer until the first rows of the list have rendered */
-#app[data-phase="hunting"]:not(:has(.lg-r)) #rule.pf,
+#app[data-phase="hunting"]:not(:has(.lg-r:nth-child(4))) #rule.pf,
 #app[data-phase="asking"] #rule.pf { display: none; }
