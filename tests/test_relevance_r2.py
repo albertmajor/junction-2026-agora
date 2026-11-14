@@ -335,7 +335,7 @@ def test_model_coded_home_listing_a_little_under_the_floor_is_costed_not_picked(
 @pytest.mark.parametrize("title,url", [
     ("Hiustenleikkuu", "https://www.helsinkibarber.fi/fi"), ("Hiustenleikkaus, kampaamopalvelu", "https://www.cityhair.net/hinnasto"),
     ("Parturileikkaus", "https://timma.fi/yritys/janna-parturi-kampaamo-haaga"), ("Trim & Basic Cut", "https://www.onnihair.fi/pricing"),
-    ("M Cut™", "https://mroom.com/fi/parturit/helsinki/toolo/"), ("Leikkaus 15 min", "https://www.saloncaramel.fi/hinnasto/"),
+    ("M Cut™", "https://mroom.com/fi/parturit/helsinki/toolo/"), ("Leikkaus 30 min", "https://www.saloncaramel.fi/hinnasto/"),
     ("Ladies Hair Cut (Short) – Taper360", "https://www.fresha.com/a/taper360-helsinki-simonkatu-10-oziaz2fe")])
 def test_haircut_salons_name_the_job(title, url):
     assert kept(svc("haircut"), line(title, 35, url))

@@ -904,7 +904,7 @@ def title_red_flags(o: Offer, need: Need | None) -> list[tuple[str, str, str]]:
 # search results, category and list pages: the price is one of many items, the url is not a listing
 LIST_URL = re.compile(
     r"/(?:s|sc|sch|search|searchpage(?:\.jsp)?|haku|suche|b|kp|l|c|list|lists|category|categories|kategorie|"
-    r"kategoria|collections|browse|catalogsearch|recommerce/forsale/search)(?:/|$|\?)"
+    r"kategoria|collections|browse|catalogsearch|recommerce/forsale/search|laji|tuoteryhma\w*)(?:/|$|\?)"
     r"|/s-[^/]+/k0\b|/k0$|[?&](?:k|q|_nkw|query|search|keyword|keywords|searchterm)="
     r"|/(?:all|alle|kaikki)/?$", re.I)
 # a used-car site's make / model page: '/fi/kaytetyt-autot/Volvo/V70' lists hundreds of cars (live: 'New from €3,932')
@@ -917,6 +917,10 @@ CAR_LIST_PATH = re.compile(r"/(?:kaytetyt-autot|vaihtoautot|used-cars|gebrauchtw
 FLYER_URL = re.compile(r"tarjouslehti|tarjouslehde\w*|mainoslehti|/flyers?/|/prospekte?/|reklamblad|kundeavis|"
                        r"tilbudsavis|weekly-?ads?\b|/folders?/\d|//(?:www\.)?(?:promotheus|minuntarjouslehteni|kimbino|"
                        r"tiendeo|ofertolino|marktjagd|kaufda|reklambladet|tjek|etilbudsavis)\.", re.I)
+# 'edullisimmat polkupyörät ... saat hintaan 109.00 € ja hintavimmat ... 10999.00 €' (intersport: a category)
+SNIPPET_RANGE = re.compile(r"edullisimma\w*.{0,120}?hintavimma\w*|halvimma\w*.{0,120}?kalleimma\w*|"
+                           r"cheapest.{0,80}?most\s+expensive|günstigste\w*.{0,80}?teuerste\w*|"
+                           r"billigaste.{0,80}?dyraste|prices?\s+(?:range\s+)?from\s+\S+\s+to\s+", re.I | re.S)
 NOT_OFFER_TITLE = re.compile(
     r"\bab\s*€\s*\d|\bpreisvergleich\b|\bprice comparison\b|\bhintavertailu\b|\bprice history\b"
     r"|\bis on sale\b|\bon sale for\b|\bprice drops?\b|\bdeal alert\b"
@@ -1079,6 +1083,8 @@ def not_an_offer(o: Offer) -> str | None:
         return "search or list page, not one listing"
     if FLYER_URL.search(url):
         return "a store flyer page, not a buyable listing"
+    if o.read_via == "search_highlight" and SNIPPET_RANGE.search(str(o.raw.get("search_text") or "")):
+        return "a category page: the search snippet gives a price range, not one item's price"
     if NOT_OFFER_TITLE.search(o.title or ""):
         return "price comparison or news page, not a shop listing"
     if not o.raw.get("from_list_page") and category_page(o.title or ""):
@@ -1683,11 +1689,22 @@ def _kind_noun(need: Need) -> str | None:
     return noun
 
 
+GIFT_NEED = re.compile(r"\bgifts?\b|\blahj\w*|geschenk\w*|\bpresents?\b|cadeau\w*|\bgave\w*|\bpresent\w*|prezent\w*", re.I)
+# adult products are never a gift for a parent, a child or a colleague (live, gift for mom: a 'Womanizer' box at
+# sinful.fi was kept)
+ADULT_RX = re.compile(r"\b(?:womanizer|satisfyer|vibraattori\w*|vibrator\w*|seksilelu\w*|sex\s?toys?|sexspielzeug|"
+                      r"sexleksak\w*|dildo\w*|lovense|we-vibe|fleshlight|erotiikka\w*|erotic\w*|erotik\w*|"
+                      r"bdsm|lingerie\s+sexy|sinful\.\w+|sexshop\w*|adulttime|lelo\.com)\b", re.I)
+
+
 def product_clash(need: Need, offer: Offer) -> str | None:
     """Why this listing is another kind of thing than the product asked for (a toy, a magazine, a game for the
     console, a kids' / men's / dog's jacket for a women's jacket, a city bike for a road bike), else None."""
     if need.kind != "product":
         return None
+    if GIFT_NEED.search(f"{need.raw} {need.thing}") and not ADULT_RX.search(f"{need.raw} {need.thing}") \
+            and (m := ADULT_RX.search(f"{offer.title or ''} {_host(offer.url or '')}")):
+        return f"an adult product ({m.group(0).strip()}), not a family gift"
     cat = need.category or {}
     return _product_clash(need.thing or "", " ".join(need.must_have), str(cat.get("id") or ""),
                           str(cat.get("label") or ""), offer.title or "", is_generic(need))
@@ -1970,6 +1987,13 @@ EXTRA_LINE = re.compile(
     r"live\s?-?stream\w*|striimau\w*|lisapalvelu\w*|lisakuva\w*|extra\s+photos?|\badd-?ons?\b|"
     r"second\s+(?:photographer|shooter)|toinen\s+kuvaaja|kakkoskuvaaja|drone\w*|drooni\w*|"
     r"matkakulu\w*|matkakorvau\w*|travel\s+(?:fee|cost|expenses)|kilometrikorvau\w*", re.I)
+HAIR_NEED = re.compile(r"haircut|hair\s+cut|hius\w*|parturi\w*|kampaamo\w*|friseur|haarschnitt|kapper|knippen|"
+                       r"frisor|klippning|barber", re.I)
+HAIR_EXTRA = re.compile(r"otsatuk\w*|otsahiu\w*|\bfringe\b|\bbangs\b|\bpony\w*|\b(?:5|10|15|20)\s*min\w*|"
+                        r"cornrows?|\bbraids?\b|\bletit\b|lettie?\w*|rastat?\b|dreadlock\w*|kulma\w*|eyebrow\w*|"
+                        r"\bbeard\b|\bparta\w*|bartschnitt|baard|skagg|\bvarjays\w*|\bcolou?r\b|raidat|foliot|"
+                        r"kampaus\w*|\bstyling\b|hiustenpesu|\bwash\b|lisa\w*|konetasoitus|niskan\s+siistiminen|"
+                        r"siistiminen|kids?\b|lasten\b|lapset\b|kinder\w*", re.I)
 EVENT_NEED = re.compile(r"wedding|haa|hochzeit|bruiloft|bryllup|brollop|photograph|kuvaaja|kuvaus|fotogra|video\w*|"
                         r"\bdj\b|band|bandi|juhla|event|tapahtuma|party", re.I)
 # a weekday daytime 'päivystys' slot is a standard rate (live, lvirundstrom.fi 'Päivystys – arkisin klo 7–17' €55/h)
@@ -2036,6 +2060,8 @@ def service_line_kind(need: Need, title: str, unit: str | None) -> str:
         return "off_topic"
     if EXTRA_LINE.search(t) and not EXTRA_LINE.search(asked) and EVENT_NEED.search(asked):
         return "extra"
+    if HAIR_NEED.search(asked) and HAIR_EXTRA.search(t) and not HAIR_EXTRA.search(asked):
+        return "extra"     # a fringe trim, a 15-minute slot, cornrows: not the standard cut (live, haircut helsinki)
     if CALLOUT_LINE.search(t) or (unit or "") == "visit" and g in OPEN_TRADES:
         return "callout"
     if PREMIUM_LINE.search(t) and not PREMIUM_LINE.search(asked) \
@@ -2074,7 +2100,20 @@ def _insurance_clash(need: Need, offer: Offer) -> str | None:
     have = [k for k, rx in INSURANCE_KINDS.items() if rx.search(title)]
     if have and not set(have) & set(want):
         return f"a different insurance ({have[0]}), not {need.thing}"
+    # a calculator site's estimate ('Arvioitu autovakuutus') or a leasing customer's add-on is no insurer's price
+    if m := INSURANCE_NOT_A_QUOTE.search(title + " " + _fold(offer.url or "")):
+        return f"not an insurer's own price ({m.group(0).strip()}): an estimate or a leasing add-on"
     return None
+
+
+INSURANCE_NOT_A_QUOTE = re.compile(r"\barvioi\w*|\bestimate\w*|\bexample\b|\besimerkki\w*|\bbeispiel\w*|\bleasing\w*|"
+                                   r"\blease\b|\bayvens\b|\bleaseplan\b|\bsixt\s+leasing|\byksityisleasing\w*|"
+                                   r"\bselkoraha\b", re.I)
+
+
+DESIGN_NEED = re.compile(r"design\w*|suunnittel\w*|graafi\w*|grafik\w*|gestalt\w*|ontwerp\w*|logo", re.I)
+MARKETING_AGENCY = re.compile(r"marketing|seo\b|\bppc\b|social\s+media\s+management|weekly\s+reports?|"
+                              r"full[- ]service\s+(?:digital\s+)?(?:marketing\s+)?agency|markkinointi\w*", re.I)
 
 
 def off_topic_reason(need: Need, offer: Offer) -> str | None:
@@ -2086,6 +2125,9 @@ def off_topic_reason(need: Need, offer: Offer) -> str | None:
     kind = (offer.raw or {}).get("line_kind") or service_line_kind(need, offer.title or "", offer.unit)
     if kind == "fee":
         return "a fee or surcharge, not a price for the job"
+    if DESIGN_NEED.search(_fold(need.thing)) and (m := MARKETING_AGENCY.search(_fold(offer.title or ""))) \
+            and not DESIGN_NEED.search(_fold(offer.title or "")):
+        return f"a marketing agency ({m.group(0)}), not a design service"
     if kind == "extra":
         return "an add-on line (extra hour, gallery, album, stream), not the package"
     if MARKET_STAT.search(offer.title or ""):
@@ -2138,6 +2180,11 @@ _MARKET_SPLIT = ("contextdev_markdown_split", "contextdev_list", "jsonld_itemlis
 
 
 FAR_CURRENCIES = {"USD", "CAD", "AUD", "NZD"}
+# currencies of countries far from Europe: a provider pricing in these is never local to a European town, even when
+# the page (or the reader) put the asked town in its location (live: wedmegood.com 30000 INR as a Helsinki photographer)
+DISTANT_CURRENCIES = {"INR", "PHP", "BRL", "MXN", "ZAR", "PKR", "BDT", "NGN", "IDR", "VND", "THB", "MYR", "LKR", "EGP",
+                      "KES", "ARS", "COP", "CLP", "PEN", "CNY", "HKD", "JPY", "KRW", "TWD", "SGD", "AED", "SAR", "QAR",
+                      "ILS", "NPR", "UAH", "RUB", "KZT"}
 
 
 def far_provider(need: Need, offer: Offer) -> str | None:
@@ -2160,6 +2207,8 @@ def far_provider(need: Need, offer: Offer) -> str | None:
     if loc and _US_STATE.search(loc):
         return f"a provider abroad (in {loc}, USA), not a {service_label(need)} near you"
     cur = (offer.currency or "").upper()
+    if cur in DISTANT_CURRENCIES:
+        return f"a provider abroad (prices in {cur}), not a {service_label(need)} near you"
     far_cur = cur in FAR_CURRENCIES or (cur == "GBP" and cc not in ("gb", "uk", "ie"))
     if not far_cur:
         return None
@@ -2327,12 +2376,56 @@ _US_STATE = re.compile(r",\s*(?:A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M
                        r"S[CD]|T[NX]|UT|V[AT]|W[AIVY])\b(?:\s+\d{5})?\s*(?:,\s*(?:usa|us|united states))?\s*$")
 
 
+# towns outside the places table that providers' URLs name (Finland's mid-size towns)
+EXTRA_TOWNS = frozenset({"sastamala", "klaukkala", "nurmijarvi", "jarvenpaa", "tuusula", "porvoo", "lohja", "hyvinkaa",
+                         "riihimaki", "kirkkonummi", "lahti", "jyvaskyla", "kuopio", "pori", "vaasa", "kotka",
+                         "kouvola", "joensuu", "lappeenranta", "rovaniemi", "seinajoki", "mikkeli", "salo", "rauma",
+                         "kajaani", "savonlinna", "raisio", "kaarina", "ylojarvi", "kangasala", "lempaala",
+                         "pirkkala", "hameenlinna", "tampere", "turku", "oulu", "kokkola", "imatra", "forssa", "iisalmi"})
+
+
+def _slug_town(need: Need, offer: Offer) -> str | None:
+    from urllib.parse import urlsplit
+    try:
+        from agora import places as P
+    except ImportError:
+        return None
+    where = P._fold(need.where or "").strip()
+    if where not in P.CITY_CC:
+        return None                 # a country or region asked
+    path = urlsplit(offer.url or "").path
+    text = P._fold(re.sub(r"[-_/.+]+", " ", path) + " " + (offer.title or ""))
+    if re.search(rf"\b{re.escape(where)}\b", text):
+        return None
+    hits = [k for k, _, _ in P._hits(text, P.CITY_CC)] + [w for w in EXTRA_TOWNS if re.search(rf"\b{w}\b", text)]
+    hits = [h for h in hits if h != where and h not in METRO.get(where, ())]
+    return hits[0] if hits else None
+
+
+COUNTRY_ONLY = re.compile(r"^\W*(?:deutschland|germany|suomi|finland|nederland|netherlands|sverige|sweden|norge|norway|"
+                          r"danmark|denmark|österreich|osterreich|austria|schweiz|switzerland|belgie|belgium|france|"
+                          r"polska|poland|eesti|estonia|europe|eu)\W*$", re.I)
+
+
+def not_shown_local(need: Need, offer: Offer) -> bool:
+    """A town asked ('plumber berlin') and the provider's only stated place is a country ('Deutschland'): a national
+    guide or directory, not shown to serve the town. Shown, never the pick."""
+    return need.kind == "service" and bool(need.where) and bool(COUNTRY_ONLY.match(offer.location or ""))
+
+
 def other_place(need: Need, offer: Offer) -> str | None:
     """'in Amsterdam, not Tilburg': a local service provider whose stated location is another town (not the asked
     one, not one of its metro towns, not a region or country that may cover it). A US state suffix ('Berlin, CT')
     is always another place for a European town."""
-    if need.kind != "service" or not need.where or not offer.location:
+    if need.kind != "service" or not need.where:
         return None
+    if not offer.location or _fold(offer.location).strip() == _fold(need.where).strip():
+        # no stated place, or only the asked town copied in: the page's own address in its URL or title says where
+        # (fresha.com/a/parturi-kampaamo-karrar-oy-sastamala-..., live: Sastamala / Tampere salons for Helsinki)
+        if town := _slug_town(need, offer):
+            return f"in {town.title()} (from the page address), not {need.where}"
+        if not offer.location:
+            return None
     loc = offer.location.strip()
     if _US_STATE.search(loc):
         return f"in {loc} (USA), not {need.where}"

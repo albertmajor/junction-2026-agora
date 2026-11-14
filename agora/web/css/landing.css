@@ -1,8 +1,8 @@
-/* Landing page under the start search (UI round A, section 3). Shown only in [data-phase="start"] (base.css).
-   Full-bleed bands alternate --paper / --paper-2; one ink band for "Powered by Context.dev". */
+/* Landing page under the start search. Shown only in [data-phase="start"] (base.css).
+   A slim "Powered by Context.dev" strip, then full-bleed bands that alternate --paper / --paper-2. */
 
 #landing { position: relative; display: block; }
-#landing .scroll-cue { margin-bottom: 8px; }
+#landing .scroll-cue { margin: 12px auto 18px; }
 
 /* ---------- bands ---------- */
 .ld-band {
@@ -26,8 +26,8 @@
   font-variation-settings: var(--display-vs); text-wrap: balance;
 }
 .ld-sub { margin: 14px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
-#landing a:not(.cd-mark):not(.scroll-cue) { color: var(--ink-blue); text-decoration-color: color-mix(in srgb, var(--ink-blue) 35%, transparent); }
-#landing a:not(.cd-mark):not(.scroll-cue):hover { text-decoration-color: currentColor; }
+#landing a:not(.cd-mark):not(.scroll-cue):not(.ld-strip-mark) { color: var(--ink-blue); text-decoration-color: color-mix(in srgb, var(--ink-blue) 35%, transparent); }
+#landing a:not(.cd-mark):not(.scroll-cue):not(.ld-strip-mark):hover { text-decoration-color: currentColor; }
 
 /* ---------- reveal (IntersectionObserver adds .in, once) ---------- */
 .ld-js .ld-rv { opacity: 0; transform: translateY(8px); }
@@ -299,3 +299,172 @@
   .ld-step svg .wob { stroke-dashoffset: 0; }
   .ld-pulse::after { animation: none; opacity: 0; }
 }
+
+/* ================= landing, second round ================= */
+/* ---------- the Context.dev strip: one row under the hero ---------- */
+.ld-strip {
+  margin-inline: calc(50% - 50vw); padding-inline: calc(50vw - 50%);
+  background: var(--paper-2); border-block: 1px solid var(--hair);
+}
+.ld-strip-in { padding-block: 30px 28px; }
+.ld-strip-top { display: flex; align-items: center; justify-content: space-between; gap: 12px 40px; flex-wrap: wrap; }
+.ld-strip-h { margin: 0; display: flex; align-items: center; gap: 12px; font: 340 34px/1.05 var(--serif); letter-spacing: -0.012em; font-variation-settings: var(--display-vs); color: var(--ink-2); }
+#landing a.ld-strip-mark { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 480; text-decoration: none; }
+#landing a.ld-strip-mark:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.ld-strip-mark img, .ld-strip-mark .cd-sq { width: 30px; height: 30px; border-radius: 7px; }
+.ld-strip-mark .cd-sq { display: inline-block; background: var(--ink-blue); }
+.ld-strip-count { display: inline-flex; align-items: center; gap: 12px; margin: 0; font: 400 15px/1.3 var(--sans); color: var(--ink-2); }
+.ld-strip-count b { font: 440 19px/1 var(--serif); color: var(--ink); }
+.ld-strip-tools { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--hair); }
+.ld-strip-tools li { display: grid; gap: 7px; padding: 16px 20px 0 0; }
+.ld-strip-tools li + li { padding-left: 20px; border-left: 1px solid var(--hair); }
+.ld-strip-tools b { font: 500 13px/1 var(--mono); color: var(--ink); }
+.ld-strip-tools b::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; vertical-align: 1px; background: var(--live); border-radius: 1px; }
+.ld-strip-tools span { font: 400 13.5px/1.45 var(--sans); color: var(--ink-2); }
+@media (max-width: 900px) {
+  .ld-strip-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ld-strip-tools li { padding-bottom: 14px; }
+  .ld-strip-tools li:nth-child(3) { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 640px) {
+  .ld-strip-h { font-size: 26px; }
+  .ld-strip-mark img, .ld-strip-mark .cd-sq { width: 24px; height: 24px; }
+  .ld-strip-tools { grid-template-columns: 1fr; }
+  .ld-strip-tools li, .ld-strip-tools li + li { padding-left: 0; border-left: 0; }
+}
+
+.ld-band { padding-block: 88px; }
+.ld-head { max-width: 680px; }
+
+/* ---------- the problem: the claim on the left, on-your-own vs with-us on the right ---------- */
+.ld-why { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 56px; align-items: start; }
+.ld-why .ld-head { margin: 0; }
+.ld-vs { background: var(--receipt); border: 1px solid var(--hair); border-radius: 14px; padding: 4px 22px 8px; }
+.ld-vs-r { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; padding: 14px 0; border-top: 1px solid var(--hair); font: 400 14.5px/1.45 var(--sans); }
+.ld-vs-r > span { position: relative; padding-left: 22px; }
+.ld-vs-r > span:first-child { color: var(--ink-3); }
+.ld-vs-r > span:last-child { color: var(--ink); }
+.ld-vs-r > span::before { content: ""; position: absolute; left: 0; top: .62em; width: 9px; height: 1.5px; background: var(--ink-3); }
+.ld-vs-r > span:last-child::before { top: .32em; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: inset 0 0 0 1.2px var(--ink); }
+.ld-vs-h { border-top: 0; padding: 14px 0 10px; font: 500 12px/1 var(--sans); }
+.ld-vs-h > span { padding-left: 0; color: var(--ink-2) !important; }
+.ld-vs-h > span::before { content: none; }
+
+/* ---------- how it works: three panels, each with a small mock-up ---------- */
+.ld-steps { gap: 20px; }
+.ld-step {
+  display: flex; flex-direction: column; min-width: 0; padding: 14px 14px 22px;
+  background: var(--receipt); border: 1px solid var(--hair); border-radius: 16px;
+}
+.ld-step h3 { margin: 20px 8px 8px; }
+.ld-step p { margin: 0 8px; max-width: none; font-size: 14.5px; line-height: 1.55; }
+.ld-mock {
+  position: relative; height: 172px; border-radius: 10px; background: var(--paper-2);
+  box-shadow: inset 0 0 0 1px var(--hair); padding: 18px; display: flex; flex-direction: column; justify-content: center; gap: 12px;
+  overflow: hidden;
+}
+.alt .ld-mock { background: var(--paper); }
+/* 1: the question */
+.mk-box {
+  display: flex; align-items: center; gap: 2px; height: 44px; padding: 0 14px; border-radius: 12px;
+  background: var(--receipt); box-shadow: 0 0 0 1px var(--ink-3), 0 0 0 4px var(--hair); font: 400 15px/1 var(--sans); color: var(--ink);
+}
+.mk-box i { width: 1.5px; height: 18px; background: var(--ink); animation: mk-blink 1.1s steps(1) infinite; }
+.mk-box b { margin-left: auto; font-weight: 400; color: var(--ink-2); }
+@keyframes mk-blink { 50% { opacity: 0; } }
+.mk-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.mk-pills span { padding: 5px 10px; border-radius: var(--r-pill); border: 1px solid var(--hair); font: 400 12px/1 var(--sans); color: var(--ink-2); white-space: nowrap; }
+/* 2: the reads */
+.m-read { gap: 0; padding: 8px 16px; }
+.mk-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--hair); font: 400 13px/1 var(--sans); min-width: 0; }
+.mk-row img, .mk-row .cd-sq { width: 16px; height: 16px; border-radius: 4px; flex: none; }
+.mk-row .cd-sq { display: inline-block; background: var(--ink-3); }
+.mk-row b { font: 500 12.5px/1 var(--mono); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-row > span:last-child { margin-left: auto; color: var(--ink-2); white-space: nowrap; }
+.mk-row.mk-more { border-bottom: 0; color: var(--ink-2); gap: 12px; padding-left: 5px; }
+.mk-row.mk-more > span:last-child { margin-left: 0; }
+/* 3: the line */
+.m-line { padding: 18px 30px; }
+.mk-axis { position: relative; height: 1.5px; background: var(--ink); border-radius: 1px; }
+.ld-mock { --mk-bg: var(--paper-2); } .alt .ld-mock { --mk-bg: var(--paper); }
+.mk-dot { position: absolute; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2.5px var(--mk-bg); }
+.mk-dot.mk-tag { background: var(--mk-bg); box-shadow: inset 0 0 0 1.5px var(--ink-3), 0 0 0 2.5px var(--mk-bg); }
+.mk-dot.pick { background: var(--accent); box-shadow: inset 0 0 0 1.2px var(--ink), 0 0 0 2.5px var(--mk-bg), 0 0 0 4px var(--ink); }
+.mk-axis em { position: absolute; left: 50%; transform: translateX(-50%); font: 400 11.5px/1 var(--mono); font-style: normal; color: var(--ink-2); white-space: nowrap; }
+.mk-axis em.dn { top: 19px; } .mk-axis em.up { bottom: 21px; color: var(--ink); font-weight: 500; }
+.mk-axis em.end { left: auto; right: -8px; transform: none; }
+.mk-hop { position: absolute; bottom: 9px; height: 16px; border: 1px dashed var(--ink-3); border-bottom: 0; border-radius: 10px 10px 0 0; }
+.mk-hop em { bottom: 22px; color: var(--live); }
+
+/* ---------- the all-in price: the claim on the left, two receipts on the right ---------- */
+.ld-price { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 56px; align-items: start; }
+.ld-price .ld-head { margin: 0; }
+.ld-gap { margin: 32px 0 0; font: 340 27px/1.25 var(--serif); letter-spacing: -0.01em; color: var(--ink-2); font-variation-settings: var(--display-vs); }
+.ld-gap b { font-weight: 440; color: var(--ink); }
+.ld-own { margin: 24px 0 0; padding-top: 18px; border-top: 1px solid var(--hair); max-width: 46ch; font: italic 340 15.09px/1.45 var(--serif); color: var(--ink-2); font-variation-settings: "opsz" 24, "SOFT" 100; }
+.ld-rcs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ld-rc { margin: 0; padding: 18px 18px 16px; background: var(--receipt); border: 1px solid var(--hair); border-radius: 14px; min-width: 0; }
+.ld-rc figcaption { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding-bottom: 14px; margin-bottom: 4px; border-bottom: 1px dashed var(--hair); }
+.ld-rc figcaption img, .ld-rc figcaption .cd-sq { width: 16px; height: 16px; border-radius: 4px; }
+.ld-rc figcaption .cd-sq { display: inline-block; background: var(--ink-3); }
+.ld-rc figcaption b { font: 500 13px/1.2 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ld-rc figcaption span { grid-column: 2; font: 400 12px/1.2 var(--sans); color: var(--ink-3); }
+.rc-l { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; font: 400 13px/1.3 var(--sans); color: var(--ink-2); }
+.rc-l > span:last-child { font: 400 13px/1.3 var(--mono); color: var(--ink); text-align: right; }
+.rc-l.q > span:last-child { font-family: var(--sans); color: var(--ink-3); }
+.rc-l.add > span:last-child { color: var(--live); }
+.rc-l.sum { margin-top: 4px; padding-top: 13px; border-top: 1px solid var(--ink-3); color: var(--ink); font-weight: 500; }
+.rc-l.sum > span:last-child { font: 440 21.15px/1 var(--serif); letter-spacing: -0.005em; }
+.rc-n { margin: 8px 0 0; font: 400 12px/1.4 var(--sans); color: var(--ink-3); }
+
+/* ---------- sources: three ways in, then a few examples ---------- */
+.ld-lanes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--hair); }
+.ld-lanes li { padding: 22px 28px 4px 0; }
+.ld-lanes li + li { padding-left: 28px; border-left: 1px solid var(--hair); }
+.ld-lanes .ld-n { display: inline-block; border: 0; padding: 0; margin-bottom: 12px; color: var(--live); font-size: 12px; }
+.ld-lanes h3 { margin: 0 0 8px; font: 340 21.15px/1.141 var(--serif); letter-spacing: -0.007em; font-variation-settings: "opsz" 36, "SOFT" 50; }
+.ld-lanes p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+.ld-wall-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 56px 0 12px; }
+.ld-wall-h b { font: 500 13px/1 var(--sans); color: var(--ink-2); }
+.ld-wall-h span { font: 400 11.5px/1 var(--mono); color: var(--ink-3); }
+.ld-wall { display: block; padding: 6px 22px; background: var(--receipt); border: 1px solid var(--hair); border-radius: 14px; }
+.ld-group { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; align-items: start; padding: 16px 0; }
+.ld-group + .ld-group { border-top: 1px solid var(--hair); }
+.ld-gl { margin: 14px 0 0; font: 440 17px/1.1 var(--serif); letter-spacing: -0.006em; color: var(--ink); }
+.ld-group ul { display: flex; flex-wrap: wrap; gap: 4px; }
+.ld-group li { width: 96px; min-width: 0; padding: 8px 4px; border-radius: 10px; gap: 6px; transition: background 200ms var(--ease); }
+.ld-group li:hover { background: var(--paper-2); }
+.ld-group .ld-logo img { background: #fff; }
+.ld-bn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ld-more .ld-logo i { width: auto; min-width: 32px; padding: 0 7px; font: 500 11px/1 var(--mono); font-style: normal; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair); border-style: dashed; }
+.ld-more .ld-bn { color: var(--ink-3); }
+.ld-foot { margin-top: 20px; }
+
+/* ---------- for agents: the call on the left, what comes back on the right ---------- */
+.ld-agent { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.ld-codes { max-width: none; }
+.ld-codes .ld-links { margin-top: 12px; }
+.ld-json pre { font-size: 12.5px; line-height: 1.65; }
+.ld-code .tk-v { color: var(--ink-2); }
+.ld-tools { margin-top: 36px; }
+
+@media (max-width: 1000px) {
+  .ld-price, .ld-why { grid-template-columns: 1fr; gap: 36px; }
+  .ld-lanes { grid-template-columns: 1fr; }
+  .ld-lanes li, .ld-lanes li + li { padding: 20px 0; border-left: 0; }
+  .ld-lanes li + li { border-top: 1px solid var(--hair); }
+  .ld-agent { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) { .ld-steps { gap: 16px; } }
+@media (max-width: 640px) {
+  .ld-band { padding-block: 64px; }
+  .ld-rcs { grid-template-columns: 1fr; }
+  .ld-vs { padding: 2px 16px 6px; }
+  .ld-vs-r { gap: 16px; font-size: 13.5px; }
+  .ld-gap { font-size: 22px; }
+  .ld-wall { padding: 2px 14px; }
+  .ld-group { grid-template-columns: 1fr; gap: 8px; }
+  .ld-gl { margin: 0; }
+  .ld-group li { width: 72px; }
+}
+@media (prefers-reduced-motion: reduce) { .mk-box i { animation: none; } }

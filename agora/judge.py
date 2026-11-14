@@ -360,7 +360,8 @@ REFURB_TO_NEW = 0.85           # a refurbished shop price is ~85% of new: new re
 UPPER_SHARE = 0.60             # the marketplace reference is the median of the top 60% of matching listings
 MIN_MARKET_REF = 5             # marketplace listings needed before they alone set a reference
 MIN_USED_FLOOR_N = 15          # this many marketplace listings set the floor from their own median ...
-USED_FLOOR_SHARE = 0.55        # ... at this share of it (when lower than ratio x new)
+USED_FLOOR_SHARE = 0.75        # ... at this share of what they ask (when lower than ratio x new)
+STALE_FLOOR_SHARE = 0.85       # ... when ratio x new sits above this share of it
 PRIVATE_NEW = "new (private seller)"
 _MARKET_KINDS = ("classifieds", "resale", "auction", "specialist")
 
@@ -485,11 +486,13 @@ def reference_price(offers: list[Offer], cat: Category, need: Need | None = None
     if len(market) >= MIN_USED_FLOOR_N:
         # plenty of matching marketplace listings: the floor is what they sell for, not a share of a 'new' price
         # that may be a stale launch price (live, iphone 13: €598 x 0.35 = €209 flagged 677 ordinary €189 phones)
-        # (only when that median sits above the ratio floor: a median under it is a flood of ear tips and cases)
-        med = statistics.median(market)
-        if med >= floor and USED_FLOOR_SHARE * med < floor:
+        # (the upper-60% median: only when the ratio floor sits right under what sellers ask, at over 85% of it,
+        # is that 'new' price stale; a floor well under it is guarding a flood of ear tips and cases)
+        med = market_ref or 0.0
+        if STALE_FLOOR_SHARE * med < floor <= med:
             floor = USED_FLOOR_SHARE * med
-            floor_basis = f"{USED_FLOOR_SHARE:.0%} of the median of {len(market)} marketplace listings ({fmt(med)})"
+            floor_basis = (f"{USED_FLOOR_SHARE:.0%} of what {len(market)} marketplace listings ask (upper "
+                           f"{UPPER_SHARE:.0%} median {fmt(med)})")
     return Reference(round(new, 2), round(floor, 2), ratio, basis, len(shop_new), len(shop_ref),
                      round(market_ref, 2) if market_ref is not None else None, len(market), floor_basis)
 
@@ -595,6 +598,22 @@ def _host(url: str) -> str:
     return m.group(1).lower() if m else ""
 
 
+_NEW_PRICE_MARK = r"\W{0,3}(?:\(?\s*(?:uusi|uutena|new|neu|neupreis|uvp|rrp|msrp|ord\.?|ordinarie|nypris|ny\s?pris|"
+_NEW_PRICE_MARK += r"nieuwprijs|listapreis|list\s+price|was|oli|normaalisti|norm\.?)\b|\(\s*u[a-z]{0,3}(?:\.{2,3}|…))"
+
+
+def _marked_new_price(o: Offer, amount: Any) -> bool:
+    """The witness amount is the new / list price printed next to the real one ('FAIR Apple MacBook Air 2022 | M2
+    699 € 1 499 € (Uusi)' on refurbed.fi): no disagreement about this offer's price."""
+    try:
+        a = float(amount)
+    except (TypeError, ValueError):
+        return False
+    whole = f"{int(a):,}".replace(",", r"[\s.,\u00a0]?")
+    text = f"{o.title or ''} | {o.raw.get('search_text') or ''}"
+    return bool(re.search(rf"(?<!\d){whole}(?:[.,]\d{{2}})?\s?(?:€|eur)?{_NEW_PRICE_MARK}", text, re.I))
+
+
 def verify_price(o: Offer) -> str | None:
     """Compare the read price with other witnesses (search snippet, a second read step, another page).
     Sets raw['price_check']:
@@ -608,9 +627,10 @@ def verify_price(o: Offer) -> str | None:
         if not isinstance(w, dict) or w.get("primary"):
             continue
         q = eur(w.get("price"), w.get("currency"))
-        if q:
+        if q and not _marked_new_price(o, w.get("price")):
             others.append((str(w.get("via", "?")), q, _independent(o, w)))
     texts = text_prices(o) if p is not None and not any(via == "snippet" for via, _, _ in others) else []
+    texts = [q for q in texts if not _marked_new_price(o, q)]
     others += [("snippet", q, False) for q in texts]
     if p is None or not others:
         o.raw["price_check"] = None
@@ -788,7 +808,13 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
     if p and med_same and len(same) >= (3 if o.condition == "service" else 2) and not _disputed(o) \
             and not mixed and not (own_shop and o.condition == "new"):
         r = p / med_same
-        if r < 0.5 and not any(f.startswith("too good to be true") for f in flags):
+        # a plan read off the provider's own pricing page, priced per month / year: a cheaper plan among a handful
+        # of agencies is a cheaper plan, not a fake (live: draftss.com $265/mo vs a median of 8 agencies)
+        plan = o.condition == "service" and period_of(o) in ("month", "year", "week") and len(same) < 15
+        if r < 0.5 and plan:
+            score -= 0.2
+            flags.append(f"well under the usual {cond} price ({1 - r:.0%} below {fmt(med_same)})")
+        elif r < 0.5 and not any(f.startswith("too good to be true") for f in flags):
             score -= 0.5
             flags.append(f"too good to be true: {1 - r:.0%} under the {cond} median ({fmt(med_same)})")
         elif 0.5 <= r < 0.7:
@@ -1642,6 +1668,13 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         o.raw["ex_vat_eur"] = p
         p = round(p * (1 + vat), 2)
         basis.append(f"page price {fmt(o.raw['ex_vat_eur'])} is without VAT; {vat:.1%} VAT added")
+    if unit == "job" and (inst := INSTALMENTS.search(o.title or "")):
+        # 'Epic hääportretit (neljä maksuerää)' €215 is one of four payments: the job costs 4 x €215
+        n = _instalment_count(inst.group(1))
+        if n and 2 <= n <= 24:
+            o.raw["instalments"] = n
+            basis.append(f"the page price {fmt(p)} is one of {n} instalments: {n} x {fmt(p)}")
+            p = round(p * n, 2)
     rate = p
     size = job_size_m2(need)
     conf: str = "high"
@@ -1717,7 +1750,7 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         calc = (f"{bundle.group(1).replace(',', '.')} h for {fmt(rate)}" if bundle else f"fixed price per {unit}")
     receipt.append((label, round(sticker, 2)))
     callout = o.raw.get("callout_fee") if isinstance(o.raw, dict) else None
-    extras = float(callout) if isinstance(callout, (int, float)) else 0.0
+    extras = float(callout) if isinstance(callout, (int, float)) and callout >= MIN_CALLOUT_EUR else 0.0
     est_callout = o.raw.get("est_callout_fee") if trade and not extras else None
     if extras:
         receipt.append(("call-out fee", round(extras, 2)))
@@ -1978,8 +2011,10 @@ def _estimate_missing_minimums(need: Need, offers: list[Offer]) -> None:
         return
     known = [float(o.raw["min_hours"]) for o in offers if o.unit == "hour"
              and isinstance(o.raw.get("min_hours"), (int, float)) and 0.5 <= o.raw["min_hours"] <= 12]
+    # a per-km travel line (€0.46/km) is no call-out fee: fees under MIN_CALLOUT_EUR never vote (live, plumbing:
+    # a €1.63 'call-out (est.)' was added to every provider)
     fees = [float(o.raw["callout_fee"]) for o in offers if isinstance(o.raw.get("callout_fee"), (int, float))
-            and o.raw["callout_fee"] > 0]
+            and o.raw["callout_fee"] >= MIN_CALLOUT_EUR]
     for o in offers:
         o.raw.pop("est_min_hours", None)
         o.raw.pop("est_callout_fee", None)
@@ -1990,6 +2025,32 @@ def _estimate_missing_minimums(need: Need, offers: list[Offer]) -> None:
             o.raw["est_min_hours"] = statistics.median(known)
         if fees and not isinstance(o.raw.get("callout_fee"), (int, float)):
             o.raw["est_callout_fee"] = statistics.median(fees)
+
+
+_NUM_WORDS = {"kaksi": 2, "kolme": 3, "neljä": 4, "nelja": 4, "viisi": 5, "kuusi": 6, "two": 2, "three": 3, "four": 4,
+              "five": 5, "six": 6, "twelve": 12, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5, "funf": 5, "sechs": 6,
+              "zwölf": 12, "twee": 2, "drie": 3, "tva": 2, "två": 2, "tre": 3, "fyra": 4, "fire": 4}
+INSTALMENTS = re.compile(r"\b(\d{1,2}|kaksi|kolme|neljä|nelja|viisi|kuusi|two|three|four|five|six|twelve|zwei|drei|vier|"
+                         r"fünf|funf|sechs|zwölf|twee|drie|två|tva|tre|fyra|fire)\s*(?:x\s*)?(?:maksuer\w*|erä\w*|"
+                         r"instal+ments?|payments?|monthly\s+payments|raten|termijnen|delbetalning\w*|avdrag)\b", re.I)
+
+
+def _instalment_count(word: str) -> int | None:
+    w = word.lower().strip()
+    return int(w) if w.isdigit() else _NUM_WORDS.get(w)
+
+
+def _family_need(need: Need) -> bool:
+    """A maker + product line, no model ('lego technic', 'ikea kallax'): many different items under one name."""
+    try:
+        from agora.resolve import signature
+    except ImportError:
+        return False
+    sig = signature(need.thing or "")
+    return bool(sig.brand and not sig.models and not sig.family and sig.words - {sig.brand})
+
+
+MIN_CALLOUT_EUR = 10.0     # a 'call-out fee' under €10 is a per-km or per-minute line read as one
 
 
 def _generic_need(need: Need) -> bool:
@@ -2212,13 +2273,20 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     good = [o for o in good if not o.raw.get("partial_job") and not o.raw.get("near_floor")] or good
     # a model asked ('dyson v15'): the pick comes from that model's own group, never from a small group of
     # titles naming several models ('Dyson V11 V15': batteries and docks that fit both, live pick €56)
+    if is_service(need):
+        try:
+            from agora.resolve import not_shown_local
+            good = [o for o in good if not not_shown_local(need, o)] or good
+        except ImportError:
+            pass
     if not is_service(need) and (main := _main_model_ids(need, things)):
         good = [o for o in good if o.thing_id in main] or good
     # a kind of thing ('road bike', 'puhelin', 'sofa'): the pick is a sensibly priced one, not the €35 frame or
     # the €19 diaper bag at the bottom of the bag (live): shown, but crowned only when nothing else is left
     good = [o for o in good if (o.raw.get("mixed_ratio") or 1.0) >= MIXED_PICK_MIN] or good
-    if not is_service(need) and _generic_need(need):
-        # a vague need ('puhelin', 'sofa'): the pick sits in the hunt's usual range, not at its giveaway end
+    if not is_service(need) and (_generic_need(need) or _family_need(need)):
+        # a vague need ('puhelin', 'sofa') or a product line ('lego technic'): the pick sits in the hunt's usual
+        # range, not at its giveaway end (live: a €9 Monster Jam set was the 'lego technic' pick)
         meds: dict[str, float] = {}
         for c in ("new", "used", "refurbished"):
             xs = [x for o in priced if market_condition(o) == c and (x := price_of(o))]
@@ -2326,7 +2394,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         if ref is not None:
             n_low = sum(1 for o in all_offers if o.raw.get("ref_suspect"))
             lines.append(f"reference: new {fmt(ref.new_eur)} ({ref.basis}); used or private listings under "
-                         f"{fmt(ref.floor_eur)} are treated as parts, broken or fakes ({n_low} flagged)")
+                         f"{fmt(ref.floor_eur)}" + (f" ({ref.floor_basis})" if ref.floor_basis else "")
+                         + f" are treated as parts, broken or fakes ({n_low} flagged)")
         if best_all is not cheapest and not surely_buyable(cheapest):
             lines.append(f"{cheapest.source} is cheaper ({fmt(_landed(cheapest))} all in) but does not say it ships to Finland")
         if eu_extra:
@@ -2434,41 +2503,44 @@ def short_title(o: Offer, n: int = 40) -> str:
     return t
 
 
-_RISK_GROUPS = (
-    ("price disagrees", "whose price disagrees between the page and the search"),
-    ("too good", "priced too low to be real"),
-    ("red flag: too little for a whole car", "priced too low to be a whole car"),
-    ("red flag: the description says", "with a problem in the description"),
-    ("red flag: a swap", "look like swaps, not sales"),
-    ("red flag: broken", "broken or faulty"),
-    ("red flag: locked", "locked to an account or operator"),
-    ("red flag: a copy", "possible copies or fakes"),
-    ("red flag", "with another red flag in the title"),
-    ("outside the EU", "may not ship to Finland"),
-    ("out of stock", "out of stock"),
-    ("photo copied", "with a photo copied from another listing"),
-    ("scam pattern", "matching a scam pattern"),
+_RISK_GROUPS = (      # flag start -> (one, many)
+    ("price disagrees", ("whose price disagrees between the page and the search",
+                         "whose price disagrees between the page and the search")),
+    ("too good", ("priced too low to be real", "priced too low to be real")),
+    ("red flag: too little for a whole car", ("priced too low to be a whole car", "priced too low to be a whole car")),
+    ("red flag: the description says", ("with a problem in its description", "with a problem in their description")),
+    ("red flag: a swap", ("is a swap, not a sale", "are swaps, not sales")),
+    ("red flag: broken", ("broken or faulty", "broken or faulty")),
+    ("red flag: locked", ("locked to an account", "locked to an account")),
+    ("red flag: probably a copy", ("possibly a copy", "possibly copies")),
+    ("red flag", ("with another red flag in the title", "with another red flag in the title")),
+    ("outside the EU", ("may not ship to Finland", "may not ship to Finland")),
+    ("out of stock", ("out of stock", "out of stock")),
+    ("photo copied", ("with a photo copied from another listing", "with photos copied from other listings")),
+    ("scam pattern", ("matching a scam pattern", "matching a scam pattern")),
 )
+_OTHER_RISK = ("low trust for other reasons", "low trust for other reasons")
 
 
-def _risk_group(o: Offer) -> str:
+def _risk_group(o: Offer) -> tuple[str, str]:
     for f in o.flags:
         for start, label in _RISK_GROUPS:
             if f.startswith(start):
                 return label
-    return "low trust for other reasons"
+    return _OTHER_RISK
 
 
 def risky_line(flagged: list[Offer]) -> str:
-    """'375 offers look risky: 200 priced too low to be real, 120 look like swaps, not sales, 40 broken or
-    faulty': plain counts per reason, never raw flag strings, never cut mid-word."""
+    """'375 offers look risky: 200 priced too low to be real, 120 are swaps, not sales, 40 broken or faulty':
+    plain counts per reason, never raw flag strings, never cut mid-word."""
     counts = Counter(_risk_group(o) for o in flagged)
     verb = "looks" if len(flagged) == 1 else "look"
-    parts = [f"{n} {label}" for label, n in counts.most_common(4)]
-    rest = sum(counts.values()) - sum(n for _, n in counts.most_common(4))
+    top = counts.most_common(4)
+    parts = [f"{n} {label[0] if n == 1 else label[1]}" for label, n in top]
+    rest = sum(counts.values()) - sum(n for _, n in top)
     if rest:
         parts.append(f"{rest} for other reasons")
-    return f"{len(flagged)} offer{'s' * (len(flagged) != 1)} {verb} risky: " + ", ".join(parts)
+    return f"{len(flagged)} offer{'s' * (len(flagged) != 1)} {verb} risky: " + "; ".join(parts)
 
 
 def _names_more_than_asked(need: Need, o: Offer) -> bool:

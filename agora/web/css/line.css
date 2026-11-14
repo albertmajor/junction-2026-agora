@@ -437,13 +437,6 @@
 /* a raised cutout's stem is a whisper, its foot sits on the axis */
 .ln-o.full.raised .ln-stem { opacity: .5; }
 
-/* dark mode: the shelf's darkest cutouts (a black camera, a black bike) get a faint warm rim so they
-   don't sink into the night paper */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ln-shelfo .ln-pic img { filter: drop-shadow(0 0 1px rgba(255, 248, 235, .45)) drop-shadow(0 0 8px rgba(255, 248, 235, .10)); }
-}
-:root[data-theme="dark"] .ln-shelfo .ln-pic img { filter: drop-shadow(0 0 1px rgba(255, 248, 235, .45)) drop-shadow(0 0 8px rgba(255, 248, 235, .10)); }
-
 /* ---------- ledger: every offer, ranked, under the line (desktop; the phone's line is already a list) ---------- */
 #ledger { margin: 32px 0 8px; }
 #ledger[hidden] { display: none; }
@@ -585,13 +578,9 @@ html.agent-on #ledger { opacity: 0; pointer-events: none; }
 .ln-v .ln-switch button { padding: 0 10px; }
 .ln-v .ln-trayc { margin-top: 6px; }
 
-/* the start line's objects: in full colour (owner); a soft glow keeps dark objects readable on the dark theme */
-.ln-shelfo .ln-pic img { filter: none; transition: filter 400ms var(--ease), transform 300ms var(--ease); }
-.ln-shelfo:hover .ln-pic img, .ln-shelfo:focus-visible .ln-pic img { transform: translateY(-2px); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ln-shelfo .ln-pic img { filter: drop-shadow(0 0 1px rgba(255, 248, 235, .45)) drop-shadow(0 0 8px rgba(255, 248, 235, .10)); }
-}
-:root[data-theme="dark"] .ln-shelfo .ln-pic img { filter: drop-shadow(0 0 1px rgba(255, 248, 235, .45)) drop-shadow(0 0 8px rgba(255, 248, 235, .10)); }
+/* the start line's objects: muted like the browse grid below (one family), colour comes back on hover; no glow */
+.ln-shelfo .ln-pic img { filter: grayscale(1) sepia(.12) contrast(1.02) brightness(1.04); transition: filter 400ms var(--ease), transform 300ms var(--ease); }
+.ln-shelfo:hover .ln-pic img, .ln-shelfo:focus-visible .ln-pic img { filter: none; transform: translateY(-2px); }
 .ln-v .ln-o.dot .ln-cap { -webkit-line-clamp: 2; }
 /* while hunting, the verdict headline already says who leads (in the answer's place): no second, faint copy */
 #app[data-phase="hunting"] #line .ln-caption { visibility: hidden; }

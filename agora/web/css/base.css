@@ -232,9 +232,9 @@ button { cursor: pointer; }
   #start h1 { font-size: 52.37px; margin-bottom: 24px; }
   .ex { font-size: 13px; padding: 8px 12px; }
 }
-/* the start screen is one calm group (question, box, examples, shelf) held a little above centre */
+/* the start screen is one calm group (question, box, examples, shelf) under the header */
 @media (min-width: 641px) {
-  [data-phase="start"] #main { justify-content: center; padding-bottom: 4vh; }
+  [data-phase="start"] #main { justify-content: flex-start; padding-top: clamp(28px, 5.4vh, 64px); padding-bottom: 0; }
   [data-phase="start"] #start { padding-top: 0; }
   #app[data-phase="start"] #line { margin-top: 8px; }
 }
@@ -243,10 +243,9 @@ button { cursor: pointer; }
 }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-/* the start hero holds the fold minus a strip (header + the browse head), so the first grid row of
-   #landing peeks above the fold; never shorter than its own content */
-[data-phase="start"] #main { min-height: max(520px, calc(100vh - 380px)); min-height: max(520px, calc(100svh - 380px)); }
-@media (max-width: 640px) { [data-phase="start"] #main { min-height: 0; } }
+/* the start hero is as tall as its own content, so the scroll cue and the first band of #landing sit
+   right under the price line instead of below a block of empty paper */
+[data-phase="start"] #main { min-height: 0; }
 #app:not([data-phase="start"]) #landing { display: none; }
 
 /* scroll cue under the hero: a hairline grows 0 -> 32 px, then "browse ↓" fades in. Once. */
