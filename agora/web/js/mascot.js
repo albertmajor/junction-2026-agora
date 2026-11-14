@@ -164,31 +164,41 @@ export function mountMascot() {
   refresh();
 }
 
-/** Keep the start-screen monkey beside the search box and clear of the title, whatever the fonts:
- *  feet level with the box's bottom, just right of it; dropped below the title if they would touch. */
-export function placeStartMonkey() {
+/** Where the start-screen monkey stands, relative to the search box (#ask): his left edge `dx` px right of the
+ *  box's right edge, his feet `dy` px below the box's bottom; `w` = width in px; `flip` mirrors him; `rot` tilts.
+ *  The owner sets these with the monkey devtool (?monkeydev=1 or Ctrl+Shift+M on localhost) and exports JSON. */
+export const MONKEY_PLACE = { dx: 22, dy: 0, w: 75, flip: false, rot: 0 };
+const LOCAL = () => typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+export function monkeyPlace() {
+  if (LOCAL()) {
+    try { const o = JSON.parse(localStorage.getItem('pm.monkeyPlace') || 'null'); if (o) return { ...MONKEY_PLACE, ...o }; } catch {}
+  }
+  return MONKEY_PLACE;
+}
+
+export function placeStartMonkey(cfg = monkeyPlace()) {
   if (typeof document === 'undefined') return;
   const m = document.querySelector('#start .start-monkey');
   const start = document.getElementById('start');
   const ask = document.getElementById('ask');
-  const h1 = document.getElementById('ask-title');
-  if (!m || !start || !ask || !h1 || !m.offsetParent) return;
-  const s = start.getBoundingClientRect(), a = ask.getBoundingClientRect(), t = h1.getBoundingClientRect();
+  if (!m || !start || !ask || !m.offsetParent) return;
+  const s = start.getBoundingClientRect(), a = ask.getBoundingClientRect();
   const img = m.querySelector('img');
-  const h = (img && img.getBoundingClientRect().height) || m.getBoundingClientRect().height || 131;
-  let top = a.bottom - s.top - h;
-  const left = a.right - s.left + 22;
-  // the title's text box: measure the text itself, not the full-width block
-  const range = document.createRange(); range.selectNodeContents(h1);
-  const tr = range.getBoundingClientRect();
-  const overlapsX = left + s.left < tr.right + 12;
-  if (overlapsX && top + s.top < tr.bottom + 10) top = tr.bottom - s.top + 10;
-  m.style.left = `${Math.round(left)}px`; m.style.top = `${Math.round(top)}px`;
+  m.style.width = `${cfg.w}px`; if (img) { img.style.width = `${cfg.w}px`; img.style.height = 'auto'; }
+  const h = (img && img.getBoundingClientRect().height) || cfg.w * 131 / 75;
+  m.style.left = `${Math.round(a.right - s.left + cfg.dx)}px`;
+  m.style.top = `${Math.round(a.bottom - s.top - h + cfg.dy)}px`;
+  if (img) img.style.transform = `${cfg.flip ? 'scaleX(-1) ' : ''}rotate(${cfg.rot || 0}deg)`;
 }
 if (typeof window !== 'undefined') {
-  const go = () => requestAnimationFrame(placeStartMonkey);
+  const go = () => requestAnimationFrame(() => placeStartMonkey());
   window.addEventListener('resize', go);
   window.addEventListener('load', go);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(go);
   setTimeout(go, 50); setTimeout(go, 600);
+  if (LOCAL()) {
+    const open = () => import('./monkeydev.js').then(m => m.openMonkeyDev()).catch(e => console.warn('monkeydev', e));
+    if (/[?&]monkeydev=1\b/.test(location.search)) setTimeout(open, 300);
+    window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') { e.preventDefault(); open(); } });
+  }
 }
