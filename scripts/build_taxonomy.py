@@ -409,6 +409,7 @@ class Tree:
         self.merges = collections.Counter()
         self.adds = collections.Counter()
         self.folds = collections.Counter()
+        self.aliases: dict[str, str] = {}       # removed id -> the node that took it over
 
     # -- basic ops
     def depth(self, nid: str) -> int:
@@ -521,6 +522,38 @@ class Tree:
             self.nodes[x]["depth"] = px["depth"] + 1
             self.nodes[x]["root"] = px["root"]
             stack.extend(self.nodes[x]["children"])
+
+    def absorb(self, src: str, dst: str, *, same: bool) -> None:
+        """src disappears into dst: its children, domains, codes and synonyms move; its labels fill dst's missing
+        languages when it means the same (same=True), else they become synonyms. src's id becomes an alias."""
+        n, d = self.nodes[src], self.nodes[dst]
+        assert not self.in_subtree(dst, src), (src, dst)
+        for lang, lab in n["labels"].items():
+            if same and lang not in d["labels"]:
+                d["labels"][lang] = lab
+            elif lab not in d["syn"] and lab not in d["labels"].values():
+                d["syn"].append(lab)
+        for x in n["syn"]:
+            if x not in d["syn"] and x not in d["labels"].values():
+                d["syn"].append(x)
+        for k, v in n["codes"].items():
+            for x in v:
+                if x not in d["codes"].setdefault(k, []):
+                    d["codes"][k].append(x)
+        for w in n["where"]:
+            if w not in d["where"]:
+                d["where"].append(w)
+        d["src"] |= n["src"]
+        for c in list(n["children"]):
+            if d["depth"] + self.height(c) <= MAX_DEPTH:
+                self.move(c, dst)
+            else:
+                self.absorb(c, src, same=False)       # too deep under dst: fold into src first (moves along)
+        for c in list(n["children"]):
+            self.move(c, dst)
+        self.nodes[n["parent"]]["children"].remove(src)
+        del self.nodes[src]
+        self.aliases[src] = dst
 
     def index_synonyms(self, nid: str, syns: list[str]) -> None:
         """Make hand-written synonyms merge targets too ('Electricians' -> 'Electrical work')."""
@@ -1005,7 +1038,8 @@ class TokenIndex:
                     score[nid] += w
         return [k for k, _ in sorted(score.items(), key=lambda kv: (-kv[1], self.t.depth(kv[0]), kv[0]))[:n]]
 
-    def fuzzy(self, label: str, lang: str, roots: list[str], within: str | None = None) -> str | None:
+    def fuzzy(self, label: str, lang: str, roots: list[str], within: str | None = None,
+              max_depth: int = MAX_DEPTH) -> str | None:
         """A node whose label (same language, or English) says the same with other inflection/wording:
         token pairs equal or sharing a long prefix ('astianpesukoneet' ~ 'astianpesukone'). Inside a known
         parent it is enough that every token of the menu label is in the node label ('Kannettavat' ~
@@ -1015,11 +1049,11 @@ class TokenIndex:
             return None
         for nid in self.ranked(label, lang, within):
             n = self.t.nodes[nid]
-            if n["root"] not in roots or not menu_target(n):
+            if n["root"] not in roots or not menu_target(n) or n["depth"] > max_depth:
                 continue
             for l2 in (lang, "en"):
                 lab = n["labels"].get(l2)
-                if not lab:
+                if not lab or not same_shape(label, lab):
                     continue
                 b = [x for x in tokens(lab, l2) if x not in GENERIC] or tokens(lab, l2)
                 if not b:
@@ -1071,6 +1105,11 @@ class TokenIndex:
 LIST_LABEL = re.compile(r",|&|\+|\b(and|ja|und|en|och|és|es|og|et|i|y|e|sowie|samt)\b", re.I)
 
 
+def same_shape(a: str, b: str) -> bool:
+    """'Computers en software' (a list of two things) is not 'Computer Software' (one thing)."""
+    return bool(LIST_LABEL.search(a)) == bool(LIST_LABEL.search(b))
+
+
 def roots_for(spec) -> list[str]:
     if spec == "products":
         return PRODUCT_ROOTS
@@ -1081,18 +1120,141 @@ def roots_for(spec) -> list[str]:
     return list(spec)
 
 
+# ------------------------------------------------------------------ 6a. menu hygiene: junk pages, facets, spelling
+
+# Shop menus and sitemaps also list pages that are not categories of goods or services: test pages, campaigns,
+# news/info, B2B and reference-customer pages, jobs, account/help/store pages, gift-under-price pages, the shop's own
+# vouchers. Those are dropped with everything below them.
+JUNK_RULES: list[tuple[str, str]] = [
+    ("test page", r"\b(test|beringar\d*|slices|digilife)\b"),
+    ("campaign", r"black\s*friday|cyber\s*monday|season\s*sale|\bsale\b|\boutlet\b|\bdeals?\b|aanbieding|\bangebote\b|"
+                 r"\baktionen\b|\btarjous|\bkampanja|\bkampanj\b|loppuhuipennus|alennusmyynti|prime\s*day|singles\s*day|"
+                 r"\bnieuw!|\bneuheiten\b"),
+    ("info/news", r"\b(corona\w*|covid\w*|newsletter|blog|ratgeber|inspiration|ideen|geschenkideen|gift ideas|"
+                  r"lahjaideat|cadeautips)\b"),
+    ("b2b", r"\bb2b\b|referenzkund"),
+    ("jobs", r"\b(jobs|vacatures?|karriere|stellenangebote?|työpaikat|lediga jobb|careers|sonstige berufe|"
+             r"callcenter)\b"),
+    ("account/help", r"\b(klantenservice|kundenservice|asiakaspalvelu|kundtjänst|customer service|mijn|my account|"
+                     r"kundenkonto|login|faq|filialen|winkels|myymälät|store locator|terminvereinbarung|"
+                     r"schwachstellen\w*|smartbar|relution|diged|plusgarantie|plusschutz|garantieerweiterung|"
+                     r"zahnzusatzversicherung|kaufberatung|tarifberatung|zahlung|lieferung|umtausch|rueckgabe|rückgabe|"
+                     r"alle merken|marken|merken|brands|garantie)\b"),
+    ("price page", r"\b(lahja|lahjat)\b|\d+\s?(€|euro|eur)\b"),
+]
+JUNK_KEEP = re.compile(r"penetration|\bpat\b|drug|allergy|\bdna\b|hearing|driving|\bmot\b", re.I)
+SELF_NAMES = ("coolblue", "helpling", "mediamarkt", "prisma", "emag", "ipon", "jimms", "blocket", "verkkokauppa",
+              "checkatrade", "my-hammer", "myhammer", "fiverr", "kleinanzeigen", "marktplaats", "otto.de")
+# 'Other ...' buckets and pure size/spec/price facets are not categories either: a leaf folds into its parent
+# (its label becomes a search synonym there), a wrapper with children is skipped over.
+FOLD_RULE = re.compile(
+    r"^(weitere|sonstige|muut|övrig[at]?|ovrig[at]?|overige?|egyeb|egyéb|other|others|misc|miscellaneous|alle|all|"
+    r"kaikki|alla)\b|\b(overig|muut|sonstige|sonstiges|övrigt)$|"
+    r"^\W*(alle\s+|under\s+|yli\s+|bis\s+|ab\s+)?[\d.,]+\s*(gb|tb|mb|w|kw|mm|cm|m|zoll|tuumaa|inch|\"|mhz|ghz|v|mah|"
+    r"kg|l|hz|k|x)?(\s*-\s*[\d.,]+\s*(gb|tb|mb|w|mm|cm|zoll|tuumaa|inch|\"|kg|l)?)?\W*$|\d+\s*(zoll|tuumaa|inch)\b|\balle\s+\d", re.I)
+
+
+def menu_junk(label: str, site: str) -> str | None:
+    """'drop' (not a category: drop with its subtree), 'fold' (facet / 'other' bucket) or None."""
+    low = label.lower()
+    if any(n in low for n in SELF_NAMES):
+        return "drop"
+    for _why, rx in JUNK_RULES:
+        if re.search(rx, low) and not JUNK_KEEP.search(low):
+            return "drop"
+    if FOLD_RULE.search(low):
+        return "fold"
+    return None
+
+
+class Speller:
+    """Puts back letters a URL slug lost: 'Waeschetonne' -> 'Wäschetonne', 'Jarjestelmakamerat' ->
+    'Järjestelmäkamerat', 'Fenykepezogepek' -> 'Fényképezőgépek', using the words the tree already has in that
+    language (whole word, else a compound of two known words; German ae/oe/ue as a last resort)."""
+
+    def __init__(self, t: Tree) -> None:
+        forms: dict[str, dict[str, collections.Counter]] = collections.defaultdict(
+            lambda: collections.defaultdict(collections.Counter))
+        self.ascii_en: set[str] = set()
+        for n in t.nodes.values():
+            for lang, lab in n["labels"].items():
+                for w in re.findall(r"[^\W\d_]+", lab.lower()):
+                    if lang == "en":
+                        self.ascii_en.add(w)
+                    forms[lang][fold(w, lang)][w] += 1
+        self.forms = {lang: {k: c.most_common(1)[0][0] for k, c in d.items()} for lang, d in forms.items()}
+
+    def word(self, w: str, lang: str) -> str:
+        low = w.lower()
+        fm = self.forms.get(lang, {})
+        if not low.isascii() or len(low) < 3 or low in self.ascii_en and lang != "de":
+            return w
+        k = fold(low, lang)
+        got = fm.get(k)
+        if not got:
+            for i in range(3, len(k) - 3):           # compound of two known words, longest tail first
+                a, b = k[:i], k[i:]
+                if b in fm and (a in fm or (a[-1] in "sn" and a[:-1] in fm)):
+                    got = (fm.get(a) or fm[a[:-1]] + a[-1]) + fm[b]
+                    break
+        if not got and lang == "de" and re.search("ae|oe|ue", low) and low not in self.ascii_en:
+            got = re.sub(r"(?<![aeiouq])ue", "ü", re.sub(r"(?<![aeiou])oe", "ö", re.sub(r"(?<![aeiou])ae", "ä", low)))
+        if not got or got.isascii():
+            return w
+        return got[:1].upper() + got[1:] if w[:1].isupper() else got
+
+    def label(self, s: str, lang: str) -> str:
+        if lang not in ("de", "fi", "sv", "hu", "nl", "da", "nb", "pl", "cs", "fr", "es", "it"):
+            return s
+        return re.sub(r"[^\W\d_]+", lambda m: self.word(m.group(0), lang), s)
+
+
+# Marketplace top levels are lists of several things ('Möbler och inredning'): mapped by hand to our nodes
+# (None = not a category). Children are then matched inside that node.
+MENU_TOP: dict[str, dict[str, str | None]] = {
+    "blocket": {"möbler och inredning": "furniture", "kläder, kosmetika och accessoarer": "fashion",
+                "elektronik och vitvaror": "electronics", "föräldrar och barn": "baby-kids",
+                "bygg och trädgård": "diy", "underhållning och hobby": "hobbies", "sport och friluftsliv": "sports-outdoors",
+                "djur och tillbehör": "pets", "fordonstillbehör": "vehicles", "konst och antikt": "hobbies",
+                "affärsverksamhet": "business"},
+    "tori": {"koti ja sisustus": "home-garden", "vaatteet, kosmetiikka ja asusteet": "fashion",
+             "elektroniikka ja kodinkoneet": "electronics", "lapset ja vanhemmat": "baby-kids",
+             "piha ja remontointi": "diy", "viihde ja harrastukset": "hobbies", "eläimet ja eläintarvikkeet": "pets",
+             "auto-, vene- ja moottoripyörätarvikkeet": "vehicles", "antiikki ja taide": "hobbies",
+             "liiketoiminta ja palvelut": "business"},
+    "marktplaats": {"antiek en kunst": "hobbies", "audio tv en foto": "electronics", "auto s": "vehicles",
+                    "auto onderdelen": "vehicles", "auto diversen": "vehicles", "caravans en kamperen": "vehicles",
+                    "cd s en dvd s": "media", "computers en software": "electronics", "contacten en berichten": None,
+                    "diensten en vakmensen": "trades", "dieren en toebehoren": "pets", "doe het zelf en verbouw": "diy",
+                    "fietsen en brommers": "sports-outdoors", "hobby en vrije tijd": "hobbies",
+                    "huis en inrichting": "home-garden", "huizen en kamers": "property", "kinderen en baby s": "baby-kids",
+                    "motoren": "vehicles", "muziek en instrumenten": "hobbies", "postzegels en munten": "hobbies",
+                    "sieraden tassen en uiterlijk": "fashion", "spelcomputers en games": "electronics",
+                    "sport en fitness": "sports-outdoors", "telecommunicatie": "electronics",
+                    "tickets en kaartjes": "events-leisure", "tuin en terras": "home-garden", "vakantie": "travel",
+                    "verzamelen": "hobbies", "witgoed en apparatuur": "appliances", "zakelijke goederen": "business",
+                    "diversen": None},
+}
+UNPLACED: dict[str, list[tuple]] = collections.defaultdict(list)     # for inspection (not exported)
+SERVICE_WORDS = re.compile(r"dienst|palvelu|tjänst|service|vakmens|handwerk|hantverk|reparat|korjaus|unterricht|"
+                           r"lessen|opetus|kurs|cursus|lektion", re.I)
+
+
 def build_menus(t: Tree) -> dict[str, dict]:
     stats = {}
+    speller = Speller(t)
     for key_, (domain, lang, lane, rspec, _fn) in MENU_SITES.items():
         p = MENUS / f"{key_}.json"
         if not p.exists():
             continue
         data = json.loads(p.read_text())
         items = data["items"]
-        roots = roots_for(rspec)
-        tix = TokenIndex(t, roots)
+        all_roots = roots_for(rspec)
+        tix = TokenIndex(t, all_roots)
         mapped: dict[tuple, str | None] = {}
-        matched = added = unplaced = 0
+        matched = added = unplaced = junk = facets = 0
+        dropped: set[tuple] = set()
+        flat = all(len(it["path"]) == 1 for it in items)     # a flat sitemap: 'top level' is not broad
         anchor = MENU_ANCHOR.get(key_)
         drop = MENU_DROP.get(key_)
         have = {tuple(it["path"]) for it in items}
@@ -1104,35 +1266,68 @@ def build_menus(t: Tree) -> dict[str, dict]:
                     items.append({"path": list(pre), "url": ""})
         for it in sorted(items, key=lambda x: len(x["path"])):
             path = tuple(it["path"])
-            labels = it.get("labels") or {lang: path[-1]}
+            labels = it.get("labels") or {lang: speller.label(path[-1], lang)}
             if path in mapped:
                 continue
-            if drop and drop(path):
+            if drop and drop(path) or any(path[:k] in dropped for k in range(1, len(path))):
                 mapped[path] = None
                 continue
             lab0, l0 = next(iter(labels.items()))[1], next(iter(labels))
             parent_node = mapped.get(path[:-1]) if len(path) > 1 else None
+            verdict = menu_junk(lab0, key_) or (menu_junk(path[-1], key_) if path[-1] != lab0 else None)
+            if verdict == "drop":
+                dropped.add(path)
+                mapped[path] = None
+                junk += 1
+                continue
+            if verdict == "fold":           # 'Other ...' / '512GB': a synonym of the parent; children skip over it
+                mapped[path] = parent_node
+                if parent_node:
+                    t.merge_into(parent_node, {}, list(labels.values()), src=None)
+                    t.add_where(parent_node, domain, lane)
+                facets += 1
+                continue
+            top = MENU_TOP.get(key_, {})
+            if len(path) == 1 and lab0.lower() in top:
+                node = top[lab0.lower()]
+                mapped[path] = node
+                if node:
+                    t.merge_into(node, {}, [lab0], src="menu:" + key_)
+                    t.add_where(node, domain, lane)
+                    matched += 1
+                else:
+                    dropped.add(path)
+                    junk += 1
+                continue
+            roots = all_roots
+            if rspec == "all":              # marketplaces: goods stay among goods, services among services
+                if parent_node:
+                    roots = SERVICE_ROOTS if t.root_of(parent_node) in SERVICE_ROOTS else PRODUCT_ROOTS
+                elif not SERVICE_WORDS.search(lab0):
+                    roots = PRODUCT_ROOTS
             node = None
             # 1. same meaning: under the mapped parent (exact, then lenient), else anywhere in the allowed roots
             if parent_node:
                 node = t.find(labels, parent_node, roots=roots)
-                if node and not menu_target(t.nodes[node]):
-                    node = None
+                if node and (not menu_target(t.nodes[node]) or t.root_of(node) != t.root_of(parent_node)
+                             and t.depth(node) > 3):
+                    node = None             # 'Möbel > Regale' is not the oven 'Racks' in another root
                 node = node or tix.fuzzy(lab0, l0, roots, within=parent_node)
             if not node:
-                max_d = 3 if len(path) == 1 else MAX_DEPTH
+                max_d = 3 if len(path) == 1 and not flat else MAX_DEPTH
                 for l2, lab in labels.items():
                     k = key(lab, l2)
                     if is_generic(k):
                         continue
                     for c in sorted(t.keys.get((l2, k), ()), key=lambda c: (t.depth(c), c)):
-                        if t.root_of(c) in roots and t.depth(c) <= max_d and menu_target(t.nodes[c]):
+                        if t.root_of(c) in roots and t.depth(c) <= max_d and menu_target(t.nodes[c]) and \
+                                same_shape(lab, t.nodes[c]["labels"].get(l2) or t.nodes[c]["labels"].get("en", "")):
                             node = c
                             break
                     if node:
                         break
             if not node:
-                node = tix.fuzzy(lab0, l0, roots)
+                node = tix.fuzzy(lab0, l0, roots, max_depth=3 if len(path) == 1 and not flat else MAX_DEPTH)
             if node:
                 t.merge_into(node, labels, [], src="menu:" + key_)
                 matched += 1
@@ -1145,6 +1340,7 @@ def build_menus(t: Tree) -> dict[str, dict]:
                 if not parent:
                     mapped[path] = None
                     unplaced += 1
+                    UNPLACED[key_].append(path)
                     continue
                 nid = f"m:{key_}:{slug(path[-1])[:24]}-{hashlib.sha1('/'.join(path).encode()).hexdigest()[:6]}"
                 node = t.place(nid, parent, labels, src="menu:" + key_, kind=t.nodes[parent]["kind"])
@@ -1153,8 +1349,10 @@ def build_menus(t: Tree) -> dict[str, dict]:
             mapped[path] = node
             if node:
                 t.add_where(node, domain, lane)
-        stats[key_] = {"items": len(items), "matched": matched, "added": added, "unplaced": unplaced}
-        print(f"menu {key_}: {len(items)} items, {matched} matched, {added} added, {unplaced} unplaced")
+        stats[key_] = {"items": len(items), "matched": matched, "added": added, "unplaced": unplaced,
+                       "junk": junk, "facets": facets}
+        print(f"menu {key_}: {len(items)} items, {matched} matched, {added} added, {unplaced} unplaced, "
+              f"{junk} junk, {facets} facets")
     return stats
 
 
@@ -1222,6 +1420,319 @@ def regroup_services(t: Tree) -> int:
                 print("   move", n["labels"].get("en") or next(iter(n["labels"].values())), "->", t.nodes[best]["labels"]["en"])
     print(f"regroup: {moved} service entries moved under curated nodes")
     return moved
+
+
+# ------------------------------------------------------------------ 6c. English names for menu nodes
+
+FUNC_WORDS = {
+    "de": {"mit": "with", "ohne": "without", "für": "for", "fur": "for", "von": "of", "zum": "for", "zur": "for",
+           "im": "in", "aus": "from", "und": "&", "oder": "or", "fürs": "for", "furs": "for"},
+    "nl": {"met": "with", "zonder": "without", "voor": "for", "van": "of", "en": "&", "of": "or"},
+    "sv": {"med": "with", "utan": "without", "för": "for", "for": "for", "till": "for", "och": "&", "eller": "or"},
+    "fi": {"ja": "&", "tai": "or"}, "hu": {"és": "&", "es": "&", "vagy": "or"},
+    "da": {"og": "&", "med": "with", "til": "for"}, "nb": {"og": "&", "med": "with", "til": "for"},
+}
+NO_TRANSLATION = {"de": {"ab", "bis", "andere", "weitere"}, "fi": {"muut"}, "sv": {"övriga", "ovriga"},
+                  "nl": {"overige"}}
+SMALL_EN = {"with", "without", "for", "of", "in", "from", "or", "and", "&", "the", "a"}
+_WORDS_RX = re.compile(r"[^\W_]+(?:['’][^\W_]+)?|[,&/+]")
+
+
+def _parts(label: str, lang: str) -> list[str]:
+    conj = {k for k, v in FUNC_WORDS.get(lang, {}).items() if v == "&"} | ({"and"} if lang == "en" else set())
+    out, cur = [], []
+    for w in _WORDS_RX.findall(label):
+        if w in ",&+/" or w.lower() in conj:
+            if cur:
+                out.append(cur)
+            cur = []
+        else:
+            cur.append(w)
+    if cur:
+        out.append(cur)
+    return [" ".join(p) for p in out]
+
+
+def _content(part: str, lang: str) -> list[str]:
+    fw = FUNC_WORDS.get(lang, {})
+    return [w for w in part.split() if w.lower() not in fw and key(w, lang)]
+
+
+class Translator:
+    """Foreign menu label -> English from the tree's own parallel labels (Shopify/Google/CPV/curated nodes carry the
+    same category in up to 13 languages): word and compound alignments, function words, English loanwords. Every
+    word must be known, else None (no guessing)."""
+
+    def __init__(self, t: Tree) -> None:
+        words: dict[str, dict[str, collections.Counter]] = collections.defaultdict(
+            lambda: collections.defaultdict(collections.Counter))
+        self.en_vocab: set[str] = set()
+        for nid, n in t.nodes.items():
+            en = n["labels"].get("en")
+            if not en or nid.startswith("m:"):
+                continue
+            self.en_vocab.update(w.lower() for w in re.findall(r"[^\W_]+", en))
+            ep = _parts(en, "en")
+            for lang, lab in n["labels"].items():
+                if lang == "en":
+                    continue
+                lp = _parts(lab, lang)
+                if len(lp) != len(ep):
+                    continue
+                for x, e in zip(lp, ep):
+                    xw, ew = _content(x, lang), _content(e, "en")
+                    # evidence: 1 word <-> 1 word = 3, 1 word <-> 2-3 words (a compound) = 2, word pairs of
+                    # equally long phrases = 1. A translation needs 3 points and half of the word's evidence.
+                    if len(xw) == 1 and len(ew) == 1:
+                        words[lang][key(xw[0], lang)][ew[0]] += 3
+                    elif len(xw) == 1 and 2 <= len(ew) <= 3:
+                        words[lang][key(xw[0], lang)][" ".join(ew)] += 2
+                    elif len(xw) == len(ew) <= 3:
+                        for a, b in zip(xw, ew):
+                            words[lang][key(a, lang)][b] += 1
+        self.words = {}
+        for lang, d in words.items():
+            ok = {}
+            for k, c in d.items():
+                best, n_ = c.most_common(1)[0]
+                if k and n_ >= 3 and n_ >= 0.5 * sum(c.values()):
+                    ok[k] = best
+            self.words[lang] = ok
+
+    def _word(self, w: str, lang: str) -> str | None:
+        low = w.lower()
+        fw = FUNC_WORDS.get(lang, {})
+        if low in fw:
+            return fw[low]
+        if low in NO_TRANSLATION.get(lang, ()):
+            return None
+        if any(ch.isdigit() for ch in w):
+            return w.upper() if len(w) <= 4 and w.isalnum() else w
+        d = self.words.get(lang, {})
+        k = key(w, lang)
+        if k in d:
+            return d[k]
+        if low in self.en_vocab:
+            return w
+        if len(k) >= 10:                              # compound of two known words: modifier + head
+            for i in range(5, len(k) - 4):
+                a, b = k[:i], k[i:]
+                aa = a if a in d else (a[:-1] if a[-1:] in "sn" and a[:-1] in d else None)
+                if aa and b in d:
+                    return _singular(d[aa]) + " " + d[b]
+        return None
+
+    def translate(self, label: str, lang: str, *, title: bool) -> str | None:
+        if lang == "en":
+            return label
+        out: list[str] = []
+        for w in _WORDS_RX.findall(label):
+            if w in ",&+/":
+                out.append({"+": "&"}.get(w, w))
+                continue
+            tr = self._word(w, lang)
+            if tr is None:
+                return None
+            out.append(tr)
+        for i in range(len(out) - 1):                 # modifiers are singular: 'Camera batteries'
+            if out[i] not in ",&/" and out[i].lower() not in SMALL_EN and out[i + 1] not in ",&/" \
+                    and out[i + 1].lower() not in SMALL_EN:
+                out[i] = _singular(out[i])
+        text = " ".join(out).replace(" ,", ",").replace(" / ", "/")
+        ws: list[str] = []
+        for w in text.split():
+            if not ws or w.lower() != ws[-1].lower():
+                ws.append(w)
+        while ws and ws[-1].lower() in SMALL_EN:
+            ws.pop()
+        while ws and ws[0].lower() in SMALL_EN:
+            ws.pop(0)
+        if not ws:
+            return None
+        res = []
+        for i, w in enumerate(ws):
+            if w.isupper() and len(w) > 1 or any(ch.isdigit() for ch in w):
+                res.append(w)
+            elif i == 0 or title and w.lower() not in SMALL_EN:
+                res.append(w[:1].upper() + w[1:].lower())
+            else:
+                res.append(w.lower())
+        return " ".join(res)
+
+
+def _singular(phrase: str) -> str:
+    head, _, last = phrase.rpartition(" ")
+    lw = last.lower()
+    if "'" in lw or "’" in lw:
+        pass
+    elif len(lw) > 4 and lw.endswith("ies"):
+        last = last[:-3] + "y"
+    elif len(lw) > 4 and lw.endswith(("ches", "shes", "sses", "xes")):
+        last = last[:-2]
+    elif len(lw) > 3 and lw.endswith("s") and not lw.endswith(("ss", "us", "is", "ics")):
+        last = last[:-1]
+    return (head + " " + last).strip()
+
+
+def _equivalent(t: Tree, nid: str) -> str | None:
+    """An existing English-named node that means the same as menu node nid (same label in a shared language, same
+    root): its parent, a sibling, an ancestor, else the shallowest such node."""
+    n = t.nodes[nid]
+    best = None
+    for lang, lab in n["labels"].items():
+        k = key(lab, lang)
+        if not k:
+            continue
+        cands = [c for c in t.keys.get((lang, k), ()) if c != nid and c in t.nodes and "en" in t.nodes[c]["labels"]
+                 and t.root_of(c) == n["root"] and not t.in_subtree(c, nid)]
+        if is_generic(k):
+            cands = [c for c in cands if c == n["parent"] or t.nodes[c]["parent"] == n["parent"]]
+        for c in cands:
+            rank = (0 if c == n["parent"] else 1 if t.nodes[c]["parent"] == n["parent"] else
+                    2 if t.in_subtree(n["parent"], c) else 3, c.startswith(("cpv:", "nace:")), t.depth(c), c)
+            if best is None or rank < best[0]:
+                best = (rank, c)
+    return best[1] if best else None
+
+
+def localise_menu_nodes(t: Tree) -> dict:
+    """Every node a shop menu added gets an English label: merged into the existing node with the same meaning,
+    else translated from the tree's multilingual labels. A leaf that still has no English name is a facet of its
+    parent ('Dji kameras', 'Brommers puch'): it folds into the parent as a synonym. Only nodes with children keep
+    a foreign label (listed in tree.json "missing_en")."""
+    tr = Translator(t)
+    st: collections.Counter = collections.Counter()
+    order = sorted((nid for nid in t.nodes if nid.startswith("m:")), key=lambda x: (-t.depth(x), x))
+    for nid in order:
+        if nid not in t.nodes:
+            continue
+        n = t.nodes[nid]
+        if "en" in n["labels"]:
+            continue
+        tgt = _equivalent(t, nid)
+        if tgt:
+            t.absorb(nid, tgt, same=True)
+            st["merged"] += 1
+            continue
+        title = n["kind"] not in ("service",)
+        en = next((x for lang, lab in n["labels"].items() if (x := tr.translate(lab, lang, title=title))), None)
+        if en and not n["children"] and not re.search(r"[a-z]{3,}", en):
+            en = None                   # 'HDMI', 'DDR5', '4X': a spec facet of the parent, not a category
+        if en:
+            k, par = key(en), n["parent"]
+            if k == key(t.nodes[par]["labels"].get("en", "")):
+                t.absorb(nid, par, same=True)
+                st["merged"] += 1
+                continue
+            sib = sorted(c for c in t.nodes[par]["children"] if c != nid and key(t.nodes[c]["labels"].get("en", "")) == k)
+            if sib:
+                t.absorb(nid, sib[0], same=True)
+                st["merged"] += 1
+                continue
+            n["labels"]["en"] = en
+            t.keys[("en", k)].add(nid)
+            st["translated"] += 1
+            continue
+        if not n["children"]:
+            t.absorb(nid, n["parent"], same=False)
+            st["folded"] += 1
+            continue
+        st["kept_foreign"] += 1
+    print("localise:", dict(st))
+    return dict(st)
+
+
+# ------------------------------------------------------------------ 6d. the trades A-Z bucket into groups
+
+BUCKET = "trades.other-trades-specialists"
+
+
+def regroup_trades_bucket(t: Tree) -> int:
+    rules = [(re.compile(rx), tgt) for rx, tgt in curated.TRADE_BUCKET_RULES]
+    for _, tgt in rules:
+        if tgt != "-fold" and tgt not in t.nodes:
+            print("  bucket rule target missing:", tgt)
+    moved = 0
+    for c in list(t.nodes[BUCKET]["children"]):
+        n = t.nodes[c]
+        en = n["labels"].get("en")
+        if not en:
+            continue
+        tgt = next((g for rx, g in rules if rx.search(en.lower())), None)
+        if not tgt or (tgt != "-fold" and tgt not in t.nodes):
+            continue
+        if tgt == "-fold":
+            t.absorb(c, BUCKET, same=False)
+        elif n["children"]:            # a platform's own top category ('Badezimmer'): the same thing as the group
+            t.absorb(c, tgt, same=True)
+        else:
+            t.move(c, tgt)
+        moved += 1
+    print(f"trades bucket: {moved} entries grouped, {len(t.nodes[BUCKET]['children'])} left")
+    return moved
+
+
+# ------------------------------------------------------------------ 6e. shopper names for CPV / NACE wordings
+
+_ACT = (r"repair|maintenance|installation|inspection|testing|transport|disposal|supply|preservation|reconditioning|"
+        r"rental|hire|leasing|renting|design|printing|training|management|operation|consultancy|translation|removal|"
+        r"collection|storage|demolition|construction|decoration|conversion|refurbishment|cleaning|servicing|"
+        r"overhaul|dismantling|assembly|sterilisation|calibration|programming|insurance")
+
+
+def shopper_name(label: str) -> str | None:
+    """'Repair and maintenance services of microcomputers' -> 'Microcomputer repair & maintenance',
+    'Satellite telecommunications activities' -> 'Satellite telecommunications', 'Courier services' stays."""
+    s = label.strip()
+    s = re.sub(r"\s*\((?:except|excluding|other than|not elsewhere)[^)]*\)", "", s, flags=re.I)
+    s = re.sub(r",?\s+(?:other than|except|excluding|not elsewhere classified)\b.*$", "", s, flags=re.I)
+    s = re.sub(r",?\s*n\.e\.c\.?$", "", s, flags=re.I)
+    s = re.sub(r"^miscellaneous\s+", "Other ", s, flags=re.I)
+    s = re.sub(r"^(?:services (?:provided|furnished) by|activities of)\s+", "", s, flags=re.I)
+    s = re.sub(r"^renting and leasing\b", "Rental", s, flags=re.I)
+    s = re.sub(r"^repair, maintenance and associated services (?:of|related to|for)\b", "Repair and maintenance of", s,
+               flags=re.I)
+    m = re.match(rf"^({_ACT})(?:(?:,| and) ({_ACT}))?(?: and associated)?(?: services?| works?)? (?:of|for|on|to|related to)"
+                 rf" (?:the )?(.+)$", s, flags=re.I)
+    if m and len(m.group(3).split()) <= 5:
+        acts = m.group(1).lower() + (" & " + m.group(2).lower() if m.group(2) else "")
+        s = f"{m.group(3)} {acts}"
+    m = re.match(r"^services related to (.+)$", s, flags=re.I)
+    if m:
+        s = m.group(1) + " services"
+    s = re.sub(r" service activities$", " services", s, flags=re.I)
+    m = re.match(r"^(.+?) (?:services|activities)$", s, flags=re.I)
+    if m:
+        body = m.group(1)
+        last = body.split()[-1].lower()
+        if last.endswith(("al", "ic", "ive", "ary", "ory")):
+            s = body + " services" if s.lower().endswith("activities") else s
+        elif len(body.split()) >= 2 or last.endswith("ing"):
+            s = body
+    s = re.sub(r"\b(repair|maintenance|installation|construction|insulation|building|demolition) works?$", r"\1", s,
+               flags=re.I)
+    s = re.sub(r"\s+and\s+", " & ", s)
+    s = re.sub(r"\s+", " ", s).strip(" ,")
+    if not s:
+        return None
+    s = s[:1].upper() + s[1:]
+    return s if s != label else None
+
+
+def shorten_official_labels(t: Tree) -> int:
+    n_ = 0
+    for nid, n in t.nodes.items():
+        if not nid.startswith(("cpv:", "nace:")) or "en" not in n["labels"]:
+            continue
+        official = n["labels"]["en"]
+        short = shopper_name(official)
+        if short and len(short) <= len(official):
+            n["labels"]["en"] = short
+            if official not in n["syn"]:
+                n["syn"].insert(0, official)
+            n_ += 1
+    print(f"official names shortened: {n_}")
+    return n_
 
 
 # ------------------------------------------------------------------ 7. synonyms, kinds, sizes
@@ -1299,7 +1810,7 @@ def assign_kinds_sizes(t: Tree) -> None:
 KIND_CODE = {"product": "p", "service": "s", "digital": "d", "vehicle": "v", "property": "r", "food": "f"}
 
 
-def export(t: Tree, menu_stats: dict) -> pathlib.Path:
+def export(t: Tree, menu_stats: dict, cleanup: dict | None = None) -> pathlib.Path:
     order: list[str] = []
 
     def walk(nid: str) -> None:
@@ -1329,6 +1840,15 @@ def export(t: Tree, menu_stats: dict) -> pathlib.Path:
         if n["where"]:
             row["w"] = n["where"]
         rows.append(row)
+    aliases = {}
+    for old, new in {**curated.ID_ALIASES, **t.aliases}.items():
+        seen = set()
+        while new not in t.nodes and new in t.aliases and new not in seen:
+            seen.add(new)
+            new = t.aliases[new]
+        if new in t.nodes and old not in t.nodes:
+            aliases[old] = new
+    missing_en = [nid for nid in order if "en" not in t.nodes[nid]["labels"]]
     depth = max(t.depth(n) for n in t.nodes)
     lang_cov = {lang: sum(1 for n in t.nodes.values() if lang in n["labels"]) for lang in LANGS}
     per_root = {r: sum(1 for n in t.nodes.values() if n["root"] == r) for r in t.roots}
@@ -1336,7 +1856,10 @@ def export(t: Tree, menu_stats: dict) -> pathlib.Path:
         "name": "agora-taxonomy", "version": time.strftime("%Y-%m-%d"), "langs": list(LANGS), "max_depth": depth,
         "kinds": {v: k for k, v in KIND_CODE.items()}, "sources": SOURCES,
         "stats": {"nodes": len(rows), "per_root": per_root, "labels_per_lang": lang_cov,
-                  "added": dict(t.adds), "merged": dict(t.merges), "folded": dict(t.folds), "menus": menu_stats},
+                  "added": dict(t.adds), "merged": dict(t.merges), "folded": dict(t.folds), "menus": menu_stats,
+                  "cleanup": cleanup or {}, "missing_en": len(missing_en), "aliases": len(aliases)},
+        "missing_en": missing_en,       # nodes still shown with a foreign label in the English view
+        "aliases": aliases,             # ids that were merged away -> the node that holds them now
         "nodes": rows,
     }
     raw = json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode()
@@ -1363,9 +1886,12 @@ def build() -> pathlib.Path:
     build_nace(t)
     build_cpv(t)
     menu_stats = build_menus(t)
+    cleanup = {"localise": localise_menu_nodes(t)}
+    cleanup["trades_bucket_grouped"] = regroup_trades_bucket(t)
     regroup_services(t)
+    cleanup["official_names_shortened"] = shorten_official_labels(t)
     assign_kinds_sizes(t)
-    return export(t, menu_stats)
+    return export(t, menu_stats, cleanup)
 
 
 def main() -> None:

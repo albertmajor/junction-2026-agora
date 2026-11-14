@@ -323,13 +323,16 @@ class Leaderboard:
         self.need, self.resolve, self.size = need, resolve, size
         self.top: list[dict[str, Any]] = []
         self._last = 0.0
+        self._cost = 0.0
 
     def update(self, offers: list[Offer]) -> dict[str, Any] | None:
         judge_mod = _module("judge")
         if judge_mod is None or not offers:
             return None
         now = time.monotonic()
-        if len(offers) > 40 and now - self._last < 1.0:   # hundreds of offers: re-rank at most once a second
+        # hundreds of offers (free marketplace pages read 8 deep): re-rank at most once a second, and never
+        # spend more than ~1/3 of the event loop on it (a 900-offer judge takes ~1 s)
+        if len(offers) > 40 and now - self._last < max(1.0, 3 * self._cost):
             return None
         self._last = now
         twins = copy.deepcopy(offers)
@@ -338,6 +341,8 @@ class Leaderboard:
             judge_mod.judge(self.need, things, history=False)
         except Exception:
             return None
+        finally:
+            self._cost = time.monotonic() - now
         def settled(o: Offer, peers: list[Offer]) -> bool:
             """Only rank a price once something can vouch for it: a second witness, or at least one other
             offer of its condition within 0.5x-2.5x of it. (Otherwise the first too-cheap listing 'leads'
@@ -680,7 +685,7 @@ async def hunt(
         async with sem:
             got, _, q1 = await timed_read(url, free_read)
         offer, why = got if isinstance(got, tuple) else (got, "")
-        if (offer is not None and why in ("jsonld", "snippet_rate")) \
+        if (offer is not None and why in ("jsonld", "snippet_rate", "plain_split")) \
                 or (offer is None and str(why).startswith("page gone")):
             (FETCH_MEMO.get() or {}).pop(url, None)      # free: JSON-LD, or a service rate stated in the snippet
             return got, q1
@@ -776,11 +781,13 @@ async def hunt(
         o = item.data.get("offer") or {}
         before = latest.get("v") or provisional
         t_now = time.monotonic()
-        if len(out.offers) > 40 and t_now - latest.get("t", 0.0) < 1.0 and "v" in latest:
+        if len(out.offers) > 40 and t_now - latest.get("t", 0.0) < max(1.0, 3 * latest.get("cost", 0.0)) \
+                and "v" in latest:
             now, twins = None, latest.get("twins")          # re-judged under a second ago: reuse it
         else:
             now, twins = snapshot(need, out.offers, resolve, judge)
             latest["t"] = t_now
+            latest["cost"] = time.monotonic() - t_now
         latest["twins"] = twins
         after = to_dict(now) if now is not None else before
         latest["v"] = after

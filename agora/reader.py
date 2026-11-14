@@ -1444,6 +1444,104 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
     return _keep_best(out, need, MAX_SPLIT_OFFERS)
 
 
+def registry_free(site: Any) -> dict | None:
+    """The source-registry record when this marketplace page can be read by plain fetch (agora.sources)."""
+    if site is None or getattr(site, "itemlist", False):
+        return None
+    try:
+        from agora import marketplaces
+        return marketplaces.registry_record(site)
+    except Exception:
+        return None
+
+
+_PAGE_SUFFIX = re.compile(r"^/p/?\{page\}/?$")
+
+
+def registry_page_url(rec: dict, site: Any, url: str, n: int) -> str | None:
+    """Results page n of a registry source: its paging param / '/p/{page}/' suffix, else the hand-listed scheme."""
+    from urllib.parse import parse_qsl, urlencode, urlunsplit
+    pg = rec.get("pagination") or {}
+    parts = urlsplit(url)
+    if pg.get("param"):
+        q = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k != pg["param"]]
+        q.append((pg["param"], str(n)))
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(q), ""))
+    if pg.get("path_suffix") and _PAGE_SUFFIX.match(pg["path_suffix"]):
+        path = re.sub(r"/p/?\d+/?$", "", parts.path.rstrip("/"))
+        return urlunsplit((parts.scheme, parts.netloc, path + pg["path_suffix"].replace("{page}", str(n)),
+                           parts.query, ""))
+    try:
+        from agora import marketplaces
+        return marketplaces.page_url(site, url, n)
+    except Exception:
+        return None
+
+
+def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | None, site: Any, page: int) -> list[Offer]:
+    out: list[Offer] = []
+    said = {"refurbished": "refurbished", "new": "new"}.get(getattr(site, "lane", ""))
+    for row in rows:
+        u = listing_url(row.get("url"), page_url)
+        title = fence.clean_field(str(row.get("title") or "")[:160]) or ""
+        amount, cur = parse_price(row.get("price"), row.get("currency"), domain_of(page_url))
+        if u is None or not title or amount is None:
+            continue
+        o = _list_offer(u, page_url, title, amount, cur, need, hint, schema_cond=None, said_cond=said, image=None,
+                        location=None, via="plain_split", step="plain_split")
+        o.raw["page"] = page
+        if row.get("text"):
+            o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
+        out.append(o)
+    return out
+
+
+async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str | None) -> tuple[list[Offer], int]:
+    """Plain fetch + agora.sources.rows_from_html, then pages 2..(FREE_PAGES x depth) the same way (3 at a time),
+    stopping when a page has no rows or its titles stop matching the need. No token spent. -> (offers, pages)."""
+    from agora import sources as _src
+    status, html = await fetch_html(url)
+    if status != 200 or not html or looks_blocked(status, html):
+        return [], 0
+    first = _rows_to_offers(_src.rows_from_html(html, url, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, 1)
+    if not first:
+        return [], 0
+    out, pages = list(first), 1
+    last = FREE_PAGES * max(1, min(3, READ_DEPTH.get()))
+    sem = asyncio.Semaphore(FREE_PAGE_CONCURRENCY)
+    seen = {o.url for o in first}
+
+    async def one(k: int) -> list[Offer]:
+        u = registry_page_url(rec, site, url, k)
+        if not u or u == url:
+            return []
+        async with sem:
+            st, h = await fetch_html(u)
+        if st != 200 or not h or looks_blocked(st, h):
+            return []
+        got = _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, k)
+        return [o for o in got if o.url not in seen]
+
+    n = 2
+    while n <= last:
+        batch = list(range(n, min(last, n + FREE_PAGE_CONCURRENCY - 1) + 1))
+        got = await asyncio.gather(*(one(k) for k in batch), return_exceptions=True)
+        stop = False
+        for items in got:
+            if isinstance(items, BaseException) or not items:
+                stop = True
+                continue
+            pages += 1
+            seen |= {o.url for o in items}
+            out += items
+            if sum(1 for o in items if _score(o, need) >= 0.5) / len(items) < FREE_PAGE_MIN_MATCH:
+                stop = True
+        if stop:
+            break
+        n = batch[-1] + 1
+    return _keep_best(out, need, MAX_SPLIT_OFFERS), pages
+
+
 async def more_itemlist_pages(page_url: str, site: Any, need: Need, hint: str | None, first: list[Offer],
                               html: str) -> tuple[list[Offer], int]:
     """A free ItemList site (tori): read pages 2..FREE_PAGES politely (3 at a time, plain fetch, no tokens).
@@ -1549,6 +1647,23 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
         return (offers if expand_lists else best_offer(offers, need)), via
 
     site = direct_site(url, need)
+    free_rec = registry_free(site)
+    if free_rec is not None and expand_lists:
+        # a source the registry verified readable by plain fetch (vinted, marktplaats, kleinanzeigen ...):
+        # rows cut from the HTML, pages 2..N read the same way, before any paid Context.dev scrape
+        try:
+            items, pages = await read_free_source(url, site, free_rec, need, lane)
+        except Exception:          # blocked, layout changed, network: the paid markdown read still works
+            items, pages = [], 0
+        if items:
+            contextdev.note_free_read()
+            market = note_market(url, site, "", len(items), pages)
+            for o in items:
+                o.raw["site"] = site.key
+                o.raw["market"] = market
+                if getattr(site, "vehicle", False):
+                    o.raw["category"] = "vehicle"
+            return listed(items, "plain_split")
     if site is not None and not site.itemlist and not paid:
         return None, "search page: needs a list read"        # no ItemList on this site: skip the free fetch
     status, html = (0, "") if site is not None and not site.itemlist else await fetch_html(url)

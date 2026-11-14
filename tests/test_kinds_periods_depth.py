@@ -244,9 +244,9 @@ def test_red_car_pick_is_never_a_toy():
 def test_vehicle_routes_to_car_marketplaces_first_without_excluding_others():
     pages = marketplaces.direct_pages("car", "used", None, "fi", 10)
     keys = [d.site.key for d in pages]
-    assert keys[0] == "tori_autot" and "nettiauto" in keys and "tori" in keys   # priority, not exclusion
-    assert pages[0].url == "https://www.tori.fi/mobility/search/car"            # generic 'car': browse the category
-    assert marketplaces.site_for(pages[0].url).key == "tori_autot"
+    assert keys[0] == "nettiauto" and "tori" in keys                            # priority, not exclusion
+    assert pages[0].url == "https://www.nettiauto.com/vaihtoautot"              # generic 'car': browse the category
+    assert marketplaces.site_for("https://www.tori.fi/mobility/search/car").key == "tori_autot"
 
 
 def test_marketplace_platform_rating_never_sets_listings_aside(monkeypatch):
@@ -256,3 +256,37 @@ def test_marketplace_platform_rating_never_sets_listings_aside(monkeypatch):
     assert judge._trust_signals(o, [o], None) == [] or all("reviews" not in s[0] for s in judge._trust_signals(o, [o], None))
     shop = Offer(url="https://badshop.example/p/1", source="badshop.example", title="x", price=1, currency="EUR")
     assert any("reviews" in s[0] for s in judge._trust_signals(shop, [shop], None))
+
+
+# --------------------------------------------------------------------------- 6. free registry sources, paginated
+
+def _mp_page(start: int, n: int) -> str:
+    rows = "".join(f'<li><a href="/v/audio-tv-en-foto/koptelefoons/a{100000 + i}-airpods-pro-2">'
+                   f'AirPods Pro 2 used</a><span>€ {120 + i % 50},00</span></li>' for i in range(start, start + n))
+    return f"<html><body><ul>{rows}</ul></body></html>"
+
+
+def test_marktplaats_is_read_free_and_paginated(monkeypatch):
+    """Owner: 'are we even checking multiple pages? marktplaats has multiple pages'."""
+    monkeypatch.setenv("AGORA_DIRECT", "1")
+    site = marketplaces.SITES["marktplaats"]
+    assert marketplaces.free_site(site)
+    asked: list[str] = []
+
+    async def fetch(url):
+        asked.append(url)
+        page = 1 if "/p/" not in url else int(url.rstrip("/").rsplit("/", 1)[-1])
+        return (200, _mp_page(page * 100, 20)) if page <= 3 else (200, "<html><body>geen resultaten</body></html>")
+    monkeypatch.setattr(reader, "fetch_html", fetch)
+    n = N.parse_need_rules("airpods pro 2")
+    url = marketplaces.build_url(site, "airpods pro 2")
+    got, via = asyncio.run(reader.read_with_reason(url, n, lane="used", paid=False, expand_lists=True))
+    assert via == "plain_split" and isinstance(got, list) and len(got) == 60
+    assert {o.raw["page"] for o in got} == {1, 2, 3} and any(u.endswith("/p/2/") for u in asked)
+    assert all(o.read_via == "plain_split" and o.condition == "used" for o in got)
+
+
+def test_free_registry_pages_cost_no_token_in_the_plan():
+    plan = marketplaces.direct_pages("airpods pro 2", "used", None, "fi", tokens=0)
+    assert {"vinted_fi", "marktplaats", "kleinanzeigen"} <= {d.site.key for d in plan}
+    assert not any(d.paid for d in plan)

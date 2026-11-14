@@ -128,7 +128,75 @@ _SITES: list[Site] = [
          r"OffersOfProduct", "de"),
     Site("pricerunner", "se", "comparison", "https://www.pricerunner.se/results?q={q}", r"/pl/", "sv"),
 ]
+
+
+def _registry_sites() -> list[Site]:
+    """Verified search pages from the source registry (agora/sources, scripts/onboard_sources.py) for sites
+    not hand-listed above. verified_free ones read with a plain fetch (no token)."""
+    try:
+        from agora import sources as _src
+    except Exception:              # registry missing or broken: the hand list still works
+        return []
+    have = {s.domain for s in _SITES}
+    out: list[Site] = []
+    templates: set[str] = set()
+    try:
+        for rec in _src.load():
+            if rec.get("status") not in ("verified_free", "verified_contextdev") or rec.get("domain") in have:
+                continue
+            kw = _src.as_site_kwargs(rec)
+            if kw and kw["template"] not in templates:      # one Site per search URL (amazon.co.uk twice)
+                templates.add(kw["template"])
+                out.append(Site(**{k: v for k, v in kw.items() if k in Site.__dataclass_fields__}))
+    except Exception:
+        return out
+    return out
+
+
+_SITES += _registry_sites()
 SITES: dict[str, Site] = {s.key: s for s in _SITES}
+_REC_CACHE: dict[str, dict | None] = {}
+
+
+def registry_record(site: Site) -> dict | None:
+    """The source-registry record of this site (agora.sources), else None. Cached."""
+    if site.key not in _REC_CACHE:
+        try:
+            from agora import sources as _src
+            rec = _src.get(site.key[4:]) if site.key.startswith("src_") else _src.for_url(build_url(site, "x"))
+        except Exception:
+            rec = None
+        _REC_CACHE[site.key] = rec if rec and rec.get("status") == "verified_free" and rec.get("free_fetch") else None
+    return _REC_CACHE[site.key]
+
+
+def free_site(site: Site) -> bool:
+    """Read without a Context.dev token: tori's ItemList, or a registry source verified readable by plain fetch
+    (vinted, marktplaats, kleinanzeigen, blocket, finn, dba ...: rows cut from the HTML by agora.sources)."""
+    return site.itemlist or registry_record(site) is not None
+
+
+# taxonomy root (agora.taxonomy) -> source-registry categories: which free sources to read first (priority only)
+ROOT_CATEGORIES = {"electronics": ["electronics", "computers", "phones", "cameras"], "appliances": ["appliances"],
+                   "fashion": ["fashion", "shoes"], "home-garden": ["home", "garden"], "furniture": ["furniture", "home"],
+                   "diy": ["diy", "tools"], "baby-kids": ["kids"], "toys-games": ["toys", "kids", "games"],
+                   "sports-outdoors": ["sports", "bikes"], "media": ["books", "media"], "vehicles": ["cars", "vehicles"],
+                   "hobbies": ["collectibles"], "pets": ["pets"], "health-beauty": ["beauty", "health"]}
+MAX_REGISTRY_FREE = 3        # extra free registry sources per lane (no token, but page time)
+
+
+def categories_for(thing: str) -> list[str]:
+    try:
+        from agora.need import vehicle_need
+        if vehicle_need(thing):
+            return ["cars", "vehicles"]
+        from agora import taxonomy
+        c = taxonomy.classify(thing)
+    except Exception:
+        return []
+    if not c or (c.get("confidence") or 0) < 0.45:
+        return []
+    return ROOT_CATEGORIES.get((c.get("path_ids") or [""])[0], [])
 CURRENCY = {"se": "SEK", "no": "NOK", "dk": "DKK", "pl": "PLN", "gb": "GBP", "cz": "CZK", "ch": "CHF",
             "hu": "HUF", "ro": "RON"}
 
@@ -462,8 +530,10 @@ def vehicle_query(thing: str) -> str:
     return " ".join(words).lower()
 
 
+# live 14 Nov: tori / blocket / finn 'mobility' pages and autotalli render their listings with JS (the markdown
+# scrape has none), so they are not planned until a reader handles them; nettiauto's list splits fine
 HOME_VEHICLE: dict[str, tuple[str, ...]] = {
-    "fi": ("tori_autot", "nettiauto", "autotalli"), "se": ("blocket_bil",), "no": ("finn_bil",), "dk": ("bilbasen",),
+    "fi": ("nettiauto",), "dk": ("bilbasen",),
     "de": ("mobile_de", "autoscout24_de", "kleinanzeigen_autos"), "at": ("autoscout24_at",),
     "nl": ("marktplaats_auto", "autoscout24_nl"), "be": ("autoscout24_be",), "it": ("autoscout24_it",)}
 EU_VEHICLE = ("autoscout24_de", "mobile_de")
@@ -493,7 +563,8 @@ def scope_for(thing: str, cc: str | None, home: str | None, eu_included: bool | 
 
 
 def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens: float,
-                 max_paid: int = MAX_PAID_DIRECT, pages: int = 1, vehicle: bool | None = None) -> list[Direct]:
+                 max_paid: int = MAX_PAID_DIRECT, pages: int = 1, vehicle: bool | None = None,
+                 categories: list[str] | None = None) -> list[Direct]:
     """Marketplace search pages to read directly for one lane.
     Small things: the asked-for (else home) country's marketplaces, then the big EU ones (vinted, kleinanzeigen,
     marktplaats, blocket, olx, dba, finn, leboncoin) while the shared bucket allows; then page 2 of the first
@@ -547,7 +618,7 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
             return
         if bulky and not s.bulky_ok:
             return
-        paid = not s.itemlist
+        paid = not free_site(s)
         if paid:
             if n_paid >= max_paid or left < floor:
                 return
@@ -571,6 +642,28 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
                 left -= 1
                 out.append(Direct(d.site, lane, d.query, page_url(d.site, d.url, n) or d.url, True, n, False))
 
+    if lane in ("used", "refurbished", "new"):
+        # free registry sources for this country / lane / category (priority, never a filter): no token spent
+        try:
+            from agora import sources as _src
+            cats = categories if categories is not None else categories_for(thing)
+            n_extra = 0
+            for rec in _src.for_query(where, [lane], cats or None):
+                k = "src_" + rec["key"]
+                site = SITES.get(k) or next((x for x in _HOST_SITES.get(rec.get("domain") or "", [])
+                                             if x.lane == lane), None)
+                if site is None or site.key in home_keys or site.key in eu_keys or not free_site(site):
+                    continue
+                if cats and not set(cats) & set(rec.get("categories") or []):
+                    continue          # a general store is no first read for a car
+                if site.country not in (where, "eu") and (bulky and not site.bulky_ok):
+                    continue
+                (home_keys if site.country == where else eu_keys).append(site.key)
+                n_extra += 1
+                if n_extra >= MAX_REGISTRY_FREE:
+                    break
+        except Exception:
+            pass
     for k in home_keys:
         add(k, False)
     if bulky:

@@ -83,16 +83,17 @@ def test_site_query(thing, site, want):
 
 def test_plan_home_marketplace_free_then_big_eu_ones_while_tokens_last():
     full = m.direct_pages("airpods pro 2", "used", None, "fi", tokens=10)
+    # the source registry (agora.sources) verified vinted, kleinanzeigen, marktplaats, blocket, dba, finn readable by
+    # plain fetch: they cost no token now, only olx / leboncoin still need a paid read
     assert [(d.site.key, d.paid, d.page) for d in full][:6] == [
-        ("tori", False, 1), ("vinted_fi", True, 1), ("kleinanzeigen", True, 1), ("marktplaats", True, 1),
-        ("blocket", True, 1), ("olx_pl", True, 1)]                      # small thing: EU-wide
+        ("tori", False, 1), ("vinted_fi", False, 1), ("kleinanzeigen", False, 1), ("marktplaats", False, 1),
+        ("blocket", False, 1), ("olx_pl", True, 1)]                     # small thing: EU-wide
     assert sum(d.paid for d in full) <= m.MAX_PAID_DIRECT + 2 and not any(d.extra for d in full)
-    assert [d.site.key for d in m.direct_pages("airpods pro 2", "used", None, "fi", tokens=3)] == [
-        "tori", "vinted_fi", "kleinanzeigen"]
     dry = m.direct_pages("airpods pro 2", "used", None, "fi", tokens=0)
-    assert [d.site.key for d in dry] == ["tori"]              # tori's ItemList read is free: always
-    assert [d.site.key for d in m.direct_pages("airpods pro 2", "refurbished", None, "fi", 10)] == ["backmarket"]
-    assert [d.site.key for d in m.direct_pages("airpods pro 2", "new", None, "fi", 10)] == ["verkkokauppa"]
+    assert not any(d.paid for d in dry) and dry[0].site.key == "tori"   # free pages need no token: always
+    assert "olx_pl" not in [d.site.key for d in dry]
+    assert [d.site.key for d in m.direct_pages("airpods pro 2", "refurbished", None, "fi", 10)][0] == "backmarket"
+    assert [d.site.key for d in m.direct_pages("airpods pro 2", "new", None, "fi", 10)][0] == "verkkokauppa"
 
 
 def test_plan_bulky_things_only_at_home():
@@ -104,8 +105,8 @@ def test_plan_bulky_things_only_at_home():
     assert m.direct_pages("ikea kallax shelf", "new", None, "fi", 10) == []
     koln = m.direct_pages("kallax", "used", "de", None, 10)
     assert koln[0].site.key == "kleinanzeigen" and koln[0].url.endswith("/s-kallax/k0") and not koln[0].extra
-    assert koln[1].page == 2 and koln[1].url.endswith("/s-seite:2/kallax/k0")    # home depth before abroad
-    assert all(d.extra for d in koln[2:])
+    assert not koln[0].paid             # read free, its pages 2..N paginated by the reader (no paid page 2)
+    assert all(d.extra for d in koln[1:])
 
 
 def test_discover_emits_direct_pages_first_and_drops_the_eu_used_search(monkeypatch):

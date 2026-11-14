@@ -135,6 +135,23 @@ SERVICE_MARKETS: dict[str, tuple[str, ...]] = {
     "pl": ("oferteo.pl", "fixly.pl", "olx.pl"),
     "cz": ("nejremeslnici.cz", "poptavej.cz"),
 }
+def _registry_service_markets(per_country: int = 8) -> None:
+    """Service platforms per country from the source registry (search-engine include_domains; no template needed)."""
+    try:
+        from agora import sources as _src
+        recs = _src.load()
+    except Exception:
+        return
+    for rec in recs:
+        if "service" not in rec.get("lanes", []) or rec.get("kind") != "service":
+            continue
+        for cc in rec.get("countries", []):
+            cur = SERVICE_MARKETS.get(cc, ())
+            if cc != "eu" and rec["domain"] not in cur and len(cur) < per_country:
+                SERVICE_MARKETS[cc] = cur + (rec["domain"],)
+
+
+_registry_service_markets()
 SERVICE_DIRECTORIES = tuple(sorted({d for ds in SERVICE_MARKETS.values() for d in ds}
                                    | {"yelp.", "treatwell.", "fresha.com", "booksy.com", "yoopies.", "yoojo.",
                                       "helpling.", "hulp.nl", "klusjebij.app", "care.com", "sittercity.com"}))
@@ -718,7 +735,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
     n_search = sum(1 for lane, qp in plans.items() for x in qp if not (lane == "used" and eu_used(x)))
     # the marketplaces' own search pages (no web search spent): lean live plan only
     directs = plan_direct(need, lanes, float(tokens or 0), n_search, pages) if depth is None else {}
-    if any(d.paid and d.site.key.split("_")[0] in EU_USED_SITES for d in directs.get("used", [])):
+    if any(d.site.key.split("_")[0] in EU_USED_SITES for d in directs.get("used", [])):
         plans["used"] = [x for x in plans["used"] if not eu_used(x)]   # read them directly instead
     if need.kind == "product" and depth is None and direct_enabled():
         from agora import marketplaces
