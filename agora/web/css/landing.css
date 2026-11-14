@@ -172,23 +172,52 @@
 .ld-cd-pts p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
 .ld-cd-link { margin: 28px 0 0; font-size: 14px; }
 
-/* ---------- 1. the problem: a Tuesday night in tabs ---------- */
-.ld-night { margin: 0; background: var(--receipt); border: 1px solid var(--hair); border-radius: 16px; overflow: hidden; }
-.ld-tabs { display: flex; gap: 3px; padding: 10px 12px 0; background: var(--ld-plate); }
-.ld-tabs i { flex: 1 1 0; min-width: 0; height: 22px; border-radius: 7px 7px 0 0; background: color-mix(in srgb, var(--ld-plate) 70%, var(--ink) 8%); }
-.ld-tabs i.on { background: var(--receipt); }
-.ld-night figcaption { padding: 18px 24px 6px; font: italic 340 17px/1.2 var(--serif); color: var(--ink-2); font-variation-settings: "opsz" 24, "SOFT" 100; }
-.ld-night ol { list-style: none; margin: 0; padding: 0 24px; }
-.ld-night li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 11px 0; border-top: 1px solid var(--hair); font: 400 15px/1.45 var(--sans); color: var(--ink-2); }
-.ld-night li:first-child { border-top: 0; }
-.ld-night li:last-child { color: var(--ink); }
-.ld-night time { font: 400 12px/1.8 var(--mono); color: var(--ink-3); }
-.ld-night li b { font: 500 13px/1 var(--mono); color: var(--ink); }
-.ld-night-end { margin: 0; padding: 18px 24px 20px; border-top: 1px solid var(--ink-3); font: 340 22px/1.3 var(--serif); letter-spacing: -0.006em; font-variation-settings: var(--display-vs); }
-.ld-night-end b { font-weight: 460; background: linear-gradient(transparent 62%, color-mix(in srgb, var(--accent) 75%, transparent) 62%); }
+/* ---------- 1. the problem: one Tuesday night, before (a timeline of tabs) and after (one answer) ---------- */
+.ld-night { margin: 0; container: ld-night / inline-size; }
+.ld-night-cap { margin: 0 0 14px; font: italic 340 17px/1.3 var(--serif); color: var(--ink-2); font-variation-settings: "opsz" 24, "SOFT" 100; }
+.ld-night-cap span { color: var(--ink); }
+.ld-night-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: stretch; }
+@container ld-night (min-width: 560px) { .ld-night-cols { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
+.ld-nh { margin: 0 0 16px; font: 500 12px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.ld-nh::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--ink-2); flex: none; }
+/* before: the evening, as a thin timeline with a tab count that keeps growing */
+.ld-nb { min-width: 0; padding: 20px 22px 18px; background: var(--receipt); border: 1px solid var(--hair); border-radius: 16px; }
+.ld-tl { list-style: none; margin: 0; padding: 0; position: relative; }
+.ld-tl::before { content: ""; position: absolute; left: 3px; top: 10px; bottom: 10px; width: 1px; background: color-mix(in srgb, var(--ink) 18%, transparent); }
+.ld-tl li { position: relative; display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 7px 0 7px 18px; font: 400 14px/1.4 var(--sans); color: var(--ink-2); }
+.ld-tl li::before { content: ""; position: absolute; left: 0; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--receipt); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 40%, transparent); }
+.ld-tl li:last-child::before { background: var(--ink-2); box-shadow: none; }
+.ld-tl time { font: 400 12px/1.4 var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ld-tl-s { min-width: 0; text-wrap: pretty; }
+.ld-tl b { font: 500 13px/1 var(--mono); color: var(--ink); }
+.ld-tab { justify-self: end; padding: 3px 7px; border-radius: 6px; white-space: nowrap; font: 400 11px/1.2 var(--mono); color: var(--ink-2); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.ld-tl li:last-child .ld-tab { color: var(--ink); background: color-mix(in srgb, var(--ink) 12%, transparent); font-weight: 500; }
+.ld-nb-cost { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--hair); display: grid; gap: 6px; }
+.ld-nb-cost > span { font: 400 13px/1.2 var(--sans); color: var(--ink-2); }
+.ld-nb-cost b span { white-space: nowrap; }
+.ld-nb-cost b { font: 500 14px/1.35 var(--mono); letter-spacing: -0.03em; color: var(--ink); }
+/* after: one compact answer, a step lighter, with a tan edge */
+.ld-na { min-width: 0; padding: 20px 22px; border-radius: 16px; display: flex; flex-direction: column; gap: 18px;
+  background: color-mix(in srgb, var(--tan) 14%, var(--receipt)); border: 1px solid color-mix(in srgb, var(--tan) 85%, var(--brown)); }
+.ld-na .ld-nh { margin: 0; color: var(--ink); }
+.ld-na .ld-nh::before { border: 0; background: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 25%, transparent); }
+.ld-na p { margin: 0; display: grid; gap: 6px; }
+.ld-na-time b { font: 340 64px/0.95 var(--serif); letter-spacing: -0.02em; font-variation-settings: var(--display-vs); font-variant-numeric: lining-nums; color: var(--ink); }
+.ld-na-time small { font-size: 0.5em; letter-spacing: 0; }
+.ld-na-time q { white-space: nowrap; color: var(--ink); }
+.ld-na-time span, .ld-na-ans span { font: 400 14px/1.4 var(--sans); color: var(--ink-2); text-wrap: pretty; }
+.ld-na-ans b { justify-self: start; font: 460 24px/1.2 var(--serif); letter-spacing: -0.006em; font-variation-settings: var(--display-vs); color: var(--ink);
+  background: linear-gradient(transparent 62%, color-mix(in srgb, var(--accent) 75%, transparent) 62%); }
+.ld-na-facts { list-style: none; margin: auto 0 0; padding: 14px 0 0; border-top: 1px solid color-mix(in srgb, var(--tan) 70%, transparent); display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.ld-na-facts li { font: 400 13px/1.3 var(--sans); color: var(--ink-2); display: flex; align-items: center; gap: 7px; }
+.ld-na-facts li::before { content: ""; width: 5px; height: 5px; border-radius: 1px; background: color-mix(in srgb, var(--tan) 70%, var(--brown)); flex: none; }
+/* side by side, the facts stack; under the timeline (phone), they run in one line */
+@container ld-night (min-width: 560px) { .ld-na-facts { flex-direction: column; } }
 
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-night-end b { background: none; color: var(--accent); } }
-:root[data-theme="dark"] .ld-night-end b { background: none; color: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-na-ans b { background: none; color: var(--accent); } }
+:root[data-theme="dark"] .ld-na-ans b { background: none; color: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-na { background: color-mix(in srgb, var(--tan) 8%, var(--receipt)); } }
+:root[data-theme="dark"] .ld-na { background: color-mix(in srgb, var(--tan) 8%, var(--receipt)); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) :is(.ld-h-pull em, .ld-value b) { background: none; color: var(--accent); } }
 :root[data-theme="dark"] :is(.ld-h-pull em, .ld-value b) { background: none; color: var(--accent); }
 
@@ -483,11 +512,13 @@
   .ld-big b { font-size: 56px; }
   .ld-close-h { font-size: 40px; }
   .ld-close-s { font-size: 17px; }
-  .ld-night figcaption { padding: 16px 16px 4px; }
-  .ld-night ol { padding: 0 16px; }
-  .ld-night li { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; }
-  .ld-night-end { padding: 16px; font-size: 19px; }
-  .ld-tabs { gap: 2px; padding: 8px 8px 0; }
+  .ld-nb, .ld-na { padding: 16px; }
+  .ld-tl li { grid-template-columns: minmax(0, 1fr) auto; padding-left: 16px; }
+  .ld-tl time { grid-column: 1; }
+  .ld-tl-s { grid-column: 1 / -1; grid-row: 2; }
+  .ld-tl .ld-tab { grid-column: 2; grid-row: 1; }
+  .ld-na-time b { font-size: 52px; }
+  .ld-na-ans b { font-size: 21px; }
   .ld-q { padding: 18px 18px 16px; }
   .ld-q-text { font-size: 21.15px; }
   .ld-ask { margin-top: 40px; }

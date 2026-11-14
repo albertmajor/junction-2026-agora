@@ -121,11 +121,11 @@ function whyHtml() {
           <section class="ld-nb" aria-labelledby="ld-nb-h">
             <h3 class="ld-nh" id="ld-nb-h">Without ${esc(brand())}</h3>
             <ol class="ld-tl" role="list">${night.map(([t, s, n]) => `<li><time datetime="${t}">${t}</time><span class="ld-tl-s">${s}</span><span class="ld-tab">${n} ${n === 1 ? 'tab' : 'tabs'}</span></li>`).join('')}</ol>
-            <p class="ld-nb-cost"><span>The evening cost</span><b>${dur} · ${tabs} tabs · still unsure</b></p>
+            <p class="ld-nb-cost"><span>The evening cost</span><b><span>${dur}</span> · <span>${tabs} tabs</span> · <span>still unsure</span></b></p>
           </section>
           <section class="ld-na" aria-labelledby="ld-na-h">
             <h3 class="ld-nh" id="ld-na-h">With ${esc(brand())}</h3>
-            <p class="ld-na-time"><b>≈${EX.doneS}<small> s</small></b><span>One question: “Sony A7 III body”</span></p>
+            <p class="ld-na-time"><b>≈${EX.doneS}<small> s</small></b><span>One question: <q>Sony A7 III body</q></span></p>
             <p class="ld-na-ans"><b>${eur(fi.all, 0)} at ${esc(fi.dom)}</b><span>the best price that actually reaches you</span></p>
             <ul class="ld-na-facts" role="list">
               <li>All-in price</li>
