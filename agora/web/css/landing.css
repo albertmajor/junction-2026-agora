@@ -535,9 +535,9 @@
    one italic tan word per headline; at most one thin, static hand-drawn mark per section; one tilted receipt pair. */
 .ld-h:not(.ld-h-pull) em { font-style: italic; color: var(--ld-acc, var(--ink-2)); }
 .ld-close-h em { font-style: italic; color: var(--ld-acc-sand); }
-.ld-mk { position: relative; display: inline-block; white-space: nowrap; }
+.ld-mk { position: relative; display: inline-block; white-space: nowrap; line-height: 1; }  /* box = the glyphs, so the mark sits near the letters */
 .ld-mk-s { position: absolute; pointer-events: none; overflow: visible; fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; }
-.ld-mk.mk-under .ld-mk-s { left: -2%; width: 104%; bottom: -0.16em; height: 0.26em; stroke-width: 2.5px; }
+.ld-mk.mk-under .ld-mk-s { left: -2%; width: 104%; bottom: -0.06em; height: 0.2em; stroke-width: 2.5px; }
 .ld-mk.mk-oval .ld-mk-s { left: -0.22em; right: -0.22em; width: calc(100% + 0.44em); top: -0.08em; height: calc(100% + 0.12em); stroke-width: 2px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-mk-s { stroke: color-mix(in srgb, var(--accent) 80%, var(--tan)); } }
 :root[data-theme="dark"] .ld-mk-s { stroke: color-mix(in srgb, var(--accent) 80%, var(--tan)); }
