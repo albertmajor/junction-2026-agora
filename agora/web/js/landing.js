@@ -94,15 +94,20 @@ function bannerHtml() {
 // ---------- 1. the problem ----------
 function whyHtml() {
   const [us, fi, gb] = EX.rows;
+  // the evening without us: [time, what happened, tabs open by then]
   const night = [
-    ['21:04', `tori.fi: a used Sony A7 III for <b>${eur(fi.tag, 0)}</b>. Is that a good price? No idea.`],
-    ['21:11', `A shop in the US has one for <b>${esc(us.orig)}</b>. Cheaper! In dollars.`],
-    ['21:14', `A currency-converter tab. <b>${eur(us.tag, 0)}</b>. Still cheaper.`],
-    ['21:26', `Checkout. Import VAT: about <b>+${eur(us.vat, 0)}</b>. Shipping: “calculated at the next step”.`],
-    ['21:33', 'Does it even ship to Finland? The shop never says.'],
-    ['21:47', 'A comparison site. The first three results are sponsored.'],
-    ['22:20', `Fourteen tabs later you buy the <b>${eur(fi.all, 0)}</b> one you saw first. Was it a good price? Still no idea.`],
+    ['21:04', `tori.fi: a used A7 III for <b>${eur(fi.tag, 0)}</b>. A good price? No idea.`, 1],
+    ['21:11', `A US shop: <b>${esc(us.orig)}</b>. Cheaper, but in dollars.`, 3],
+    ['21:14', `Currency converter: <b>${eur(us.tag, 0)}</b>. Still cheaper.`, 4],
+    ['21:26', `Checkout: <b>+${eur(us.vat, 0)}</b> import VAT. Shipping “at the next step”.`, 6],
+    ['21:33', 'Does it ship to Finland? The shop never says.', 7],
+    ['21:47', 'A comparison site. The top three are sponsored.', 11],
+    ['22:20', `You buy the <b>${eur(fi.all, 0)}</b> one you saw first.`, 14],
   ];
+  const mins = t => { const [h, m] = t.split(':'); return h * 60 + +m; };
+  const spent = mins(night[night.length - 1][0]) - mins(night[0][0]);
+  const tabs = night[night.length - 1][2];
+  const dur = `${Math.floor(spent / 60)} h ${spent % 60} min`;
   return band('ld-why', 'cream', `<div class="ld-in ld-split">
       <header class="ld-head ld-rv">
         ${head('01', 'The problem', `Stop opening ${mk('<em>fourteen</em>')} tabs.`, 'ld-why-h')}
@@ -110,11 +115,25 @@ function whyHtml() {
         <p class="ld-sub">One camera: ${eur(fi.tag, 0)} in Finland, ${esc(us.orig)} in the US, ${esc(gb.orig)} in the UK. Euros, dollars, pounds, and none of the shops mentions the others.</p>
         <p class="ld-pull">We read every shop <em>so you don’t have to.</em></p>
       </header>
-      <figure class="ld-night ld-rv" style="--d:80ms" aria-label="A Tuesday night of comparing prices">
-        <div class="ld-tabs" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i${i === 13 ? ' class="on"' : ''}></i>`).join('')}</div>
-        <figcaption>Tuesday night, without us</figcaption>
-        <ol role="list">${night.map(([t, s]) => `<li><time>${t}</time><span>${s}</span></li>`).join('')}</ol>
-        <p class="ld-night-end">${esc(brand())}, 21:04:20: <b>${eur(fi.all, 0)} is the best price that actually reaches you.</b> One question, about ${EX.doneS} seconds.</p>
+      <figure class="ld-night ld-rv" style="--d:80ms" aria-labelledby="ld-night-cap">
+        <figcaption id="ld-night-cap" class="ld-night-cap">One camera, one Tuesday night: <span>before and after</span></figcaption>
+        <div class="ld-night-cols">
+          <section class="ld-nb" aria-labelledby="ld-nb-h">
+            <h3 class="ld-nh" id="ld-nb-h">Without ${esc(brand())}</h3>
+            <ol class="ld-tl" role="list">${night.map(([t, s, n]) => `<li><time datetime="${t}">${t}</time><span class="ld-tl-s">${s}</span><span class="ld-tab">${n} ${n === 1 ? 'tab' : 'tabs'}</span></li>`).join('')}</ol>
+            <p class="ld-nb-cost"><span>The evening cost</span><b>${dur} · ${tabs} tabs · still unsure</b></p>
+          </section>
+          <section class="ld-na" aria-labelledby="ld-na-h">
+            <h3 class="ld-nh" id="ld-na-h">With ${esc(brand())}</h3>
+            <p class="ld-na-time"><b>≈${EX.doneS}<small> s</small></b><span>One question: “Sony A7 III body”</span></p>
+            <p class="ld-na-ans"><b>${eur(fi.all, 0)} at ${esc(fi.dom)}</b><span>the best price that actually reaches you</span></p>
+            <ul class="ld-na-facts" role="list">
+              <li>All-in price</li>
+              <li>Ships to you</li>
+              <li>Compared ${EX.n} offers</li>
+            </ul>
+          </section>
+        </div>
       </figure>
     </div>`);
 }
@@ -390,7 +409,7 @@ const CLOSE_CHIPS = [
 ];
 function closeHtml() {
   return band('ld-close', 'sun', `<div class="ld-in ld-close-in ld-rv">
-      <img class="ld-banana" src="/web/assets/mascot/banana.png" alt="" width="54" height="34" loading="lazy">
+      <img class="ld-banana" src="/web/assets/mascot/banana.svg" alt="" width="54" height="34" loading="lazy">
       <h2 class="ld-close-h" id="ld-close-h">What do you want to ${mk('<em>buy</em>')}?</h2>
       <p class="ld-close-s">Name it. We’ll find who sells it, what it really costs delivered, and which one to buy.</p>
       <form class="ld-close-ask" role="search" aria-label="Start a search">

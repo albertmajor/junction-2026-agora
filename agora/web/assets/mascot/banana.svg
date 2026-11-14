@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 112" width="180" height="112">
+  <!-- PriceMonkey banana as a vector so it stays sharp at any size; chunky, flat, hand-drawn like the mascot's -->
+  <path fill="#F0D435" d="M20 70
+    C 46 86, 94 86, 124 62
+    C 140 49, 150 32, 154 16
+    C 156 8, 166 6, 170 13
+    C 178 30, 172 62, 146 84
+    C 116 108, 62 112, 26 94
+    C 12 87, 8 74, 20 70 Z"/>
+  <path fill="#E0C02A" d="M28 92
+    C 64 108, 116 104, 146 80
+    C 164 64, 172 42, 171 22
+    C 176 46, 168 70, 146 88
+    C 116 110, 62 112, 28 96 Z"/>
+  <path fill="#5A4019" d="M21 71 C 14 69, 7 70, 3 73 C 0 75, 1 79, 4 79 C 9 78, 15 79, 21 81 Z"/>
+  <path fill="#4E3818" d="M154 16 C 155 9, 159 4, 164 4 C 168 4, 170 8, 169 12 Z"/>
+</svg>
