@@ -194,7 +194,7 @@ export function placeStartMonkey(cfg = monkeyPlace()) {
   // the banana: mirrors him on the left of the box unless placed by hand (cfg.banana)
   const ban = document.querySelector('#start .start-banana');
   if (ban) {
-    const b = cfg.banana || { dx: cfg.dx, dy: cfg.dy, w: Math.round(cfg.w * 0.55), rot: -(cfg.rot || 0) - 18, flip: false };
+    const b = cfg.banana || { dx: cfg.dx, dy: cfg.dy, w: Math.round(cfg.w * 0.55), rot: 0, flip: false };
     const bh = Math.round(b.w * 45 / 72);
     ban.style.width = `${b.w}px`;
     ban.style.left = `${Math.round(a.left - s.left - b.dx - b.w)}px`;

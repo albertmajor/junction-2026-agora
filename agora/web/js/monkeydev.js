@@ -7,7 +7,7 @@ let panel = null;
 
 function save(cfg) { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {} placeStartMonkey(cfg); sync(cfg); }
 let target = 'monkey';   // which one the sliders and drag move: 'monkey' | 'banana'
-const bananaOf = cfg => cfg.banana || { dx: cfg.dx, dy: cfg.dy, w: Math.round(cfg.w * 0.55), rot: -(cfg.rot || 0) - 18, flip: false };
+const bananaOf = cfg => cfg.banana || { dx: cfg.dx, dy: cfg.dy, w: Math.round(cfg.w * 0.55), rot: 0, flip: false };
 const cur = cfg => (target === 'banana' ? bananaOf(cfg) : cfg);
 const setCur = (cfg, patch) => (target === 'banana' ? { ...cfg, banana: { ...bananaOf(cfg), ...patch } } : { ...cfg, ...patch });
 function sync(cfg) {
