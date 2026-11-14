@@ -233,8 +233,8 @@ async function render() {
     main.innerHTML = `<div class="ct-list">
       <button type="button" class="ct-back" data-depth="${st.path.length - 1}"><span aria-hidden="true">‹</span> ${esc(back)}</button>
       <h3 class="ct-lh">${C.icon(p.icon || st.path[0])}<span>${esc(p.label || '')}</span>${C.kindTag(p.kind)}</h3>
-      ${p.leaf ? '' : `<ul role="list">${items.map(it => rowHtml(it, { level: st.path.length, sel: false, parentKind: p.kind })).join('')}</ul>`}
       ${p.leaf ? actHtml(last, 'ct-hunt solid') : `<p class="ct-lact">${actHtml(last, 'ct-hunt')}</p>`}
+      ${p.leaf ? '' : `<ul role="list">${items.map(it => rowHtml(it, { level: st.path.length, sel: false, parentKind: p.kind })).join('')}</ul>`}
     </div>`;
     return;
   }

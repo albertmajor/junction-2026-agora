@@ -115,3 +115,52 @@ def test_viewer_ships_the_category_page():
     tree = (WEB / "js" / "tree.js").read_text()
     assert "openCategory" in tree and "canHunt" in tree
     assert "huntable === false" in (WEB / "js" / "suggest.js").read_text()
+
+
+# ---------- owner, 14 Nov: "Medical equipments, pharmaceuticals & personal care products" in the explorer ----------
+
+def test_health_beauty_reads_like_a_shop(T):
+    kids = {k["id"]: k["label"] for k in T.children("health-beauty")}
+    assert kids.get("sp:hb-1") == "Health & medical supplies"
+    assert kids.get("sp:hb-1-16") == "Pharmacy & medicines"
+    assert "Personal Care" in kids.values()
+    bad = [lab for lab in kids.values() if "equipments" in lab.lower() or lab.lower() == "personal care products"
+           or "mortuary" in lab.lower()]
+    assert not bad
+    # the procurement names are gone from the menu but still find the node, and their ids still resolve
+    assert T.resolve("cpv:33") == "sp:hb-1" and T.resolve("cpv:337") == "sp:hb-3" and T.resolve("cpv:336") == "sp:hb-1-16"
+    hits = T.search("Medical equipments, pharmaceuticals and personal care products", limit=5)
+    assert hits and hits[0]["id"] == "sp:hb-1"
+
+
+def test_funerals_live_in_care_not_health_beauty(T):
+    fun = T.node("personal-services.funeral-services")
+    assert fun["label"] == "Funerals"
+    assert T.node("cpv:339")["path_ids"][:2] == ["personal-services", "personal-services.funeral-services"]
+    for old in ("yelp:funeralservices", "nace:9603", "cpv:9837"):
+        assert T.resolve(old) == "personal-services.funeral-services"
+
+
+def test_no_procurement_grammar_in_the_tree(T):
+    import re
+    bad = [T.label(i) for i in range(len(T)) if re.search(r"\bequipments\b|;|^The ", T.label(i))]
+    assert not bad, bad[:5]
+
+
+def test_shopper_name_grammar():
+    import importlib.util
+    root = pathlib.Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("build_taxonomy", root / "scripts" / "build_taxonomy.py")
+    b = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(b)
+    assert b.shopper_name("Fitness equipments") == "Fitness equipment"
+    assert b.shopper_name("Jewellery, watches and related articles") == "Jewellery & watches"
+    assert b.shopper_name("Narrow-woven fabrics; trimmings") == "Narrow-woven fabrics & trimmings"
+    assert b.shopper_name("The oil and gas industry services") == "Oil & gas industry services"
+
+
+def test_tree_buttons_never_repeat_the_category_name():
+    js = (WEB / "js" / "tree.js").read_text()
+    assert "SEE_ALL" in js and "aria-label=\"${esc(full)}\"" in js
+    # the visible text is a short verb: no label(id) inside the button text
+    assert "esc(t('seeAll', label(id)))} <span" not in js and "esc(t('huntFor', label(id)))} <span" not in js

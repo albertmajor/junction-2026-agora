@@ -136,9 +136,9 @@
 .ct-chl { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .ct-col ul { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; scrollbar-width: thin; }
 .ct-leaf { justify-content: center; }
-.ct-leafcard { padding: 28px; display: grid; justify-items: start; gap: 10px; }
+.ct-leafcard { padding: 26px 22px; display: grid; justify-items: start; gap: 10px; }
 .ct-leafcard h3 {
-  margin: 4px 0 0; max-width: 100%; font: 400 clamp(19px, 1.65vw, 24px)/1.2 var(--serif); letter-spacing: -.005em;
+  margin: 4px 0 0; max-width: 100%; font: 400 clamp(18px, 1.45vw, 22px)/1.22 var(--serif); letter-spacing: -.005em;
   font-variation-settings: "opsz" 36, "SOFT" 50; text-wrap: balance; overflow-wrap: anywhere;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
@@ -201,6 +201,7 @@
 .ct[data-mode="list"] .ct-roots { display: none; }
 .ct[data-mode="list"] .ct-crumbs { flex-wrap: wrap; }
 .ct[data-mode="list"] .ct-hunt { max-width: 100%; }
+.ct[data-mode="list"] .ct-crumbs .ct-hunt { display: none; }   /* the list shows the action under its title */
 .ct-list { padding: 6px 6px 12px; }
 .ct-list .ct-grp + .ct-grp { margin-top: 10px; }
 .ct-list .ct-row { min-height: 44px; padding: 8px 10px; font-size: 15px; }

@@ -113,7 +113,7 @@
 .ct-hunt.page:not(.solid):not(.quiet) { background: transparent; color: var(--ink); border-color: var(--ink-3); }
 .ct-hunt.page:not(.solid):not(.quiet):hover { background: var(--paper-2); }
 .ct-mini.page { color: var(--ink-2); }
-.ct-lact { margin: 14px 0 0; }
+.ct-lact { margin: 2px 10px 10px; }
 .sg-browse { flex: none; margin-left: auto; color: var(--ink-3); font: 500 12px/1 var(--sans); align-self: center; }
 
 @media (max-width: 760px) {

@@ -1092,6 +1092,7 @@ MOVES: dict[str, str] = {
     "sp:hb-1-16": "health-beauty",                            # Medicine & Drugs -> 'Pharmacy & medicines', top level
     "cpv:3379": "sp:hb-1",                                    # lab & pharmacy glassware: not personal care
     "cpv:806": "business",                                    # military training & simulation sat in Education
+    "m:power:lastentarvikkeet-6f7aff": "baby-kids",           # 'Children's Accessories' sat in Health & Beauty
 }
 
 # Duplicates (two names for the same shelf, usually a shop's and a procurement list's): id -> the node that takes
