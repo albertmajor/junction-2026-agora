@@ -1,7 +1,7 @@
 # PriceMonkey for agents
 
 An agent asks for a thing and gets listings (new, refurbished, used, rental, services) ranked by
-**all-in price** in EUR, each with a link to the listing page. PriceMonkey does not buy anything: the agent (or its
+**all-in price** in EUR (offers you can surely buy first), each with a link to the listing page. PriceMonkey does not buy anything: the agent (or its
 person) follows the link.
 
 Two doors, same logic (`agora/agent_api.py`):
@@ -52,10 +52,27 @@ Raw JSON-RPC over stdio (one JSON object per line):
 
 | tool | arguments | returns |
 |---|---|---|
-| `find_offers` | `query` (2..200 chars), `country`? (ISO code or name, default Finland), `max_price_eur`? (all-in cap), `conditions`? (list of `new` `refurbished` `used` `rental` `service`), `limit`? (1..25, default 10) | `offers` (cards, ranked by `all_in_eur`), `n_offers` (all matching offers, before `limit`), `verdict` (one line), `ownership_verdict` (PriceMonkey's pick on cost of ownership), `ranked_by`, echoed `query` `country` `max_price_eur` `conditions`, `untrusted_fields`, `untrusted_note`, `source_mode` (+ `recording`, `note`) |
+| `find_offers` | `query` (2..200 chars), `country`? (ISO code or name, default Finland), `max_price_eur`? (all-in cap), `conditions`? (list of `new` `refurbished` `used` `rental` `service`), `limit`? (1..25, default 10) | `verdict` (one line, same rule as the web page), `pick` (the cheapest all-in offer you can surely buy), `cheapest_all_in` (the cheapest all-in offer of any kind, labelled when it is not the pick), `offers` (cards: surely buyable first by `all_in_eur`, then the uncertain ones), `n_offers` (all matching offers, before `limit`), `ownership_verdict` (PriceMonkey's pick on cost of ownership), `ranked_by`, echoed `query` `country` `max_price_eur` `conditions`, `untrusted_fields`, `untrusted_note`, `source_mode` (+ `recording`, `note`) |
 | `get_offer` | `url` (a `listing_url` from `find_offers`) | `found`; the offer card + `location`, `read_via`, `price_check`, `price_band`, `per_month_eur`, `source_mode` |
 | `explain_price` | `url` | `found`, `source`, `condition`, `price_eur`, `all_in_eur`, `shipping_note`, `flags`, `price_check`; `receipt` lines {label, eur, kind: price/tax/fee/resale/other, source_url?, via?, quote_untrusted?}; `sticker_eur`, `extras_eur`, `resale_eur`, `true_cost_total_eur`, `per` (month/job), `per_month_eur`, `months`, `confidence`, `basis`, `price_band`, `beat_eur`, `gap_eur`, `how` |
 | `watch_price` | `query`, `target_eur`, `conditions`? | `watch_id`, `query`, `target_eur`, `action: "notify"`, `rule`, `how_it_fires`, `status_url`. **Notify only**: fires a notification (ntfy topic `AGORA_NTFY_TOPIC` or a signed webhook lease) when an offer's price is at or under target while the server runs. Never buys. |
+
+### The pick (same rule as the web page)
+
+`pick` is the offer the web page circles: the **lowest all-in price you can surely buy**. An offer is
+*surely buyable* when it is in stock, ships to you (an EU shop, a local listing, or a shop outside the EU whose
+page says it ships to Finland), and is not set aside (no comparable all-in price, a price that looks too good to
+be true or disagrees with its page, a red flag, a risky seller, seller reviews with red flags, a "from" price).
+If no offer is surely buyable, `pick` is the lowest all-in offer that is not set aside, with
+`surely_buyable: false` and `unsure_why`. Ties go to the engine's own pick.
+
+`cheapest_all_in` is the lowest `all_in_eur` of any offer. When it is not the pick (`same_as_pick: false`) its
+`label` says why it is not ("may not ship to Finland", "does not ship to Finland", "out of stock", ...): it may
+be cheaper, but nobody confirmed you can get it at that price. Recommend `pick`; mention `cheapest_all_in` as
+the gamble. `verdict` says both in one line:
+
+> Pick: €825 used at tori.fi, the cheapest all-in offer that surely reaches you. Cheaper but may not ship to
+> Finland: €794.82 at allenscamera.net. 8 of 17 offers shown, 6 of them uncertain.
 
 `get_offer` and `explain_price` return `{"ok": true, "found": false, "note": ...}` for a URL no search has found.
 
@@ -76,6 +93,8 @@ An offer card:
 | `origin` | where the seller is and whether it ships to Finland: {`country_code` (ISO alpha-2, `GB` for the UK, `null` = unknown), `country_name`, `city`, `basis` (listing_location / seller_address / service_area / marketplace / known_shop / domain / currency / domain_currency / unknown), `basis_text`, `confident` (false = a guess from the domain, currency or shop), `eu`, `ships_to_fi` (true / false / `null` = not stated), `ships_text`} |
 | `job_total_eur`, `unit` | services: the total for one job and the rate's unit |
 | `in_stock` | true / false, present only when the page said |
+| `surely_buyable` | true when you can surely buy it at `all_in_eur` (see *The pick*); these cards come first |
+| `unsure_why` | present when `surely_buyable` is false: "may not ship to Finland", "does not ship to Finland", "out of stock", "seller reviews show red flags", "a 'from' price, not a specific unit", "looks risky (set aside)", "no comparable all-in price" |
 | `seller` | seller name from the page (cleaned; **untrusted**), present when known and there is no `injection` |
 | `injection` | present when the page tried to steer AI agents; the title is then replaced and `seller` left out |
 
@@ -98,7 +117,43 @@ Response (offline, from the recording; trimmed):
   "ok": true,
   "query": "iphone 15 128gb used",
   "n_offers": 6,
+  "verdict": "Pick: €480 used at tori.fi, the cheapest all-in offer that surely reaches you. Cheaper but may not ship to Finland: €374.28 at swappa.com. 2 of 6 offers shown, 1 of them uncertain.",
+  "pick": {
+    "url": "https://www.tori.fi/recommerce/forsale/item/32577499",
+    "listing_url": "https://www.tori.fi/recommerce/forsale/item/32577499",
+    "all_in_eur": 480.0,
+    "price_eur": 480.0,
+    "condition": "used",
+    "source": "tori.fi",
+    "why": "lowest all-in price you can surely buy: in stock, ships to you (or local), not risky or set aside",
+    "surely_buyable": true
+  },
+  "cheapest_all_in": {
+    "url": "https://swappa.com/listings/apple-iphone-15?storage=128gb",
+    "listing_url": "https://swappa.com/listings/apple-iphone-15?storage=128gb",
+    "all_in_eur": 374.28,
+    "price_eur": 298.23,
+    "condition": "refurbished",
+    "source": "swappa.com",
+    "why": "lowest all-in price of any offer",
+    "same_as_pick": false,
+    "surely_buyable": false,
+    "label": "may not ship to Finland"
+  },
   "offers": [
+    {
+      "title": "iPhone 15 128GB",
+      "condition": "used",
+      "price_eur": 480.0,
+      "all_in_eur": 480.0,
+      "shipping_note": "shipping unknown, not included",
+      "source": "tori.fi",
+      "url": "https://www.tori.fi/recommerce/forsale/item/32577499",
+      "listing_url": "https://www.tori.fi/recommerce/forsale/item/32577499",
+      "seller_trust": "good",
+      "flags": ["seller unknown"],
+      "surely_buyable": true
+    },
     {
       "title": "iPhone 15 - 128GB - Used and Refurbished",
       "condition": "refurbished",
@@ -110,10 +165,11 @@ Response (offline, from the recording; trimmed):
       "listing_url": "https://swappa.com/listings/apple-iphone-15?storage=128gb",
       "seller_trust": "good",
       "flags": ["outside the EU (USD): import VAT added, shipping to Finland unconfirmed", "seller unknown"],
-      "in_stock": true
+      "in_stock": true,
+      "surely_buyable": false,
+      "unsure_why": "may not ship to Finland"
     }
   ],
-  "verdict": "Cheapest all-in: €374.28 refurbished at swappa.com (2 of 6 offers shown).",
   "ownership_verdict": "Best you can surely buy: used €480 at tori.fi, €14/mo over 12 mo. Cheaper if swappa.com ships to Finland: refurbished €374 landed, €13/mo.",
   "untrusted_fields": ["title", "seller"],
   "source_mode": "recording",

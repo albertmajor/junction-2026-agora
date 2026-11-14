@@ -21,11 +21,13 @@ def test_find_offers_ranked_by_all_in_and_filtered():
     res = asyncio.run(ms.find_offers("sony a7 iii", max_price_eur=900))
     assert res["ok"] and res["source_mode"] == "fake"
     prices = [o["all_in_eur"] for o in res["offers"]]
-    assert prices == sorted(prices) and max(prices) <= 900
+    assert prices == [850.0, 790.0] and max(prices) <= 900     # the risky €790 is set aside: after the sure one
     assert res["n_offers"] == 2
-    assert res["verdict"].startswith("Cheapest all-in: €790 used at market.example")
+    assert res["verdict"].startswith("Pick: €850 used at market.example, the cheapest all-in offer that surely")
+    assert "Cheaper but looks risky (set aside): €790" in res["verdict"]
+    assert res["pick"]["all_in_eur"] == 850.0 and res["cheapest_all_in"]["all_in_eur"] == 790.0
     assert res["ownership_verdict"]
-    o = res["offers"][0]
+    o = res["offers"][1]
     assert set(o) >= {"title", "condition", "price_eur", "all_in_eur", "shipping_note", "source", "url",
                       "listing_url", "seller_trust", "flags"}
     assert o["seller_trust"] == "risky" and "raw" not in o

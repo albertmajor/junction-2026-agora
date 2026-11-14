@@ -31,13 +31,52 @@ def test_offline_find_offers_comes_from_the_recording():
     res = run(ms.find_offers("sony a7 iii", limit=5))
     assert res["ok"] and res["source_mode"] == "recording" and res["recording"] == "sony-a7-iii-body"
     assert len(res["offers"]) == 5 and res["n_offers"] >= 10
-    ranked = [o["all_in_eur"] for o in res["offers"] if o["all_in_eur"] is not None]
-    assert ranked == sorted(ranked)
-    assert res["verdict"].startswith("Cheapest all-in: €")
+    sure = [o["all_in_eur"] for o in res["offers"] if o["surely_buyable"]]
+    unsure = [o["all_in_eur"] for o in res["offers"] if not o["surely_buyable"] and o["all_in_eur"] is not None]
+    assert sure == sorted(sure) and unsure == sorted(unsure)
+    assert [o["surely_buyable"] for o in res["offers"]] == sorted((o["surely_buyable"] for o in res["offers"]),
+                                                                    reverse=True)
+    assert res["verdict"].startswith("Pick: €")
     assert all(o["url"].startswith("https://") for o in res["offers"])
     # all-in includes the import VAT for a shop outside the EU
     usa = next(o for o in res["offers"] if o["source"] == "allenscamera.net")
     assert usa["all_in_eur"] > usa["price_eur"] and "import VAT" in usa["shipping_note"]
+
+
+def test_pick_matches_the_web_page_not_the_cheapest_abroad():
+    """Judges' feedback: the agent said 'Cheapest all-in: €794.82 at allenscamera.net' (a US shop that does not
+    confirm shipping to Finland) while the page's pick was tori.fi €825. Now both say tori.fi."""
+    res = run(ms.find_offers("sony a7 iii body", limit=8))
+    pick, cheap = res["pick"], res["cheapest_all_in"]
+    rec = aa.result_from_recording("sony-a7-iii-body")
+    assert pick["listing_url"] == rec.verdict.best_offer_url and pick["source"] == "tori.fi"
+    assert pick["all_in_eur"] == 825.0 and pick["surely_buyable"]
+    assert cheap["source"] == "allenscamera.net" and cheap["all_in_eur"] == pytest.approx(794.82)
+    assert not cheap["same_as_pick"] and cheap["label"] == "may not ship to Finland"
+    assert res["verdict"].startswith("Pick: €825 used at tori.fi, the cheapest all-in offer that surely reaches you.")
+    assert "may not ship to Finland: €794.82 at allenscamera.net" in res["verdict"]
+    assert res["offers"][0]["listing_url"] == pick["listing_url"]
+    usa = next(o for o in res["offers"] if o["source"] == "allenscamera.net")
+    assert not usa["surely_buyable"] and usa["unsure_why"] == "may not ship to Finland"
+    jessops = next(o for o in res["offers"] if o["source"] == "jessops.com")
+    assert jessops["unsure_why"] == "does not ship to Finland"
+
+
+def test_pick_when_nothing_is_sure_and_when_cheapest_is_the_pick():
+    def off(url, price, flags=(), in_stock=None, trust=0.9):
+        o = Offer(url=url, title="x", price=price, currency="EUR", price_eur=price, condition="used", source=url.split("/")[2])
+        o.flags, o.in_stock, o.trust = list(flags), in_stock, trust
+        return o
+    a = off("https://a.example/1", 100, ["outside the EU (USD): import VAT added, shipping to Finland unconfirmed"])
+    b = off("https://b.example/1", 90, in_stock=False)
+    c = off("https://c.example/1", 50, ["too good to be true (70% under the median)"])
+    assert aa.pick_offer([a, b, c]) is b and not aa.surely_buyable(b)     # none sure: lowest not set aside
+    d = off("https://d.example/1", 120)
+    assert aa.pick_offer([a, b, c, d]) is d
+    assert sorted([a, b, c, d], key=aa._rank_key) == [d, b, a, c]
+    assert aa.unsure_why(c) == "looks risky (set aside)" and aa.unsure_why(off("https://e.example/1", 10, trust=0.3))
+    line = aa.verdict_line(d, d, 1, 1, 0)
+    assert line == "Pick: €120 used at d.example, the cheapest all-in offer that surely reaches you. 1 of 1 offers shown."
 
 
 def test_disputed_prices_never_rank_first():

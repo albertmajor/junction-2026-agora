@@ -47,7 +47,7 @@ async def api_offers(request: Request,
                      conditions: str | None = Query(None, max_length=80,
                                                     description="comma list: new,refurbished,used,rental,service"),
                      limit: int = Query(agent_api.DEFAULT_LIMIT, ge=1, le=agent_api.MAX_LIMIT)) -> Any:
-    """Offers for `q`, ranked by all-in price, each with a link to the listing page. Read-only."""
+    """Offers for `q`, ranked by all-in price (surely buyable first) with the pick, each with a link. Read-only."""
     return await _run(agent_api.find_offers, q, country, max_price_eur, conditions, limit, client=_client(request))
 
 

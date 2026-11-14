@@ -464,6 +464,9 @@ def offer_card(o: Offer) -> dict[str, Any]:
         card["job_total_eur"] = tc.total_eur
     if o.in_stock is not None:
         card["in_stock"] = o.in_stock
+    card["surely_buyable"] = surely_buyable(o)
+    if not card["surely_buyable"]:
+        card["unsure_why"] = unsure_why(o)
     if signals:
         card["injection"] = signals
     elif o.seller:
@@ -471,26 +474,96 @@ def offer_card(o: Offer) -> dict[str, Any]:
     return card
 
 
+# ---------- the pick: the same rule as the web page (agora/web/js/core.js pickUrl / isUnsure / isSetAside) ----------
+
+HOME_COUNTRY = "Finland"     # shipping flags are worked out for the engine's home country
+_SET_ASIDE = re.compile(r"too good to be true|price disagrees|^red flag", re.I)
+_UNSURE = re.compile(r"does not ship|shipping to \w+ unconfirmed|out of stock|from-price|^reviews: red flags", re.I)
+PICK_WHY = ("lowest all-in price you can surely buy: in stock, ships to you (or local), not risky or set aside")
+
+
+def set_aside(o: Offer) -> bool:
+    """Never the pick (the page's isSetAside, plus judge's risky): no comparable all-in price, a price that looks
+    too good to be true or disagrees with its page, a red flag, a risky seller."""
+    raw = o.raw or {}
+    return (all_in_eur(o) is None or raw.get("price_check") == "disputed"
+            or (o.trust is not None and o.trust < 0.5)
+            or any(_SET_ASIDE.search(f) for f in o.flags))
+
+
+def unsure_why(o: Offer) -> str:
+    """Why we cannot say you can surely buy it at that price, in a few words; '' when you surely can."""
+    fl = list(o.flags)
+    raw = o.raw or {}
+    if any(re.search(r"does not ship", f, re.I) for f in fl) or raw.get("pickup_abroad"):
+        return f"does not ship to {HOME_COUNTRY}"
+    if any(f.lower().startswith("reviews: red flags") for f in fl):
+        return "seller reviews show red flags"
+    if o.in_stock is False or any(re.search(r"out of stock", f, re.I) for f in fl):
+        return "out of stock"
+    if any(re.search(r"from-price", f, re.I) for f in fl):
+        return "a 'from' price, not a specific unit"
+    if any(re.search(r"shipping to \w+ unconfirmed", f, re.I) for f in fl):
+        return f"may not ship to {HOME_COUNTRY}"
+    if set_aside(o):
+        return "looks risky (set aside)" if all_in_eur(o) is not None else "no comparable all-in price"
+    return ""
+
+
+def surely_buyable(o: Offer) -> bool:
+    return not unsure_why(o)
+
+
+def pick_offer(offers: list[Offer], verdict: Verdict | None = None) -> Offer | None:
+    """The page's pick: the lowest all-in offer you can surely buy. If none is sure, the lowest all-in one that
+    is not set aside (then `surely_buyable` is false on it). Ties go to the engine's pick (best_offer_url)."""
+    pref = verdict and (verdict.best_offer_url or verdict.best_true_cost_url)
+    pool = [o for o in offers if not set_aside(o)]
+    sure = [o for o in pool if surely_buyable(o)]
+    best: Offer | None = None
+    for o in sure or pool:
+        a, b = all_in_eur(o), (all_in_eur(best) if best else float("inf"))
+        if a < b - 0.005 or (abs(a - b) <= 0.005 and o.url == pref):     # type: ignore[operator]
+            best = o
+    return best
+
+
 def _rank_key(o: Offer) -> tuple[int, float]:
+    """Surely buyable first by all-in, then the uncertain ones by all-in (the set-aside ones after them, as on the
+    page), then those without an all-in price."""
     a = all_in_eur(o)
-    return (0, a) if a is not None else (1, o.price_eur if o.price_eur is not None else float("inf"))
+    if a is None:
+        return (3, o.price_eur if o.price_eur is not None else float("inf"))
+    return (0 if surely_buyable(o) else 2 if set_aside(o) else 1, a)
 
 
 def _eur(x: float) -> str:
     return f"€{x:,.0f}" if abs(x - round(x)) < 0.005 else f"€{x:,.2f}"
 
 
-def verdict_line(cards: list[dict[str, Any]], verdict: Verdict | None, n_total: int) -> str:
-    if not cards:
-        return "No priced offers matched." + (f" PriceMonkey's pick overall: {verdict.headline}" if verdict else "")
-    top = next((c for c in cards if c["all_in_eur"] is not None), None)
-    risky = sum(1 for c in cards if c["seller_trust"] == "risky")
-    if top is None:
-        line = f"{len(cards)} offers, none with a comparable all-in price (rates or unconfirmed prices)."
+def _brief_pick(o: Offer, why: str) -> dict[str, Any]:
+    return {"url": go_link(o.url) or o.url, "listing_url": o.url, "all_in_eur": all_in_eur(o),
+            "price_eur": o.price_eur, "condition": o.condition, "source": o.source, "why": why}
+
+
+def verdict_line(pick: Offer | None, cheapest: Offer | None, n_shown: int, n_total: int, n_unsure: int,
+                 verdict: Verdict | None = None) -> str:
+    """One plain line, consistent with the page: the pick first, then the cheaper offer it passed over (and why)."""
+    if pick is None:
+        if n_shown == 0:
+            return "No priced offers matched." + (f" PriceMonkey's verdict overall: {verdict.headline}" if verdict else "")
+        return f"{n_shown} offers, none with a comparable all-in price (rates or unconfirmed prices)."
+    where = f"{pick.condition} at {pick.source}"
+    if surely_buyable(pick):
+        line = f"Pick: {_eur(all_in_eur(pick))} {where}, the cheapest all-in offer that surely reaches you."  # type: ignore[arg-type]
     else:
-        line = f"Cheapest all-in: {_eur(top['all_in_eur'])} {top['condition']} at {top['source']}"
-        line += f" ({len(cards)} of {n_total} offers shown"
-        line += f", {risky} look risky)." if risky else ")."
+        line = (f"No offer is sure to reach you; lowest all-in: {_eur(all_in_eur(pick))} {where} "  # type: ignore[arg-type]
+                f"({unsure_why(pick)}).")
+    if cheapest is not None and cheapest.url != pick.url:
+        line += (f" Cheaper but {unsure_why(cheapest) or 'uncertain'}: {_eur(all_in_eur(cheapest))} "  # type: ignore[arg-type]
+                 f"at {cheapest.source}.")
+    line += f" {n_shown} of {n_total} offers shown"
+    line += f", {n_unsure} of them uncertain." if n_unsure else "."
     return line
 
 
@@ -518,14 +591,29 @@ async def find_offers(query: Any, country: Any = None, max_price_eur: Any = None
     if cap is not None:
         offers = [o for o in offers if (all_in_eur(o) if all_in_eur(o) is not None else o.price_eur) <= cap]
     offers.sort(key=_rank_key)
-    cards = [offer_card(o) for o in offers[:n]]
+    shown = offers[:n]
+    cards = [offer_card(o) for o in shown]
+    pick = pick_offer(offers, res.verdict)
+    costed = [o for o in offers if all_in_eur(o) is not None]
+    cheapest = min(costed, key=lambda o: all_in_eur(o)) if costed else None   # type: ignore[arg-type,return-value]
+    if pick is not None and cheapest is not None and all_in_eur(cheapest) >= all_in_eur(pick) - 0.005:  # type: ignore[operator]
+        cheapest = pick                     # a tie is not "cheaper"
     out = {
         "ok": True, "query": q, "country": cc, "max_price_eur": cap, "conditions": conds,
-        "n_offers": len(offers), "offers": cards,
-        "verdict": verdict_line(cards, res.verdict, len(offers)),
+        "n_offers": len(offers),
+        "verdict": verdict_line(pick, cheapest, len(cards), len(offers),
+                                sum(1 for o in shown if not surely_buyable(o)), res.verdict),
+        "pick": ({**_brief_pick(pick, PICK_WHY), "surely_buyable": surely_buyable(pick),
+                  **({"unsure_why": unsure_why(pick)} if not surely_buyable(pick) else {})} if pick else None),
+        "cheapest_all_in": (None if cheapest is None else {
+            **_brief_pick(cheapest, "lowest all-in price of any offer"), "same_as_pick": cheapest is pick,
+            "surely_buyable": surely_buyable(cheapest),
+            **({"label": unsure_why(cheapest) or "uncertain"} if cheapest is not pick else {})}),
+        "offers": cards,
         "ownership_verdict": res.verdict.headline if res.verdict else None,
-        "ranked_by": "all_in_eur ascending (sticker + sourced shipping/import VAT/fees); offers without a "
-                     "comparable all-in price come last",
+        "ranked_by": "surely buyable first (in stock, ships to you or local, not risky), by all_in_eur ascending "
+                     "(sticker + sourced shipping/import VAT/fees); then the uncertain ones by all_in_eur; then "
+                     "the risky (set aside) ones; offers without a comparable all-in price last",
         "untrusted_fields": ["title", "seller"],
         "untrusted_note": UNTRUSTED_NOTE,
         **meta,
