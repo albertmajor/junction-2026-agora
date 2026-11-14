@@ -463,3 +463,7 @@ html.staging #rule { padding-bottom: 104px; }
   transition: color 160ms, box-shadow 160ms, background 160ms;
 }
 #links a.q-btn:hover, #links a.q-btn:focus-visible { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); box-shadow: inset 0 0 0 1px var(--ink-3); }
+/* header links: nothing on the start page (the footer covers "how it works" / "for agents"); on result pages only
+   the small "?" that explains how the result was found. The agent view stays reachable (press A, footer link). */
+#links #agent-top { display: none; }
+#app[data-phase="start"] #links, #app[data-phase="category"] #links, #app[data-phase="asking"] #links { visibility: hidden; }
