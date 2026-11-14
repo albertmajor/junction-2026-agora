@@ -119,10 +119,11 @@ function build(el) {
   }
   el.classList.add('ll', 'livelog');
   el.innerHTML = `
+    <img class="ll-peek" src="/web/assets/brand/logo.svg" width="48" height="40" alt="" aria-hidden="true">
     <div class="ll-panel">
       <div class="ll-head">
         <span class="ll-dot" aria-hidden="true"></span>
-        <span class="ll-title"><span class="ll-t-long">Reading the web live</span><span class="ll-t-short">Reading live</span></span>
+        <span class="ll-title"><span class="ll-t-long">Sniffing out prices, live</span><span class="ll-t-short">Sniffing out prices</span></span>
         <span class="ll-count"><span class="ll-cq"><b data-c="searches">0</b> <span data-w="searches">searches</span> · </span><b data-c="pages">0</b> <span data-w="pages">pages</span> · <b data-c="offers">0</b> <span data-w="offers">offers</span> · <b data-c="secs">0.0</b> s</span>
         <span class="ll-cd">${cdMark()}</span>
       </div>
@@ -365,8 +366,8 @@ function onReset(d) {
   els.toggle.setAttribute('aria-expanded', 'false');
   root.dataset.state = 'live';
   root.dataset.replay = replay ? '1' : '0';
-  els.title.querySelector('.ll-t-long').textContent = replay ? 'Replaying a recorded live hunt' : 'Reading the web live';
-  els.title.querySelector('.ll-t-short').textContent = replay ? 'Recorded hunt' : 'Reading live';
+  els.title.querySelector('.ll-t-long').textContent = replay ? 'Replaying a recorded live hunt' : 'Sniffing out prices, live';
+  els.title.querySelector('.ll-t-short').textContent = replay ? 'Recorded hunt' : 'Sniffing out prices';
   const on = !!(d && d.q && !d.empty);
   show(on);
   if (on) clockStart();

@@ -1,9 +1,9 @@
-// Agora web core: event bus, shared store, small helpers.
+// PriceMonkey web core: event bus, shared store, small helpers.
 // This file is the contract between the modules (see DESIGN.md, "The contract").
 
 // The product name: data-brand on <html> in index.html is the one edit point. main.js writes it into
 // <title> and the logo at boot; the static text there is only the no-JS fallback.
-export const BRAND = (typeof document !== 'undefined' && document.documentElement && document.documentElement.dataset.brand) || 'Agora';
+export const BRAND = (typeof document !== 'undefined' && document.documentElement && document.documentElement.dataset.brand) || 'PriceMonkey';
 
 export const bus = new EventTarget();
 export function emit(type, detail) { bus.dispatchEvent(new CustomEvent(type, { detail })); }

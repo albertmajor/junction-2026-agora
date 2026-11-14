@@ -9,7 +9,9 @@
   --ink-2:  #5E5A52;
   --ink-3:  #9A948A;
   --hair:   rgba(28,27,24,.12);
-  --accent: #F5D547;
+  --accent: #F0D435;   /* banana yellow: the "your price" tag, the pick, one dot per drawing */
+  --brown:  #4E3818;   /* PriceMonkey fur: the "monkey" half of the wordmark */
+  --tan:    #E8C89F;   /* PriceMonkey face */
   --flag:   #B4532A;
   --ok:     #2F6B4F;
   --alarm:  #B3261E;
@@ -37,7 +39,7 @@
     --ink-2:#B5AFA4; --ink-3:#8A8478; --hair:rgba(238,234,225,.12);
     --field:#1E1C19; --shadow-sheet: 0 8px 24px rgba(0,0,0,.4);
     --flag:#D9774E; --ok:#5FA683; --alarm:#E5594F;
-    --live:#FF7A45; --ink-blue:#9DB8E8; --paper-2:#1D1B18;
+    --live:#FF7A45; --ink-blue:#9DB8E8; --paper-2:#1D1B18; --brown:#D9B98C;
     color-scheme: dark;
   }
 }
@@ -46,7 +48,7 @@
   --ink-2:#B5AFA4; --ink-3:#8A8478; --hair:rgba(238,234,225,.12);
   --field:#1E1C19; --shadow-sheet: 0 8px 24px rgba(0,0,0,.4);
   --flag:#D9774E; --ok:#5FA683; --alarm:#E5594F;
-  --live:#FF7A45; --ink-blue:#9DB8E8; --paper-2:#1D1B18;
+  --live:#FF7A45; --ink-blue:#9DB8E8; --paper-2:#1D1B18; --brown:#D9B98C;
   color-scheme: dark;
 }
 @media (max-width: 640px) { :root { --gutter: 16px; --line-h: auto; } }
@@ -88,19 +90,21 @@ button { cursor: pointer; }
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px;
   padding: 22px 0 0; min-height: 64px;
 }
-.logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.logo { display: inline-flex; align-items: flex-end; gap: 8px; text-decoration: none; }
 .logo span {
   font: italic 400 26px/1 var(--serif); letter-spacing: -.01em; text-transform: lowercase;
   font-variation-settings: var(--logo-vs), "wght" 400;
   transition: font-variation-settings 300ms var(--ease);
+  padding-bottom: 3px;
 }
+/* the second half of the wordmark in the monkey's brown (tan at night) */
+.logo span b { font-weight: inherit; color: var(--brown); }
 /* hover: the soft italic firms up (variable-font morph: SOFT 100 -> 0, wght 400 -> 500) */
 .logo:hover span, .logo:focus-visible span { font-variation-settings: "opsz" 48, "SOFT" 0, "WONK" 1, "wght" 500; }
-.logo-mark circle { transition: transform 300ms var(--ease); transform-origin: 10px 6.5px; }
-.logo:hover .logo-mark circle { transform: translateX(3px); }
-.logo-mark { width: 28px; height: 14px; overflow: visible; }
-.logo-mark path { stroke: var(--ink); stroke-width: 1.5; fill: none; }
-.logo-mark circle { fill: var(--accent); stroke: var(--ink); stroke-width: 1.2; }
+/* the monkey head: flat, hand-drawn; on hover it cocks its head */
+.logo-mark { width: 40px; height: 34px; display: block; flex: none; transform-origin: 50% 100%; transition: transform 300ms var(--ease); }
+.logo:hover .logo-mark, .logo:focus-visible .logo-mark { transform: rotate(-7deg); }
+@media (prefers-reduced-motion: reduce) { .logo-mark { transition: none; } .logo:hover .logo-mark { transform: none; } }
 #links { display: flex; gap: 20px; font-size: 13px; color: var(--ink-2); justify-self: end; }
 #links a { text-decoration: none; }
 #links a:hover { color: var(--ink); }
@@ -145,6 +149,15 @@ button { cursor: pointer; }
   padding-top: 14vh;
 }
 [data-phase="start"] #start { display: block; }
+/* the mascot, once: standing beside the box with his banana (wide screens only; the header logo is enough on a phone) */
+#start { position: relative; }
+.start-monkey {
+  position: absolute; left: calc(50% + 344px); top: 30px; width: 72px; height: auto;
+  animation: rise 700ms 180ms var(--ease) both; pointer-events: none;
+}
+@media (max-width: 1000px) { .start-monkey { display: none; } }
+/* one monkey at a time: the found-nothing one replaces him */
+#start:has(#status.none) .start-monkey { display: none; }
 #start h1 {
   font: 400 64px/1.02 var(--serif); letter-spacing: -.02em; margin: 0 0 32px;
   font-variation-settings: var(--display-vs);
@@ -281,6 +294,11 @@ button { cursor: pointer; }
 #status.err .dot { background: var(--flag); animation: none; }
 #status .err-recs { display: inline-flex; gap: 8px; flex-wrap: wrap; margin-left: 6px; vertical-align: middle; }
 @keyframes breathe { 50% { opacity: .3; } }
+/* found nothing: the mascot stands beside the honest message, small */
+#status.none { display: flex; align-items: flex-end; gap: 14px; }
+#status.none .st-monkey { flex: none; width: 44px; height: auto; animation: rise 500ms var(--ease) both; }
+#status.none .st-text { padding-bottom: 6px; max-width: 52ch; text-align: left; }
+#examples + #status.none:not(:empty), #start + #status.none:not(:empty) { justify-content: center; }
 
 #start + #status:not(:empty), #examples + #status:not(:empty) { text-align: center; padding-top: 22px; }
 [data-phase="start"] #tag,
@@ -302,9 +320,7 @@ button { cursor: pointer; }
 #rule p { margin: 0; }
 #rule .say { text-wrap: balance; }
 #rule .soft { color: var(--ink-3); }
-.rule-mark { width: 18px; height: 9px; overflow: visible; margin-right: 8px; vertical-align: 1px; }
-.rule-mark path { stroke: var(--ink-3); stroke-width: 1.5; fill: none; }
-.rule-mark circle { fill: var(--paper); stroke: var(--ink-3); stroke-width: 1.2; }
+.rule-mark { width: 19px; height: 16px; margin-right: 8px; vertical-align: -3px; }
 .foot-links { display: flex; gap: 18px; }
 .foot-links a { text-decoration: none; color: var(--ink-3); }
 .foot-links a:hover { color: var(--ink); }

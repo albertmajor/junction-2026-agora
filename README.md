@@ -1,8 +1,10 @@
-# Agora
+<img src="agora/web/assets/brand/logo-128.png" width="64" alt="PriceMonkey logo">
+
+# PriceMonkey
 
 **One search box for everything you can buy, products and services.**
 
-Type "sony a7 iii body", "iphone 15 128gb used" or "home cleaning helsinki 60m2". Agora reads new,
+Type "sony a7 iii body", "iphone 15 128gb used" or "home cleaning helsinki 60m2". PriceMonkey reads new,
 refurbished, used, rental and service offers from across the web at the same time and puts them on one
 price ladder. It ranks them by what owning the thing really costs you: the price, plus import VAT and
 shipping, minus what you get back when you resell it, per month. Every number shows its source.
@@ -58,7 +60,7 @@ Agents get listings, not a checkout. Ask for a thing; get new, refurbished, used
 ranked by **all-in price** (sticker + shipping + import VAT/fees), each with a link to the listing page.
 
 ```bash
-claude mcp add agora -- "$PWD/.venv/bin/python" -m agora.mcp_server
+claude mcp add pricemonkey -- "$PWD/.venv/bin/python" -m agora.mcp_server
 ```
 
 Tools: `find_offers(query, country?, max_price_eur?, conditions?, limit?)`, `get_offer(url)`,
@@ -68,6 +70,10 @@ client; buying tools stay hidden unless `AGORA_MCP_EXPERIMENTAL_BUY=1`. Non-MCP 
 (`agora/agent_http.py`) or the `GET /hunt?q=` stream. Schemas and examples: `docs/AGENTS_GUIDE.md`.
 
 ## Architecture in brief
+
+The product is called PriceMonkey; the Python package is still `agora` (internal name, env vars stay `AGORA_*`).
+The one brand spot in the web app is `data-brand` on `<html>` in `agora/web/index.html`; logo, mascot, favicons
+and the share image live in `agora/web/assets/brand/`.
 
 ```
 need  ->  discover  ->  read  ->  resolve  ->  judge  ->  verdict          (SSE stream: GET /hunt)
@@ -90,7 +96,7 @@ need  ->  discover  ->  read  ->  resolve  ->  judge  ->  verdict          (SSE 
 | `api.py`, `web/`, `static/` | FastAPI + server-sent events; the viewer "the line" (`web/`, vanilla ES modules, no build step) and the old lab viewer (`static/`, at `/lab`) |
 
 Safety, in short: page text is data, never instructions (fenced, with a random id per block). The agent
-only buys offers that Agora's own reader stored, at the price it read. Auto-buy runs only on our mock shop,
+only buys offers that PriceMonkey's own reader stored, at the price it read. Auto-buy runs only on our mock shop,
 under a signed mandate with a cap. The shop checks the mandate, the signed cart and the closed mandate
 itself, keeps its own spend ledger, and refuses replays. State-changing routes refuse other web origins.
 

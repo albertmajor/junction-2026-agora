@@ -41,6 +41,7 @@ async function mountAll() {
   if (ll && ll.mountLivelog) { try { ll.mountLivelog($('reading'), line); } catch (e) { console.warn('[agora] mountLivelog failed', e); } }
   const sg = await load('suggest');
   if (sg && sg.mountSuggest) { try { sg.mountSuggest(ask, qIn); } catch (e) { console.warn('[agora] mountSuggest failed', e); } }
+  load('imagefill').then(m => { try { m && m.mountImagefill && m.mountImagefill(); } catch (e) { console.warn('[agora] mountImagefill failed', e); } });
   const lm = await load('landing');
   if (lm && lm.mountLanding) { try { lm.mountLanding($('landing')); } catch (e) { console.warn('[agora] mountLanding failed', e); } }
   const plan = [
@@ -155,11 +156,15 @@ $('crumbs') && $('crumbs').addEventListener('click', e => {
 });
 
 // ---------- status line ----------
-function setStatus(kind, text, extra = '') {
+// monkey: the mascot shrugs beside a "found nothing" message (the only place he appears in the results)
+function setStatus(kind, text, extra = '', { monkey = false } = {}) {
   statusEl.classList.toggle('err', kind === 'err');
+  statusEl.classList.toggle('none', !!(kind && monkey));
   statusEl.dataset.kind = kind || '';
   if (!kind) { statusEl.innerHTML = ''; return; }
-  statusEl.innerHTML = `<span class="dot" aria-hidden="true"></span>${esc(text)}${extra}`;
+  statusEl.innerHTML = monkey
+    ? `<img class="st-monkey" src="/web/assets/brand/mascot.svg" width="44" height="80" alt=""><span class="st-text"><span class="dot" aria-hidden="true"></span>${esc(text)}${extra}</span>`
+    : `<span class="dot" aria-hidden="true"></span>${esc(text)}${extra}`;
 }
 
 // ---------- need chips ----------
@@ -341,7 +346,7 @@ on('done', d => {
   if (statusEl.classList.contains('err')) return;
   setStatus(null);
   const note = endStatus();
-  if (note) setStatus(note[0], note[1]);
+  if (note) setStatus(note[0], note[1], '', { monkey: n === 0 });
 });
 // what the end of a hunt says when it found little: honest, and what to do about it
 function endStatus() {
@@ -370,7 +375,7 @@ on('error', e => {
       const b = box.querySelector(`.ex[data-q="${CSS.escape(stream.queryFor(slug))}"]`);
       if (b) box.prepend(b);
     });
-    setStatus('err', e.message);
+    setStatus('err', e.message, '', { monkey: true });
     box.after(statusEl);
   } else {
     setStatus('err', e.message);
@@ -628,7 +633,9 @@ async function boot() {
   // the product name: one edit point (data-brand on <html>, read into BRAND by core.js); the static
   // <title> and .brand text in index.html are only the no-JS fallback
   if (!params.get('q')) document.title = BRAND;
-  document.querySelectorAll('.brand').forEach(b => { b.textContent = BRAND; });
+  // "PriceMonkey" -> price<b>monkey</b>: the second word wears the monkey's brown
+  const bm = /^(.+?)([A-Z][a-z]+)$/.exec(BRAND);
+  document.querySelectorAll('.brand').forEach(b => { b.innerHTML = bm ? `${esc(bm[1])}<b>${esc(bm[2])}</b>` : esc(BRAND); });
   app.dataset.phase = 'start';
   placeBox();
   const narrowPh = matchMedia('(max-width: 480px)');

@@ -295,7 +295,7 @@ async function plan(d = {}) {
     const listed = Number(o.price_eur);
     let target = isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 825;
     let note = null;
-    // a used listing has one price: Agora never pays more than the pick was listed at
+    // a used listing has one price: we never pays more than the pick was listed at
     if (isFinite(listed) && listed > 0 && target > listed) {
       note = `the pick was listed at ${eur(listed)} on ${seller} · ${BRAND} holds your price there`;
       target = listed;

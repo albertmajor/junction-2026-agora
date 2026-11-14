@@ -174,6 +174,13 @@ function rowSig(it, i, kind, pick) {
   return [i, kind, val(it), tagEur(it), it.url === pick, !!it.tc, it.late, tm && tm.text, ccOf(it), isPickupOnly(it),
     it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to].join('|');
 }
+// no photo (yet): a calm tile with the shop's own mark over its initial, so it reads as "from this shop", not broken
+const shopIcon = d => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
+function placeholder(it) {
+  const d = String(domainOf(it.url) || shopOf(it) || '').replace(/^www\./, '');
+  const l = esc((shopOf(it) || d || '?').replace(/^www\./, '')[0].toUpperCase());
+  return `<i class="ph" data-l="${l}">${d ? `<img class="ph-logo" alt="" loading="lazy" referrerpolicy="no-referrer" src="${esc(shopIcon(d))}">` : ''}</i>`;
+}
 function rowHtml(it, i, kind, pick) {
   const raw = it.offer.image || '';
   const src = cutSrc(it) || (isProductPhoto(raw) ? raw : '');
@@ -182,12 +189,13 @@ function rowHtml(it, i, kind, pick) {
   const tm = trustMark(it);
   const mark = meaningful(tm) ? `<span class="tmark" data-state="${esc(tm.state)}" data-label="${esc(tm.label)}">${esc(tm.text)}</span>` : '';
   const pic = src ? `<img alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${esc(src)}" data-raw="${esc(isProductPhoto(raw) ? raw : '')}">`
-                  : `<i>${esc((site || '?').replace(/^www\./, '')[0].toUpperCase())}</i>`;
+                  : placeholder(it);
+  const title = String(it.offer.title || '').trim();
   const cls = ['lg-r', it.url === pick ? 'pick' : '', it.tc && isUnsure(it) ? 'unsure' : '', kind === 'risky' ? 'risky' : ''].filter(Boolean).join(' ');
   return `<button type="button" class="${cls}" data-url="${esc(it.url)}">
     <span class="lg-n">${i + 1}</span><span class="lg-pic">${pic}</span>
-    <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span>${mark}</span>
-    <span class="lg-ti">${esc(it.offer.title || '')}</span>
+    <span class="lg-main"><span class="lg-ti">${esc(title || site)}</span>
+      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${mark}</span></span>
     <span class="lg-c">${esc(condWord(it.offer.condition))}</span>
     <span class="lg-tag">${esc(eur(tagEur(it), { dp: 0 }))}</span>
     <span class="lg-tc">${kind === 'risky' && v == null ? '<span class="lg-nc">not costed</span>' : esc(money(v, it))}</span>
@@ -227,12 +235,12 @@ function cardHtml(h, i) {
   const [lead, ...more] = h.why;
   const v = allIn(it);
   return `<li><button type="button" class="lg-hc${i === 0 ? ' is-pick' : ''}" data-url="${esc(it.url)}">
-    <span class="hc-pic">${src ? `<img alt="" decoding="async" referrerpolicy="no-referrer" src="${esc(src)}">` : `<i>${esc((shopOf(it) || '?')[0].toUpperCase())}</i>`}</span>
+    <span class="hc-pic">${src ? `<img alt="" decoding="async" referrerpolicy="no-referrer" src="${esc(src)}">` : placeholder(it)}</span>
     <span class="hc-body">
       <span class="hc-why"><b>${esc(lead.charAt(0).toUpperCase() + lead.slice(1))}</b>${more.length ? `<span> · ${esc(more.join(' · '))}</span>` : ''}</span>
-      <span class="hc-p">${esc(money(v, it))}<small>${isJob(it) ? '' : ' all in'}${shipsUnconfirmed(it) ? ' + shipping' : ''}</small></span>
+      <span class="hc-t">${esc(String(o.title || '').trim() || shopOf(it))}</span>
       <span class="hc-s">${flagHtml(it, { noFi: true })}<span>${esc(shopOf(it))}</span>${sub ? `<em>${esc(sub)}</em>` : ''}</span>
-      <span class="hc-t">${esc(o.title || '')}</span>
+      <span class="hc-p">${esc(money(v, it))}<small>${isJob(it) ? '' : ' all in'}${shipsUnconfirmed(it) ? ' + shipping' : ''}</small></span>
     </span></button></li>`;
 }
 
@@ -267,7 +275,7 @@ function scaffold() {
     <ol class="lg-hl" aria-label="The better ones"></ol>
     <div class="lg-fb" aria-label="Filter the listings"></div>
     <p class="lg-jump" hidden></p>
-    <div class="lg-r lg-head" aria-hidden="true"><span></span><span></span><span>shop</span><span>title</span><span>condition</span><span class="lg-tag">tag</span><span class="lg-tc">all in</span><span></span></div>
+    <div class="lg-r lg-head" aria-hidden="true"><span></span><span></span><span>listing</span><span>condition</span><span class="lg-tag">tag</span><span class="lg-tc">all in</span><span></span></div>
     <ol class="lg-l" data-g="main"></ol>
     <div class="lg-more-w" data-g="main"><button type="button" class="lg-more" data-g="main"></button></div>
     <section class="lg-g lg-eu" hidden>
@@ -432,12 +440,20 @@ export function mountLedger(el) {
       render();
     }, 220);
   });
+  // Google's "no icon" answer is a tiny generic globe: keep the shop's initial instead
+  root.addEventListener('load', e => {
+    const img = e.target;
+    if (img && img.classList && img.classList.contains('ph-logo') && img.naturalWidth < 32) img.remove();
+  }, true);
   root.addEventListener('error', e => {
     const img = e.target;
     if (!img || img.tagName !== 'IMG' || img.closest('.flag')) return;
+    if (img.classList.contains('ph-logo')) { img.remove(); return; }   // no shop mark: the initial stays
     const raw = img.dataset.raw;
     if (raw && img.src !== raw) { img.dataset.raw = ''; img.src = raw; return; }
-    img.replaceWith(Object.assign(document.createElement('i'), { textContent: '·' }));
+    const ph = Object.assign(document.createElement('i'), { className: 'ph' });
+    ph.dataset.l = '·';
+    img.replaceWith(ph);
   }, true);
   on('reset', () => {
     limits = { main: STEP, eu: STEP, risky: 30 }; filt = freshFilter(); euOpen = false; riskOpen = true;

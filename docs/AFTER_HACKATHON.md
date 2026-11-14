@@ -1,6 +1,6 @@
-# After the hackathon: keep Agora reading, publish price pages
+# After the hackathon: keep PriceMonkey reading, publish price pages
 
-Goal: Agora keeps reading prices on a schedule and publishes one honest, useful price page per popular item.
+Goal: PriceMonkey keeps reading prices on a schedule and publishes one honest, useful price page per popular item.
 Search engines and LLM assistants can cite those pages, and buyers click out through our affiliate links.
 If only 0.01% of LLM shopping traffic buys through us, that is still money. Agents buying through us
 with a small markup is phase 3. We do not build it now.
@@ -15,7 +15,7 @@ Written 2026-11-14. Black Friday is **27 Nov 2026**, so the 2-week rollout ends 
   - Google Trends, for rising shopping queries in FI, SE, DE, NL, FR.
   - Shop bestseller lists (Amazon, Verkkokauppa, Back Market): read them by hand once a week. Never scrape them in bulk.
   - Reddit, e.g. r/BuyItForLife and r/Suomi buying threads.
-- Pick items where Agora wins: new, refurbished and used all exist, and the price varies a lot across shops.
+- Pick items where PriceMonkey wins: new, refurbished and used all exist, and the price varies a lot across shops.
   Good fits: phones, cameras, lenses, consoles, laptops, headphones, e-bikes, robot vacuums, prams.
   Avoid items with one fixed price (Apple-only sellers) and items whose model numbers change every month.
 - Seasonal calendar:

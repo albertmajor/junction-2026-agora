@@ -1,4 +1,4 @@
-/* Agora: the "your price" tag, the guard, the buy finale, the stamp (B4).
+/* PriceMonkey: the "your price" tag, the guard, the buy finale, the stamp (B4).
    Tokens come from base.css. Yellow (--accent) is used ONLY for the tag here. */
 
 /* ---------- shared: a photo that could not be cut out ----------
@@ -425,7 +425,7 @@
   #app[data-phase="finale"] #tag .tg-watch { max-width: calc(100% - 440px); }
 }
 
-/* night: one gesture. The paper dims a shade while Agora works, and comes back with the receipt. */
+/* night: one gesture. The paper dims a shade while PriceMonkey works, and comes back with the receipt. */
 html, body { transition: background-color 1.2s var(--ease); }
 html.night { --paper: #E6E1D6; --field: #EEEAE1; }
 @media (prefers-color-scheme: dark) { html.night:not([data-theme="light"]) { --paper: #0E0D0B; --field: #171613; } }

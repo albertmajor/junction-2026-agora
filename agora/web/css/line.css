@@ -461,10 +461,10 @@
 .lg-f button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 0 0 1px var(--hair); }
 .lg-l { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }
 .lg-l li { border-bottom: 1px solid var(--hair); }
-/* # · photo · shop · title · condition · tag · all in · note */
+/* # · photo · listing (title, then shop) · condition · tag · all in · note */
 .lg-r {
-  display: grid; grid-template-columns: 28px 44px minmax(170px, 230px) minmax(0, 1fr) 88px 72px 96px 172px;
-  align-items: center; column-gap: 12px; width: 100%; min-height: 52px; padding: 6px 8px 6px 4px; margin: 0;
+  display: grid; grid-template-columns: 28px 96px minmax(0, 1fr) 88px 72px 96px 172px;
+  align-items: center; column-gap: 14px; width: 100%; min-height: 108px; padding: 6px 8px 6px 4px; margin: 0;
   border: 0; background: none; color: var(--ink-2); font: 400 13px/1.3 var(--sans); text-align: left; cursor: pointer;
   transition: background var(--t-ui) var(--ease);
 }
@@ -474,15 +474,22 @@
 .lg-r:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 .lg-r.pick { box-shadow: inset 2px 0 0 var(--accent); }
 .lg-n { font: 400 11px var(--mono); color: var(--ink-3); text-align: right; }
-.lg-pic img, .lg-pic i {
-  width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--stage);
-  display: grid; place-items: center; font: normal 400 15px/1 var(--serif); color: var(--ink-2);
+.lg-pic { display: block; width: 96px; height: 96px; }
+.lg-pic > img, .lg-pic > i {
+  width: 100%; height: 100%; border-radius: 10px; object-fit: cover; background: var(--stage);
+  box-shadow: inset 0 0 0 1px var(--hair);
 }
-.lg-t { min-width: 0; display: grid; gap: 2px; justify-items: start; }
-.lg-s { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; color: var(--ink); white-space: nowrap; }
+/* the listing: its title first (what you'd buy), the shop on a quieter line under it */
+.lg-main { min-width: 0; display: grid; gap: 5px; justify-items: start; }
+.lg-ti {
+  min-width: 0; max-width: 100%; color: var(--ink); font: 500 14px/1.35 var(--sans); text-wrap: pretty;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.lg-t { min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); }
+.lg-s { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; white-space: nowrap; }
 .lg-d { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lg-cm { display: none; color: var(--ink-3); }
 .lg-t .tmark { font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.lg-ti { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-3); font-size: 12.5px; }
 .lg-c { color: var(--ink-3); font-size: 12.5px; }
 .lg-tag, .lg-tc { font: 400 12px var(--mono); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lg-tag { color: var(--ink-3); }
@@ -496,6 +503,7 @@
 }
 .lg-sep b { font-weight: 500; color: var(--ink-2); }
 .lg-sep + li .lg-r, .lg-sep ~ li .lg-r { color: var(--ink-3); }
+.lg-sep ~ li .lg-ti { color: var(--ink-2); }
 .lg-sep ~ li .lg-tc { color: var(--ink-2); font-weight: 400; }
 /* flags in the list: no fade-in (rows re-render), full strength; the dotted rule alone marks a guess */
 .lg-s .flag img { animation: none; opacity: 1 !important; }
@@ -507,9 +515,8 @@
 }
 .lg-more:hover { color: var(--ink); }
 @media (max-width: 1023px) {
-  .lg-r { grid-template-columns: 24px 40px minmax(150px, 1fr) 76px 64px 92px 150px; column-gap: 10px; }
-  .lg-ti { display: none; }
-  .lg-head > span:nth-child(4) { display: none; }
+  .lg-r { grid-template-columns: 24px 88px minmax(0, 1fr) 76px 64px 92px 140px; column-gap: 12px; min-height: 100px; }
+  .lg-pic { width: 88px; height: 88px; }
 }
 /* phones: the ledger is the full list of listings too (listings.css lays the rows out) */
 html.agent-on #ledger { opacity: 0; pointer-events: none; }

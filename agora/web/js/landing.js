@@ -5,7 +5,7 @@ import * as core from './core.js';
 import { queryFor } from './stream.js';
 import { mountTree } from './tree.js';
 
-const brand = () => core.BRAND || document.documentElement.dataset.brand || 'Agora';
+const brand = () => core.BRAND || document.documentElement.dataset.brand || 'PriceMonkey';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 

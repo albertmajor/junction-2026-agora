@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
-  <!-- Agora hand-drawn marks. Exactly the three hand-drawn places in DESIGN.md section 5.
-       Drawn for Agora (no third-party artwork). Used inline by line.js via <use href="#...">. -->
+  <!-- PriceMonkey hand-drawn marks. Exactly the three hand-drawn places in DESIGN.md section 5.
+       Drawn for PriceMonkey (no third-party artwork). Used inline by line.js via <use href="#...">. -->
 
   <!-- 1. rough ink circle around the winner: about 1.1 turns, slight drift, ends past its start.
        pathLength=1 so callers can draw it with stroke-dasharray:1; stroke-dashoffset:1 -> 0. -->

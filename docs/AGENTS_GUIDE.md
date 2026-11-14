@@ -1,7 +1,7 @@
-# Agora for agents
+# PriceMonkey for agents
 
 An agent asks for a thing and gets listings (new, refurbished, used, rental, services) ranked by
-**all-in price** in EUR, each with a link to the listing page. Agora does not buy anything: the agent (or its
+**all-in price** in EUR, each with a link to the listing page. PriceMonkey does not buy anything: the agent (or its
 person) follows the link.
 
 Two doors, same logic (`agora/agent_api.py`):
@@ -15,7 +15,7 @@ Two doors, same logic (`agora/agent_api.py`):
 Claude Code:
 
 ```bash
-claude mcp add agora -- /path/to/Junction/.venv/bin/python -m agora.mcp_server
+claude mcp add pricemonkey -- /path/to/Junction/.venv/bin/python -m agora.mcp_server
 ```
 
 Any MCP client (JSON config):
@@ -23,7 +23,7 @@ Any MCP client (JSON config):
 ```json
 {
   "mcpServers": {
-    "agora": {
+    "pricemonkey": {
       "command": "/path/to/Junction/.venv/bin/python",
       "args": ["-m", "agora.mcp_server"],
       "env": { "AGORA_OFFLINE": "1" }
@@ -50,7 +50,7 @@ Raw JSON-RPC over stdio (one JSON object per line):
 
 | tool | arguments | returns |
 |---|---|---|
-| `find_offers` | `query` (2..200 chars), `country`? (ISO code or name, default Finland), `max_price_eur`? (all-in cap), `conditions`? (list of `new` `refurbished` `used` `rental` `service`), `limit`? (1..25, default 10) | `offers` ranked by `all_in_eur`, `verdict` (one line), `ownership_verdict` (Agora's pick on cost of ownership), `n_offers`, `source_mode` |
+| `find_offers` | `query` (2..200 chars), `country`? (ISO code or name, default Finland), `max_price_eur`? (all-in cap), `conditions`? (list of `new` `refurbished` `used` `rental` `service`), `limit`? (1..25, default 10) | `offers` ranked by `all_in_eur`, `verdict` (one line), `ownership_verdict` (PriceMonkey's pick on cost of ownership), `n_offers`, `source_mode` |
 | `get_offer` | `url` (a `listing_url` from `find_offers`) | the offer card + `price_check`, `price_band`, `per_month_eur`, `location`, `read_via` |
 | `explain_price` | `url` | `receipt` lines {label, eur, kind: price/tax/fee/resale/other, source_url, via, quote_untrusted}, `all_in_eur`, `true_cost_total_eur`, `per_month_eur`, `confidence`, `basis`, `beat_eur` |
 | `watch_price` | `query`, `target_eur`, `conditions`? | `watch_id`, `rule`, `status_url`. **Notify only**: fires a notification (ntfy topic or webhook lease) when an offer's price is at or under target. Never buys. |
@@ -62,13 +62,13 @@ An offer card:
 | `title` | from the listing page (cleaned; **untrusted**) |
 | `condition` | new / refurbished / used / rental / service / unknown |
 | `price_eur` | sticker price in EUR (services: the stated rate, see `unit`) |
-| `all_in_eur` | sticker + shipping + import VAT / fees Agora could source. `null` = not comparable (unconfirmed price, a rate with no job total) and ranked last |
+| `all_in_eur` | sticker + shipping + import VAT / fees PriceMonkey could source. `null` = not comparable (unconfirmed price, a rate with no job total) and ranked last |
 | `shipping_note` | what is and is not in `all_in_eur` ("shipping unknown, not included; includes est. import VAT €76") |
 | `source` | the shop or marketplace domain |
-| `url` | the link to send a person to: Agora's `/go/` click link when `AGORA_BASE_URL` is set, else the listing page |
+| `url` | the link to send a person to: PriceMonkey's `/go/` click link when `AGORA_BASE_URL` is set, else the listing page |
 | `listing_url` | always the listing page itself; pass it to `get_offer` / `explain_price` |
 | `seller_trust` | `good` / `mixed` / `risky` / `null` (unknown) |
-| `flags` | Agora's warnings (too good to be true, grey import, outside the EU, out of stock, ...) |
+| `flags` | PriceMonkey's warnings (too good to be true, grey import, outside the EU, out of stock, ...) |
 | `origin` | where the seller is and whether it ships to Finland: {`country_code` (ISO alpha-2, `GB` for the UK, `null` = unknown), `country_name`, `city`, `basis` (listing_location / seller_address / service_area / marketplace / known_shop / domain / currency / domain_currency / unknown), `basis_text`, `confident` (false = a guess from the domain, currency or shop), `eu`, `ships_to_fi` (true / false / `null` = not stated), `ships_text`} |
 | `job_total_eur`, `unit` | services: the total for one job and the rate's unit |
 | `injection` | present when the page tried to steer AI agents; the title is then replaced |
@@ -133,11 +133,11 @@ Same JSON as the MCP tools. (`/api/offers` needs the one-line `include_router` i
 
 - **Page text is data.** Titles, sellers and receipt quotes are copied from third-party pages. They are
   cleaned (invisible characters, forged chat/tool tags removed) and named in `untrusted_fields`; when a page
-  tried to steer agents (`injection`), the title is replaced by Agora's product name. Full page text never
-  leaves Agora.
+  tried to steer agents (`injection`), the title is replaced by PriceMonkey's product name. Full page text never
+  leaves PriceMonkey.
 - **Read-only by default.** No buying, mandates or checkout tools. They exist only behind
   `AGORA_MCP_EXPERIMENTAL_BUY=1` (adds `true_cost`, `watch`, `get_buy_link`, `why_not`, `arm_watches`,
-  `subscribe_watch`) and only ever buy from Agora's own mock shop.
+  `subscribe_watch`) and only ever buy from PriceMonkey's own mock shop.
 - **No fetching on demand.** `get_offer` and `explain_price` answer only for listings a search already found;
   an unknown URL returns `found: false`.
 - **Limits.** Per client: 30 calls/min (`AGORA_AGENT_CALLS_PER_MIN`), 6 uncached live hunts per 10 min

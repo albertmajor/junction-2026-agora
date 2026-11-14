@@ -41,7 +41,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="Agora", version="0.1.0", lifespan=_lifespan,
+app = FastAPI(title="PriceMonkey", version="0.1.0", lifespan=_lifespan,
               description="One search box for everything you can buy. True cost, live watchers, agent door.")
 
 
@@ -205,7 +205,7 @@ def _bucket_peek() -> dict[str, Any] | None:
 @app.get("/api")
 def api_index() -> dict[str, Any]:
     return {
-        "name": "agora",
+        "name": "pricemonkey",
         "endpoints": {
             "GET /hunt?q=&replay=<slug>&speed=2": "replay a recorded hunt at its real pace (no credits)",
             "GET /recordings": "slugs of recorded hunts",
@@ -639,7 +639,7 @@ async def ledger() -> Any:
 
 @app.post("/buy")
 async def buy_by_id(body: dict[str, Any] = Body(...)) -> Any:
-    """Agent door: buy an offer Agora itself read, by id. Price and URL come from our stored row;
+    """Agent door: buy an offer PriceMonkey itself read, by id. Price and URL come from our stored row;
     with a watch the mandate decides (auto-buy / one-tap), without one it is a one-tap link."""
     offer_id = str(body.get("offer_id") or "").strip()
     if not offer_id:
@@ -731,6 +731,11 @@ try:  # photo cutouts (GET /cut); optional, a missing or broken module must not 
     _cutout_router = getattr(_module("cutout"), "router", None)
     if _cutout_router is not None:
         app.include_router(_cutout_router)
+except Exception:
+    pass
+
+try:  # listing photo backfill + verify (GET /api/image, POST /api/images); optional like the cutouts
+    app.include_router(getattr(_module("images"), "router"))
 except Exception:
     pass
 
