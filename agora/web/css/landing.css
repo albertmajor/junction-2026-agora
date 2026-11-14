@@ -610,3 +610,9 @@
   .ld-gl { font-size: 24px; margin: 0; }
   .ld-group li { width: 84px; }
 }
+/* tighter vertical rhythm (owner): pull line, promise rows */
+.ld-pull { line-height: 1.02; margin-top: 22px; }
+.ld-pull em { display: inline; }
+.ld-promises li { padding: 12px 0; gap: 4px 32px; }
+.ld-promises h3 { line-height: 1.15; }
+.ld-promises p { line-height: 1.45; }

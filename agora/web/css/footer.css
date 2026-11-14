@@ -27,10 +27,11 @@
 /* the giant wordmark, bleeding to the edges, with the monkey standing next to it */
 .pf-word {
   display: flex; align-items: flex-end; gap: clamp(8px, 2vw, 28px);
-  margin: clamp(12px, 1.6vw, 24px) 0 0; margin-left: -0.04em;
+  margin: calc(-0.02em + 8px) 0 0; margin-left: -0.04em;
   line-height: .78; user-select: none; overflow: hidden;
 }
 .pf-name {
+  margin-top: -0.08em;
   font: 400 clamp(60px, 13.2vw, 212px)/.8 var(--serif); font-variation-settings: var(--display-vs);
   letter-spacing: -0.035em; color: var(--pf-ink); white-space: nowrap; padding-bottom: .2em;
 }
