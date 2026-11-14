@@ -406,7 +406,7 @@
 /* ---------- 8. close ---------- */
 .ld-band#ld-close { padding-block: 104px 96px; }
 .ld-close-in { display: grid; justify-items: center; text-align: center; }
-.ld-banana { display: block; width: 54px; height: auto; margin-bottom: 18px; }
+.ld-banana { display: block; width: 92px; height: auto; margin-bottom: 22px; }
 .ld-close-h { margin: 0; font: 340 64px/1 var(--serif); letter-spacing: -0.022em; font-variation-settings: var(--display-vs); text-wrap: balance; }
 .ld-close-h em { font-style: italic; }
 .ld-close-s { margin: 16px 0 0; max-width: 34ch; font: italic 340 19px/1.4 var(--serif); color: var(--ink-2); font-variation-settings: "opsz" 24, "SOFT" 100; text-wrap: balance; }
