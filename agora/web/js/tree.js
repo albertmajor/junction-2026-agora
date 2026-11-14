@@ -17,7 +17,7 @@ const MAX_COLS = 3;
 // popular categories, each with a real listing photo our hunts read (recorded hunts replay instantly)
 const POPULAR = [
   { id: 'sp:co-2-2', img: '/web/assets/shelf/kamera-0.png', title: 'Sony A7 III', rec: 'sony-a7-iii-body' },
-  { id: 'sp:el-4-8-5-2', img: '/web/assets/shelf/iphone-15-0.png', title: 'iPhone 15, 128 GB', rec: 'iphone-15-128gb-used' },
+  { id: 'sp:el-4-8-5-2', img: '/web/assets/shelf/iphone-15-2.png', title: 'iPhone 15, 128 GB', rec: 'iphone-15-128gb-used' },
   { id: 'home-services.cleaning.home-cleaning', svg: 'home-services', title: 'Home cleaning, Helsinki', rec: 'home-cleaning-helsinki-60m2' },
   { id: 'sp:sg-4-4-3-2', img: '/web/assets/shelf/rennrad-0.png', title: 'City bike with basket', rec: 'city-bike-with-basket' },
   { id: 'sp:fr-22', img: '/web/assets/shelf/sohva-2.png', title: 'IKEA Söderhamn sofa', q: 'IKEA Söderhamn sofa' },

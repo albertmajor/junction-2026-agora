@@ -191,14 +191,15 @@ button { cursor: pointer; }
 /* a banana on the other side of the box, mirroring the monkey (placed by mascot.js placeStartMonkey) */
 .start-banana { position: absolute; width: 72px; height: auto; pointer-events: none;
   /* drops in from above onto its spot and bounces (uses `translate`/`rotate`, so mascot.js's own transform stays) */
-  animation: banana-drop 1150ms 450ms both; }
+  animation: banana-drop 900ms 200ms both; }
 @keyframes banana-drop {
-  0%   { translate: 0 -140px; rotate: -12deg; animation-timing-function: cubic-bezier(.55, 0, .9, .45); opacity: 1; }
-  55%  { translate: 0 0;     rotate: 4deg;   animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
-  70%  { translate: 0 -16px; rotate: -3deg;  animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
-  82%  { translate: 0 0;     rotate: 2deg;   animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
-  90%  { translate: 0 -4px;  rotate: -1deg;  animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
-  100% { translate: 0 0;     rotate: 0deg; }
+  0%   { translate: 0 -120px; opacity: 0; animation-timing-function: cubic-bezier(.5, 0, .85, .4); }
+  25%  { opacity: 1; }
+  58%  { translate: 0 0; animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  74%  { translate: 0 -14px; animation-timing-function: cubic-bezier(.5, 0, .85, .4); }
+  86%  { translate: 0 0; animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  93%  { translate: 0 -3px; animation-timing-function: cubic-bezier(.5, 0, .85, .4); }
+  100% { translate: 0 0; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .start-banana { animation: none; } }
 @media (max-width: 1000px) { .start-monkey, .start-banana { display: none; } }
