@@ -1,0 +1,35 @@
+/* The mascot's moods (mascot.js): idle beside the start box, searching over the live log, thinking while the
+   first answer is costed, found-it once over the pick card. One monkey at a time, small, never in the way. */
+picture.mk { display: block; pointer-events: none; }
+picture.mk img { display: block; width: 100%; height: auto; }
+
+/* ---------- over the live log while it reads (behind the panel: only the head and the busy hand show) ---------- */
+#reading .ll-peek {
+  position: absolute; z-index: 0; right: 180px; top: -36px; width: 52px;
+  animation: mk-peek-up 520ms 200ms var(--ease, ease) both;
+}
+#reading[data-state="done"] .ll-peek { display: none; }
+/* he stands in the gap between the box and the header links; where that gap closes (under 1200 px) he moves
+   under the links and shows a little less; a phone (and a tablet whose links wrap) has no room above the panel */
+@media (max-width: 1199px) { #reading .ll-peek { right: 44px; top: -27px; } }
+@media (max-width: 799px) { #reading .ll-peek { display: none; } }
+/* once the pick card is up, its monkey takes over */
+#app:has(#verdict .v-pick:not([hidden]) .vp-mk) #reading .ll-peek { display: none; }
+@keyframes mk-peek-up { from { transform: translateY(36px); } to { transform: none; } }
+
+/* ---------- over the pick card: thinking while it is costed, found-it once on the final answer ---------- */
+#verdict .v-pick { position: relative; }
+.vp-mk {
+  position: absolute; right: 22px; bottom: 100%; width: 72px; height: 50px; overflow: hidden;
+  pointer-events: none;
+}
+/* both crops share the right edge and the feet: anchor right, fixed height */
+.vp-mk picture.mk { position: absolute; right: 0; top: 2px; width: auto; animation: mk-peek-up 420ms var(--ease, ease) both; }
+.vp-mk picture.mk img { width: auto; height: 104px; }
+.vp-mk picture.mk[data-mood="found-it"] img { height: 104px; }
+/* room for him above the card where the card has none */
+@media (max-width: 1099px) { #verdict .v-pick:has(.vp-mk) { margin-top: 52px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #reading .ll-peek, .vp-mk picture.mk { animation: none; }
+}

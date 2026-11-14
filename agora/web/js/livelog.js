@@ -3,6 +3,7 @@
 //
 // Wired by main.js mountAll() (mountLivelog($('reading'), line)); stream.js stamps d._t / it._t = ev.t_ms.
 import * as core from './core.js';
+import { picture } from './mascot.js';
 
 const { S, on } = core;
 const RM = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: true };
@@ -119,7 +120,7 @@ function build(el) {
   }
   el.classList.add('ll', 'livelog');
   el.innerHTML = `
-    <img class="ll-peek" src="/web/assets/brand/logo.svg" width="48" height="40" alt="" aria-hidden="true">
+    ${picture('searching', { cls: 'll-peek', w: 52, h: 91 })}
     <div class="ll-panel">
       <div class="ll-head">
         <span class="ll-dot" aria-hidden="true"></span>

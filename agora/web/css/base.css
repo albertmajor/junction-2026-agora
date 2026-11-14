@@ -152,7 +152,7 @@ button { cursor: pointer; }
 /* the mascot, once: standing beside the box with his banana (wide screens only; the header logo is enough on a phone) */
 #start { position: relative; }
 .start-monkey {
-  position: absolute; left: calc(50% + 344px); top: 30px; width: 72px; height: auto;
+  position: absolute; left: calc(50% + 344px); top: 30px; width: 75px; height: auto;
   animation: rise 700ms 180ms var(--ease) both; pointer-events: none;
 }
 @media (max-width: 1000px) { .start-monkey { display: none; } }

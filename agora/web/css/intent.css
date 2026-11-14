@@ -50,5 +50,5 @@
 .it-card .cp-arrow { grid-column: 2; grid-row: 1; color: var(--ink-3); }
 @media (prefers-reduced-motion: reduce) { .it-card { transition: none; } .it-card:hover { transform: none; } }
 
-/* the monkey peeking over the live log stands 25px above it: keep it off the chips */
-@media (min-width: 641px) { #intents:not([hidden]) ~ #reading.ll:not([hidden]):not([data-state="done"]) { margin-top: 26px; } }
+/* the monkey peeking over the live log stands 36px above it: keep it off the chips */
+@media (min-width: 641px) { #intents:not([hidden]) ~ #reading.ll:not([hidden]):not([data-state="done"]) { margin-top: 38px; } }

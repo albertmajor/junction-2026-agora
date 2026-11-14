@@ -2,6 +2,7 @@
 // hunting… → provisional answer + "checking N more shops" → final answer + "✓ checked".
 import { S, on, emit, eur, cutSrc, goHref, domainOf, isSetAside, isProductPhoto, allIn, pickUrl, cheapestByCondition, shippingUnknown, shipsUnconfirmed, shipNote, trustMark, isUnsure, unsureWhy } from './core.js';
 import { flagHtml, originFor, countryName } from './flags.js';
+import { pickMonkey } from './mascot.js';
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -211,6 +212,8 @@ function setPick(lead) {
     if (fb && img.getAttribute('src') !== fb) img.src = fb;
     else { img.remove(); el.querySelector('.vp-pic').classList.add('is-mono'); }
   });
+  const mk = pickMonkey();                 // the monkey peeking over the card (kept across re-renders)
+  if (mk) el.prepend(mk);
   el.dataset.url = lead.url;
   el.hidden = false;
 }

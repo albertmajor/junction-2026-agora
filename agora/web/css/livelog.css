@@ -17,19 +17,8 @@
 :root[data-theme="dark"] #reading.ll { --ll-bg: var(--paper-2, #1D1B18); --ll-live: var(--live, #FF7A45); --ll-blue: var(--ink-blue, #9DB8E8); }
 #reading.ll[hidden], [data-phase="start"] #reading.ll { display: none; }
 
-/* ---------- the monkey peeking over the panel while it reads (gone once the log folds) ---------- */
+/* the monkey peeking over the panel while it reads: mascot.css */
 #reading.ll { position: relative; }
-#reading .ll-peek {
-  position: absolute; z-index: 0; right: 232px; top: -25px; width: 48px; height: 40px;
-  transform-origin: 50% 100%; pointer-events: none;
-  animation: ll-peek-up 520ms 200ms var(--ease, ease) both, ll-sniff 2.4s 900ms ease-in-out infinite;
-}
-#reading[data-state="done"] .ll-peek { display: none; }
-@keyframes ll-peek-up { from { transform: translateY(28px); } to { transform: none; } }
-@keyframes ll-sniff { 0%, 100% { transform: none; } 30% { transform: rotate(-4deg) translateY(-1px); } 60% { transform: rotate(3deg); } }
-@media (prefers-reduced-motion: reduce) { #reading .ll-peek { animation: none; } }
-/* a phone has no room above the panel (the box sits right on it) */
-@media (max-width: 640px) { #reading .ll-peek { display: none; } }
 
 /* ---------- the panel during the hunt ---------- */
 #reading .ll-panel {

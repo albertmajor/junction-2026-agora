@@ -1,6 +1,7 @@
 // Boot, start screen, header, need chips, ticker, URL state, keys, lab panel, stage script (B1).
 import { S, bus, emit, on, eur, domainOf, resetStore, allIn, isJobItem, pickUrl, shipsUnconfirmed, BRAND } from './core.js';
 import * as stream from './stream.js';
+import { mountMascot, setDeciding } from './mascot.js';
 
 const $ = id => document.getElementById(id);
 const app = $('app'), bar = $('bar'), ask = $('ask'), qIn = $('q'), start = $('start'), h1 = start.querySelector('h1');
@@ -140,6 +141,11 @@ async function run(q, { push = true, cat = null, free = false, intent = null, pl
   q = String(q || '').trim().replace(/\s+/g, ' ');
   if (q.length < 2) { qIn.focus(); return; }
   const I = mods.intent || null;
+  // the monkey thinks while the meaning (and the category) is worked out; the hunt or the category page ends it
+  setDeciding(true);
+  try { return await runDecided(q, I, { push, cat, free, intent, plan, interp }); } finally { setDeciding(false); }
+}
+async function runDecided(q, I, { push, cat, free, intent, plan, interp }) {
   if (I && !plan && !cat && !free) {
     interp = interp || await within(I.interpret(q), 900);
     const list = (interp && interp.intents) || [];
@@ -171,6 +177,7 @@ async function run(q, { push = true, cat = null, free = false, intent = null, pl
   showCrumbs(rw ? plan.hunt.q : q, huntCat);
   if (I) { if (interp && plan) I.show(q, interp, plan); else I.clear(); }
   setStatus('hunt', 'reading the question…');
+  setDeciding(false);
   setPhase('hunting');
   await stream.startHunt(q, rw ? { send: plan.hunt.q, cat: plan.hunt.cat, intent: plan.hunt.intent || plan.id } : {});
 }
@@ -731,6 +738,7 @@ async function boot() {
   ph(); narrowPh.addEventListener && narrowPh.addEventListener('change', ph);
   if (params.has('lab')) { const l = $('lab-link'); if (l) l.hidden = false; }
   renderExamples();
+  mountMascot();
   await mountAll();
   emit('ready', {});
   if (params.get('lab') === '1') toggleLab(true);

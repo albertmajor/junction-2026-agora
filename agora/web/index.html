@@ -33,6 +33,7 @@
 <link rel="stylesheet" href="/web/css/catpage.css">
 <link rel="stylesheet" href="/web/css/intent.css">
 <link rel="stylesheet" href="/web/css/listings.css">
+<link rel="stylesheet" href="/web/css/mascot.css">
 <link rel="icon" href="/web/assets/brand/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" href="/web/assets/brand/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/web/assets/brand/apple-touch-icon.png">
@@ -68,7 +69,7 @@
 
   <main id="main">
     <section id="start" aria-labelledby="ask-title">
-      <img class="start-monkey" src="/web/assets/brand/mascot.svg" width="72" height="131" alt="" aria-hidden="true">
+      <picture class="mk start-monkey" data-mood="idle" aria-hidden="true"><source media="(prefers-reduced-motion: reduce)" srcset="/web/assets/mascot/monkey-idle-still.png"><source type="image/webp" srcset="/web/assets/mascot/monkey-idle.webp"><img src="/web/assets/mascot/monkey-idle.gif" width="75" height="131" alt="" decoding="async" loading="lazy"></picture>
       <h1 id="ask-title">What do you want to <em>buy</em>?</h1>
       <div id="examples" aria-label="Try one"></div>
     </section>
