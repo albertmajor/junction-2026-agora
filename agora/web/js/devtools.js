@@ -431,7 +431,7 @@ const store = {
 };
 const escH = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-let BASE = null, S = null, UI = null, showA = false, panel = null, pill = null, started = false;
+let peek = false, BASE = null, S = null, UI = null, showA = false, panel = null, pill = null, started = false;
 const sheetText = new Map();   // href -> original css text
 let applied = false, raf = 0;
 
@@ -504,12 +504,20 @@ async function probeFamily(name, axesText) {
   if (known && !axesText) return { family: known.family, meta: null };
   const enc = fam.replace(/ /g, '+');
   const all = [100, 200, 300, 400, 500, 600, 700, 800, 900];
-  const r = await fetch(`https://fonts.googleapis.com/css?family=${encodeURIComponent(fam).replace(/%20/g, '+')}:${all.map(w => `${w},${w}i`).join(',')}`);
-  if (!r.ok) throw new Error(`Google Fonts has no family "${fam}" (HTTP ${r.status})`);
+  const missing = () => new Error(`Google Fonts has no family "${fam}" (check the spelling on fonts.google.com, or you are offline)`);
+  let r;
+  try { r = await fetch(`https://fonts.googleapis.com/css?family=${encodeURIComponent(fam).replace(/%20/g, '+')}:${all.map(w => `${w},${w}i`).join(',')}`); }
+  catch { throw missing(); }   // an unknown family answers 400 without CORS headers, so fetch() rejects
+  if (!r.ok) throw missing();
   const css = await r.text();
   const weights = [...new Set([...css.matchAll(/font-weight:\s*(\d+)/g)].map(m => +m[1]))].sort((a, b) => a - b);
   const ital = /font-style:\s*italic/.test(css);
   const meta = { axes: [], weights: weights.length ? weights : [400], ital, style: 'custom' };
+  // a variable wght axis? (css2 answers a weight range only for variable families)
+  if (!axesText && meta.weights.length > 1) {
+    const lo = meta.weights[0], hi = meta.weights[meta.weights.length - 1];
+    try { if ((await fetch(`https://fonts.googleapis.com/css2?family=${enc}:wght@${lo}..${hi}`)).ok) meta.axes.push(['wght', lo, hi]); } catch { /* static */ }
+  }
   if (axesText && axesText.trim()) {
     for (const m of axesText.matchAll(/([A-Za-z0-9]{4})\s*[:=]?\s*(-?[\d.]+)\s*\.\.\s*(-?[\d.]+)/g)) meta.axes.push([m[1], +m[2], +m[3]]);
     if (meta.axes.length) {
@@ -637,7 +645,7 @@ function renderPane() {
       : `<div class="dt-row"><label for="dt-weight-s">weight</label><select id="dt-weight-s">${meta.weights.map(w => `<option${w === r.weight ? ' selected' : ''}>${w}</option>`).join('')}</select>
          <span class="dt-ws">${meta.weights.map(w => `<label><input type="checkbox" data-w="${w}"${(r.weights || []).includes(w) || w === r.weight ? ' checked' : ''}>${w}</label>`).join('')}</span></div>`}
     ${axes.map(([t, lo, hi]) => slider('dt-ax-' + t, `<abbr title="variation axis">${t}</abbr>`, r.axes[t] != null ? r.axes[t] : (t === 'opsz' ? Math.min(hi, Math.max(lo, r.size)) : t === 'wdth' ? Math.min(hi, 100) : lo), lo, hi, t === 'WONK' ? 1 : (hi - lo) > 20 ? 1 : 0.1)).join('')}
-    ${axes.length ? `<div class="dt-row dt-hint">axes not touched stay at the font's default; <button type="button" class="dt-link" data-act="clear-axes">clear axes</button></div>` : ''}
+    ${axes.length ? `<div class="dt-row dt-hint"><span>axes left alone use the font's own default</span><button type="button" class="dt-link" data-act="clear-axes">clear axes</button></div>` : ''}
     ${slider('dt-size', role === 'display' ? 'headline px' : 'base px', r.size, role === 'display' ? 28 : 9, role === 'display' ? 110 : 22, 0.5, 'px')}
     <div class="dt-row"><label for="dt-ratio">ratio</label><input type="range" id="dt-ratio" min="1.05" max="1.62" step="0.001" value="${r.ratio}">
       <select class="dt-ratio-s">${ratioOpts}<option value=""${RATIOS.some(([v]) => near(v, r.ratio)) ? '' : ' selected'}>${fmt(r.ratio, 3)}</option></select></div>
@@ -646,14 +654,16 @@ function renderPane() {
     <div class="dt-row dt-feat"><label>features</label><span class="dt-chips">${FEATURE_CHIPS.map(t => `<button type="button" class="dt-chip${feats[t] != null && feats[t] !== 0 ? ' on' : ''}${feats[t] === 0 ? ' off' : ''}" data-feat="${t}" title="${t}: click on → off → unset">${t}</button>`).join('')}</span></div>
     <div class="dt-row"><label for="dt-feats">raw</label><input type="text" id="dt-feats" class="dt-wide" value="${escH(r.features)}" spellcheck="false"></div>
     ${role === 'main' ? `
-    <div class="dt-row"><label for="dt-lt">labels ≤ <input type="number" class="dt-num dt-lmax" min="9" max="16" step="0.5" value="${r.labels.maxSize}">px</label>
+    <div class="dt-sep">small labels (main text at or under the size below)</div>
+    <div class="dt-row"><label for="dt-lt">labels</label>
       <select id="dt-lt">${['none', 'uppercase', 'small-caps', 'lowercase', 'capitalize'].map(t => `<option${t === r.labels.transform ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+    ${slider('dt-lmax', 'label ≤', r.labels.maxSize, 9, 16, 0.5, 'px')}
     ${slider('dt-lls', 'label tracking', r.labels.letterSpacing, -0.02, 0.16, 0.001, 'em')}` : ''}`;
   if (UI.msg) { pane.querySelector('.dt-msg').textContent = UI.msg; UI.msg = ''; }
 }
 function specimenFont(r, role) {
   const vs = vsString(r.axes);
-  return `font-family:"${escH(r.family)}", ${role === 'mono' ? 'monospace' : role === 'display' ? 'serif' : 'sans-serif'};font-weight:${r.weight};letter-spacing:${emStr(r.letterSpacing)};font-feature-settings:${escH(r.features)};font-variation-settings:${escH(vs)}`;
+  return `font-family:'${escH(r.family)}', ${role === 'mono' ? 'monospace' : role === 'display' ? 'serif' : 'sans-serif'};font-weight:${r.weight};letter-spacing:${emStr(r.letterSpacing)};font-feature-settings:${escH(r.features)};font-variation-settings:${escH(vs)}`;
 }
 function renderSpecimen() {
   if (!panel) return;
@@ -667,7 +677,7 @@ function renderSpecimen() {
   }).join('');
   panel.querySelector('.dt-spec').innerHTML = `
     <div class="dt-spec-page${showA ? ' is-a' : ''}">
-      <div style="${specimenFont(d, 'display')};font-size:${fmt(Math.min(d.size * 0.5, 40), 2)}px;line-height:${d.lineHeight}">What do you want to <em>buy</em>?</div>
+      <div style="${specimenFont(d, 'display')};font-size:${fmt(Math.min(d.size * 0.4, 28), 2)}px;line-height:${d.lineHeight}">What do you want to <em>buy</em>?</div>
       <p style="${specimenFont(m, 'main')};font-size:${m.size}px;line-height:${m.lineHeight}">A used Fujifilm X100V, refurbished, ships from Berlin in 2 days. Returns 30 days, all in.</p>
       <div class="dt-spec-row">
         <span style="${specimenFont(m, 'main')};font-size:${Math.min(m.labels.maxSize, m.size * 0.8)}px;${lt};letter-spacing:${emStr(m.letterSpacing + m.labels.letterSpacing)};color:var(--dt-ink-2)">best price · 14 shops</span>
@@ -712,7 +722,10 @@ function setFamily(role, family, meta) {
   r.weights = [...new Set([r.weight, 400, 500])].filter(w => m.weights.includes(w)).sort((a, b) => a - b);
   // keep only axes the new family has; back on the original family, its original axis values come back
   if (family.toLowerCase() === BASE[role].family.toLowerCase()) r.axes = clone(BASE[role].axes);
-  else r.axes = Object.fromEntries(Object.entries(r.axes).filter(([t]) => m.axes.some(a => a[0] === t)));
+  else r.axes = Object.fromEntries(Object.entries(r.axes).flatMap(([t, v]) => {
+    const a = m.axes.find(x => x[0] === t);
+    return a ? [[t, Math.min(a[2], Math.max(a[1], v))]] : [];
+  }));
   if (role === 'main') r.fallback = BASE.main.fallback;
   if (role === 'display') r.fallback = BASE.display.fallback;
   if (role === 'mono') r.fallback = BASE.mono.fallback;
@@ -757,7 +770,6 @@ function onInput(e) {
   if (t.classList.contains('dt-num') && t.dataset.for) { id = t.dataset.for; const rg = panel.querySelector('#' + id); if (rg) rg.value = t.value; }
   else if (t.type === 'range') { const n = panel.querySelector(`.dt-num[data-for="${id}"]`); if (n) n.value = t.value; }
   const v = numFrom(e);
-  if (t.classList.contains('dt-lmax')) { if (Number.isFinite(v)) r.labels.maxSize = v; change(); return; }
   if (!Number.isFinite(v) && id !== 'dt-feats') return;
   if (id === 'dt-weight') r.weight = Math.round(v);
   else if (id === 'dt-size') r.size = v;
@@ -765,6 +777,7 @@ function onInput(e) {
   else if (id === 'dt-ls') r.letterSpacing = v;
   else if (id === 'dt-lh') r.lineHeight = v;
   else if (id === 'dt-lls') r.labels.letterSpacing = v;
+  else if (id === 'dt-lmax') r.labels.maxSize = v;
   else if (id && id.startsWith('dt-ax-')) r.axes[id.slice(6)] = v;
   else return;
   change();
@@ -812,6 +825,13 @@ export function init() {
   document.head.appendChild(css);
   const cs = getComputedStyle(document.documentElement);
   BASE = baselineFrom(n => cs.getPropertyValue(n));
+  // families applied earlier by apply_fonts.py that are not in the catalog: read their axes from the page's own link
+  const gl = document.querySelector('link[href^="https://fonts.googleapis.com/css2"]:not(#dt-fonts):not([data-dt-preview])');
+  const linkMeta = gl ? metaFromUrl(gl.href) : {};
+  for (const k of ['main', 'display', 'mono']) {
+    const m = !findFont(BASE[k].family) && linkMeta[BASE[k].family.toLowerCase()];
+    if (m) { BASE[k].meta = m; BASE[k].weights = BASE[k].weights.filter(w => m.weights.includes(w) || m.axes.length); }
+  }
   UI = Object.assign({ open: false, role: 'main', collapsed: false, x: null, y: null, q: '' }, store.get(LS_UI) || {});
   const saved = store.get(LS_SET);
   S = clone(BASE);
@@ -820,9 +840,9 @@ export function init() {
   if (params.get('dev') === '0') UI.open = false;
   addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'D' || e.key === 'd')) { e.preventDefault(); toggle(); }
-    else if (panel && e.altKey && !showA && e.key === 'Alt') setAB(true);
+    else if (panel && e.key === 'Alt' && !showA && !e.repeat) { peek = true; setAB(true); }
   });
-  addEventListener('keyup', e => { if (panel && e.key === 'Alt' && showA && UI.altPeek !== false) setAB(false); });
+  addEventListener('keyup', e => { if (peek && e.key === 'Alt') { peek = false; setAB(false); } });
   if (!sameAsBase(S)) apply();
   if (params.get('dev') === '1' || UI.open) toggle(true); else updatePill();
   window.pmDevtools = { get settings() { return S; }, base: () => BASE, toggle, exportJson: () => exportJson(S), importJson: t => doImport(typeof t === 'string' ? t : JSON.stringify(t)) };

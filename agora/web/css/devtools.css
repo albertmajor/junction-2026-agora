@@ -75,15 +75,14 @@
 .dt-row abbr { text-decoration: none; font-family: ui-monospace, Menlo, monospace; }
 .dt-row input[type="range"] { width: 100%; accent-color: var(--dt-on); }
 .dt-num { width: 64px; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 2px 4px; text-align: right; }
-.dt-lmax { width: 44px; margin: 0 2px; }
-.dt-row .dt-lmax + * { margin-left: 2px; }
 .dt-unit { color: var(--dt-ink-3); font-size: 10.5px; }
 .dt-row select { grid-column: 2 / 5; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 2px 4px; }
 .dt-row #dt-weight-s { grid-column: 2; }
 .dt-row .dt-ratio-s { grid-column: 3 / 5; }
 .dt-ws { grid-column: 3 / 5; display: flex; flex-wrap: wrap; gap: 2px 6px; color: var(--dt-ink-2); font-size: 10.5px; }
 .dt-ws label { display: inline-flex; align-items: center; gap: 2px; }
-.dt-hint { grid-template-columns: 1fr; color: var(--dt-ink-3); font-size: 10.5px; min-height: 18px; }
+.dt-hint { display: flex; justify-content: space-between; color: var(--dt-ink-3); font-size: 10.5px; min-height: 18px; }
+.dt-sep { margin: 8px 0 2px; padding-top: 6px; border-top: 1px dashed var(--dt-hair); color: var(--dt-ink-3); font-size: 10.5px; }
 .dt-link { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; }
 .dt-feat { align-items: start; padding-top: 4px; }
 .dt-chips { grid-column: 2 / 5; display: flex; flex-wrap: wrap; gap: 3px; }

@@ -18,7 +18,6 @@ if (process.argv[2] === 'transform') {
   out.__vars = dt.rootVars(s);
   out.__url = dt.googleFontsUrl(s);
   process.stdout.write(JSON.stringify(out));
-  process.exit(0);
 }
 
 const tests = [];
@@ -114,7 +113,7 @@ test('static families load only the chosen weights; mono never asks for italics'
 });
 
 let failed = 0;
-for (const [name, fn] of tests) {
+if (process.argv[2] !== 'transform') for (const [name, fn] of tests) {
   try { fn(); console.log('ok  ', name); } catch (e) { failed++; console.log('FAIL', name, '\n', e.message); }
 }
 if (failed) process.exit(1);
