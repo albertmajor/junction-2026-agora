@@ -763,9 +763,9 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
         out = []
         for qq in qs:
             qq = qq.replace("{rest}", f" {rest}" if rest else "")
-            if "{place}" not in qq and tpl["local"] and where_p:
+            if "{place}" not in qq and ((tpl["local"] and where_p) or (tpl["travel"] and place)):
                 qq += " {place}"
-            out.append(_fill(qq, where_p if (tpl["local"] or tpl["travel"]) else None))
+            out.append(_fill(qq, where_p if tpl["local"] else place if tpl["travel"] else None))
         queries[lg] = out
     queries.setdefault("en", [_fill(hunt_words, None)])
     doms = list(tpl["domains"].get(cc, [])) + [d for d in tpl["domains"].get("*", []) if "." in d]
@@ -784,7 +784,8 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
         "huntable": bool(nb["huntable"]) if nb else True,
         "hunt": {"q": re.sub(r"\s+", " ", hunt_words).strip(), "cat": cat, "intent": f"c:{concept}.{tpl['key']}"},
         "queries": queries, "lanes": list(tpl["lanes"]), "domains": doms[:10], "look": look,
-        "why": tpl["why"], "local": tpl["local"], "place": where_p if (tpl["local"] or tpl["travel"]) else None,
+        "why": tpl["why"], "local": tpl["local"], "travel": tpl["travel"] or "",
+        "place": where_p if tpl["local"] else place if tpl["travel"] else None,
         "source": "curated", "w": tpl["w"],
     }
 
@@ -1242,8 +1243,12 @@ def plan(intent_id: str, q: str = "", *, country: str | None = None, lang: str |
         tpl = next((t for t in (c or {}).get("intents", []) if t["key"] == sub), None)
         if tpl is None:
             return None
-        _k, _p, rest = match_concept(core)
-        rest = rest if _k == key else ""
+        hw, fc = fold(tpl["hunt"]), fold(core)
+        if fc == hw or fc.startswith(hw + " "):      # the hunt's own words came back ('lunch restaurant')
+            rest = fc[len(hw):].strip()
+        else:                                        # the typed words ('gift for mom')
+            _k, _p, rest = match_concept(core)
+            rest = rest if _k == key else ""
         it = _render(tpl, concept=key, lang=lg, cc=cc, place=place, near=near, rest=rest, T=T)
         it["confidence"] = tpl["w"]
         it.pop("w", None)
@@ -1286,15 +1291,17 @@ def apply(need: Any, intent_id: str, *, country: str | None = None, lang: str = 
         cat["domains"] = own + [d for d in cat.get("domains") or [] if d.get("domain") not in set(it["domains"])]
         cat["kind"] = it["kind"] if it["kind"] in ("service", "digital") else cat.get("kind") or it["kind"]
         cat["intent"] = {"id": it["id"], "label": it["label"], "queries": it["queries"], "look": it["look"],
-                         "why": it["why"], "domains": it["domains"]}
+                         "why": it["why"], "domains": it["domains"], "travel": bool(it.get("travel"))}
         need_mod.apply_category(need, cat)
         if it["kind"] in ("vehicle", "product", "food") and it.get("lanes"):
             need.conditions = [c for c in it["lanes"] if c in ("new", "used", "refurbished", "rental")] \
                 or need.conditions
         words = it["hunt"]["q"]
-        if it.get("place"):
-            words = re.sub(rf"\s*\b(?:to\s+)?{re.escape(it['place'])}\b", "", words, flags=re.I).strip()
+        if it.get("place") and it.get("local"):       # 'haircut Helsinki': the job, in that city
+            words = re.sub(rf"\s*\b{re.escape(it['place'])}\b", "", words, flags=re.I).strip()
             need.where = need.where or it["place"]
+        elif it.get("travel"):                        # 'flights to Berlin': bought at home, the place is the trip
+            need.where = None
         need.thing = words.lower() or need.thing
         ev = need_mod._cat_event(cat) if cat.get("id") else {
             "id": None, "label": cat["label"], "path": cat["path"], "kind": cat["kind"],

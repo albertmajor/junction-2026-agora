@@ -38,7 +38,7 @@
 .it-cp { margin: 4px 0 28px; }
 .it-cards { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
 .it-card { width: 100%; height: 100%; text-align: left; border: 0; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 12px; align-items: start; padding: 16px; border-radius: 16px; background: var(--receipt); color: var(--ink);
+  gap: 4px 12px; align-items: start; align-content: start; padding: 16px; border-radius: 16px; background: var(--receipt); color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--t-ui) var(--ease), transform var(--t-ui) var(--ease); }
 .it-card:hover { box-shadow: inset 0 0 0 1px var(--ink-3), 0 6px 18px rgba(28,27,24,.06); transform: translateY(-1px); }
 .it-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -49,3 +49,6 @@
 .it-cd { grid-column: 1; font: 400 12px/1.4 var(--mono); color: var(--ink-3); }
 .it-card .cp-arrow { grid-column: 2; grid-row: 1; color: var(--ink-3); }
 @media (prefers-reduced-motion: reduce) { .it-card { transition: none; } .it-card:hover { transform: none; } }
+
+/* the monkey peeking over the live log stands 25px above it: keep it off the chips */
+@media (min-width: 641px) { #intents:not([hidden]) ~ #reading.ll:not([hidden]):not([data-state="done"]) { margin-top: 26px; } }

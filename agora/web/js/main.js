@@ -144,6 +144,14 @@ async function run(q, { push = true, cat = null, free = false, intent = null, pl
     interp = interp || await within(I.interpret(q), 900);
     const list = (interp && interp.intents) || [];
     plan = (intent && list.find(x => x.id === intent)) || list[0] || null;
+  } else if (I && !plan && cat && cat.id && !free && cat.huntable !== false) {
+    // a hunt from the tree: a category with a plan of its own ('School catering' -> catering companies, in
+    // Finnish, on their own sites) hunts that plan; any other keeps its words, with next steps if nothing turns up
+    interp = await within(I.interpret(q, { cat: cat.id }), 900);
+    const top = interp && interp.intents && interp.intents[0];
+    plan = top && top.source === 'curated' && top.node === cat.id ? top
+      : (interp ? { id: '_typed', label: q, as_typed: true, hunt: null } : null);
+    if (interp) interp = { ...interp, dominant: true };
   }
   const rw = !!(I && plan && I.rewrites(plan));
   if (!free && !rw && !(interp && interp.concept)) {

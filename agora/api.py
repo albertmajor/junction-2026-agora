@@ -262,6 +262,8 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
                                                 "(2-3; more pages, more time)"),
                       cat: str | None = Query(None, max_length=120, description="category tree node id the hunt "
                                               "started from (its kind, lanes and local words steer the hunt)"),
+                      intent: str | None = Query(None, max_length=160, description="a meaning of vague words "
+                                                 "from GET /api/intent (e.g. c:lunch.places)"),
                       ) -> StreamingResponse:
     if replay is not None:
         slug = hunt_mod.slugify(q) if replay in ("", "1", "auto", "true") else replay
@@ -276,6 +278,8 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
             kw = _depth_kwargs(depth, kw)
         if cat and replay is None and "category" in inspect.signature(hunt_mod.hunt).parameters:
             kw["category"] = cat
+        if intent and replay is None and "intent" in inspect.signature(hunt_mod.hunt).parameters:
+            kw["intent"] = intent
         stream = (hunt_mod.replay(slug, speed, max_gap_ms=max_gap * 1000 if max_gap else None) if replay is not None
                   else hunt_mod.hunt(q, result=res, **kw))
         try:

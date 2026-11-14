@@ -492,6 +492,7 @@ async def hunt(
     depth: int = 1,
     check_pick: bool = True,
     category: str | None = None,
+    intent: str | None = None,
 ) -> AsyncIterator[Event]:
     """Run one hunt, yielding Events as they happen. Pass `result` to also collect the final objects.
 
@@ -600,6 +601,16 @@ async def hunt(
             cat_event = need_mod.categorize(need, category)
         except Exception as exc:
             yield ev("error", where="category", message=f"{type(exc).__name__}: {exc}"[:300])
+    if intent:
+        # a meaning picked for vague words (agora.intent: 'lunch' -> lunch places near you): its category, kind,
+        # lanes, local words and where-to-look sites replace the literal reading
+        try:
+            from agora import intent as intent_mod
+            ev_i = intent_mod.apply(need, intent)
+            if ev_i is not None:
+                cat_event = ev_i
+        except Exception as exc:
+            yield ev("error", where="intent", message=f"{type(exc).__name__}: {exc}"[:300])
     out.need = need
     yield ev("need", need=to_dict(need), hunt_id=hunt_id)
     if cat_event is not None:

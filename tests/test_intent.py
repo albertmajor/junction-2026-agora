@@ -129,6 +129,13 @@ def test_plan_and_apply_fit_the_need():
     intent.apply(n2, "c:haircut.salon")
     assert n2.where == "Helsinki" and n2.thing == "haircut"
     assert intent.apply(Need(raw="x", thing="x"), "c:nope.nothing") is None
+    # the hunt sends the meaning's own words back ('lunch restaurant', 'gift ideas for mom'): no doubling
+    n4 = need_mod.parse_need_rules("lunch restaurant")
+    intent.apply(n4, "c:lunch.places")
+    assert n4.thing == "lunch restaurant"
+    n5 = need_mod.parse_need_rules("gift ideas for mom")
+    intent.apply(n5, "c:gift.ideas")
+    assert n5.thing == "gift ideas for mom"
     n3 = need_mod.parse_need_rules("lunch")
     assert intent.apply(n3, "c:lunch.box")["kind"] == "product" and n3.kind == "product"
 

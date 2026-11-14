@@ -57,11 +57,11 @@ function chip(it, pressed) {
 function render() {
   if (!el) return;
   const I = st.interp, it = st.chosen;
-  if (!I || !it || !I.intents.length) { el.hidden = true; el.innerHTML = ''; return; }
+  if (!I || !it || (!I.intents.length && !(I.next || []).length)) { el.hidden = true; el.innerHTML = ''; return; }
   const showNow = rewrites(it);
   const showChips = !I.dominant && I.intents.length > 1;
   if (!showNow && !showChips && !st.empty) { el.hidden = true; el.innerHTML = ''; return; }
-  const others = I.intents.filter(x => x.id !== it.id);
+  const others = I.intents.filter(x => x.id !== it.id && !(it.id === '_typed' && x.hunt && x.hunt.q === st.q));
   let html = '';
   if (showNow || showChips) {
     html += `<p class="it-now"><span class="it-k">${esc(w('now'))}</span> <b>${esc(it.label)}</b>${where(it)}</p>`;
@@ -86,8 +86,10 @@ function render() {
 // next steps belong to the likeliest meaning (its providers near you, its broader category): offered only while
 // that one is chosen; another meaning's empty hunt offers the other meanings instead
 function stepsFor(I, it) {
-  if (!I || !it || !I.intents.length || I.intents[0].id !== it.id) return [];
-  return (I.next || []).filter(n => !(n.hunt && n.hunt.intent === it.id && n.kind !== 'providers'));
+  if (!I || !it || (it.id !== '_typed' && (!I.intents.length || I.intents[0].id !== it.id))) return [];
+  const shown = new Set(I.intents.map(x => x.node).filter(Boolean));
+  return (I.next || []).filter(n => !(n.hunt && n.hunt.intent === it.id && n.kind !== 'providers')
+    && !(n.kind === 'sibling' && n.hunt && shown.has(n.hunt.cat)));
 }
 
 /** main.js: the hunt is starting with this interpretation (or none). */

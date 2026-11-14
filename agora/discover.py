@@ -569,6 +569,27 @@ def period_plan(need: Need, cc: str | None) -> list[tuple[str, str | None]]:
     return out
 
 
+def intent_plan(need: Need, cc: str | None) -> list[Any] | None:
+    """A meaning picked by agora.intent ('lunch' -> lunch places near you): its own queries verbatim (never
+    'price per hour' for a lunch), English + the home language, then one search inside its where-to-look sites
+    (lounaat.info, wolt.com ...). None when the need carries no picked meaning."""
+    it = (need.category or {}).get("intent") or {}
+    qs = it.get("queries") or {}
+    if not qs:
+        return None
+    travel = bool(it.get("travel"))              # a trip is bought at home, in the home language
+    home = home_country() if travel else (cc or home_country())
+    cc = None if travel else cc
+    lang = _lang(home) if home else None
+    local = (qs.get(ISO_OF_LOCAL.get(lang or "", lang or "")) or [])[:1] if lang else []
+    out: list[Any] = [(q, cc) for q in (qs.get("en") or [])[:1]]
+    out += [(q, home) for q in local]
+    sites = [d for d in it.get("domains") or [] if "." in d][:8]
+    if sites and out:
+        out.append(((local or [out[0][0]])[0], home, sites))
+    return out or None
+
+
 def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[str, str | None]]:
     """The live plan: one (query, country filter) per lane.
     new = the English buy query (asked-for country); refurbished = open to all of Europe (backmarket, refurbed,
@@ -577,6 +598,8 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
     service = English + local (a service hunt has only that lane)."""
     cc = country_of(need)
     avail = tokens if tokens is not None else tokens_available()
+    if lane == "service" and (picked := intent_plan(need, cc)):
+        return picked
     if lane == "service" and priced_per_period(need):
         return period_plan(need, cc)
     if lane == "service":
