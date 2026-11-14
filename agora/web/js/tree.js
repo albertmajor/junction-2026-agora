@@ -40,10 +40,18 @@ async function kids(id) {
 const label = id => (info.get(id) || {}).label || '';
 const catOf = ids => ({ id: ids[ids.length - 1], ids: [...ids], path: ids.map(label) });
 const canHunt = id => (info.get(id) || {}).huntable !== false;
+// Owner, 14 Nov: "that white button with this long text looks way too goofy big". The button never repeats the
+// category name (it is the title right above it): a short verb, the full name only for screen readers + tooltip.
+const SEE_ALL = { en: 'See all', fi: 'Näytä kaikki', de: 'Alle ansehen', nl: 'Alles bekijken', sv: 'Visa alla' };
+const seeAll = () => SEE_ALL[C.getLang()] || SEE_ALL.en;
 // the action button for a node: hunt a concrete one, open the page of a broad one
-const actHtml = (id, cls = 'ct-hunt') => canHunt(id)
-  ? `<button type="button" class="${cls}" data-hunt-path="1">${esc(t('huntFor', label(id)))} <span aria-hidden="true">→</span></button>`
-  : `<button type="button" class="${cls} page" data-page="${esc(id)}">${esc(t('seeAll', label(id)))} <span aria-hidden="true">→</span></button>`;
+const actHtml = (id, cls = 'ct-hunt') => {
+  const hunt = canHunt(id);
+  const full = hunt ? t('huntFor', label(id)) : t('seeAll', label(id));
+  const attrs = hunt ? 'data-hunt-path="1"' : `data-page="${esc(id)}"`;
+  return `<button type="button" class="${cls}${hunt ? '' : ' page'}" ${attrs} aria-label="${esc(full)}" title="${esc(full)}">${
+    esc(hunt ? t('hunt') : seeAll())} <span aria-hidden="true">→</span></button>`;
+};
 
 // ---------- markup ----------
 function shell() {
@@ -113,7 +121,7 @@ function crumbsHtml() {
       : `<button type="button" class="ct-cr" data-depth="${k + 1}">${esc(label(id))}</button>`);
   });
   const sep = '<span class="ct-sep" aria-hidden="true">›</span>';
-  const hunt = ids.length ? actHtml(ids[ids.length - 1]) : '';
+  const hunt = ids.length ? actHtml(ids[ids.length - 1], 'ct-hunt quiet') : '';
   return `<span class="ct-trail">${parts.join(sep)}</span>${hunt}`;
 }
 

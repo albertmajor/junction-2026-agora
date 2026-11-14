@@ -25,7 +25,9 @@ function header(d) {
   const inside = (d.groups || []).concat(d.items || []).map(x => x.label);
   const about = d.about || (inside.length ? t('inside', inside.slice(0, 4).join(', '), Math.max(0, inside.length - 4)) : '');
   const hunt = d.huntable
-    ? `<button type="button" class="cp-hunt" data-hunt-self="1">${esc(t('huntAny', d.label))} <span aria-hidden="true">→</span></button>` : '';
+    // a short verb, not the title again (owner, 14 Nov: long name buttons looked "goofy big")
+    ? `<button type="button" class="cp-hunt" data-hunt-self="1" aria-label="${esc(t('huntAny', d.label))}" title="${esc(t('huntAny', d.label))}">${
+      esc(t('hunt'))} <span aria-hidden="true">→</span></button>` : '';
   return `<nav class="cp-crumbs" aria-label="Category path">${trail}</nav>
     <header class="cp-head">
       <span class="cp-badge">${C.icon(d.icon, 'ct-ic cp-hic')}</span>

@@ -855,10 +855,209 @@ RENAMES: dict[str, str] = {
     "sp:se-4": "Kids' & indoor activities|Lasten ja sisäaktiviteetit|Kinder- & Indoor-Aktivitäten|"
                "Kinder- & binnenactiviteiten|Barn- & inomhusaktiviteter",
     "sp:se-5": "Home improvement|Kodin parannus|Heimwerker-Service|Woningverbetering|Hemförbättring",
-    "cpv:39": "Furniture & household goods (EU list)|||",
+    "cpv:39": "Household goods & furnishings|Kodin tavarat ja sisustus|Haushaltswaren & Einrichtung|"
+              "Huishoudelijke artikelen & inrichting|Hushållsartiklar & inredning",
     "pets.pet-services": "Pet care, grooming & vets|Lemmikkien hoito, trimmaus ja eläinlääkärit|"
                          "Tierbetreuung, Hundesalon & Tierarzt|Dierenoppas, trimsalon & dierenarts|"
                          "Djurpassning, trimning & veterinär",
+    # Owner, 14 Nov ("Medical equipments, pharmaceuticals & personal care products" in the explorer): procurement
+    # (CPV) and statistics (NACE) headings a shopper sees in the first levels get plain shop names. The old wording
+    # stays a search synonym; ids never change (merged ones become aliases, see MERGES).
+    # Health & Beauty
+    "sp:hb-1": "Health & medical supplies|Terveys- ja hoitotarvikkeet|Gesundheit & Medizinbedarf|"
+               "Gezondheid & medische benodigdheden|Hälsa & medicinska förnödenheter",
+    "sp:hb-1-16": "Pharmacy & medicines|Apteekki ja lääkkeet|Apotheke & Arzneimittel|Apotheek & medicijnen|"
+                  "Apotek & läkemedel",
+    "cpv:3361": "Digestion & metabolism medicines|Ruoansulatus- ja aineenvaihduntalääkkeet|"
+                "Arzneimittel für Verdauung & Stoffwechsel|Medicijnen voor spijsvertering & stofwisseling|"
+                "Läkemedel för matsmältning & ämnesomsättning",
+    "cpv:3362": "Blood & heart medicines|Veren ja sydämen lääkkeet|Arzneimittel für Blut & Herz|"
+                "Medicijnen voor bloed & hart|Läkemedel för blod & hjärta",
+    "cpv:3363": "Skin, muscle & joint medicines|Iho-, lihas- ja nivellääkkeet|Arzneimittel für Haut, Muskeln & Gelenke|"
+                "Medicijnen voor huid, spieren & gewrichten|Läkemedel för hud, muskler & leder",
+    "cpv:3364": "Hormone & urinary medicines|Hormoni- ja virtsatielääkkeet|Hormon- & Urologika|"
+                "Hormoon- & urologische medicijnen|Hormon- & urinvägsläkemedel",
+    "cpv:3365": "Anti-infectives & vaccines|Infektiolääkkeet ja rokotteet|Antiinfektiva & Impfstoffe|"
+                "Anti-infectiemiddelen & vaccins|Infektionsläkemedel & vacciner",
+    "cpv:3366": "Nervous system medicines|Hermoston lääkkeet|Arzneimittel für das Nervensystem|"
+                "Medicijnen voor het zenuwstelsel|Läkemedel för nervsystemet",
+    "cpv:3367": "Respiratory medicines|Hengityselinten lääkkeet|Atemwegsmedikamente|Medicijnen voor de luchtwegen|"
+                "Läkemedel för andningsvägarna",
+    "cpv:3368": "Pharmacy articles|Apteekkitarvikkeet|Apothekenartikel|Apotheekartikelen|Apoteksartiklar",
+    "cpv:3369": "Other medicines|Muut lääkkeet|Weitere Arzneimittel|Overige medicijnen|Övriga läkemedel",
+    "cpv:3371": "Perfume & toiletries|Hajuvedet ja hygieniatuotteet|Parfüm & Toilettenartikel|Parfum & toiletartikelen|"
+                "Parfym & hygienartiklar",
+    "cpv:3372": "Razors & manicure sets|Partahöylät ja manikyyrisetit|Rasierer & Maniküre-Sets|Scheermessen & manicuresets|"
+                "Rakhyvlar & manikyrset",
+    "cpv:3374": "Hand & nail care|Käsien ja kynsien hoito|Hand- & Nagelpflege|Hand- & nagelverzorging|Hand- & nagelvård",
+    "cpv:3375": "Baby care|Vauvanhoito|Babypflege|Babyverzorging|Babyvård",
+    "cpv:3376": "Toilet paper, tissues & napkins|Wc-paperi, nenäliinat ja servetit|Toilettenpapier, Taschentücher & Servietten|"
+                "Toiletpapier, tissues & servetten|Toalettpapper, näsdukar & servetter",
+    "cpv:3377": "Sanitary paper products|Paperiset hygieniatuotteet|Hygienepapier|Hygiënisch papier|Mjukpapper",
+    "cpv:3379": "Lab & pharmacy glassware|Laboratorio- ja apteekkilasit|Labor- & Apothekenglas|Laboratorium- & apotheekglaswerk|"
+                "Laboratorie- & apoteksglas",
+    # Care, Family & Everyday Help: one place for funerals
+    "personal-services.funeral-services": "Funerals|Hautajaiset|Bestattungen|Uitvaarten|Begravningar",
+    "cpv:339": "Mortuary & autopsy supplies|Ruumishuone- ja obduktiotarvikkeet|Leichenhallen- & Obduktionsbedarf|"
+               "Mortuarium- & autopsiebenodigdheden|Bårhus- & obduktionsmaterial",
+    "cpv:98": "Clubs, associations & other services|Yhdistykset, kerhot ja muut palvelut|Vereine, Verbände & weitere Dienste|"
+              "Verenigingen, clubs & overige diensten|Föreningar, klubbar & övriga tjänster",
+    "nace:87": "Care homes|Hoivakodit|Pflegeheime|Verzorgingshuizen|Vårdhem & äldreboenden",
+    "nace:88": "Social services & day care|Sosiaalipalvelut ja päivähoito|Sozialdienste & Tagesbetreuung|"
+               "Sociale diensten & dagopvang|Sociala tjänster & dagvård",
+    "nace:881": "Elderly & disability support|Vanhus- ja vammaispalvelut|Senioren- & Behindertenhilfe|"
+                "Ouderen- & gehandicaptenzorg|Äldre- & handikappomsorg",
+    "nace:8899": "Other social services|Muut sosiaalipalvelut|Weitere Sozialdienste|Overige sociale diensten|"
+                 "Övriga sociala tjänster",
+    # things
+    "cpv:32": "Radio, TV & telecom equipment|Radio-, tv- ja telelaitteet|Radio-, TV- & Telekommunikationsgeräte|"
+              "Radio-, tv- & telecomapparatuur|Radio-, tv- & teleutrustning",
+    "cpv:18": "Clothing, shoes & bags|Vaatteet, kengät ja laukut|Kleidung, Schuhe & Taschen|Kleding, schoenen & tassen|"
+              "Kläder, skor & väskor",
+    "cpv:161": "Soil & cultivation machinery|Maanmuokkaus- ja viljelykoneet|Bodenbearbeitungs- & Anbaumaschinen|"
+               "Grondbewerkings- & teeltmachines|Jordbearbetnings- & odlingsmaskiner",
+    "cpv:315": "Lamps & lighting|Valaisimet ja lamput|Lampen & Beleuchtung|Lampen & verlichting|Lampor & belysning",
+    "cpv:392": "Kitchen & household items|Keittiö- ja taloustarvikkeet|Küchen- & Haushaltsartikel|"
+               "Keuken- & huishoudartikelen|Kök- & hushållsartiklar",
+    "cpv:3922": "Kitchen, household & catering supplies||||",
+    "cpv:3923": "Special-purpose products||||",
+    "cpv:0312": "Plants & nursery stock|Taimet ja puutarhakasvit|Pflanzen & Baumschulware|Planten & kwekerijproducten|"
+                "Plantor & plantskoleväxter",
+    "cpv:3911": "Seats & chairs|Istuimet ja tuolit|Sitzmöbel & Stühle|Zitmeubels & stoelen|Sittmöbler & stolar",
+    "cpv:3912": "Tables, cupboards, desks & bookcases||||",
+    "cpv:3919": "Wallpaper & wall coverings|Tapetit ja seinäpäällysteet|Tapeten & Wandbeläge|Behang & wandbekleding|"
+                "Tapeter & väggbeklädnad",
+    "cpv:375": "Games, toys & fairground rides|Pelit, lelut ja huvipuistolaitteet|Spiele, Spielzeug & Fahrgeschäfte|"
+               "Spellen, speelgoed & kermisattracties|Spel, leksaker & nöjesattraktioner",
+    "cpv:374": "Sports equipment|Urheiluvälineet|Sportausrüstung|Sportartikelen|Sportutrustning",
+    "cpv:37": "Instruments, toys, crafts & art supplies|Soittimet, lelut, käsityö- ja taidetarvikkeet|"
+              "Instrumente, Spielzeug, Bastel- & Künstlerbedarf|Instrumenten, speelgoed, hobby- & kunstbenodigdheden|"
+              "Instrument, leksaker, hantverk & konstnärsmaterial",
+    "cpv:22": "Books, newspapers & print|Kirjat, lehdet ja painotuotteet|Bücher, Zeitungen & Drucksachen|"
+              "Boeken, kranten & drukwerk|Böcker, tidningar & trycksaker",
+    "cpv:15": "Food, drinks & tobacco|Ruoka, juomat ja tupakka|Lebensmittel, Getränke & Tabak|Eten, drinken & tabak|"
+              "Mat, dryck & tobak",
+    "cpv:031": "Farm & garden produce|Maatalous- ja puutarhatuotteet|Agrar- & Gartenbauerzeugnisse|"
+               "Land- & tuinbouwproducten|Jordbruks- & trädgårdsprodukter",
+    "cpv:033": "Fish, meat & livestock|Kala, liha ja karja|Fisch, Fleisch & Vieh|Vis, vlees & vee|Fisk, kött & boskap",
+    "nace:56": "Cafés, bars & catering|Kahvilat, baarit ja catering|Cafés, Bars & Catering|Cafés, bars & catering|"
+               "Kaféer, barer & catering",
+    "nace:563": "Bars & cafés|Baarit ja kahvilat|Bars & Cafés|Bars & cafés|Barer & kaféer",
+    "nace:562": "Catering & canteens|Catering ja henkilöstöravintolat|Catering & Kantinen|Catering & kantines|"
+                "Catering & personalrestauranger",
+    "cpv:224": "Stamps, forms & printed matter|Postimerkit, lomakkeet ja painotuotteet|Briefmarken, Formulare & Drucksachen|"
+               "Postzegels, formulieren & drukwerk|Frimärken, blanketter & trycksaker",
+    "cpv:228": "Notebooks, binders & stationery|Vihot, kansiot ja paperitarvikkeet|Hefte, Ordner & Papeteriewaren|"
+               "Schriften, ordners & kantoorpapier|Anteckningsböcker, pärmar & pappersvaror",
+    "cpv:301": "Office machines & supplies|Toimistokoneet ja -tarvikkeet|Büromaschinen & Bürobedarf|"
+               "Kantoormachines & -benodigdheden|Kontorsmaskiner & kontorsmaterial",
+    "cpv:34": "Vehicles & transport equipment|Ajoneuvot ja kuljetusvälineet|Fahrzeuge & Transportausrüstung|"
+              "Voertuigen & transportmiddelen|Fordon & transportutrustning",
+    "cpv:0913": "Petrol, diesel & oils|Bensiini, diesel ja öljyt|Benzin, Diesel & Öle|Benzine, diesel & oliën|"
+                "Bensin, diesel & oljor",
+    "cpv:03": "Farm, fishing & forestry products|Maa-, metsä- ja kalatalouden tuotteet|Land-, Forst- & Fischereierzeugnisse|"
+              "Land-, bosbouw- & visserijproducten|Jord-, skogs- & fiskeprodukter",
+    "cpv:14": "Metals, minerals & mining products|Metallit, mineraalit ja kaivostuotteet|Metalle, Mineralien & Bergbauprodukte|"
+              "Metalen, mineralen & mijnbouwproducten|Metaller, mineraler & gruvprodukter",
+    "cpv:19": "Leather, fabrics, plastic & rubber|Nahka, kankaat, muovi ja kumi|Leder, Stoffe, Kunststoff & Gummi|"
+              "Leer, stoffen, kunststof & rubber|Läder, tyger, plast & gummi",
+    "cpv:24": "Chemicals|Kemikaalit|Chemikalien|Chemicaliën|Kemikalier",
+    "cpv:35": "Security & fire safety equipment|Turva- ja palontorjuntavarusteet|Sicherheits- & Brandschutzausrüstung|"
+              "Beveiligings- & brandbeveiligingsuitrusting|Säkerhets- & brandskyddsutrustning",
+    "cpv:38": "Lab, optical & precision instruments|Laboratorio-, optiset ja tarkkuuslaitteet|Labor-, Optik- & Präzisionsgeräte|"
+              "Laboratorium-, optische & precisie-instrumenten|Laboratorie-, optik- & precisionsinstrument",
+    "cpv:43": "Construction & mining machinery|Rakennus- ja kaivoskoneet|Bau- & Bergbaumaschinen|Bouw- & mijnbouwmachines|"
+              "Bygg- & gruvmaskiner",
+    "cpv:76": "Oil & gas industry services|Öljy- ja kaasualan palvelut|Dienste für die Öl- & Gasindustrie|"
+              "Diensten voor de olie- & gasindustrie|Tjänster för olje- & gasindustrin",
+    "cpv:77": "Farming, forestry & gardening services|Maa-, metsä- ja puutarhatalouden palvelut|"
+              "Land-, Forst- & Gartenbaudienste|Land-, bos- & tuinbouwdiensten|Jord-, skogs- & trädgårdstjänster",
+    "cpv:181": "Workwear|Työvaatteet|Arbeitskleidung|Werkkleding|Arbetskläder",
+    "cpv:0311": "Crops & market-garden produce|Viljelykasvit ja puutarhatuotteet|Feldfrüchte & Gartenbauerzeugnisse|"
+                "Gewassen & tuinbouwproducten|Grödor & trädgårdsprodukter",
+    "cpv:806": "Defence & security training|Puolustus- ja turvallisuuskoulutus|Verteidigungs- & Sicherheitstraining|"
+               "Defensie- & beveiligingstraining|Försvars- & säkerhetsutbildning",
+    "cpv:48": "Software & information systems|Ohjelmistot ja tietojärjestelmät|Software & Informationssysteme|"
+              "Software & informatiesystemen|Programvara & informationssystem",
+    # services
+    "cpv:701": "Property development & sales|Kiinteistökehitys ja -myynti|Immobilienentwicklung & -verkauf|"
+               "Vastgoedontwikkeling & -verkoop|Fastighetsutveckling & -försäljning",
+    "cpv:702": "Property rental|Kiinteistöjen vuokraus|Immobilienvermietung|Vastgoedverhuur|Fastighetsuthyrning",
+    "cpv:703": "Estate agents & property management|Kiinteistönvälitys ja isännöinti|Makler & Hausverwaltung|"
+               "Makelaars & vastgoedbeheer|Fastighetsmäklare & förvaltning",
+    "nace:81": "Building care & landscaping|Kiinteistöhuolto ja viherrakentaminen|Gebäudeservice & Landschaftspflege|"
+               "Gebouwonderhoud & groenvoorziening|Fastighetsskötsel & anläggning",
+    "nace:95": "Computer & household repairs|Tietokoneiden ja kodin laitteiden korjaus|Computer- & Haushaltsreparaturen|"
+               "Computer- & huishoudelijke reparaties|Dator- & hushållsreparationer",
+    "cpv:503": "Computer, office & AV equipment repair|Tietokone-, toimisto- ja AV-laitteiden korjaus|"
+               "Reparatur von Computern, Büro- & AV-Geräten|Reparatie van computers, kantoor- & AV-apparatuur|"
+               "Reparation av datorer, kontors- & AV-utrustning",
+    "cpv:7731": "Planting & green-space care|Viheralueiden istutus ja hoito|Bepflanzung & Grünflächenpflege|"
+                "Beplanting & groenonderhoud|Plantering & grönyteskötsel",
+    "cpv:505": "Pump, valve & machinery repair|Pumppujen, venttiilien ja koneiden korjaus|"
+               "Reparatur von Pumpen, Ventilen & Maschinen|Reparatie van pompen, kleppen & machines|"
+               "Reparation av pumpar, ventiler & maskiner",
+    "cpv:501": "Vehicle repair & maintenance|Ajoneuvojen korjaus ja huolto|Fahrzeugreparatur & -wartung|"
+               "Voertuigreparatie & -onderhoud|Fordonsreparation & underhåll",
+    "cpv:502": "Aircraft, rail & boat repair|Lentokoneiden, junien ja veneiden korjaus|Reparatur von Flugzeugen, Bahn & Booten|"
+               "Reparatie van vliegtuigen, treinen & boten|Reparation av flyg, tåg & båtar",
+    "nace:9602": "Hairdressing & beauty treatments|Kampaamo- ja kauneudenhoitopalvelut|Friseur & Kosmetik|"
+                 "Kappers & schoonheidsbehandelingen|Frisör & skönhetsbehandlingar",
+    "cpv:9833": "Spas, saunas & massage|Kylpylät, saunat ja hieronta|Spa, Sauna & Massage|Spa, sauna & massage|"
+                "Spa, bastu & massage",
+    "nace:862": "Medical & dental practices|Lääkärin- ja hammaslääkärinvastaanotot|Arzt- & Zahnarztpraxen|"
+                "Huisartsen- & tandartspraktijken|Läkar- & tandläkarmottagningar",
+    "nace:869": "Other health services|Muut terveyspalvelut|Weitere Gesundheitsdienste|Overige gezondheidszorg|"
+                "Övriga hälsotjänster",
+    "nace:91": "Museums, libraries & culture|Museot, kirjastot ja kulttuuri|Museen, Bibliotheken & Kultur|"
+               "Musea, bibliotheken & cultuur|Museer, bibliotek & kultur",
+    "nace:93": "Sports, amusement & recreation|Urheilu, huvit ja virkistys|Sport, Freizeit & Unterhaltung|"
+               "Sport, amusement & recreatie|Sport, nöjen & rekreation",
+    "nace:772": "Household & leisure rentals|Kodin ja vapaa-ajan tavaroiden vuokraus|"
+                "Vermietung von Haushalts- & Freizeitartikeln|Verhuur van huishoud- & vrijetijdsartikelen|"
+                "Uthyrning av hushålls- & fritidsartiklar",
+    "cpv:92": "Recreation, culture & sport|Virkistys, kulttuuri ja urheilu|Freizeit, Kultur & Sport|Recreatie, cultuur & sport|"
+              "Fritid, kultur & sport",
+    "cpv:7996": "Photography|Valokuvaus|Fotografie|Fotografie|Fotografering",
+    "nace:79": "Travel agents & tour operators|Matkatoimistot ja matkanjärjestäjät|Reisebüros & Reiseveranstalter|"
+               "Reisbureaus & touroperators|Resebyråer & researrangörer",
+    "nace:771": "Car rental|Autonvuokraus|Autovermietung|Autoverhuur|Biluthyrning",
+    "nace:49": "Land transport|Maaliikenne|Landverkehr|Vervoer over land|Landtransport",
+    "nace:4932": "Taxis|Taksit|Taxis|Taxi's|Taxi",
+    "cpv:63": "Freight handling, storage & logistics|Rahdinkäsittely, varastointi ja logistiikka|Umschlag, Lagerung & Logistik|"
+              "Overslag, opslag & logistiek|Godshantering, lagring & logistik",
+    "cpv:64": "Post & telecoms|Posti ja tietoliikenne|Post & Telekommunikation|Post & telecom|Post & telekom",
+    "nace:70": "Management consultancy|Liikkeenjohdon konsultointi|Unternehmensberatung|Managementadvies|Managementkonsulter",
+    "nace:71": "Architects, engineers & testing|Arkkitehdit, insinöörit ja testaus|Architekten, Ingenieure & Prüfung|"
+               "Architecten, ingenieurs & keuringen|Arkitekter, ingenjörer & provning",
+    "nace:72": "Research & development|Tutkimus ja kehitys|Forschung & Entwicklung|Onderzoek & ontwikkeling|"
+               "Forskning & utveckling",
+    "nace:74": "Other professional services|Muut asiantuntijapalvelut|Weitere Fachdienstleistungen|"
+               "Overige professionele diensten|Övriga konsulttjänster",
+    "nace:78": "Recruitment & staffing|Rekrytointi ja henkilöstövuokraus|Personalvermittlung & Zeitarbeit|"
+               "Werving & uitzendwerk|Rekrytering & bemanning",
+    "nace:82": "Office & business support|Toimisto- ja yrityspalvelut|Büro- & Unternehmensservice|"
+               "Kantoor- & bedrijfsondersteuning|Kontors- & företagsservice",
+    "cpv:79": "Business services|Yrityspalvelut|Unternehmensdienstleistungen|Zakelijke dienstverlening|Företagstjänster",
+    "nace:62": "Programming & IT consulting|Ohjelmointi ja IT-konsultointi|Programmierung & IT-Beratung|"
+               "Programmeren & IT-advies|Programmering & IT-konsulter",
+    "nace:631": "Hosting, data processing & web portals|Hosting, tietojenkäsittely ja verkkoportaalit|"
+                "Hosting, Datenverarbeitung & Webportale|Hosting, gegevensverwerking & webportalen|"
+                "Hosting, databehandling & webbportaler",
+    "cpv:72": "IT services|IT-palvelut|IT-Dienstleistungen|IT-diensten|IT-tjänster",
+    "cpv:66": "Banking & insurance|Pankki- ja vakuutuspalvelut|Bank & Versicherung|Bank & verzekering|Bank & försäkring",
+    "nace:65": "Insurance & pensions|Vakuutukset ja eläkkeet|Versicherungen & Vorsorge|Verzekeringen & pensioenen|"
+               "Försäkringar & pension",
+    "nace:66": "Brokers & financial advice|Välittäjät ja talousneuvonta|Makler & Finanzberatung|Makelaars & financieel advies|"
+               "Mäklare & finansiell rådgivning",
+    "nace:35": "Electricity, gas & heating|Sähkö, kaasu ja lämpö|Strom, Gas & Wärme|Elektriciteit, gas & warmte|El, gas & värme",
+    "nace:36": "Water supply|Vesihuolto|Wasserversorgung|Watervoorziening|Vattenförsörjning",
+    "nace:38": "Waste collection & recycling|Jätehuolto ja kierrätys|Abfallentsorgung & Recycling|Afvalinzameling & recycling|"
+               "Avfallshantering & återvinning",
+    "cpv:092": "Coal, oil & fuels|Hiili, öljy ja polttoaineet|Kohle, Öl & Brennstoffe|Kolen, olie & brandstoffen|"
+               "Kol, olja & bränslen",
+    "cpv:906": "Street cleaning & sanitation|Katujen puhtaanapito ja sanitaatio|Straßenreinigung & Sanitärdienste|"
+               "Straatreiniging & sanitatie|Gatustädning & sanitet",
 }
 
 # Nodes in the wrong root (an import put them where a shopper would never look): id -> new parent id.
@@ -887,6 +1086,54 @@ MOVES: dict[str, str] = {
     "yelp:3dprinting": "professional",
     "yelp:screenprinting": "professional.printing-copying",
     "yelp:screen_printing_tshirt_printing": "professional.printing-copying",
+    # owner, 14 Nov: "Post-mortem & mortuary" sat in Health & Beauty
+    "cpv:339": "personal-services.funeral-services",          # mortuary & autopsy supplies
+    "cpv:39296": "personal-services.funeral-services",        # funeral supplies (sat in Home & Garden)
+    "sp:hb-1-16": "health-beauty",                            # Medicine & Drugs -> 'Pharmacy & medicines', top level
+    "cpv:3379": "sp:hb-1",                                    # lab & pharmacy glassware: not personal care
+    "cpv:806": "business",                                    # military training & simulation sat in Education
+}
+
+# Duplicates (two names for the same shelf, usually a shop's and a procurement list's): id -> the node that takes
+# it over. Children move along, the old labels become synonyms and the old id an alias. Applied after MOVES.
+MERGES: dict[str, str] = {
+    # Health & Beauty
+    "cpv:33": "sp:hb-1",            # 'Medical equipments, pharmaceuticals & personal care products' (empty after moves)
+    "cpv:336": "sp:hb-1-16",        # 'Pharmaceutical products' = Pharmacy & medicines
+    "cpv:337": "sp:hb-3",           # 'Personal care products' = Personal Care
+    "cpv:3373": "sp:hb-3-19",       # 'Eye care products & corrective lenses' = Vision Care
+    # funerals: four nodes for one thing
+    "yelp:funeralservices": "personal-services.funeral-services",
+    "nace:9603": "personal-services.funeral-services",
+    "cpv:9837": "personal-services.funeral-services",
+    # DIY
+    "cpv:44": "sp:ha-2",            # 'Construction structures & materials; auxiliary products' = Building Materials
+    "cpv:31": "sp:ha-11",           # 'Electrical machinery, apparatus, equipment & consumables; lighting'
+    # food & drink
+    "cpv:553": "nace:561",          # 'Restaurant & food-serving' = Restaurants & mobile food services
+    "cpv:554": "nace:563",          # 'Beverage-serving'
+    "cpv:555": "nace:562",          # 'Canteen & catering'
+    "sp:se-9": "nace:56",           # 'Food & Beverage Services' (empty)
+    # pets
+    "nace:75": "pets.pet-services",
+    "cpv:852": "pets.pet-services",
+    # beauty & health
+    "nace:9604": "cpv:9833",        # 'Physical well-being' twice
+    "cpv:85": "health-services",    # 'Health & social work' (empty)
+    # travel & transport
+    "cpv:635": "nace:79",           # travel agencies twice
+    "cpv:55": "nace:55",            # 'Hotel, restaurant & retail trade services' -> Accommodation
+    "nace:50": "cpv:606",           # 'Water transport' twice
+    # professional
+    "cpv:71": "nace:71",            # architects & engineers twice
+    "cpv:73": "nace:72",            # research & development twice
+    # utilities
+    "cpv:41": "nace:36",            # 'Collected & purified water'
+    "cpv:905": "nace:38",           # 'Refuse & waste related services'
+    "cpv:093": "nace:35",           # 'Electricity, heating, solar & nuclear energy'
+    "cpv:09": "utilities",          # 'Petroleum products, fuel, electricity & other sources of energy' (empty)
+    # care
+    "cpv:853": "nace:88",           # social work twice
 }
 
 # Empty umbrellas to merge into their parent even when the words look concrete (the rules in browse.py catch

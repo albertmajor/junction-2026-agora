@@ -1867,6 +1867,16 @@ def shopper_name(label: str) -> str | None:
                flags=re.I)
     s = re.sub(r"\s+and\s+", " & ", s)
     s = re.sub(r"\s+", " ", s).strip(" ,")
+    # grammar and procurement leftovers: 'equipments', 'The oil ...', 'a; b', ', & related articles'
+    s = re.sub(r"\b(equipment|aircraft|spacecraft)s\b", r"\1", s, flags=re.I)
+    s = re.sub(r"^the\s+", "", s, flags=re.I)
+    s = re.sub(r"\s*;\s*", ", ", s)
+    s = re.sub(r",?\s*&\s*(?:related|associated|similar)\s+(?:products|articles|items|equipment|accessories|parts)$", "",
+               s, flags=re.I)
+    s = s.replace(", & ", " & ")
+    if "," in s and "&" not in s:
+        head, _, tail = s.rpartition(", ")
+        s = f"{head} & {tail}"
     if not s:
         return None
     s = s[:1].upper() + s[1:]
@@ -1880,7 +1890,7 @@ def shorten_official_labels(t: Tree) -> int:
             continue
         official = n["labels"]["en"]
         short = shopper_name(official)
-        if short and len(short) <= len(official):
+        if short and len(short) <= len(official) + 2:          # "a; b" -> "a & b" may grow a little
             n["labels"]["en"] = short
             if official not in n["syn"]:
                 n["syn"].insert(0, official)
@@ -1902,6 +1912,15 @@ def tidy_categories(t: Tree) -> dict:
                 and not t.in_subtree(new_parent, nid) and t.depth(new_parent) + t.height(nid) <= MAX_DEPTH:
             t.move(nid, new_parent)
             out["moved"] += 1
+            n = t.nodes[nid]
+            if not n["kind"] and new_parent in t.nodes and t.nodes[t.root_of(nid)].get("kind") == "service" \
+                    and nid.startswith("cpv:") and nid[4:6].isdigit() and int(nid[4:6]) < 45:
+                n["kind"] = "product"                 # goods moved into a service root stay goods
+    out["merged"] = 0
+    for src, dst in curated.MERGES.items():
+        if src in t.nodes and dst in t.nodes and src != dst and not t.in_subtree(dst, src):
+            t.absorb(src, dst, same=False)
+            out["merged"] += 1
     for nid, spec in curated.RENAMES.items():
         if nid not in t.nodes:
             continue

@@ -109,7 +109,9 @@
 .cp-note { margin: 18px 0 0; font: 400 13px/1.4 var(--sans); color: var(--ink-3); }
 
 /* tree + suggestions: a broad category opens its page instead of hunting */
-.ct-hunt.page { background: var(--receipt); color: var(--ink); border-color: var(--ink-3); }
+/* "See all →" outside the detail panel is an outline button; in the panel (.solid) it is the one primary action */
+.ct-hunt.page:not(.solid):not(.quiet) { background: transparent; color: var(--ink); border-color: var(--ink-3); }
+.ct-hunt.page:not(.solid):not(.quiet):hover { background: var(--paper-2); }
 .ct-mini.page { color: var(--ink-2); }
 .ct-lact { margin: 14px 0 0; }
 .sg-browse { flex: none; margin-left: auto; color: var(--ink-3); font: 500 12px/1 var(--sans); align-self: center; }
