@@ -916,6 +916,11 @@ class _Lane:
         except ImportError:
             self.early = False
         self.cc = _lang_for(need)[0]
+        try:
+            from agora.need import national_service
+            self.national = national_service(need)
+        except ImportError:
+            self.national = False
         self.score: dict[str, int] = {}          # registrable -> core words its page title names
         words = re.findall(r"[a-zäöåüß]{4,}", " ".join([core_of(need)] + [str(v) for v in
                                                        (cat.get("labels") or {}).values()]).lower())
@@ -1147,6 +1152,8 @@ class _Lane:
                 continue
             if LISTICLE_PATH.search(urlsplit(url).path):
                 continue                       # a blog post that is not a list: no provider, no price
+            if getattr(self, "national", False) and self.cc and not self.is_local(url):
+                continue                       # insurance / loans / energy: only the country's own providers
             if url in self.seen_urls or not self.claim(url):
                 continue
             hint = url if PRICING_PATH.search(urlsplit(url).path) else None
@@ -1206,6 +1213,8 @@ class _Lane:
             known = []
         for p in known:
             dom = p["domain"]
+            if self.national and self.cc and not self.is_local(f"https://{dom}/"):
+                continue      # an insurer abroad sells nothing here (eval r2: lemonade / progressive for a Finn)
             if not self.claim(f"https://{dom}/"):
                 continue
             self.stats["registry"] += 1
