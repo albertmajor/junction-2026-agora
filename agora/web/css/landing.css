@@ -10,34 +10,34 @@
   --ld-paper: var(--paper);
   --ld-cream: #EFE3CC;   /* warm sand */
   --ld-sun:   color-mix(in srgb, var(--accent) 20%, var(--paper));
-  --ld-green: #E0EADB;   /* receipt green */
-  --ld-peach: #F7E4D0;
-  --ld-sky:   #E2E9F3;   /* a real blue tint (a blue mix into warm paper went grey) */
+  --ld-green: #F2EADB;   /* warm paper (brand family: no greens) */
+  --ld-peach: #EEDCC2;   /* tan, from the monkey's face */
+  --ld-sky:   #F5F0E6;   /* light paper (brand family: no blues) */
   --ld-close: color-mix(in srgb, var(--accent) 34%, var(--paper));
   --ld-ink:   #1C1B18;
-  --ld-acc-sand: #8A5A1C; --ld-acc-sun: #7A6200; --ld-acc-green: var(--ok); --ld-acc-peach: #A4542C; --ld-acc-sky: var(--ink-blue);
+  --ld-acc-sand: #8A5A1C; --ld-acc-sun: #7A6200; --ld-acc-green: #4E3818; --ld-acc-peach: #6B4A1E; --ld-acc-sky: #8A5A1C;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) #landing {
-    --ld-cream: #2A241A;
-    --ld-sun:   #2E2A14;
-    --ld-green: #1B2A20;
-    --ld-peach: #33231A;
-    --ld-sky:   #1A2534;
-    --ld-close: #3A3416;
+    --ld-cream: #221F1A;   /* dark: warm charcoals from the brand (ink + monkey brown), no olive/green/navy */
+    --ld-sun:   #262219;
+    --ld-green: #1D1B17;
+    --ld-peach: #28211A;
+    --ld-sky:   #201E1A;
+    --ld-close: #2B2617;
     --ld-ink:   #EDE6D6;   /* in dark, the banner inverts the other way: a light slab */
-    --ld-acc-sand: #E0B878; --ld-acc-sun: #F0D435; --ld-acc-green: #7CC39E; --ld-acc-peach: #EE9A6E; --ld-acc-sky: #9DB8E8;
+    --ld-acc-sand: #D9B98C; --ld-acc-sun: #F0D435; --ld-acc-green: #E8C89F; --ld-acc-peach: #D9B98C; --ld-acc-sky: #F0D435;
   }
 }
 :root[data-theme="dark"] #landing {
-  --ld-cream: #2A241A;
-  --ld-sun:   #2E2A14;
-  --ld-green: #1B2A20;
-  --ld-peach: #33231A;
-  --ld-sky:   #1A2534;
-  --ld-close: #3A3416;
+  --ld-cream: #221F1A;   /* dark: warm charcoals from the brand (ink + monkey brown), no olive/green/navy */
+  --ld-sun:   #262219;
+  --ld-green: #1D1B17;
+  --ld-peach: #28211A;
+  --ld-sky:   #201E1A;
+  --ld-close: #2B2617;
   --ld-ink:   #EDE6D6;
-  --ld-acc-sand: #E0B878; --ld-acc-sun: #F0D435; --ld-acc-green: #7CC39E; --ld-acc-peach: #EE9A6E; --ld-acc-sky: #9DB8E8;
+  --ld-acc-sand: #D9B98C; --ld-acc-sun: #F0D435; --ld-acc-green: #E8C89F; --ld-acc-peach: #D9B98C; --ld-acc-sky: #F0D435;
 }
 /* the cue sits a little lower so the banner starts below a 900 px fold */
 #landing .scroll-cue { margin: 12px auto 58px; }
