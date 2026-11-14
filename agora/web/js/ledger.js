@@ -1,8 +1,9 @@
 // ledger.js: ALL the listings a hunt found, with the better ones highlighted (UI round B, owner item 1).
 //   1. The better ones: the pick + the best per condition + best trusted seller + closest + best value, each
 //      with a short reason ("cheapest all-in", "best trusted seller", …).
-//   2. Filters: condition, country (flags), ships to you vs pickup only, price range.
-//   3. Every other listing by what you pay, all in. Rendered 50 at a time as you scroll (an observer on a
+//   2. One Filters menu, open only after a click: bananas (the teammate's trust), price value, condition,
+//      country (flags), ships to you vs pickup only, price range. Order: best value first, or cheapest. List or grid.
+//   3. Every other listing, best value first (or by what you pay, all in). Rendered 50 at a time as you scroll (an observer on a
 //      sentinel, plus a "show 50 more" button), rows keyed by URL and reused, so hundreds stay smooth.
 //   4. "Also in the EU (+ shipping est.)": the bulky hunt's extra marketplaces, folded.
 //   5. Set aside: too cheap to trust, price unconfirmed, red-flag reviews. Dimmed, at the bottom, with reasons.
@@ -23,7 +24,26 @@ let filt = freshFilter();
 let euOpen = false, riskOpen = true;
 const cache = new Map();              // url -> {sig, li}
 
-function freshFilter() { return { cond: new Set(), cc: new Set(), ship: 'all', min: null, max: null }; }
+let mids = {};                        // middle price per condition, for the value icons (set each render)
+let sortMode = 'value';               // 'value': best price value first · 'price': what you pay
+let view = savedView();               // 'list' | 'grid'
+let menuOpen = false;                 // the Filters panel opens only on a click
+
+function freshFilter() { return { cond: new Set(), cc: new Set(), ship: 'all', min: null, max: null, bn: 0, vt: 0 }; }
+
+const VIEW_KEY = 'pricemonkey.listings.view';
+function savedView() { try { return globalThis.localStorage && localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list'; } catch { return 'list'; } }
+function saveView(v) { try { if (globalThis.localStorage) localStorage.setItem(VIEW_KEY, v); } catch { /* private mode: the view lasts this visit */ } }
+
+// icons: Lucide (lucide.dev, ISC licence), inline so they take the text colour
+const svg = body => `<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const IC = {
+  banana: '<path d="M4 13c3.5-2 8-2 10 2a5.5 5.5 0 0 1 8 5"/><path d="M5.15 17.89c5.52-1.52 8.65-6.89 7-12C11.55 4 11.5 2 13 2c3.22 0 5 5.5 5 8 0 6.5-4.2 12-10.49 12C5.11 22 2 22 2 20c0-1.5 1.14-1.55 3.15-2.11Z"/>',
+  value: '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m15 9-6 6"/><path d="M9 9h.01"/><path d="M15 15h.01"/>',
+  filters: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+  list: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
+  grid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+};
 
 // ---------- words ----------
 function condWord(c) {
@@ -45,6 +65,68 @@ function money(v, it) {
 const shopOf = it => (it.offer && it.offer.source) || domainOf(it.url);
 const ccOf = it => { const o = originFor(it); return o && o.country_code ? String(o.country_code).toUpperCase() : ''; };
 function meaningful(tm) { return !!tm && tm.state !== 'none' && !(tm.state === 'done' && tm.label === 'unknown' && !/★/.test(tm.text)); }
+
+// ---------- price value ----------
+// How far under the middle price of its condition, in the teammate's steps (bananas.py in
+// rpaszekdev/agora-junction-2026): 10 / 20 / 30% under = one / two / three value icons. More than half under is too
+// good to be true and gets none (the set-aside rules catch most of those anyway).
+const VALUE_STEPS = [0.10, 0.20, 0.30];
+const TOO_GOOD = 0.5;
+const MIN_FOR_MIDDLE = 3;             // fewer prices than this say nothing about a middle
+function median(nums) {
+  const s = nums.filter(v => v != null && isFinite(v)).sort((a, b) => a - b);
+  if (s.length < MIN_FOR_MIDDLE) return null;
+  const h = s.length >> 1;
+  return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2;
+}
+/** {all, <condition>: middle EUR price}: of that condition when it has enough prices, else of every listing. */
+export function middles(list) {
+  const by = new Map();
+  for (const it of list) {
+    const c = condWord(it.offer && it.offer.condition) || 'other';
+    if (!by.has(c)) by.set(c, []);
+    by.get(c).push(val(it));
+  }
+  const all = median(list.map(val));
+  const out = { all };
+  for (const [c, vs] of by) out[c] = median(vs) ?? all;
+  return out;
+}
+/** 0..3 value icons for a share under the middle price (negative: dearer; null: unknown). */
+export function valueTier(u) { return u == null || !isFinite(u) || u > TOO_GOOD ? 0 : VALUE_STEPS.filter(s => u >= s).length; }
+/** {under, tier, mid}: the share under the middle price of its condition, and its value icons. */
+export function valueOf(it, m = mids) {
+  const mid = m[condWord(it.offer && it.offer.condition) || 'other'] ?? m.all;
+  const v = val(it);
+  if (mid == null || v == null || !(mid > 0)) return { under: null, tier: 0, mid: null };
+  const under = (mid - v) / mid;
+  return { under, tier: valueTier(under), mid };
+}
+/** The list in this order: 'value' (most value icons, then the biggest share under, then the cheapest) or 'price'. */
+export function sortBy(list, mode, m = mids) {
+  const byPrice = (a, b) => (val(a) ?? Infinity) - (val(b) ?? Infinity);
+  if (mode !== 'value') return list.slice().sort(byPrice);
+  const key = new Map(list.map(it => {
+    const v = valueOf(it, m);
+    return [it, [v.tier, v.under == null || v.under > TOO_GOOD ? -Infinity : v.under]];
+  }));
+  return list.slice().sort((a, b) => {
+    const ka = key.get(a), kb = key.get(b);
+    return (kb[0] - ka[0]) || (kb[1] === ka[1] ? 0 : kb[1] - ka[1]) || byPrice(a, b);
+  });
+}
+
+// ---------- trust: the teammate's bananas ----------
+/** agora/bananas.py puts {n, state, why} in every truecost: how much speaks for the listing and its seller.
+ *  {n: 1..3, eaten: false, why} · {n: 0, eaten: true, why} (do not trust it) · null (nothing to say). */
+export function bananasOf(it) {
+  const b = it && it.tc && it.tc.bananas;
+  if (!b || typeof b !== 'object') return null;
+  const why = typeof b.why === 'string' ? b.why : '';
+  if (b.state === 'eaten') return { n: 0, eaten: true, why };
+  const n = Math.max(0, Math.min(3, Math.round(Number(b.n) || 0)));
+  return n ? { n, eaten: false, why } : null;
+}
 
 // ---------- groups ----------
 /** Every listing, split: main (by all in), eu (the bulky hunt's "also in the EU"), risky (set aside / red
@@ -138,13 +220,21 @@ function passes(it) {
   const v = val(it);
   if (f.min != null && (v == null || v < f.min)) return false;
   if (f.max != null && (v == null || v > f.max)) return false;
+  if (f.bn && !((bananasOf(it) || { n: 0 }).n >= f.bn)) return false;
+  if (f.vt && valueOf(it).tier < f.vt) return false;
   return true;
 }
-const filtering = () => filt.cond.size || filt.cc.size || filt.ship !== 'all' || filt.min != null || filt.max != null;
+const filtering = () => filt.cond.size || filt.cc.size || filt.ship !== 'all' || filt.min != null || filt.max != null || filt.bn || filt.vt;
+/** How many kinds of filter are on: the number on the Filters button. */
+const activeKinds = () => [filt.cond.size, filt.cc.size, filt.ship !== 'all', filt.min != null || filt.max != null, filt.bn, filt.vt].filter(Boolean).length;
 function facets(all) {
   const cond = new Map(), cc = new Map();
+  const bn = [0, 0, 0, 0], vt = [0, 0, 0, 0];   // [-, at least one, at least two, three]
   let ships = 0, pickup = 0, lo = Infinity, hi = -Infinity;
   for (const it of all) {
+    const b = bananasOf(it), t = valueOf(it).tier;
+    for (let k = 1; b && k <= b.n; k++) bn[k]++;
+    for (let k = 1; k <= t; k++) vt[k]++;
     const c = condWord(it.offer.condition) || 'other';
     cond.set(c, (cond.get(c) || 0) + 1);
     const k = ccOf(it) || '?';
@@ -153,7 +243,7 @@ function facets(all) {
     const v = val(it);
     if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
   }
-  return { cond, cc, ships, pickup, lo: isFinite(lo) ? lo : null, hi: isFinite(hi) ? hi : null };
+  return { cond, cc, ships, pickup, bn, vt, lo: isFinite(lo) ? lo : null, hi: isFinite(hi) ? hi : null };
 }
 
 // ---------- rows (keyed, reused) ----------
@@ -172,7 +262,7 @@ function noteFor(it, kind, pick) {
 function rowSig(it, i, kind, pick) {
   const tm = trustMark(it);
   return [i, kind, val(it), tagEur(it), it.url === pick, !!it.tc, it.late, tm && tm.text, ccOf(it), isPickupOnly(it),
-    it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to].join('|');
+    it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to, valueHtml(it, kind), JSON.stringify(bananasOf(it))].join('|');
 }
 // no photo (yet): a calm tile with the shop's own mark over its initial, so it reads as "from this shop", not broken
 const shopIcon = d => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
@@ -180,6 +270,25 @@ function placeholder(it) {
   const d = String(domainOf(it.url) || shopOf(it) || '').replace(/^www\./, '');
   const l = esc((shopOf(it) || d || '?').replace(/^www\./, '')[0].toUpperCase());
   return `<i class="ph" data-l="${l}">${d ? `<img class="ph-logo" alt="" loading="lazy" referrerpolicy="no-referrer" src="${esc(shopIcon(d))}">` : ''}</i>`;
+}
+// the value icons: the share under (or over) the middle price of its condition, with up to three % badges
+function valueHtml(it, kind) {
+  if (kind === 'risky') return '';
+  const { under, tier, mid } = valueOf(it);
+  if (under == null) return '';
+  const pct = Math.round(Math.abs(under) * 100);
+  const cond = condWord(it.offer && it.offer.condition);
+  const of = `the middle price${cond ? ` of ${cond}` : ''} (${eur(Math.round(mid), { dp: 0 })})`;
+  const tip = under > TOO_GOOD ? `${pct}% under ${of}: too good to be true` : pct === 0 ? `at ${of}` : `${pct}% ${under > 0 ? 'under' : 'over'} ${of}`;
+  const label = pct === 0 ? '≈ middle' : `${under > 0 ? '−' : '+'}${pct}%`;
+  return `<span class="lg-vi" data-t="${under > TOO_GOOD ? 'x' : tier}" title="${esc(tip)}">${svg(IC.value).repeat(tier)}<b>${label}</b></span>`;
+}
+// the teammate's bananas: how much speaks for the listing and its seller; an eaten black one = do not trust it
+function bananaHtml(it) {
+  const b = bananasOf(it);
+  if (!b) return '';
+  const tip = b.eaten ? `Do not trust it${b.why ? ': ' + b.why : ''}` : `${b.n} banana${b.n > 1 ? 's' : ''}${b.why ? ': ' + b.why : ''}`;
+  return `<span class="lg-bn${b.eaten ? ' eaten' : ''}" title="${esc(tip)}">${svg(IC.banana).repeat(b.eaten ? 1 : b.n)}<span class="sr">${esc(tip)}</span></span>`;
 }
 function rowHtml(it, i, kind, pick) {
   const raw = it.offer.image || '';
@@ -195,7 +304,8 @@ function rowHtml(it, i, kind, pick) {
   return `<button type="button" class="${cls}" data-url="${esc(it.url)}">
     <span class="lg-n">${i + 1}</span><span class="lg-pic">${pic}</span>
     <span class="lg-main"><span class="lg-ti">${esc(title || site)}</span>
-      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${mark}</span></span>
+      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${bananaHtml(it)}${mark}</span></span>
+    <span class="lg-v">${valueHtml(it, kind)}</span>
     <span class="lg-c">${esc(condWord(it.offer.condition))}</span>
     <span class="lg-tag">${esc(eur(tagEur(it), { dp: 0 }))}</span>
     <span class="lg-tc">${kind === 'risky' && v == null ? '<span class="lg-nc">not costed</span>' : esc(money(v, it))}</span>
@@ -265,7 +375,12 @@ function filterHtml(fc) {
       <span aria-hidden="true">–</span>
       <label><span class="sr">to</span><input type="number" inputmode="numeric" min="0" step="1" data-p="max" placeholder="${esc(eur(Math.ceil(fc.hi), { dp: 0 }))}" value="${filt.max ?? ''}"></label>
     </span>` : '';
-  return condRow + ccRow + shipRow + price + (filtering() ? '<button type="button" class="lg-clear">clear filters</button>' : '');
+  const step = (k, counts, icon, cur) => `<span class="lg-f" role="group">${[0, 1, 2, 3].map(n =>
+    `<button type="button" data-${k}="${n}" aria-pressed="${cur === n}">${n ? `${svg(icon).repeat(n)}${n < 3 ? '+' : ''} <span>${n0(counts[n])}</span>` : 'any'}</button>`).join('')}</span>`;
+  const row = (label, html, tip = '') => html ? `<div class="lg-fr"><span class="lg-fl"${tip ? ` title="${esc(tip)}"` : ''}>${label}</span>${html}</div>` : '';
+  return row('Price value', mids.all != null ? step('vt', fc.vt, IC.value, filt.vt) : '', '10 / 20 / 30% under the middle price of its condition')
+    + row('Bananas', fc.bn[1] || filt.bn ? step('bn', fc.bn, IC.banana, filt.bn) : '', 'how much speaks for the listing and its seller')
+    + row('Condition', condRow) + row('Seller in', ccRow) + row('Delivery', shipRow) + row('Price, all in', price);
 }
 
 // ---------- render ----------
@@ -273,9 +388,15 @@ function scaffold() {
   root.innerHTML = `
     <div class="lg-top"><h2 class="lg-h"></h2><span class="lg-cnt" role="status"></span></div>
     <ol class="lg-hl" aria-label="The better ones"></ol>
-    <div class="lg-fb" aria-label="Filter the listings"></div>
+    <div class="lg-tb">
+      <button type="button" class="lg-fbtn" aria-expanded="false" aria-controls="lg-fp">${svg(IC.filters)}Filters<span class="lg-fn"></span><i aria-hidden="true">▾</i></button>
+      <span class="lg-f lg-sort" role="group" aria-label="Order"><button type="button" data-sort="value" aria-pressed="true">${svg(IC.value)}best value</button><button type="button" data-sort="price" aria-pressed="false">cheapest</button></span>
+      <button type="button" class="lg-clear" hidden>clear filters</button>
+      <span class="lg-f lg-view" role="group" aria-label="View"><button type="button" data-view="list" aria-pressed="true" title="List">${svg(IC.list)}<span class="sr">list</span></button><button type="button" data-view="grid" aria-pressed="false" title="Grid">${svg(IC.grid)}<span class="sr">grid</span></button></span>
+    </div>
+    <div class="lg-fb" id="lg-fp" role="group" aria-label="Filter the listings" hidden></div>
     <p class="lg-jump" hidden></p>
-    <div class="lg-r lg-head" aria-hidden="true"><span></span><span></span><span>listing</span><span>condition</span><span class="lg-tag">tag</span><span class="lg-tc">all in</span><span></span></div>
+    <div class="lg-r lg-head" aria-hidden="true"><span></span><span></span><span>listing</span><span class="lg-v">value</span><span>condition</span><span class="lg-tag">tag</span><span class="lg-tc">all in</span><span></span></div>
     <ol class="lg-l" data-g="main"></ol>
     <div class="lg-more-w" data-g="main"><button type="button" class="lg-more" data-g="main"></button></div>
     <section class="lg-g lg-eu" hidden>
@@ -290,6 +411,7 @@ function scaffold() {
     </section>`;
   els = {
     h: root.querySelector('.lg-h'), cnt: root.querySelector('.lg-cnt'), hl: root.querySelector('.lg-hl'), fb: root.querySelector('.lg-fb'),
+    fbtn: root.querySelector('.lg-fbtn'), fn: root.querySelector('.lg-fn'), clear: root.querySelector('.lg-tb .lg-clear'),
     head: root.querySelector('.lg-head'),
     list: { main: root.querySelector('ol[data-g=main]'), eu: root.querySelector('ol[data-g=eu]'), risky: root.querySelector('ol[data-g=risky]') },
     more: { main: root.querySelector('.lg-more[data-g=main]'), eu: root.querySelector('.lg-more[data-g=eu]'), risky: root.querySelector('.lg-more[data-g=risky]') },
@@ -308,6 +430,18 @@ function scaffold() {
   }
 }
 
+/** The toolbar's state: Filters open or not and how many are on, the order, list or grid. */
+function toolbar() {
+  els.fbtn.setAttribute('aria-expanded', String(menuOpen));
+  const k = activeKinds();
+  els.fn.textContent = k ? ` · ${k}` : '';
+  els.fb.hidden = !menuOpen || !els.fb.innerHTML.trim();
+  els.clear.hidden = !filtering();
+  root.querySelectorAll('[data-sort]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sort === sortMode)));
+  root.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  root.classList.toggle('is-grid', view === 'grid');
+}
+
 let hlKey = '', fbKey = '';
 function render() {
   raf = 0; lastDraw = performance.now();
@@ -324,17 +458,21 @@ function render() {
   const hk = hls.map(h => [h.it.url, h.why.join(','), val(h.it), ccOf(h.it)].join('~')).join('|');
   if (hk !== hlKey) { hlKey = hk; els.hl.innerHTML = hls.map(cardHtml).join(''); els.hl.hidden = !hls.length; }
 
-  // filters (built from every listing, so the counts say what each filter would show)
+  // filters (built from every listing, so the counts say what each filter would show); value against the comparable ones
+  mids = middles(g.main.concat(g.costing, g.eu));
   const all = g.main.concat(g.costing, g.eu, g.risky);
   const fc = facets(all);
-  const fk = JSON.stringify([[...fc.cond], [...fc.cc], fc.ships, fc.pickup, Math.floor(fc.lo || 0), Math.ceil(fc.hi || 0), filt.ship, [...filt.cond], [...filt.cc], filt.min, filt.max]);
+  const fk = JSON.stringify([[...fc.cond], [...fc.cc], fc.ships, fc.pickup, fc.bn, fc.vt, mids.all != null, Math.floor(fc.lo || 0), Math.ceil(fc.hi || 0),
+    filt.ship, [...filt.cond], [...filt.cc], filt.min, filt.max, filt.bn, filt.vt]);
   if (fk !== fbKey && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.lg-price'))) {
-    fbKey = fk; els.fb.innerHTML = filterHtml(fc); els.fb.hidden = !els.fb.innerHTML.trim();
+    fbKey = fk; els.fb.innerHTML = filterHtml(fc);
   }
+  toolbar();
 
-  const main = g.main.concat(g.costing).filter(passes), eu = g.eu.filter(passes), risky = g.risky.filter(passes);
+  const main = sortBy(g.main.concat(g.costing).filter(passes), sortMode), eu = sortBy(g.eu.filter(passes), sortMode), risky = g.risky.filter(passes);
   const shown = main.length + eu.length + risky.length;
-  els.h.innerHTML = `${n === 1 ? 'The one listing' : `All ${n0(n)} listings`}, <span>${S.turned ? 'by what you pay, all in' : 'by the price on the tag'}</span>`;
+  const order = sortMode === 'value' ? 'best value first' : S.turned ? 'by what you pay, all in' : 'by the price on the tag';
+  els.h.innerHTML = `${n === 1 ? 'The one listing' : `All ${n0(n)} listings`}, <span>${order}</span>`;
   els.cnt.innerHTML = filtering() ? `showing ${n0(shown)} of ${n0(n)}` : (g.risky.length ? `${n0(n - g.risky.length)} compared · ${n0(g.risky.length)} set aside` : '');
 
   const part = (key, list, kind) => {
@@ -415,6 +553,21 @@ export function mountLedger(el) {
       filt[k].has(v) ? filt[k].delete(v) : filt[k].add(v);
       limits.main = limits.eu = STEP; render(); refocus(`.lg-chip[data-${k}="${CSS.escape(v)}"]`); return;
     }
+    if (e.target.closest('.lg-fbtn')) {
+      menuOpen = !menuOpen; render();
+      if (menuOpen) { const f = els.fb.querySelector('button, input'); if (f) f.focus({ preventScroll: true }); }
+      return;
+    }
+    const so = e.target.closest('[data-sort]');
+    if (so) { sortMode = so.dataset.sort === 'price' ? 'price' : 'value'; limits.main = limits.eu = STEP; render(); return; }
+    const vw = e.target.closest('[data-view]');
+    if (vw) { view = vw.dataset.view === 'grid' ? 'grid' : 'list'; saveView(view); render(); return; }
+    const st = e.target.closest('[data-bn], [data-vt]');
+    if (st) {
+      const k = st.dataset.bn != null ? 'bn' : 'vt';
+      filt[k] = Math.max(0, Math.min(3, Number(st.dataset[k]) || 0));
+      limits.main = limits.eu = STEP; render(); refocus(`[data-${k}="${filt[k]}"]`); return;
+    }
     const sh = e.target.closest('[data-ship]');
     if (sh) { filt.ship = sh.dataset.ship; render(); refocus(`[data-ship="${sh.dataset.ship}"]`); return; }
     if (e.target.closest('.lg-clear')) { filt = freshFilter(); render(); return; }
@@ -440,6 +593,9 @@ export function mountLedger(el) {
       render();
     }, 220);
   });
+  root.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && menuOpen) { menuOpen = false; render(); els.fbtn.focus(); }
+  });
   // Google's "no icon" answer is a tiny generic globe: keep the shop's initial instead
   root.addEventListener('load', e => {
     const img = e.target;
@@ -456,7 +612,7 @@ export function mountLedger(el) {
     img.replaceWith(ph);
   }, true);
   on('reset', () => {
-    limits = { main: STEP, eu: STEP, risky: 30 }; filt = freshFilter(); euOpen = false; riskOpen = true;
+    limits = { main: STEP, eu: STEP, risky: 30 }; filt = freshFilter(); euOpen = false; riskOpen = true; menuOpen = false;
     cache.clear(); hlKey = ''; fbKey = '';
     for (const ol of Object.values(els.list)) ol.textContent = '';
     queue(true);
@@ -469,4 +625,4 @@ export function mountLedger(el) {
 }
 function refocus(sel) { const b = root.querySelector(sel); if (b) b.focus({ preventScroll: true }); }
 
-export const _test = { groups, highlights, rows, passes, setFilter(f) { filt = Object.assign(freshFilter(), f); } };
+export const _test = { groups, highlights, rows, passes, setFilter(f) { filt = Object.assign(freshFilter(), f); }, setMids(m) { mids = m || {}; } };

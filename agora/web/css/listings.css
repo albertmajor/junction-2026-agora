@@ -87,8 +87,34 @@ i.ph .ph-logo {
   background: var(--receipt); box-shadow: 0 0 0 6px var(--receipt), 0 0 0 7px var(--hair); object-fit: contain;
 }
 
-/* filters: condition · country (flags) · ships to you / pickup only · price */
-.lg-fb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 14px; }
+/* toolbar: Filters (opens its panel on a click) · best value / cheapest · clear · list / grid */
+.ic { flex: none; display: block; }
+.lg-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 12px; }
+.lg-fbtn {
+  display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 11px; border: 0; border-radius: var(--r-pill);
+  background: var(--stage); box-shadow: inset 0 0 0 1px var(--hair); font: 500 13px/32px var(--sans); color: var(--ink); cursor: pointer;
+  transition: background var(--t-ui) var(--ease), color var(--t-ui) var(--ease);
+}
+.lg-fbtn:hover { background: var(--paper-2); }
+.lg-fbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.lg-fbtn[aria-expanded="true"] { background: var(--ink); color: var(--paper); box-shadow: none; }
+.lg-fn { font: 400 12px var(--mono); }
+.lg-fbtn i { font-style: normal; font-size: 10px; transition: transform var(--t-ui) var(--ease); }
+.lg-fbtn[aria-expanded="true"] i { transform: rotate(180deg); }
+.lg-sort, .lg-view { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-pill); background: var(--stage); box-shadow: inset 0 0 0 1px var(--hair); }
+.lg-sort button, .lg-view button { display: inline-flex; align-items: center; gap: 6px; }
+.lg-view { margin-left: auto; }
+.lg-view button { padding: 0 9px; }
+/* the panel: one row per kind of filter */
+.lg-fb {
+  display: grid; gap: 10px; margin: 0 0 14px; padding: 14px 16px; border-radius: 12px;
+  background: var(--receipt); box-shadow: inset 0 0 0 1px var(--hair); animation: lg-open 160ms var(--ease) both;
+}
+@keyframes lg-open { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .lg-fb { animation: none; } }
+.lg-fr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.lg-fl { flex: none; width: 104px; font: 500 12px/1.3 var(--sans); color: var(--ink-3); }
+.lg-fr .lg-f button { display: inline-flex; align-items: center; gap: 3px; }
 .lg-fb[hidden] { display: none; }
 .lg-fg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .lg-chip, .lg-f button {
@@ -118,8 +144,19 @@ i.ph .ph-logo {
 .lg-jump button { border: 0; padding: 0; background: none; font: inherit; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
 .lg-jump button:hover { color: var(--ink); text-decoration-color: currentColor; }
 
-/* rows: # · photo · listing · condition · tag · all in · note (wider for reasons) */
-.lg-r { grid-template-columns: 28px 96px minmax(0, 1fr) 84px 68px 92px minmax(120px, 200px); }
+/* rows: # · photo · listing · value · condition · tag · all in · note (wider for reasons) */
+.lg-r { grid-template-columns: 28px 96px minmax(0, 1fr) 104px 84px 68px 92px minmax(110px, 180px); }
+
+/* price value: up to three % badges for 10 / 20 / 30% under the middle price of its condition */
+.lg-v { display: flex; align-items: center; min-width: 0; }
+.lg-vi { display: inline-flex; align-items: center; gap: 1px; font: 500 12px var(--mono); color: var(--ink-3); white-space: nowrap; }
+.lg-vi b { font-weight: 500; margin-left: 4px; }
+.lg-vi:not([data-t="0"]):not([data-t="x"]) { color: var(--ok); }
+.lg-vi[data-t="x"] { color: var(--flag); }
+/* trust: the teammate's bananas; an eaten one is black */
+.lg-bn { display: inline-flex; align-items: center; gap: 1px; }
+.lg-bn .ic { fill: var(--accent); stroke: color-mix(in srgb, var(--accent) 40%, var(--ink)); }
+.lg-bn.eaten .ic { fill: var(--ink); stroke: var(--ink); }
 .lg-head[hidden] { display: none; }
 .lg-l:empty { border-top: 0; }
 .lg-x .lg-why { color: var(--ink-2); }
@@ -147,7 +184,7 @@ i.ph .ph-logo {
 .lg-r.risky .lg-tc { color: var(--ink-2); font-weight: 400; }
 
 @media (max-width: 1023px) {
-  .lg-r { grid-template-columns: 24px 88px minmax(0, 1fr) 76px 60px 84px 130px; }
+  .lg-r { grid-template-columns: 24px 88px minmax(0, 1fr) 92px 76px 60px 84px 120px; }
 }
 
 /* phones: every listing is here too (the line shows the cheapest few). Photo · shop + title · all in. */
@@ -156,13 +193,12 @@ i.ph .ph-logo {
   .lg-top { flex-wrap: wrap; gap: 4px 12px; }
   .lg-h { font-size: 20px; }
   .lg-hl { grid-template-columns: 1fr; gap: 8px; }
-  .lg-fb { gap: 8px; flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(var(--gutter) * -1); padding: 2px var(--gutter) 6px; scrollbar-width: none; }
-  .lg-fb::-webkit-scrollbar { display: none; }
-  .lg-fg { flex-wrap: nowrap; }
-  .lg-chip, .lg-f button { white-space: nowrap; flex: none; }
+  .lg-fb { padding: 12px; }
+  .lg-fl { width: 100%; }
+  .lg-sort button { padding: 0 8px; }
   .lg-head { display: none !important; }
   .lg-r {
-    grid-template-columns: 72px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 12px; row-gap: 2px;
+    grid-template-columns: 72px minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 2px;
     min-height: 88px; padding: 8px 2px; align-items: start;
   }
   .lg-n, .lg-c, .lg-tag { display: none; }
@@ -174,6 +210,8 @@ i.ph .ph-logo {
   .lg-cm { display: inline; }
   .lg-tc { grid-column: 3; grid-row: 1; padding-top: 2px; }
   .lg-x { grid-column: 3; grid-row: 2; text-align: right; max-width: 30vw; font-size: 11.5px; }
+  .lg-v { grid-column: 2; grid-row: 3; }
+  .ledger.is-grid .lg-l { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .lg-hc { grid-template-columns: 80px minmax(0, 1fr); }
   .hc-pic { width: 80px; height: 80px; }
   .lg-gs { width: 100%; }
@@ -182,3 +220,32 @@ i.ph .ph-logo {
 /* dark: the highlighter becomes a thin banana underline so the light ink stays readable */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lg-hc.is-pick .hc-why b { background: linear-gradient(transparent 86%, var(--accent) 86%); } }
 :root[data-theme="dark"] .lg-hc.is-pick .hc-why b { background: linear-gradient(transparent 86%, var(--accent) 86%); }
+
+/* grid: the same rows as cards, photo on top; the order and the filters stay the same */
+.ledger.is-grid .lg-head { display: none !important; }
+.ledger.is-grid .lg-l { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; border-top: 0; }
+.ledger.is-grid .lg-l li { min-width: 0; border-bottom: 0; }
+.ledger.is-grid .lg-r {
+  position: relative; height: 100%; min-height: 0; padding: 10px; border-radius: 12px; align-items: start; row-gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto auto; grid-template-areas: "pic pic" "main main" "v tc" "x x";
+  background: var(--receipt); box-shadow: inset 0 0 0 1px var(--hair); color: var(--ink-2);
+  transform-origin: 50% 50%; transition: transform 180ms var(--ease), box-shadow 180ms var(--ease);
+}
+.ledger.is-grid .lg-r.pick { box-shadow: inset 0 0 0 1px var(--hair), inset 0 3px 0 var(--accent); }
+.ledger.is-grid .lg-n, .ledger.is-grid .lg-c, .ledger.is-grid .lg-tag { display: none; }
+.ledger.is-grid .lg-pic { grid-area: pic; width: 100%; height: auto; aspect-ratio: 1; }
+.ledger.is-grid .lg-main { grid-area: main; }
+.ledger.is-grid .lg-cm { display: inline; }
+.ledger.is-grid .lg-v { grid-area: v; align-self: center; }
+.ledger.is-grid .lg-tc { grid-area: tc; align-self: center; padding: 0; font-size: 15px; }
+.ledger.is-grid .lg-x { grid-area: x; white-space: normal; text-align: left; max-width: none; }
+.ledger.is-grid .lg-x:empty { display: none; }
+/* hover: the card grows from its middle, over its neighbours (not out to one side) */
+.ledger.is-grid .lg-l .lg-r:hover, .ledger.is-grid .lg-r:focus-visible {
+  z-index: 3; transform: scale(1.06); background: var(--receipt); color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink-3), 0 14px 34px rgba(28, 27, 24, .14);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger.is-grid .lg-r { transition: none; }
+  .ledger.is-grid .lg-l .lg-r:hover, .ledger.is-grid .lg-r:focus-visible { transform: none; }
+}

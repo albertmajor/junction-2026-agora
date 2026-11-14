@@ -78,6 +78,54 @@ test('filters: condition, country, pickup only, price range', () => {
   ledger._test.setFilter({});
 });
 
+// price value: how far under the middle price of its condition (the teammate's bananas.py steps: 10/20/30%)
+const item = (url, condition, eur, bananas) => ({ url, offer: { condition, price_eur: eur, title: url }, ...(bananas !== undefined ? { tc: { bananas } } : {}) });
+test('value: tiers by share under the middle price of the same condition; too good to be true gets none', () => {
+  const list = [item('a', 'used', 100), item('b', 'used', 85), item('c', 'used', 75), item('d', 'used', 65),
+    item('e', 'used', 35), item('f', 'used', 110), item('n', 'new', 300), item('m', 'new', 200), item('o', 'new', 250)];
+  const mids = ledger.middles(list);
+  assert.equal(mids.used, 80);  // median of 100 85 75 65 35 110
+  assert.equal(mids.new, 250);
+  const t = id => ledger.valueOf(list.find(x => x.url === id), mids).tier;
+  assert.equal(t('f'), 0);       // dearer than the middle
+  assert.equal(t('a'), 0);       // 25% over
+  assert.equal(t('c'), 0);       // 6% under: under one step
+  assert.equal(t('d'), 1);       // 19% under
+  assert.equal(t('m'), 2);       // 20% under the new middle
+  assert.equal(t('e'), 0);       // 56% under: not believed
+  assert.equal(ledger.valueOf(list[0], {}).tier, 0);  // no middle: no value
+  assert.equal(ledger.valueTier(0.3), 3);
+  assert.equal(ledger.valueTier(0.51), 0);
+});
+
+test('best value first: most value icons, then the biggest share under the middle, then the cheapest', () => {
+  const list = [item('a', 'used', 100), item('b', 'used', 70), item('c', 'used', 60), item('d', 'used', 90), item('e', 'used', 100)];
+  const mids = ledger.middles(list);   // 90
+  assert.deepEqual(ledger.sortBy(list, 'value', mids).map(x => x.url), ['c', 'b', 'd', 'a', 'e']);
+  assert.deepEqual(ledger.sortBy(list, 'price', mids).map(x => x.url), ['c', 'b', 'd', 'a', 'e']);
+  const mixed = [item('u', 'used', 60), item('v', 'used', 100), item('w', 'used', 100), item('n1', 'new', 300), item('n2', 'new', 200), item('n3', 'new', 310)];
+  const m2 = ledger.middles(mixed);   // used 100, new 300
+  assert.deepEqual(ledger.sortBy(mixed, 'value', m2).slice(0, 2).map(x => x.url), ['u', 'n2']); // 40% then 33% under
+  assert.equal(ledger.sortBy(mixed, 'price', m2)[0].url, 'u');
+});
+
+test('filters: bananas (trust, from the truecost) and value', () => {
+  const list = [item('g3', 'used', 50, { n: 3, state: 'good', why: 'x' }), item('g1', 'used', 52, { n: 1, state: 'good' }),
+    item('ea', 'used', 54, { n: 0, state: 'eaten', why: 'looks like a scam pattern' }), item('no', 'used', 100, null), item('nx', 'used', 100)];
+  assert.deepEqual(ledger.bananasOf(list[2]), { n: 0, eaten: true, why: 'looks like a scam pattern' });
+  assert.equal(ledger.bananasOf(list[3]), null);
+  ledger._test.setFilter({ bn: 1 });
+  assert.deepEqual(list.filter(ledger._test.passes).map(x => x.url), ['g3', 'g1']);
+  ledger._test.setFilter({ bn: 3 });
+  assert.deepEqual(list.filter(ledger._test.passes).map(x => x.url), ['g3']);
+  ledger._test.setMids(ledger.middles(list));   // used middle 54: 50 is 7% under, 52 4%
+  ledger._test.setFilter({ vt: 1 });
+  assert.deepEqual(list.filter(ledger._test.passes).map(x => x.url), []);
+  ledger._test.setMids({ used: 100 });
+  assert.deepEqual(list.filter(ledger._test.passes).map(x => x.url), ['g3', 'g1', 'ea']);
+  ledger._test.setFilter({}); ledger._test.setMids({});
+});
+
 test('the summary credits Context.dev for search too (never "0 via Context.dev")', () => {
   const st = livelog._test.cdStats();
   assert.equal(st.searches, 4);
