@@ -97,7 +97,7 @@ async def _no_stale_ui(request: Request, call_next):
     """Browsers revalidate UI files every load, so a changed JS file is never served stale."""
     resp = await call_next(request)
     p = request.url.path
-    if p.startswith(("/web/", "/static/")) and not p.startswith("/web/assets/"):
+    if p.startswith(("/web/", "/static/")) and (not p.startswith("/web/assets/") or p.endswith(".json")):
         resp.headers["Cache-Control"] = "no-cache"
     return resp
 
