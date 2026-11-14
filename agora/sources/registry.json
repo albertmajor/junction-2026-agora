@@ -1,15 +1,15 @@
 {
  "meta": {
-  "requests": 2273,
+  "requests": 2393,
   "seconds_last_run": 6,
   "counts": {
-   "search_found_unverified": 66,
-   "verified_free": 37,
-   "blocked": 51,
-   "no_search": 40
+   "search_found_unverified": 73,
+   "verified_free": 41,
+   "blocked": 56,
+   "no_search": 41
   },
-  "total": 194,
-  "updated": "2026-11-14T12:16:10+00:00"
+  "total": 211,
+  "updated": "2026-11-14T12:16:37+00:00"
  },
  "sources": [
   {
@@ -953,6 +953,98 @@
    "group": "Vehicles"
   },
   {
+   "key": "autotrader_co_uk_cars_used",
+   "name": "Auto Trader UK",
+   "domain": "autotrader.co.uk",
+   "home": "https://www.autotrader.co.uk/cars/used",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.autotrader.co.uk/cars/used/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:08+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "United Kingdom",
+   "group": "Vehicles"
+  },
+  {
+   "key": "autovit_ro",
+   "name": "Autovit.ro",
+   "domain": "autovit.ro",
+   "home": "https://www.autovit.ro/",
+   "countries": [
+    "ro"
+   ],
+   "languages": [
+    "ro"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.autovit.ro/anunturi/?q={q}&amp%3Butm_source=google&amp%3Butm_medium=search&amp%3Butm_campaign=search_organic",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/autoturisme/anunt/[^/?#]+\\.html(?:[/?#]|$)",
+   "sample": [
+    "/autoturisme/anunt/jaecoo-7-ID7HQrz2.html",
+    "/autoturisme/anunt/mercedes-benz-gle-ver-amg-53-mhev-4maticplus-ID7HR2B9.html",
+    "/autoturisme/anunt/mg-mg3-ID7HR2KM.html"
+   ],
+   "links": 29,
+   "prices": 51,
+   "itemlist": true,
+   "jsonld_products": 32,
+   "embedded_prices": 32,
+   "next_data": true,
+   "pagination": {},
+   "yield": 0.984,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:14+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Romania",
+   "group": "Vehicles"
+  },
+  {
    "key": "avito_ru",
    "name": "Avito",
    "domain": "avito.ru",
@@ -1178,6 +1270,54 @@
    "seed": "secondhand_xlsx",
    "market": "Belarus",
    "group": "Eastern Europe"
+  },
+  {
+   "key": "bauhaus_fi",
+   "name": "Bauhaus",
+   "domain": "bauhaus.fi",
+   "home": "https://www.bauhaus.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "diy",
+    "tools",
+    "garden",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://bauhaus.fi/catalogsearch/result?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://bauhaus.fi/catalogsearch/result?q={q}",
+    "https://www.bauhaus.fi/?search={q}"
+   ],
+   "test_query": "bosch",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:31+00:00",
+   "seed": "extra"
   },
   {
    "key": "bazar_bg",
@@ -1501,6 +1641,50 @@
    "group": "Fashion and family"
   },
   {
+   "key": "bilbasen_dk",
+   "name": "Bilbasen",
+   "domain": "bilbasen.dk",
+   "home": "https://www.bilbasen.dk/",
+   "countries": [
+    "dk"
+   ],
+   "languages": [
+    "da"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:11+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Denmark",
+   "group": "Vehicles"
+  },
+  {
    "key": "bland_is",
    "name": "Bland.is",
    "domain": "bland.is",
@@ -1791,6 +1975,52 @@
    "group": "Nordics"
   },
   {
+   "key": "bricklink_com",
+   "name": "BrickLink",
+   "domain": "bricklink.com",
+   "home": "https://www.bricklink.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.bricklink.com/v2/search.page?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.bricklink.com/v2/search.page?q={q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:56+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Books and collectibles"
+  },
+  {
    "key": "bukowskis_com",
    "name": "Bukowskis",
    "domain": "bukowskis.com",
@@ -1930,6 +2160,50 @@
    "seed": "secondhand_xlsx",
    "market": "France, selected European markets",
    "group": "Bikes and sports"
+  },
+  {
+   "key": "car_gr",
+   "name": "Car.gr",
+   "domain": "car.gr",
+   "home": "https://www.car.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.car.gr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:16+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Greece",
+   "group": "Vehicles"
   },
   {
    "key": "cardmarket_com_en",
@@ -2306,6 +2580,54 @@
    "seed": "secondhand_xlsx",
    "market": "Monaco",
    "group": "Southern Europe"
+  },
+  {
+   "key": "coches_net",
+   "name": "Coches.net",
+   "domain": "coches.net",
+   "home": "https://www.coches.net/es/segunda-mano/",
+   "countries": [
+    "es"
+   ],
+   "languages": [
+    "es"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.coches.net/es/segunda-mano/s?k={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*\\.aspx(?:[/?#]|$)",
+   "sample": [
+    "/audi-a5-ehybrid-quattro-220kw299cv-black-line-5p-electrico-hibrido-2025-en-alicante-71783868-covo.aspx",
+    "/audi-q3-35-tdi-110kw-150cv-quattro-5p-diesel-2020-en-murcia-71341765-covo.aspx",
+    "/bmw-serie-5-535i-4p-gasolina-2010-en-baleares-71882948-covo.aspx"
+   ],
+   "links": 7,
+   "prices": 26,
+   "itemlist": false,
+   "jsonld_products": 1,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.307,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 4,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:10+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Spain",
+   "group": "Vehicles"
   },
   {
    "key": "coolblue_nl",
@@ -3217,7 +3539,7 @@
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:06:49+00:00",
+   "checked_at": "2026-11-14T12:16:19+00:00",
    "seed": "extra"
   },
   {
@@ -3876,6 +4198,52 @@
    "group": "Southeast Europe"
   },
   {
+   "key": "jimms_fi",
+   "name": "Jimm's",
+   "domain": "jimms.fi",
+   "home": "https://www.jimms.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "computers",
+    "electronics",
+    "games"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.jimms.fi/fi/Product/Search?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.jimms.fi/fi/Product/Search?q={q}"
+   ],
+   "test_query": "lenovo",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:24+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "jofogas_hu",
    "name": "Jófogás",
    "domain": "jofogas.hu",
@@ -4493,6 +4861,50 @@
    "seed": "secondhand_xlsx",
    "market": "France",
    "group": "Western Europe"
+  },
+  {
+   "key": "lacentrale_fr",
+   "name": "La Centrale",
+   "domain": "lacentrale.fr",
+   "home": "https://www.lacentrale.fr/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.lacentrale.fr/recherche?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:10+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "France",
+   "group": "Vehicles"
   },
   {
    "key": "lajumate_ro",
@@ -5681,6 +6093,51 @@
    "group": "Turkey and Caucasus"
   },
   {
+   "key": "nettiauto_com",
+   "name": "Nettiauto",
+   "domain": "nettiauto.com",
+   "home": "https://www.nettiauto.com/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.nettiauto.com/haku?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:11+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Finland",
+   "group": "Vehicles"
+  },
+  {
    "key": "njuskalo_hr",
    "name": "Njuškalo",
    "domain": "njuskalo.hr",
@@ -6247,6 +6704,54 @@
    "group": "Baltics"
   },
   {
+   "key": "otomoto_pl",
+   "name": "OTOMOTO",
+   "domain": "otomoto.pl",
+   "home": "https://www.otomoto.pl/",
+   "countries": [
+    "pl"
+   ],
+   "languages": [
+    "pl"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.otomoto.pl/oferty/?q={q}&amp%3Butm_source=google&amp%3Butm_medium=search&amp%3Butm_campaign=search_organic",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/osobowe/oferta/[^/?#]+\\.html(?:[/?#]|$)",
+   "sample": [
+    "/osobowe/oferta/audi-q5-sportback-ID6IjT8l.html",
+    "/osobowe/oferta/audi-rs-e-tron-gt-ID6I9rP9.html",
+    "/osobowe/oferta/bmw-seria-4-ID6IhDqt.html"
+   ],
+   "links": 31,
+   "prices": 35,
+   "itemlist": true,
+   "jsonld_products": 32,
+   "embedded_prices": 32,
+   "next_data": true,
+   "pagination": {},
+   "yield": 0.906,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:14+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Poland",
+   "group": "Vehicles"
+  },
+  {
    "key": "otto_de",
    "name": "OTTO",
    "domain": "otto.de",
@@ -6290,6 +6795,51 @@
    "contextdev": false,
    "checked_at": "2026-11-14T12:06:54+00:00",
    "seed": "extra"
+  },
+  {
+   "key": "ovoko_com",
+   "name": "Ovoko / RRR.LT",
+   "domain": "ovoko.com",
+   "home": "https://ovoko.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://about.ovoko.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 5,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:17+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Vehicles"
   },
   {
    "key": "pamono_eu",
@@ -6566,7 +7116,7 @@
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:06:49+00:00",
+   "checked_at": "2026-11-14T12:16:20+00:00",
    "seed": "extra"
   },
   {
@@ -6613,6 +7163,100 @@
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Western Europe"
+  },
+  {
+   "key": "prisma_fi",
+   "name": "Prisma",
+   "domain": "prisma.fi",
+   "home": "https://www.prisma.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "home",
+    "electronics"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.prisma.fi/haku?search={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:28+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "proshop_fi",
+   "name": "Proshop",
+   "domain": "proshop.fi",
+   "home": "https://www.proshop.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "computers",
+    "electronics",
+    "phones"
+   ],
+   "kind": "retailer",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.proshop.fi/?s={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": true,
+   "listing": "^/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*/\\d+(?:[/?#]|$)",
+   "sample": [
+    "/Kannettava-tietokone/Lenovo-IdeaPad-Slim-3-14-Core-i7-16GB-512GB/3443694",
+    "/Kannettava-tietokone/Lenovo-IdeaPad-Slim-3i-15-Core-5-16GB-512GB/3479771",
+    "/Kannettava-tietokone/Lenovo-IdeaPad-Slim-3i-15-Core-7-16GB-512GB/3479820"
+   ],
+   "links": 16,
+   "prices": 65,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "pn"
+   },
+   "yield": 0.8,
+   "robots_disallowed": [],
+   "test_query": "lenovo",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:27+00:00",
+   "seed": "extra"
   },
   {
    "key": "publi24_ro",
@@ -7510,6 +8154,54 @@
    "group": "Baltics"
   },
   {
+   "key": "standvirtual_com",
+   "name": "Standvirtual",
+   "domain": "standvirtual.com",
+   "home": "https://www.standvirtual.com/",
+   "countries": [
+    "pt"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.standvirtual.com/anuncios/?q={q}&amp%3Butm_source=google&amp%3Butm_medium=search&amp%3Butm_campaign=search_organic",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/carros/anuncio/[^/?#]+\\.html(?:[/?#]|$)",
+   "sample": [
+    "/carros/anuncio/cupra-born-ver-58-kwh-ID8Q1mfB.html",
+    "/carros/anuncio/vw-amarok-ver-2-0-tdi-cd-high-cm-4motion-aut-ID8Q19FF.html",
+    "/carros/anuncio/vw-arteon-shooting-brake-ver-sb-1-4-tsi-ehybrid-elegance-ID8Q15r2.html"
+   ],
+   "links": 35,
+   "prices": 38,
+   "itemlist": true,
+   "jsonld_products": 32,
+   "embedded_prices": 32,
+   "next_data": true,
+   "pagination": {},
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:13+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Portugal",
+   "group": "Vehicles"
+  },
+  {
    "key": "subito_it",
    "name": "Subito",
    "domain": "subito.it",
@@ -7736,6 +8428,53 @@
    "seed": "secondhand_xlsx",
    "market": "Spain",
    "group": "Southern Europe"
+  },
+  {
+   "key": "tokmanni_fi",
+   "name": "Tokmanni",
+   "domain": "tokmanni.fi",
+   "home": "https://www.tokmanni.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "home",
+    "garden",
+    "toys"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.tokmanni.fi/search/?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.tokmanni.fi/search/?q={q}"
+   ],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:28+00:00",
+   "seed": "extra"
   },
   {
    "key": "tori_fi",
@@ -8340,12 +9079,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.05,
+   "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "samsung",
-   "tried": 6,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:06:03+00:00",
+   "checked_at": "2026-11-14T12:16:18+00:00",
    "seed": "extra"
   },
   {
@@ -8592,6 +9331,54 @@
    "seed": "secondhand_xlsx",
    "market": "Spain, Italy, Portugal",
    "group": "Multi-market"
+  },
+  {
+   "key": "watchfinder_com",
+   "name": "Watchfinder",
+   "domain": "watchfinder.com",
+   "home": "https://www.watchfinder.com/",
+   "countries": [
+    "gb",
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "watches",
+    "collectibles"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.watchfinder.com/search?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.watchfinder.com/search?q={q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:58+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "UK, selected European markets",
+   "group": "Books and collectibles"
   },
   {
    "key": "werkspot_nl",
