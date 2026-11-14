@@ -530,3 +530,16 @@
 #landing > section.ld-band:nth-of-type(even) { --ld-bg: color-mix(in srgb, var(--paper) 95%, var(--ink) 5%); }
 /* the closing band just continues the two-tone rhythm (owner: no olive/banana slab) */
 #landing > section.ld-band#ld-close { --ld-acc: var(--ld-acc-sun); }
+/* one light-grey band low on the page (owner): the closing call to action. In dark mode it's a light slab, so its
+   ink tokens flip to dark; in light mode it's a near-white grey. */
+#landing > section.ld-band#ld-close { --ld-bg: #ECEBE8; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #landing > section.ld-band#ld-close {
+    --ld-bg: #E6E4E0; --ink: #1C1B18; --ink-2: #4A463F; --ink-3: #6E685E; --hair: rgba(28,27,24,.14);
+    --receipt: #F6F4F0; --paper-2: #DAD7D1; --ink-blue: #6B4A1E; --ld-acc: #6B4A1E; color: #1C1B18;
+  }
+}
+:root[data-theme="dark"] #landing > section.ld-band#ld-close {
+  --ld-bg: #E6E4E0; --ink: #1C1B18; --ink-2: #4A463F; --ink-3: #6E685E; --hair: rgba(28,27,24,.14);
+  --receipt: #F6F4F0; --paper-2: #DAD7D1; --ink-blue: #6B4A1E; --ld-acc: #6B4A1E; color: #1C1B18;
+}
