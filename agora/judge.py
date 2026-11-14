@@ -37,6 +37,7 @@ from decimal import Decimal
 from typing import Any
 
 from agora.models import Haggle, Need, Offer, Thing, TrueCost, Verdict
+from agora.need import is_service, priced_per_period
 
 DEFAULT_MONTHS = 12
 
@@ -545,8 +546,11 @@ def _trust_signals(o: Offer, pool: list[Offer], photos: dict[int, list[Offer]] |
     except Exception:
         pass
     try:   # seller reviews (agora.reviews), cache only: a "watch out" shop is capped under the risky line
-        from agora import reviews
-        out += reviews.signals_for(o)
+        from agora import reviews, trust
+        # a marketplace PLATFORM's rating (marktplaats ★1.2 from its own users' gripes) labels the platform; it
+        # never sets aside the individual listings of its many sellers, each is judged on its own
+        if not trust.is_marketplace(o.url):
+            out += reviews.signals_for(o)
     except Exception:
         pass
     return out
@@ -896,6 +900,72 @@ def _horizon_cost(o: Offer, months: int) -> tuple[float, list[tuple[str, float]]
     return total, [(f"rent {fmt(p)}/{unit} x {months} mo", round(total, 2))], f"rental at {fmt(p)} per {unit}"
 
 
+# ---------------------------------------------------------------- PERIOD PRICES (subscriptions, retainers, rates)
+# A plan per month is not an owned thing: nothing to resell, and its cost is the price per its period. Offers are
+# compared like with like: recurring plans by their monthly price (a yearly plan / 12), hourly rates with hourly
+# rates, project prices with project prices.
+
+PERIOD_UNITS = {"month": "month", "mo": "month", "monthly": "month", "kk": "month", "year": "year", "yr": "year",
+                "annual": "year", "yearly": "year", "week": "week", "wk": "week", "hour": "hour", "h": "hour",
+                "day": "day", "job": "job", "project": "job", "once": "job", "visit": "job"}
+PER_MONTH = {"month": 1.0, "year": 1 / 12, "week": 52 / 12}
+PERIOD_GROUP = {"month": "month", "year": "month", "week": "month", "hour": "hour", "day": "day", "job": "job"}
+PERIOD_WORD = {"month": "month", "year": "year", "week": "week", "hour": "hour", "day": "day", "job": "project"}
+_SYM = {"EUR": "€", "USD": "$", "GBP": "£"}
+
+
+def money(amount: float, currency: str | None) -> str:
+    """The price as the provider states it: '$4,995', '€49.90', '1,200 SEK'."""
+    cur = (currency or "EUR").upper()
+    num = f"{amount:,.2f}" if abs(amount) < 100 and round(amount, 2) != round(amount) else f"{amount:,.0f}"
+    return f"{_SYM[cur]}{num}" if cur in _SYM else f"{num} {cur}"
+
+
+def period_of(o: Offer) -> str | None:
+    """month | year | week | hour | day | job for a period-priced offer (a plan, a rate), else None."""
+    unit = (o.unit or (o.raw.get("period") if isinstance(o.raw, dict) else None) or "").lower().strip()
+    return PERIOD_UNITS.get(unit)
+
+
+def is_periodic(o: Offer) -> bool:
+    """A service / subscription price per period (never resold): a long-tail plan or a service rate."""
+    return period_of(o) is not None and (o.condition == "service" or bool(o.raw.get("longtail")))
+
+
+def period_cost(o: Offer, months: int = DEFAULT_MONTHS) -> TrueCost | None:
+    """A plan or rate costed per its period, nothing to resell. Recurring plans: per_month_eur = the monthly
+    price (a yearly plan / 12) and total_eur = `months` of it; hour / day / project: per_month_eur = the
+    price per that unit (TrueCost.per says which), total_eur = one unit."""
+    p = price_of(o)
+    per = period_of(o)
+    if p is None or per is None:
+        return None
+    o.raw["period_group"] = PERIOD_GROUP[per]
+    stated = money(o.price if o.price is not None else p, o.currency if o.price is not None else "EUR")
+    word = PERIOD_WORD[per]
+    in_eur = "" if (o.currency or "EUR").upper() == "EUR" else f" (≈ {fmt(p)})"
+    plan = (o.raw.get("plan") or {}).get("name") if isinstance(o.raw.get("plan"), dict) else None
+    named = f" ({plan})" if plan else ""
+    conf = "medium" if o.read_via in ("search_highlight", "longtail_registry") else "high"
+    if per in PER_MONTH:
+        monthly = p * PER_MONTH[per]
+        total = monthly * months
+        receipt = [(f"{stated}/{word}{in_eur}{named}", round(p, 2))]
+        if per != "month":
+            receipt.append((f"= {fmt(monthly)}/month", 0.0))
+        receipt.append((f"{months} months", round(total, 2)))
+        basis = (f"subscription at {stated} per {word}{in_eur}: nothing to own or resell; "
+                 f"{months} months ≈ {fmt(total)}")
+        return TrueCost(months, round(p, 2), 0.0, None, round(total, 2), round(monthly, 2), conf,  # type: ignore[arg-type]
+                        receipt, basis, per="month")
+    receipt = [(f"{stated} per {word}{in_eur}{named}", round(p, 2))]
+    basis = {"hour": "hourly rate as stated: the total depends on the hours the work takes",
+             "day": "day rate as stated: the total depends on the days the work takes",
+             "job": "fixed price per project as stated"}[per]
+    return TrueCost(0, round(p, 2), 0.0, None, round(p, 2), round(p, 2), conf, receipt, basis,  # type: ignore[arg-type]
+                    per=per)
+
+
 _STEP_DOWN = {"high": "medium", "medium": "low", "low": "low"}
 RESALE_CAP = 0.9      # resale never above 90% of the sticker: no €0/mo ownership
 
@@ -909,6 +979,8 @@ def estimate_true_cost(
     p = price_of(o)
     if p is None:
         return None
+    if is_periodic(o):                 # a monthly plan is not an owned thing: no resale, priced per period
+        return period_cost(o, months)
     cat = category or category_for(o.title)
     imports = import_lines(o)
     vat = round(sum(v for _, v in imports), 2)
@@ -1070,7 +1142,7 @@ def job_size_m2(need: Need) -> float | None:
 
 def _gross_up(o: Offer, need: Need, rate: float | None = None) -> None:
     """Some providers advertise the price after the household deduction. Compare everyone gross."""
-    if need.kind != "service" or o.price_eur is None or "net_of_deduction_eur" in o.raw:
+    if not is_service(need) or o.price_eur is None or "net_of_deduction_eur" in o.raw:
         return
     if AFTER_DEDUCTION.search(o.title or ""):
         r = rate or HOUSEHOLD.rate
@@ -1384,7 +1456,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                             depreciation)
     for o in t.offers:
         price_of(o)
-    if need.kind == "service":
+    if is_service(need):
         t.offers[:] = _merge_net_gross(t.offers)
         for o in t.offers:
             _gross_up(o, need, o.raw.get("page_deduction_rate"))
@@ -1393,7 +1465,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
     for o in t.offers:
         discount = discount_check(o, t.offers, history=history)
         o.trust, new_flags = assess_trust(o, _peers_for(o, t.offers, everyone or []), photos=photos, discount=discount,
-                                          floor=0.0 if need.kind == "service" else floor)
+                                          floor=0.0 if is_service(need) else floor)
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
             o.flags.append(note)
@@ -1404,10 +1476,13 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
             o.flags.append("recurring-contract price (no one-time price on the page)")
         if (n := seen.get(o.source, 0)) >= 2:
             o.flags.append(f"seen before in {n} hunts")
-        if need.kind != "service":
+        if not is_service(need) and not is_periodic(o):
             _shipping_flags(o, need)
     for o in t.offers:
-        if need.kind == "service":
+        if priced_per_period(need):
+            o.true_cost = period_cost(o, months)
+            continue
+        if is_service(need):
             o.true_cost = service_cost(o, need)
             continue
         if _disputed(o) or (any(f.startswith("too good to be true") for f in o.flags)
@@ -1416,7 +1491,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
             o.flags.append("not costed: price unconfirmed (far off the market or disputed)")
             continue
         o.true_cost = estimate_true_cost(o, t.offers, months, cat)
-        o.haggle = make_haggle(o, t.offers, t.name, cat)
+        o.haggle = None if is_periodic(o) else make_haggle(o, t.offers, t.name, cat)
 
 
 def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, history: bool = True,
@@ -1436,10 +1511,10 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     cat_of: dict[int, Category] = {}
     offers_of: dict[int, list[Offer]] = {}
     band_of: dict[int, dict[str, Any]] = {}
-    floor = market_floor(everyone) if need.kind != "service" else 0.0   # across Things: a lone part is its own Thing
+    floor = market_floor(everyone) if not is_service(need) else 0.0   # across Things: a lone part is its own Thing
     for t in things:
         _judge_offers(need, t, months, seen, depreciation, history=history, photos=photos, floor=floor,
-                      everyone=everyone if need.kind != "service" else None)
+                      everyone=everyone if not is_service(need) else None)
         cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                                 depreciation)
         bands = price_band(t, history=history)
@@ -1462,7 +1537,7 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
             and not o.raw.get("pickup_abroad")] or [o for o in priced if not o.raw.get("pickup_abroad")] or priced
     # bulky things: the home country is the pickable set; listings abroad are shown as "also in the EU"
     eu_extra: list[Offer] = []
-    if need.kind != "service" and _bulky(need):
+    if not is_service(need) and _bulky(need):
         home_set = [o for o in good if not o.raw.get("abroad")]
         if home_set:
             eu_extra = [o for o in good if o.raw.get("abroad")]
@@ -1475,7 +1550,11 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     best_tc = min(owned, key=lambda o: o.true_cost.per_month_eur) if owned else None  # type: ignore[union-attr]
     lines: list[str] = []
 
-    if need.kind == "service" and best_tc is not None:
+    periodic = [o for o in owned if o.raw.get("period_group")] if priced_per_period(need) else []
+    if periodic:
+        headline, best_tc = _period_verdict(need, periodic, priced, months, lines)
+        best_link = best_tc
+    elif is_service(need) and best_tc is not None:
         headline = _service_headline(need, best_tc)
         # cheapest job first; at most 2 lines per site (one directory's ten cleaners do not fill the comparison)
         per_site: dict[str, int] = {}
@@ -1512,7 +1591,7 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
         if no_unit:
             lines.append(f"{no_unit} more offer{'s' * (no_unit != 1)} without a clear unit (per hour / m² / job)")
         best_link = best_tc
-    elif need.kind == "service" or best_tc is None:
+    elif is_service(need) or best_tc is None:
         unit = f"/{cheapest.unit}" if cheapest.unit else ""
         headline = f"Cheapest: {fmt(_landed(cheapest))}{unit} at {cheapest.source}."
         if len(good) > 1:
@@ -1522,6 +1601,13 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
         # Products: people want the full price they pay once (tag + shipping + import + fees), so the
         # pick is the lowest ALL-IN price among offers you can surely buy. Owning cost per month stays
         # a secondary line (true_cost on every offer), never the headline.
+        plans = [o for o in good if is_periodic(o)]
+        if plans and len(plans) < len(good):
+            good = [o for o in good if not is_periodic(o)]
+            cheapest = min(good, key=_landed)
+            pl = min(plans, key=lambda o: o.true_cost.per_month_eur if o.true_cost else 1e12)
+            lines.append(f"also as a service / subscription: {_period_price(pl)} at {pl.source} "
+                         "(priced per period, not compared with buying one)")
         sure = [o for o in good if surely_buyable(o)]
         best_all = min(sure or good, key=_landed)
         for o in good:
@@ -1640,6 +1726,83 @@ def all_in_headline(good: list[Offer], best: Offer, lines: list[str]) -> str:
         tail = ", ".join(others)
         head += f" {tail[0].upper()}{tail[1:]}."
     return head
+
+
+GROUP_WORDS = {
+    "month": re.compile(r"\b(?:subscriptions?|monthly|per month|a month|/mo|retainer|unlimited|plans?|membership|saas|"
+                        r"kuukausi\w*|monatlich|abo\w*)\b", re.I),
+    "hour": re.compile(r"\b(?:hourly|per hour|an hour|/h|tuntihinta|stundensatz)\b", re.I),
+    "job": re.compile(r"\b(?:project|one[- ]off|one[- ]time|fixed price|website|logo|kertamaksu|projekt\w*)\b", re.I),
+}
+GROUP_ORDER = ("month", "job", "hour", "day")
+GROUP_NOUN = {"month": "monthly plans", "job": "project prices", "hour": "hourly rates", "day": "day rates"}
+
+
+def lead_group(need: Need, groups: dict[str, list[Offer]]) -> str:
+    """Which period the comparison is in: what the need asks for ('subscription' -> monthly, 'project' ->
+    per project), else the period most offers state (ties: monthly, project, hourly, daily)."""
+    for g, rx in GROUP_WORDS.items():
+        if g in groups and rx.search(need.raw or need.thing):
+            return g
+    return max(groups, key=lambda g: (len(groups[g]), -GROUP_ORDER.index(g) if g in GROUP_ORDER else -9))
+
+
+def _period_price(o: Offer) -> str:
+    """'$4,995/month', '€1,200/year (≈ €100/month)', '€85 per hour', '€2,500 per project'."""
+    per = period_of(o) or "job"
+    stated = money(o.price if o.price is not None else (o.price_eur or 0), o.currency if o.price is not None else "EUR")
+    if per in PER_MONTH:
+        tail = f" (≈ {fmt(o.true_cost.per_month_eur)}/month)" if per != "month" and o.true_cost else ""
+        return f"{stated}/{PERIOD_WORD[per]}{tail}"
+    return f"{stated} per {PERIOD_WORD[per]}"
+
+
+def _year_total(o: Offer) -> str:
+    """'≈ $59,940 a year' in the offer's own currency (EUR added when it is another one)."""
+    per = period_of(o)
+    if per not in PER_MONTH or o.price is None:
+        return ""
+    yearly = o.price * PER_MONTH[per] * 12
+    eur_note = "" if (o.currency or "EUR").upper() == "EUR" or o.price_eur is None else \
+        f" (≈ {fmt((o.price_eur or 0) * PER_MONTH[per] * 12)})"
+    return f"≈ {money(yearly, o.currency)} a year{eur_note}"
+
+
+def _period_verdict(need: Need, periodic: list[Offer], priced: list[Offer], months: int,
+                    lines: list[str]) -> tuple[str, Offer]:
+    """Subscriptions / retainers / rates: like with like. The lead period's cheapest trustworthy offer heads
+    the verdict ('$4,995/month at designjoy.co · ≈ $59,940 a year'); other periods are listed apart."""
+    groups: dict[str, list[Offer]] = {}
+    for o in periodic:
+        groups.setdefault(o.raw["period_group"], []).append(o)
+    lead = lead_group(need, groups)
+    ranked = sorted(groups[lead], key=lambda o: o.true_cost.per_month_eur)  # type: ignore[union-attr]
+    best = ranked[0]
+    year = _year_total(best)
+    headline = f"{_period_price(best)} at {best.source}" + (f" · {year}" if year else "") + "."
+    if len(ranked) > 1:
+        per_site: dict[str, int] = {}
+        shown = 0
+        for o in ranked:
+            if shown >= 5 or per_site.get(o.source, 0) >= 1:
+                continue
+            per_site[o.source] = 1
+            shown += 1
+            plan = (o.raw.get("plan") or {}).get("name") if isinstance(o.raw.get("plan"), dict) else None
+            lines.append(f"{o.source}: {_period_price(o)}" + (f" ({plan})" if plan else ""))
+        med = statistics.median(o.true_cost.per_month_eur for o in ranked)  # type: ignore[union-attr]
+        unit = "/month" if lead == "month" else f" per {PERIOD_WORD.get(lead, lead)}"
+        lines.append(f"{len(ranked)} {GROUP_NOUN.get(lead, 'offers')} compared, median {fmt(med)}{unit}")
+    for g in GROUP_ORDER:
+        if g == lead or g not in groups:
+            continue
+        o = min(groups[g], key=lambda x: x.true_cost.per_month_eur)  # type: ignore[union-attr]
+        lines.append(f"{GROUP_NOUN[g]} (not compared with {GROUP_NOUN.get(lead, lead)}): from {_period_price(o)} "
+                     f"at {o.source}" + (f", {len(groups[g])} in all" if len(groups[g]) > 1 else ""))
+    loose = len([o for o in priced if o.true_cost is None])
+    if loose:
+        lines.append(f"{loose} more offer{'s' * (loose != 1)} without a clear period (per month / hour / project)")
+    return headline, best
 
 
 def _service_headline(need: Need, best: Offer) -> str:

@@ -171,6 +171,12 @@ def test_small_budget_still_covers_every_lane(monkeypatch):
 
 
 def test_wholesale_and_price_trackers_are_not_shops():
-    assert dv.is_non_shop("https://merkandi.com/products/iphone-15-128gb/1") is not None
+    # owner: listings are judged one by one, not whole sites: merkandi's page is read, its lot title rejects it
+    from agora import resolve
+    from agora.models import Offer
+    assert dv.is_non_shop("https://merkandi.com/products/iphone-15-128gb/1") is None
+    lot = Offer(url="https://merkandi.com/products/iphone-15-128gb/1", source="merkandi.com",
+                title="Wholesale lot 50 pcs iPhone 15 128GB", price=20000, currency="EUR")
+    assert resolve.not_an_offer(lot) == "a wholesale lot, not one item"
     assert dv.is_non_shop("https://www.mobiledepot.eu/wholesale/exclusive-stock/x") is not None
     assert dv.is_non_shop("https://www.flipifyapp.com/price-tracker/apple-iphone-15") is not None

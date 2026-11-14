@@ -2,7 +2,7 @@
 Written at Junction 2026.
 
 Lanes follow `need.conditions` (new / refurbished / used / rental) plus a `service` lane when
-need.kind == "service". Each lane gets 1-3 query variants: an English one with a country filter,
+is_service(need). Each lane gets 1-3 query variants: an English one with a country filter,
 one in the local language, and (deep mode) one aimed at EU marketplaces.
 HOME COUNTRY (env AGORA_COUNTRY, default "fi"): with no place in the query, the used lane still gets a
 local-language variant filtered to the home country (tori.fi, huuto.net for fi), and home shops rank first. Results are deduped by
@@ -24,6 +24,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from agora import contextdev
 from agora.models import Event, Need
+from agora.need import is_service, priced_per_period
 from agora.reader import LANE_WORDS, domain_of, lane_hint, remember_source
 
 PER_DOMAIN = 2
@@ -192,8 +193,8 @@ JUNK_DOMAINS = ("alibaba.com", "youtube.com", "youtu.be", "reddit.com", "wikiped
                 "dpreview.com", "rtings.com", "techradar.com", "theverge.com", "cnet.com", "tomsguide.com",
                 "pcmag.com", "camelcamelcamel.com", "pricespy.", "hintaopas.fi", "idealo.", "pricerunner.",
                 "linkedin.com", "stackexchange.com", "fandom.com", "imdb.com",
-                # B2B wholesale + price trackers: not something a person can just buy
-                "merkandi.com", "gsmexchange.com", "flipifyapp.com", "keepa.com", "pricecharting.com",
+                # price trackers: they sell nothing (B2B wholesale lots are judged per listing in agora.resolve)
+                "flipifyapp.com", "keepa.com", "pricecharting.com",
                 # search-engine ad redirects
                 "duckduckgo.com", "bing.com",
                 # price comparison / trackers ('ab € 999' is not an offer)
@@ -397,7 +398,7 @@ def expected_yield(url: str, kind: str, lane: str, title: str = "", snippet: str
     """How many offers reading this page should give, roughly: the order to read pages in when a search
     returns more than the hunt can read. A service directory lists many providers; a page whose snippet
     shows a rate will price; a guide or a quote form usually will not."""
-    if kind == "service":
+    if kind in ("service", "digital"):
         if is_service_directory(url, title):
             from agora.domainstats import list_yield
             seen = list_yield(domain_of(url))
@@ -423,7 +424,7 @@ def paid_priority(url: str, kind: str, lane: str, title: str = "", snippet: str 
 
 def lanes_for(need: Need) -> list[str]:
     lanes: list[str] = []
-    if need.kind == "service":
+    if is_service(need):
         lanes.append("service")
         if "rental" in need.conditions:
             lanes.append("rental")
@@ -502,6 +503,24 @@ def tokens_available() -> float:
         return full
 
 
+PERIOD_LOCAL = {"fi": "hinnasto kuukausi", "de": "Preise pro Monat", "se": "pris per månad", "nl": "prijzen per maand",
+                "fr": "tarifs par mois", "dk": "priser pr måned", "no": "priser per måned", "es": "precios al mes",
+                "it": "prezzi al mese", "pl": "cennik miesięcznie", "pt": "preços por mês", "cz": "ceník měsíčně"}
+
+
+def period_plan(need: Need, cc: str | None) -> list[tuple[str, str | None]]:
+    """A subscription / retainer / B2B service (need.priced_per_period): providers' pricing pages, not a
+    rate per hour and not the local trades' service marketplaces (tori.fi lists no bookkeepers' plans).
+    English first; the asked-for country's language second (its own providers are what the person wants)."""
+    thing_q = _thing_q(need)
+    where = need.where or ""
+    out = [(re.sub(r"\s+", " ", f"{thing_q} pricing plans {where}").strip(), cc)]
+    lang = lang_of(need, cc)
+    if lang in PERIOD_LOCAL:
+        out.append((re.sub(r"\s+", " ", f"{thing_q} {where} {PERIOD_LOCAL[lang]}").strip(), cc))
+    return out
+
+
 def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[str, str | None]]:
     """The live plan: one (query, country filter) per lane.
     new = the English buy query (asked-for country); refurbished = open to all of Europe (backmarket, refurbed,
@@ -510,6 +529,8 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
     service = English + local (a service hunt has only that lane)."""
     cc = country_of(need)
     avail = tokens if tokens is not None else tokens_available()
+    if lane == "service" and priced_per_period(need):
+        return period_plan(need, cc)
     if lane == "service":
         out_s: list[Any] = list(query_plan(need, lane, 2)[:2])
         market = service_market_query(need, cc)
@@ -572,7 +593,7 @@ def is_list_page(url: str) -> bool:
 def title_gate(need: Need, title: str) -> str | None:
     """Free pre-read check on the search title: a different model or an accessory is never read
     (a paid read would just be thrown away by resolve). Services and vague titles pass."""
-    if need.kind == "service" or not title:
+    if is_service(need) or not title:
         return None
     try:
         from agora import resolve
@@ -624,7 +645,7 @@ def direct_enabled() -> bool:
     return os.environ.get("AGORA_DIRECT", "1").strip().lower() not in ("0", "off", "false", "no")
 
 
-def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int) -> dict[str, list[Any]]:
+def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int, pages: int = 1) -> dict[str, list[Any]]:
     """lane -> [marketplaces.Direct]: the marketplaces' own search pages, read without a web search. Used lane
     first (its pages yield the most), then refurbished, then new; a paid page only while the bucket has
     tokens left after the planned searches (agora.marketplaces.direct_pages)."""
@@ -638,14 +659,22 @@ def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int) ->
     for lane in ("used", "refurbished", "new"):
         if lane not in lanes:
             continue
-        pages = marketplaces.direct_pages(_thing_q(need), lane, cc, home, left)
-        left -= sum(1 for d in pages if d.paid)
-        if pages:
-            out[lane] = pages
+        got = marketplaces.direct_pages(_thing_q(need), lane, cc, home, left, pages=pages)
+        left -= sum(1 for d in got if d.paid)
+        if got:
+            out[lane] = got
     return out
 
 
 EU_USED_SITES = ("kleinanzeigen", "vinted")
+
+
+def _listicle(url: str, title: str) -> bool:
+    try:
+        from agora import longtail
+        return longtail.is_listicle(url, title)
+    except Exception:
+        return False
 
 
 def _note_listicle(url: str, title: str, snippet: str) -> None:
@@ -659,7 +688,7 @@ def _note_listicle(url: str, title: str, snippet: str) -> None:
 
 
 async def discover(need: Need, *, depth: int | None = None, max_sources: int = 40,
-                   settle_s: float = SETTLE_S, tokens: float | None = None) -> AsyncIterator[Event]:
+                   settle_s: float = SETTLE_S, tokens: float | None = None, pages: int = 1) -> AsyncIterator[Event]:
     """Need -> stream of lane / source / skip / error Events. Searches run concurrently (the shared
     rate limiter in contextdev paces them). Results are pooled for up to `settle_s`, then sources
     are emitted round-robin across lanes, best first (home country > EU > product page > list page),
@@ -667,7 +696,8 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
     lane gets at most its fair share of `max_sources`, so a fast new-shop search cannot fill the hunt
     before the used marketplaces answer.
 
-    depth: None = the lean live plan (one query per lane, see lean_plan); 1-3 = query_plan variants."""
+    depth: None = the lean live plan (one query per lane, see lean_plan); 1-3 = query_plan variants.
+    pages: 'Compare more' (hunt depth 2-3): results pages 2..pages+1 of the paid marketplaces while tokens allow."""
     t0 = time.monotonic()
 
     def ev(type_: str, **data: Any) -> Event:
@@ -687,7 +717,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
         return x[0] == re.sub(r"\s+", " ", EU_USED.format(t=_thing_q(need))).strip()
     n_search = sum(1 for lane, qp in plans.items() for x in qp if not (lane == "used" and eu_used(x)))
     # the marketplaces' own search pages (no web search spent): lean live plan only
-    directs = plan_direct(need, lanes, float(tokens or 0), n_search) if depth is None else {}
+    directs = plan_direct(need, lanes, float(tokens or 0), n_search, pages) if depth is None else {}
     if any(d.paid and d.site.key.split("_")[0] in EU_USED_SITES for d in directs.get("used", [])):
         plans["used"] = [x for x in plans["used"] if not eu_used(x)]   # read them directly instead
     if need.kind == "product" and depth is None and direct_enabled():
@@ -754,7 +784,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
 
     def refuse(url: str, dom: str) -> str | None:
         """Why this page may not be emitted now (per-domain caps), else None."""
-        if need.kind == "service" and any(dom_match(dom, d) for d in SERVICE_DIRECTORIES):
+        if is_service(need) and any(dom_match(dom, d) for d in SERVICE_DIRECTORIES):
             if items.get(dom, 0) + lists.get(dom, 0) >= PER_DOMAIN:
                 return f"already {PER_DOMAIN} pages from {dom}"
             return None
@@ -845,9 +875,10 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                     seen.add(key)
                     title = r.get("title") or ""
                     # 'The best 10 home cleaners in Tilburg' is a directory to a service hunt, not a listicle
-                    directory = need.kind == "service" and is_service_directory(url, title)
+                    directory = is_service(need) and is_service_directory(url, title) \
+                        and not (priced_per_period(need) and _listicle(url, title))   # B2B: 'best X' = listicle
                     reason = is_non_shop(url, "" if directory else title) or title_gate(need, title)
-                    if not reason and need.kind == "service" and job_ad(
+                    if not reason and is_service(need) and job_ad(
                             url, title, contextdev.highlight_text(r) or r.get("description") or ""):
                         reason = "job ad (a wage, not a price)"
                     if reason:

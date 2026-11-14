@@ -1,32 +1,77 @@
 key,name,domain,countries,lanes,categories,kind,status,template,template_via,free_fetch,listing,links,prices,itemlist,yield,reason
 1stdibs_com,1stDibs,1stdibs.com,eu,used,home furniture collectibles,specialist,search_found_unverified,https://www.1stdibs.com/search/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 2dehands_be,2dehands / 2ememain,2dehands.be,be,used,general,classifieds,verified_free,https://www.2dehands.be/q/{q}/,known,True,"^/v/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",16,71,False,0.635,
+2ememain_be,2ememain,2ememain.be,be,used,general,classifieds,search_found_unverified,https://www.2ememain.be/lrp/api/lrp-url-redirect?categoryId=0&distance=0&query={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+3byggetilbud_dk,3byggetilbud,3byggetilbud.dk,dk,service,trades renovation,service,search_found_unverified,https://www.3byggetilbud.dk/?s={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
 999_md_ro,999.md,999.md,md,used,general,classifieds,search_found_unverified,https://999.md/ro/search?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 abebooks_com,AbeBooks,abebooks.com,eu,used,books collectibles,specialist,search_found_unverified,https://www.abebooks.com/servlet/SearchResults?sts=t&searchprefs=on&kn={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
+aboutyou_de,ABOUT YOU,aboutyou.de,de,new,fashion shoes,retailer,blocked,https://www.aboutyou.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 adverts_ie,Adverts.ie,adverts.ie,ie,used,general,classifieds,blocked,https://www.adverts.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 agorani_com,Agorani,agorani.com,cy,used,general,classifieds,search_found_unverified,https://www.agorani.com/search?q={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
+ahlens_se,Åhléns,ahlens.se,se,new,fashion beauty home,retailer,search_found_unverified,https://www.ahlens.se/?search={q},form,False,^/black\-week/inredning/varumarken/?\?(?:.*&)?custom\.product_categories=,2,6,False,0.05,results page without listing links for a plain fetch
 alio_lt,Alio.lt,alio.lt,lt,used,general,classifieds,verified_free,https://www.alio.lt/paieska/{q}/,searchaction,True,^/skelbimai/[^/?#]+/[A-Za-z0-9]+\.html(?:[/?#]|$),13,27,False,0.658,
+allegro_pl,Allegro,allegro.pl,pl,new used,general electronics home fashion,marketplace,blocked,https://allegro.pl/szukaj?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 allegrolokalnie_pl,Allegro Lokalnie,allegrolokalnie.pl,pl,used,general,marketplace,verified_free,https://allegrolokalnie.pl/oferty/q/{q},searchaction,True,"^/oferta/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",50,55,True,0.996,
+allovoisins_com,AlloVoisins,allovoisins.com,fr,service rental,handyman tools general,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 alo_bg,Alo.bg,alo.bg,bg,used,general,classifieds,verified_free,https://www.alo.bg/searchq/?q={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",30,38,False,0.883,
+alternate_de,Alternate,alternate.de,de,new,computers electronics,retailer,search_found_unverified,https://www.alternate.de/listing.xhtml?q={q},form,False,"^/lenovo/[^/?#]*\d{3,}[^/?#]*/html/product/\d+(?:[/?#]|$)",0,42,False,0.0,results page without listing links for a plain fetch
+alternate_nl,Alternate,alternate.nl,nl,new,computers electronics,retailer,search_found_unverified,https://www.alternate.nl/listing.xhtml?q={q},form,False,"^/lenovo/[^/?#]*\d{3,}[^/?#]*/html/product/\d+(?:[/?#]|$)",0,30,False,0.0,results page without listing links for a plain fetch
+altex_ro,Altex,altex.ro,ro,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+alza_cz,Alza,alza.cz,cz,new,electronics computers phones appliances general,retailer,blocked,https://www.alza.cz/hledat?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+alza_hu,Alza,alza.hu,hu,new,electronics computers,retailer,blocked,https://www.alza.hu/kereses?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+alza_sk,Alza,alza.sk,sk,new,electronics computers phones appliances,retailer,blocked,https://www.alza.sk/hladat?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+amazon_co_uk,Amazon.co.uk,amazon.co.uk,gb,new used,general electronics home books,marketplace,verified_free,https://www.amazon.co.uk/s/ref=nb_sb_noss?field-keywords={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*/dp/[A-Za-z0-9]+(?:[/?#]|$)",30,289,False,0.87,
 amazon_co_uk_amazonresale,Amazon Resale,amazon.co.uk,gb eu,used refurb,electronics computers general,resale_retailer,verified_free,https://www.amazon.co.uk/s/ref=nb_sb_noss?field-keywords={q},form,True,^/[^/?#]+/dp/[A-Za-z0-9]+(?:[/?#]|$),49,104,False,0.735,
 amazon_co_uk_renewed,Amazon Renewed,amazon.co.uk,gb eu,refurb,electronics computers,refurbisher,verified_free,https://www.amazon.co.uk/s/ref=nb_sb_noss?field-keywords={q},form,True,^/[^/?#]+/dp/[A-Za-z0-9]+(?:[/?#]|$),49,104,False,0.735,
-amazon_de,Amazon.de,amazon.de,de,new used,general electronics home books toys,marketplace,verified_free,https://www.amazon.de/s?k={q},known,True,^/\-/en/[^/?#]+/b/?(?:$|\?),13,135,False,0.708,
+amazon_de,Amazon.de,amazon.de,de,new used,general electronics home books toys,marketplace,search_found_unverified,https://www.amazon.de/s?k={q},known,False,^/gp/offer\-listing/[A-Za-z0-9]+(?:[/?#]|$),46,391,False,0.63,results page without listing links for a plain fetch
+amazon_es,Amazon.es,amazon.es,es,new used,general electronics home books,marketplace,verified_free,https://www.amazon.es/s?k={q},pattern,True,"^/[^/?#]*\d{3,}[^/?#]*/dp/[A-Za-z0-9]+(?:[/?#]|$)",29,414,False,0.9,
+amazon_fr,Amazon.fr,amazon.fr,fr,new used,general electronics home books,marketplace,search_found_unverified,https://www.amazon.fr/s?k={q},pattern,False,^/clk/?\?(?:.*&)?pd_rd_r=,70,433,False,0.648,results page without listing links for a plain fetch
+amazon_it,Amazon.it,amazon.it,it,new used,general electronics home books,marketplace,verified_free,https://www.amazon.it/s?k={q},pattern,True,"^/[^/?#]*\d{3,}[^/?#]*/dp/[A-Za-z0-9]+(?:[/?#]|$)",19,324,False,0.83,
+amazon_nl,Amazon.nl,amazon.nl,nl,new,general electronics home books,marketplace,verified_free,https://www.amazon.nl/s?k={q},pattern,True,"^/[^/?#]*\d{3,}[^/?#]*/dp/[A-Za-z0-9]+(?:[/?#]|$)",43,366,False,0.9,
 andelemandele_lv,Andele Mandele,andelemandele.lv,lv,used,fashion,specialist,search_found_unverified,https://www.andelemandele.lv/perles/?search={q},searchaction,False,^/site/click/?\?(?:.*&)?campaign=,1,25,False,0.025,results page without listing links for a plain fetch
 anibis_ch,anibis.ch,anibis.ch,ch,used,general,classifieds,blocked,https://www.anibis.ch/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+ao_com,AO,ao.com,gb,new,appliances electronics,retailer,blocked,https://ao.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+apotea_se,Apotea,apotea.se,se,new,health beauty,retailer,blocked,https://www.apotea.se/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 app_muxti_cy,MUXTI,app.muxti.cy,cy,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 apple_com,Apple Certified Refurbished,apple.com,eu,used refurb,electronics computers,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+argep_hu,Árgép,argep.hu,hu,new,electronics,comparison,blocked,https://www.argep.hu/kereses?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+argos_co_uk,Argos,argos.co.uk,gb,new,general electronics home toys,retailer,blocked,https://www.argos.co.uk/search/?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+aroundhome_de,Aroundhome,aroundhome.de,de,service,renovation trades,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+arukereso_hu,Árukereső,arukereso.hu,hu,new,general electronics appliances,comparison,blocked,https://www.arukereso.hu/kereses?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 asgoodasnew_de,asgoodasnew,asgoodasnew.de,de eu,used refurb,electronics computers,resale_retailer,search_found_unverified,https://asgoodasnew.de//index.php?cl=search&searchparam={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+asos_com,ASOS,asos.com,gb,new,fashion shoes,retailer,verified_free,https://www.asos.com/search/{q}?q={q}&CTARef=slsb,searchaction,True,^/adidas\-originals/[^/?#]+/prd/\d+(?:[/?#]|$),65,117,False,0.9,
+athome_lu,atHome,athome.lu,lu,rental service,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+auchan_fr,Auchan,auchan.fr,fr,new,general home electronics,retailer,search_found_unverified,http://www.auchan.fr/recherche?text={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
 auctionet_com_en,Auctionet,auctionet.com,eu,used,home furniture collectibles,auction,search_found_unverified,https://auctionet.com/?q={q},form,False,^/fi/search/?\?(?:.*&)?company_id=,71,0,False,0.5,results page without listing links for a plain fetch
 aukro_cz,Aukro,aukro.cz,cz sk,used,collectibles general,marketplace,verified_free,https://aukro.cz/search?text={q},pattern,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",8,8,True,0.675,
 autoscout24_com,AutoScout24,autoscout24.com,eu,used,cars vehicles,vehicles,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+autoscout24_de,AutoScout24,autoscout24.de,de,used,cars vehicles,vehicles,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+autoscout24_it,AutoScout24,autoscout24.it,it,used,cars vehicles,vehicles,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+autotrader_co_uk,Auto Trader,autotrader.co.uk,gb,used,cars vehicles,vehicles,blocked,https://www.autotrader.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 autotrader_co_uk_cars_used,Auto Trader UK,autotrader.co.uk,gb,used,cars vehicles,vehicles,blocked,https://www.autotrader.co.uk/cars/used/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 autovit_ro,Autovit.ro,autovit.ro,ro,used,cars vehicles,vehicles,verified_free,https://www.autovit.ro/anunturi/?q={q}&amp%3Butm_source=google&amp%3Butm_medium=search&amp%3Butm_campaign=search_organic,searchaction,True,^/autoturisme/anunt/[^/?#]+\.html(?:[/?#]|$),29,51,True,0.984,
 avito_ru,Avito,avito.ru,ru,used,general,classifieds,blocked,https://www.avito.ru/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+azerty_nl,Azerty,azerty.nl,nl,new,computers electronics,retailer,blocked,https://azerty.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+backmarket_at,Back Market,backmarket.at,at,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.at/de-at/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_be,Back Market,backmarket.be,be,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.be/fr-be/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_co_uk,Back Market,backmarket.co.uk,gb,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.co.uk/en-gb/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 backmarket_com,Back Market,backmarket.com,eu,refurb,electronics computers,refurbisher,search_found_unverified,http://www.backmarket.com/en-us/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 backmarket_de,Back Market,backmarket.de,de,refurb,phones computers electronics,refurbisher,search_found_unverified,https://www.backmarket.de/de-de/search?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_es,Back Market,backmarket.es,es,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.es/es-es/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_fr,Back Market,backmarket.fr,fr,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.fr/fr-fr/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_ie,Back Market,backmarket.ie,ie,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.ie/en-ie/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_it,Back Market,backmarket.it,it,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.it/it-it/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_nl,Back Market,backmarket.nl,nl,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.nl/nl-nl/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+backmarket_pt,Back Market,backmarket.pt,pt,refurb,phones computers electronics,refurbisher,search_found_unverified,http://www.backmarket.pt/pt-pt/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 bakeca_it,Bakeca,bakeca.it,it,used,general,classifieds,blocked,https://www.bakeca.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 baraholka_onliner_by,Onliner Baraholka,baraholka.onliner.by,by,used,electronics computers general,classifieds,search_found_unverified,https://baraholka.onliner.by/search.php?q={q},form,False,^/viewtopic\.php/?\?(?:.*&)?t=,61,0,False,0.508,results page without listing links for a plain fetch
+bark_com_en_gb,Bark,bark.com,gb ie,service,trades cleaning tutoring handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+batmaid_ch,Batmaid,batmaid.ch,ch,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+bauhaus_at,Bauhaus,bauhaus.at,at,new,diy tools garden,retailer,blocked,https://www.bauhaus.at/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 bauhaus_fi,Bauhaus,bauhaus.fi,fi,new,diy tools garden home,retailer,search_found_unverified,https://bauhaus.fi/catalogsearch/result?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+bauhaus_info,Bauhaus,bauhaus.info,de,new,diy tools garden,retailer,blocked,https://www.bauhaus.info/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+bauhaus_se,Bauhaus,bauhaus.se,se,new,diy tools garden,retailer,search_found_unverified,https://www.bauhaus.se/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+baur_de,BAUR,baur.de,de,new,general home fashion,retailer,verified_free,https://www.baur.de/s/{q}/?ssb=,searchaction,True,^/p/[A-Za-z0-9]+(?:[/?#]|$),72,19,True,0.85,
 bazar_bg,Bazar.bg,bazar.bg,bg,used,general,classifieds,verified_free,https://bazar.bg/obiavi?q={q},searchaction,True,"^/[^/?#]*\d{3,}[^/?#]*/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",33,65,True,1.0,
 bazar_sk,Bazar.sk,bazar.sk,sk,used,general,classifieds,verified_free,https://www.bazar.sk/vyhladavanie?p%5Bkeyword%5D={q},searchaction,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",32,124,False,0.869,
 bazaraki_com,Bazaraki,bazaraki.com,cy,used,general,classifieds,blocked,https://www.bazaraki.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
@@ -34,106 +79,384 @@ bazarla_az_en,Bazarla,bazarla.az,az,used,general,classifieds,blocked,https://baz
 bazos_cz,Bazoš Czechia,bazos.cz,cz,used,general,classifieds,search_found_unverified,https://www.bazos.cz/search.php?hledat={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
 bazos_sk,Bazoš Slovakia,bazos.sk,sk,used,general,classifieds,search_found_unverified,http://www.bazos.sk/search.php?hledat={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
 beebs_app,Beebs by Kiabi,beebs.app,fr,used,fashion kids general,specialist,blocked,https://www.beebs.app/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+beslist_nl,Beslist,beslist.nl,nl,new,general electronics home,comparison,verified_free,https://www.beslist.nl/products/r/{q}/,searchaction,True,"^/products/[^/?#]+/[^/?#]*\d{3,}[^/?#]*/c/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",204,127,True,0.822,
+betreut_at,Betreut,betreut.at,at,service,childcare eldercare petcare,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+betreut_de,Betreut,betreut.de,de,service,childcare eldercare petcare cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+bike_components_de,bike-components,bike-components.de,de,new,bikes,retailer,search_found_unverified,https://www.bike-components.de/de/s//?keywords={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+bike_discount_de,Bike-Discount,bike-discount.de,de,new,bikes,retailer,search_found_unverified,https://www.bike-discount.de/de/search?search={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 bilbasen_dk,Bilbasen,bilbasen.dk,dk,used,cars vehicles,vehicles,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+bilka_dk,Bilka,bilka.dk,dk,new,general home electronics toys,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+billiger_de,billiger.de,billiger.de,de,new,general electronics,comparison,search_found_unverified,https://www.billiger.de/search?searchstring={q}&search=1&stat=1,opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
+biltema_no,Biltema,biltema.no,no,new,auto_parts tools diy,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+biltema_se,Biltema,biltema.se,se,new,auto_parts tools diy bikes,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 bland_is,Bland.is,bland.is,is,used,general,classifieds,verified_free,https://bland.is/classified/?q={q},opensearch,True,^/til\-solu/barnavorur/leikfong/[^/?#]+/\d+(?:[/?#]|$),16,43,False,0.8,
+blauarbeit_de,Blauarbeit,blauarbeit.de,de,service,handyman trades moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 blocket_se,Blocket,blocket.se,se,used,general,classifieds,verified_free,https://www.blocket.se/recommerce/forsale/search?q={q},known,True,^/recommerce/forsale/item/\d+(?:[/?#]|$),54,54,True,1.0,
+blokker_nl,Blokker,blokker.nl,nl,new,home appliances,retailer,verified_free,https://www.blokker.nl/nl/zoeken/?q={q},searchaction,True,"^/nl/\d+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",23,28,False,0.9,
+bobex_be,Bobex,bobex.be,be,service,renovation trades moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+bokadirekt_se,Bokadirekt,bokadirekt.se,se,service,beauty_services health,service,verified_free,https://www.bokadirekt.se/sok?q={q},pattern,True,"^/places/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",31,0,True,0.7,
 bol_com_nl_nl,bol,bol.com,nl be,new used,general electronics books home toys,marketplace,blocked,,,False,,0,0,False,0.0,bot wall on the home page
 bolha_com,Bolha,bolha.com,si,used,general,classifieds,search_found_unverified,https://www.bolha.com/search/?keywords={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+boligportal_dk,BoligPortal,boligportal.dk,dk,rental,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+bonprix_de,bonprix,bonprix.de,de,new,fashion home,retailer,search_found_unverified,https://www.bonprix.de/search/?searchmode=m&search_origin=textfield&qu={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 bookbot_com,Bookbot,bookbot.com,cz sk eu,used,books collectibles,resale_retailer,search_found_unverified,https://bookbot.com/search?q={q},pattern,False,^/g/\d+(?:[/?#]|$),48,67,False,0.8,results page without listing links for a plain fetch
 bookis_com_no,Bookis,bookis.com,no,used,books,specialist,search_found_unverified,https://bookis.com/no/search?query={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
+booksy_com_pl_pl,Booksy,booksy.com,pl,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+boots_com,Boots,boots.com,gb,new,beauty health,retailer,blocked,https://www.boots.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+boozt_com_se_sv,Boozt,boozt.com,se,new,fashion shoes home,retailer,verified_free,https://www.boozt.com/se/sv/search?q={q},pattern,True,"^/se/sv/adidas\-originals/[^/?#]*\d{3,}[^/?#]*/\d+(?:[/?#]|$)",35,114,False,0.9,
+boulanger_com,Boulanger,boulanger.com,fr,new,electronics appliances computers,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+brack_ch,BRACK,brack.ch,ch,new,general electronics home,retailer,search_found_unverified,https://www.brack.ch/search?query={q},pattern,False,^/it\-multimedia/?\?(?:.*&)?filter\[Art\]\[\]=,3,1,True,0.475,results drawn by JavaScript (prices in app state)
 bricklink_com,BrickLink,bricklink.com,eu,used,books collectibles,specialist,search_found_unverified,https://www.bricklink.com/v2/search.page?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+brico_be_nl,Brico,brico.be,be,new,diy tools garden,retailer,search_found_unverified,https://www.brico.be/nl/search?text={q},form,False,^/nl/[^/?#]+/[^/?#]+/[^/?#]+/accuboormachines/[^/?#]+/\d+(?:[/?#]|$),4,5,False,0.475,results drawn by JavaScript (prices in app state)
+bricodepot_fr,Brico Dépôt,bricodepot.fr,fr,new,diy tools garden,retailer,search_found_unverified,https://www.bricodepot.fr/search?search={q},searchaction,False,,0,0,False,0.0,results page did not load for a plain fetch
 bukowskis_com,Bukowskis,bukowskis.com,se fi,used,watches home furniture collectibles,auction,blocked,https://www.bukowskis.com/sok?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+but_fr,BUT,but.fr,fr,new,furniture home appliances,retailer,blocked,https://www.but.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 buycycle_com,buycycle,buycycle.com,eu,used,bikes sports outdoor music,specialist,blocked,https://buycycle.com/fi-fi/shop/search/{q},searchaction,False,,0,0,False,0.0,bot wall on the results page
+byggmax_se,Byggmax,byggmax.se,se,new,diy garden,retailer,search_found_unverified,https://www.byggmax.se/catalogsearch/result/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 campsider_com,Campsider,campsider.com,fr eu,used,bikes sports outdoor,specialist,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 car_gr,Car.gr,car.gr,gr,used,cars vehicles,vehicles,blocked,https://www.car.gr/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 cardmarket_com_en,Cardmarket,cardmarket.com,eu,used,books collectibles,specialist,blocked,https://www.cardmarket.com/en/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+carrefour_es,Carrefour,carrefour.es,es,new,general home electronics,retailer,blocked,https://www.carrefour.es/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+carrefour_fr,Carrefour,carrefour.fr,fr,new,general home electronics,retailer,blocked,https://www.carrefour.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 cashconverters_co_uk,Cash Converters UK,cashconverters.co.uk,gb,used refurb,electronics computers,resale_retailer,search_found_unverified,https://www.cashconverters.co.uk/search-results?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 cashconverters_es,Cash Converters Spain,cashconverters.es,es,used,electronics computers general,resale_retailer,search_found_unverified,https://www.cashconverters.es/es/es/search/?lang=es&q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+castorama_fr,Castorama,castorama.fr,fr,new,diy tools garden home,retailer,search_found_unverified,https://www.castorama.fr/search?term={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+castorama_pl,Castorama,castorama.pl,pl,new,diy tools garden,retailer,search_found_unverified,https://www.castorama.pl/search?term={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 catawiki_com,Catawiki,catawiki.com,eu,used,watches home furniture collectibles,auction,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+cdiscount_com,Cdiscount,cdiscount.com,fr,new used,general electronics home appliances,marketplace,search_found_unverified,https://www.cdiscount.com/search/10/{q}.html,known,False,,0,0,False,0.0,robots.txt disallows the search path
+cdon_dk,CDON,cdon.dk,dk,new,general electronics toys,marketplace,search_found_unverified,https://cdon.dk/s/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+cdon_no,CDON,cdon.no,no,new,general electronics toys,marketplace,search_found_unverified,https://cdon.no/s/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+cdon_se,CDON,cdon.se,se,new,general electronics home toys,marketplace,search_found_unverified,https://cdon.se/s/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+cel_ro,CEL.ro,cel.ro,ro,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,unreachable
+ceneo_pl,Ceneo,ceneo.pl,pl,new,general electronics appliances,comparison,blocked,https://www.ceneo.pl/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 certideal_com,CertiDeal,certideal.com,fr eu,used refurb,phones electronics computers,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+charlycares_com,Charly Cares,charlycares.com,nl,service,childcare,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+check24_de,CHECK24,check24.de,de,new service,general electronics trades,comparison,search_found_unverified,https://www.check24.de/suche/?source=input&q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+checkatrade_com,Checkatrade,checkatrade.com,gb,service,trades handyman renovation,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+childcare_co_uk,Childcare.co.uk,childcare.co.uk,gb,service,childcare petcare cleaning tutoring,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 chrono24_com,Chrono24,chrono24.com,eu,used,books watches collectibles,specialist,blocked,https://www.chrono24.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+clasohlson_com_fi,Clas Ohlson,clasohlson.com,fi,new,home electronics diy tools,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+clasohlson_com_no,Clas Ohlson,clasohlson.com,no,new,home electronics diy tools,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+clasohlson_com_se,Clas Ohlson,clasohlson.com,se,new,home electronics diy tools,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 clevertronic_de,Clevertronic,clevertronic.de,de,used refurb,phones electronics computers,resale_retailer,verified_free,https://www.clevertronic.de/products?s={q},searchaction,True,"^/kaufen/handy\-kaufen/apple/[^/?#]*\d{3,}[^/?#]*/auswahl/\d+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",10,19,False,0.5,
 clickmonaco_com_en_ads,Click Monaco,clickmonaco.com,mc,used,general,classifieds,search_found_unverified,https://www.clickmonaco.com/recherche?q={q},pattern,False,^/fr/annonces/offres/[^/?#]+(?:[/?#]|$),37,0,False,0.5,results page without listing links for a plain fetch
+clintu_es,Clintu,clintu.es,es,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 coches_net,Coches.net,coches.net,es,used,cars vehicles,vehicles,search_found_unverified,https://www.coches.net/es/segunda-mano/s?k={q},pattern,False,"^/[^/?#]*\d{3,}[^/?#]*\.aspx(?:[/?#]|$)",7,26,False,0.307,results page without listing links for a plain fetch
+compari_ro,Compari,compari.ro,ro,new,general electronics,comparison,blocked,https://www.compari.ro/cauta?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+comparis_ch,Comparis,comparis.ch,ch,new service,general housing cars,comparison,blocked,https://www.comparis.ch/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+computersalg_dk,Computersalg,computersalg.dk,dk,new,computers electronics,retailer,verified_free,https://www.csmegastore.dk/l/0/s?sq={q},form,True,"^/i/\d+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",20,47,False,0.885,
+conforama_fr,Conforama,conforama.fr,fr,new,furniture home appliances,retailer,blocked,https://www.conforama.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+conrad_ch,Conrad,conrad.ch,ch,new,electronics tools,retailer,blocked,https://www.conrad.ch/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+conrad_de,Conrad,conrad.de,de,new,electronics tools,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+coolblue_be_nl,Coolblue,coolblue.be,be,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.coolblue.be/nl/zoeken?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 coolblue_nl,Coolblue,coolblue.nl,nl,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.coolblue.nl/zoeken?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+coolshop_dk,Coolshop,coolshop.dk,dk,new,games electronics toys general,retailer,verified_free,https://www.coolshop.dk/s/?q={q},searchaction,True,^/produkt/[^/?#]+/[^/?#]*\d[^/?#]*(?:[/?#]|$),16,44,True,0.755,
+coolstuff_se,Coolstuff,coolstuff.se,se,new,general toys,retailer,search_found_unverified,https://www.coolstuff.se/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+cronoshare_com,Cronoshare,cronoshare.com,es,service,trades cleaning handyman moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+currys_co_uk,Currys,currys.co.uk,gb,new,electronics appliances computers,retailer,blocked,https://www.currys.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+currys_ie,Currys,currys.ie,ie,new,electronics appliances computers,retailer,blocked,https://www.currys.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 custojusto_pt,CustoJusto,custojusto.pt,pt,used,general,classifieds,search_found_unverified,https://www.custojusto.pt/?text={q},form,False,^/ajuda\-rules/?\?(?:.*&)?section=,1,0,False,0.025,results page without listing links for a plain fetch
+cyberport_at,Cyberport,cyberport.at,at,new,computers electronics phones,retailer,blocked,https://www.cyberport.at/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+cyberport_de,Cyberport,cyberport.de,de,new,computers electronics phones,retailer,blocked,https://www.cyberport.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+czc_cz,CZC,czc.cz,cz,new,computers electronics,retailer,blocked,https://czc.cz/vyhledavani?string={q},form,False,,0,0,False,0.0,bot wall on the results page
+daft_ie,Daft,daft.ie,ie,rental service,housing,housing,blocked,https://www.daft.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 dalder_lv,Dalder,dalder.lv,lv,used,general,classifieds,search_found_unverified,https://www.dalder.lv/search?query={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+darty_com,Darty,darty.com,fr,new,electronics appliances computers,retailer,search_found_unverified,https://magasin.darty.com/search?query={q},form,False,^/fr/[^/?#]+/[^/?#]+(?:[/?#]|$),10,0,False,0.25,results page without listing links for a plain fetch
+datart_cz,Datart,datart.cz,cz,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+datart_sk,Datart,datart.sk,sk,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 dba_dk,DBA,dba.dk,dk,used,general,classifieds,verified_free,https://www.dba.dk/recommerce/forsale/search?q={q},known,True,^/recommerce/forsale/item/\d+(?:[/?#]|$),54,53,True,1.0,
+debijenkorf_nl,de Bijenkorf,debijenkorf.nl,nl,new,fashion beauty home,retailer,blocked,https://www.debijenkorf.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_be_nl,Decathlon,decathlon.be,be,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.be/nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_ch,Decathlon,decathlon.ch,ch,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.ch/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_co_uk,Decathlon,decathlon.co.uk,gb,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_cz,Decathlon,decathlon.cz,cz,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.cz/hledat?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_de,Decathlon,decathlon.de,de,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_es,Decathlon,decathlon.es,es,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.es/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_fr,Decathlon,decathlon.fr,fr,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 decathlon_fr_occasion,Decathlon Second Life,decathlon.fr,fr be,used,bikes sports outdoor general,resale_retailer,blocked,https://www.decathlon.fr/occasion/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_hu,Decathlon,decathlon.hu,hu,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.hu/kereses?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_it,Decathlon,decathlon.it,it,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_nl,Decathlon,decathlon.nl,nl,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_pl,Decathlon,decathlon.pl,pl,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.pl/szukaj?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_pt,Decathlon,decathlon.pt,pt,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.pt/pesquisa?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+decathlon_ro,Decathlon,decathlon.ro,ro,new,sports outdoor bikes,retailer,blocked,https://www.decathlon.ro/cauta?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+dedeman_ro,Dedeman,dedeman.ro,ro,new,diy tools garden home,retailer,blocked,https://catalog.dedeman.ro/cauta?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 dell_com,Dell Outlet,dell.com,gb eu,used refurb,electronics computers,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 depop_com,Depop,depop.com,eu,used,fashion kids,specialist,blocked,https://www.depop.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+did_ie,DID Electrical,did.ie,ie,new,electronics appliances,retailer,verified_free,https://www.did.ie/search?type=product&q={q},form,True,"^/products/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",17,30,False,0.78,
+digitec_ch,Digitec,digitec.ch,ch,new,electronics computers phones,retailer,search_found_unverified,https://www.digitec.ch/search?q={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
 discogs_com_sell_list,Discogs,discogs.com,eu,used,books media music collectibles,specialist,blocked,https://www.discogs.com/sell/list/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+diy_com,B&Q,diy.com,gb,new,diy tools garden home,retailer,search_found_unverified,https://www.diy.com/search?term={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+dm_de,dm,dm.de,de,new,beauty health,retailer,search_found_unverified,https://www.dm.de/search?query={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
 dolap_com,Dolap,dolap.com,tr,used,fashion,specialist,blocked,https://dolap.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 donedeal_ie,DoneDeal,donedeal.ie,ie,used,cars vehicles general,classifieds,blocked,https://www.donedeal.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+douglas_de,Douglas,douglas.de,de,new,beauty,retailer,blocked,https://www.douglas.de/?s={q}&post_type=product,pattern,False,,0,0,False,0.0,bot wall on the results page
+dunelm_com,Dunelm,dunelm.com,gb,new,home furniture,retailer,verified_free,https://www.dunelm.com/search/?q={q},pattern,True,"^/product/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",21,26,False,0.9,
 easycash_fr,Easy Cash,easycash.fr,fr,used,electronics computers general,resale_retailer,search_found_unverified,https://bons-plans.easycash.fr/catalog/search?q={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
+ebay_at,eBay.at,ebay.at,at,new used,general electronics,marketplace,blocked,https://www.ebay.at/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q},form,False,,0,0,False,0.0,bot wall on the results page
+ebay_co_uk,eBay.co.uk,ebay.co.uk,gb,new used,general electronics collectibles,marketplace,search_found_unverified,https://www.ebay.co.uk/sch/i.html?_nkw={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
 ebay_com,eBay,ebay.com,eu,used,general,marketplace,blocked,https://www.ebay.com/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q},form,False,,0,0,False,0.0,bot wall on the results page
+ebay_de,eBay.de,ebay.de,de,new used,general electronics collectibles,marketplace,search_found_unverified,https://www.ebay.de/sch/i.html?_nkw={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+ebay_es,eBay.es,ebay.es,es,new used,general electronics,marketplace,search_found_unverified,https://www.ebay.es/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ebay_fr,eBay.fr,ebay.fr,fr,new used,general electronics collectibles,marketplace,search_found_unverified,https://www.ebay.fr/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ebay_it,eBay.it,ebay.it,it,new used,general electronics collectibles,marketplace,search_found_unverified,https://www.ebay.it/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ebuyer_com,Ebuyer,ebuyer.com,gb,new,computers electronics,retailer,search_found_unverified,https://www.ebuyer.com/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+edigital_hu,eDigital,edigital.hu,hu,new,electronics computers,retailer,verified_free,https://www.emag.hu/search?query={q},pattern,True,"^/[^/?#]*\d{3,}[^/?#]*/pd/[A-Za-z0-9]+(?:[/?#]|$)",55,104,False,0.9,
+editus_lu,Editus,editus.lu,lu,service,trades cleaning handyman,service,blocked,https://www.editus.lu/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+elcorteingles_es,El Corte Inglés,elcorteingles.es,es,new,general fashion electronics home,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+elgiganten_dk,Elgiganten,elgiganten.dk,dk,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.elgiganten.dk/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+elgiganten_se,Elgiganten,elgiganten.se,se,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.elgiganten.se/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+elkjop_no,Elkjøp,elkjop.no,no,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.elkjop.no/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+elko_is,ELKO,elko.is,is,new,electronics computers phones appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+ellos_se,Ellos,ellos.se,se,new,fashion home,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+emag_bg,eMAG,emag.bg,bg,new,general electronics appliances,marketplace,verified_free,https://www.emag.bg/search?query={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*/pd/[A-Za-z0-9]+(?:[/?#]|$)",50,110,False,0.9,
+emag_hu,eMAG,emag.hu,hu,new,general electronics appliances,marketplace,verified_free,https://www.emag.hu/search?query={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*/pd/[A-Za-z0-9]+(?:[/?#]|$)",47,93,False,0.9,
+emag_ro,eMAG,emag.ro,ro,new,general electronics appliances,marketplace,search_found_unverified,https://www.emag.ro/search?query={q},form,False,"^/[^/?#]*\d{3,}[^/?#]*/pd/[A-Za-z0-9]+(?:[/?#]|$)",54,0,False,0.597,results page without listing links for a plain fetch
+empik_com,Empik,empik.com,pl,new,books media electronics toys,retailer,verified_free,http://www.empik.com/szukaj/produkt?q={q},opensearch,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",71,119,False,0.9,
+eprice_it,ePRICE,eprice.it,it,new,electronics appliances,marketplace,blocked,https://www.eprice.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 etsy_com_c_vintage,Etsy Vintage,etsy.com,eu,used,fashion home furniture collectibles,auction,blocked,https://www.etsy.com/c/vintage/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+etuovi_com,Etuovi,etuovi.com,fi,service,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+euro_com_pl,RTV Euro AGD,euro.com.pl,pl,new,electronics appliances computers,retailer,blocked,https://www.euro.com.pl/www.euro.com.pl/search.bhtml?from=gssb&keyword={q},searchaction,False,,0,0,False,0.0,bot wall on the results page
+euronics_it,Euronics,euronics.it,it,new,electronics appliances,retailer,verified_free,https://www.euronics.it/search?lang=null&q={q},form,True,"^/telefonia/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*/\d+\.html(?:[/?#]|$)",12,198,True,0.676,
+evomag_ro,evoMAG,evomag.ro,ro,new,computers electronics,retailer,search_found_unverified,https://www.evomag.ro/?sn.q={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
 facebook_com_marketplace,Facebook Marketplace,facebook.com,eu,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+fahrrad_de,fahrrad.de,fahrrad.de,de,new,bikes,retailer,blocked,https://www.fahrrad.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+fainin_com,fainin,fainin.com,de,rental,tools outdoor electronics general,rental,search_found_unverified,https://fainin.com/search?term={q},searchaction,False,,0,4,False,0.0,results page without listing links for a plain fetch
 finn_no,FINN Torget,finn.no,no,used,general cars vehicles,classifieds,verified_free,https://www.finn.no/recommerce/forsale/search?q={q},known,True,^/recommerce/forsale/item/\d+(?:[/?#]|$),54,54,True,0.998,
+fixando_pt,Fixando,fixando.pt,pt,service,trades cleaning handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+fixly_pl,Fixly,fixly.pl,pl,service,trades handyman cleaning,service,blocked,https://fixly.pl/szukaj?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+flanco_ro,Flanco,flanco.ro,ro,new,electronics appliances,retailer,blocked,https://www.flanco.ro/cauta?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+fnac_be,Fnac,fnac.be,be,new,electronics books media games,retailer,blocked,https://www.fr.fnac.be/SearchResult/ResultList.aspx?Search={q},searchaction,False,,0,0,False,0.0,bot wall on the results page
+fnac_com,Fnac,fnac.com,fr,new,electronics books media games computers,retailer,blocked,https://www.fnac.com/SearchResult/ResultList.aspx?Search={q},searchaction,False,,0,0,False,0.0,bot wall on the results page
+fnac_es,Fnac,fnac.es,es,new,electronics books media,retailer,blocked,https://www.fnac.es/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+fnac_pt,Fnac,fnac.pt,pt,new,electronics books media,retailer,blocked,https://www.fnac.pt/SearchResult/ResultList.aspx?Search={q},searchaction,False,,0,0,False,0.0,bot wall on the results page
+forza_refurbished_nl,Forza Refurbished,forza-refurbished.nl,nl,refurb,phones computers,refurbisher,verified_free,https://www.forza-refurbished.nl/catalogsearch/result/?q={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",16,63,False,0.8,
+fotocasa_es,Fotocasa,fotocasa.es,es,rental service,housing,housing,search_found_unverified,https://www.fotocasa.es/search/results.aspx?opi=292&t={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 fr_shopping_rakuten_com,Rakuten France,fr.shopping.rakuten.com,fr,used new,media music electronics computers general books,marketplace,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 freeads_co_uk_uk_for_sale,Freeads,freeads.co.uk,gb,used,general,classifieds,blocked,https://www.freeads.co.uk/uk/for-sale/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+fressnapf_de,Fressnapf,fressnapf.de,de,new,pets,retailer,search_found_unverified,https://www.fressnapf.de/search/?text={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 friday_ad_co_uk,Friday-Ad,friday-ad.co.uk,gb,used,general,classifieds,blocked,https://www.friday-ad.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+funda_nl,funda,funda.nl,nl,service,housing,housing,blocked,https://www.funda.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+fust_ch,Fust,fust.ch,ch,new,appliances electronics,retailer,blocked,https://www.fust.ch/suche/{q}/,pattern,False,,0,0,False,0.0,bot wall on the results page
+galaxus_ch,Galaxus,galaxus.ch,ch,new,general electronics home toys,retailer,search_found_unverified,https://www.galaxus.ch/search?q={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
+galaxus_de,Galaxus,galaxus.de,de,new,general electronics home toys,retailer,search_found_unverified,https://www.galaxus.de/search?q={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
+galeria_de,Galeria,galeria.de,de,new,fashion home beauty,retailer,blocked,https://www.galeria.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+gamma_be_nl,GAMMA,gamma.be,be,new,diy tools garden,retailer,search_found_unverified,https://www.gamma.be/assortiment/zoeken?text={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+gamma_nl,GAMMA,gamma.nl,nl,new,diy tools garden,retailer,search_found_unverified,https://www.gamma.nl/assortiment/zoeken?text={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 gardrops_com,Gardrops,gardrops.com,tr,used,fashion,specialist,blocked,https://www.gardrops.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+geizhals_at,Geizhals,geizhals.at,at,new,electronics computers appliances,comparison,verified_free,https://geizhals.at/?hloc=at&fs={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*\.html(?:[/?#]|$)",28,30,False,0.9,
+geizhals_de,Geizhals,geizhals.de,de,new,electronics computers appliances,comparison,search_found_unverified,https://geizhals.de/?fs={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
 gigantti_fi,Gigantti,gigantti.fi,fi,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.gigantti.fi/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+globaldata_pt,Globaldata,globaldata.pt,pt,new,computers electronics,retailer,search_found_unverified,https://www.globaldata.pt/search?lang=null&q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 grailed_com,Grailed,grailed.com,eu,used,fashion luxury kids home furniture,specialist,blocked,https://www.grailed.com/?s={q}&post_type=product,pattern,False,,0,0,False,0.0,bot wall on the results page
+grover_com_de_de,Grover,grover.com,de,rental,electronics phones computers,rental,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+guenstiger_de,guenstiger.de,guenstiger.de,de,new,general electronics,comparison,search_found_unverified,https://www.guenstiger.de/Katalog/Suche/?search_term_string={q},form,False,,0,0,False,0.0,results page did not load for a plain fetch
 guloggratis_dk,GulogGratis,guloggratis.dk,dk,used,general,classifieds,verified_free,https://www.guloggratis.dk/s?k={q},pattern,True,"^/annonce/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",45,86,True,0.9,
 gumtree_com,Gumtree,gumtree.com,gb,used,general,classifieds,search_found_unverified,https://www.gumtree.com/search?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+habitatpresto_com,Habitatpresto,habitatpresto.com,fr,service,renovation trades,service,search_found_unverified,https://www.habitatpresto.com/mag/search?q={q},searchaction,False,^/mag/plomberie/[^/?#]+(?:[/?#]|$),2,0,False,0.15,results page without listing links for a plain fetch
+habitissimo_es,Habitissimo,habitissimo.es,es,service,renovation trades,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hagebau_de,hagebau,hagebau.de,de,new,diy tools garden,retailer,search_found_unverified,https://www.hagebau.de/search/?q={q},searchaction,False,^/[^/?#]+(?:[/?#]|$),2,0,False,0.059,results page without listing links for a plain fetch
+halfords_com,Halfords,halfords.com,gb,new,bikes auto_parts,retailer,search_found_unverified,https://www.halfords.com/?search-suggestions={q},form,False,,0,4,False,0.0,results page without listing links for a plain fetch
 halooglasi_com,Halo Oglasi,halooglasi.com,rs,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+happyhelper_dk,Happy Helper,happyhelper.dk,dk,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 hardverapro_hu,HardverApró,hardverapro.hu,hu,used,electronics computers,classifieds,search_found_unverified,https://hardverapro.hu/aprok/keres.php?stext={q},form,False,^/aprok/hirdeto/rudilicenc/index\.html/?\?(?:.*&)?uadid=,7,190,False,0.28,results page without listing links for a plain fetch
+hartlauer_at,Hartlauer,hartlauer.at,at,new,electronics cameras phones,retailer,verified_free,https://www.hartlauer.at/search/?q={q},searchaction,True,"^/produkt/[^/?#]*\d{3,}[^/?#]*/[^/?#]*\d{3,}[^/?#]*\.html(?:[/?#]|$)",25,37,False,0.9,
+harveynorman_ie,Harvey Norman,harveynorman.ie,ie,new,electronics appliances furniture computers,retailer,blocked,https://www.harveynorman.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+helpling_at,Helpling,helpling.at,at,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+helpling_be,Helpling,helpling.be,be,service,cleaning,service,no_search,,,False,,0,0,False,0.0,unreachable
+helpling_ch,Helpling,helpling.ch,ch,service,cleaning,service,verified_free,https://www.helpling.ch/?s={q},searchaction,True,^/page/\d+(?:[/?#]|$),8,0,False,0.3,
 helpling_de,Helpling,helpling.de,de,service,cleaning,service,search_found_unverified,https://www.helpling.de/?s={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+helpling_dk,Helpling,helpling.dk,dk,service,cleaning,service,no_search,,,False,,0,0,False,0.0,unreachable
+helpling_fr,Helpling,helpling.fr,fr,service,cleaning,service,search_found_unverified,https://www.helpling.fr/?s={q},searchaction,False,^/page/\d+(?:[/?#]|$),14,0,False,0.35,results page without listing links for a plain fetch
+helpling_ie,Helpling,helpling.ie,ie,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+helpling_it,Helpling,helpling.it,it,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+helpling_nl,Helpling,helpling.nl,nl,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hema_nl,HEMA,hema.nl,nl,new,home general,retailer,blocked,https://www.hema.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+hemfrid_se,Hemfrid,hemfrid.se,se,service,cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hemnet_se,Hemnet,hemnet.se,se,service,housing,housing,blocked,https://www.hemnet.se/sok?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+herold_at,Herold,herold.at,at,service,trades cleaning handyman,service,search_found_unverified,https://www.herold.at/?term={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
 hetgoed_nl,Het Goed,hetgoed.nl,nl,used,general,resale_retailer,search_found_unverified,https://www.hetgoed.nl/?s={q},searchaction,False,^/verhalen/[^/?#]+(?:[/?#]|$),6,23,False,0.165,results page without listing links for a plain fetch
+heureka_cz,Heureka,heureka.cz,cz,new,general electronics appliances,comparison,blocked,https://www.heureka.cz/hledat?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+heureka_sk,Heureka,heureka.sk,sk,new,general electronics,comparison,blocked,https://www.heureka.sk/hladat?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+hinta_fi,Hinta.fi,hinta.fi,fi,new,electronics computers appliances general,comparison,verified_free,https://hinta.fi/haku?q={q},searchaction,True,^/\d+(?:[/?#]|$),12,31,False,0.7,
+hintaopas_fi,Hintaopas,hintaopas.fi,fi,new,electronics computers appliances general,comparison,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hobbyhall_fi,Hobby Hall,hobbyhall.fi,fi,new,general home electronics,retailer,blocked,https://hobbyhall.fi/fi/sq?q={q},form,False,,0,0,False,0.0,bot wall on the results page
+home24_de,home24,home24.de,de,new,furniture home,retailer,search_found_unverified,https://www.home24.de/search?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+homedeal_nl,Homedeal,homedeal.nl,nl,service,renovation trades,service,search_found_unverified,https://www.homedeal.nl/?s={q},searchaction,False,^/loodgieter/[^/?#]+(?:[/?#]|$),4,0,False,0.2,results page without listing links for a plain fetch
+homegate_ch,Homegate,homegate.ch,ch,rental service,housing,housing,blocked,https://www.homegate.ch/de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 hood_de,Hood.de,hood.de,de,used,general,marketplace,verified_free,https://www.hood.de/suchergebnisse.htm?q={q},searchaction,True,"^/i/[^/?#]*\d{3,}[^/?#]*\.htm(?:[/?#]|$)",48,110,False,0.898,
+hornbach_at,Hornbach,hornbach.at,at,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hornbach_cz,Hornbach,hornbach.cz,cz,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hornbach_de,Hornbach,hornbach.de,de,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hubo_be_nl,Hubo,hubo.be,be,new,diy tools garden,retailer,search_found_unverified,https://www.hubo.be/nl/zoekresultaten/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 huuto_net,Huuto.net,huuto.net,fi,used,general,marketplace,search_found_unverified,https://www.huuto.net/haku?query={q},pattern,False,^/kohteet/[^/?#]+/\d+(?:[/?#]|$),14,25,False,0.65,results page without listing links for a plain fetch
 huutokaupat_com,Huutokaupat.com,huutokaupat.com,fi,used,cars vehicles general,auction,search_found_unverified,https://huutokaupat.com/haku?query={q},pattern,False,"^/kohde/\d+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",22,82,False,0.805,results page without listing links for a plain fetch
+hygglo_fi,Hygglo,hygglo.fi,fi,rental,tools outdoor electronics general,rental,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+hygglo_se,Hygglo,hygglo.se,se,rental,tools outdoor electronics general,rental,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 hyperinzerce_cz,Hyperinzerce,hyperinzerce.cz,cz,used,general,classifieds,verified_free,https://hyperinzerce.cz/inzeraty/Index?IsSearchboxQuery=False&query={q},form,True,"^/lego/inzerat/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",20,20,False,0.9,
+idealista_com,idealista,idealista.com,es,rental service,housing,housing,blocked,https://www.idealista.com/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+idealista_it,idealista,idealista.it,it,rental service,housing,housing,blocked,https://www.idealista.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+idealista_pt,idealista,idealista.pt,pt,rental service,housing,housing,blocked,https://www.idealista.pt/pesquisa?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+idealo_co_uk,idealo,idealo.co.uk,gb,new,general electronics,comparison,search_found_unverified,https://www.idealo.co.uk/mscat.html?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 idealo_de,idealo,idealo.de,de,new,general electronics appliances home,comparison,search_found_unverified,https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+idealo_es,idealo,idealo.es,es,new,general electronics appliances,comparison,search_found_unverified,https://www.idealo.es/resultados.html?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+idealo_fr,idealo,idealo.fr,fr,new,general electronics appliances,comparison,search_found_unverified,https://www.idealo.fr/prechcat.html?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+idealo_it,idealo,idealo.it,it,new,general electronics appliances,comparison,search_found_unverified,https://www.idealo.it/risultati.html?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_at_de,IKEA,ikea.com,at,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/at/de/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_be_nl,IKEA,ikea.com,be,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/be/nl/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_ch_de,IKEA,ikea.com,ch,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/ch/de/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_cz_cs,IKEA,ikea.com,cz,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/cz/cs/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_de_de,IKEA,ikea.com,de,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/de/de/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_dk_da,IKEA,ikea.com,dk,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/dk/da/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_es_es,IKEA,ikea.com,es,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/es/es/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 ikea_com_fi_fi,IKEA,ikea.com,fi,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/fi/fi/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_fr_fr,IKEA,ikea.com,fr,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/fr/fr/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_gb_en,IKEA,ikea.com,gb,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/gb/en/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_hu_hu,IKEA,ikea.com,hu,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/hu/hu/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_it_it,IKEA,ikea.com,it,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/it/it/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_nl_nl,IKEA,ikea.com,nl,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/nl/nl/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_no_no,IKEA,ikea.com,no,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/no/no/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_pl_pl,IKEA,ikea.com,pl,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/pl/pl/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_pt_pt,IKEA,ikea.com,pt,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/pt/pt/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_ro_ro,IKEA,ikea.com,ro,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/ro/ro/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_se_sv,IKEA,ikea.com,se,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/se/sv/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+immobiliare_it,Immobiliare.it,immobiliare.it,it,rental service,housing,housing,blocked,https://www.immobiliare.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+immobilienscout24_de,ImmoScout24,immobilienscout24.de,de,rental service,housing,housing,blocked,,,False,,0,0,False,0.0,bot wall on the home page
+immoweb_be,Immoweb,immoweb.be,be,rental service,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+immowelt_de,immowelt,immowelt.de,de,rental service,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+imobiliare_ro,Imobiliare.ro,imobiliare.ro,ro,rental service,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+imovirtual_com,Imovirtual,imovirtual.com,pt,rental service,housing,housing,search_found_unverified,https://www.imovirtual.com/pt/resultados/comprar/apartamento/todo-o-pais?description={q},searchaction,False,^/pt/anuncio/[^/?#]+(?:[/?#]|$),34,74,False,0.544,results page without listing links for a plain fetch
 index_hr_oglasi,Index Oglasi,index.hr,hr,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+inet_se,Inet,inet.se,se,new,computers electronics,retailer,blocked,https://www.inet.se/sok?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+ingatlan_com,ingatlan.com,ingatlan.com,hu,rental service,housing,housing,blocked,https://ingatlan.com/kereses?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+instapro_it,Instapro,instapro.it,it,service,renovation trades,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+interdiscount_ch,Interdiscount,interdiscount.ch,ch,new,electronics computers phones appliances,retailer,blocked,https://www.interdiscount.ch/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+intersport_fi,Intersport,intersport.fi,fi,new,sports outdoor fashion,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+intersport_fr,Intersport,intersport.fr,fr,new,sports outdoor fashion,retailer,blocked,https://www.intersport.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+isku_fi,Isku,isku.fi,fi,new,furniture home,retailer,blocked,https://www.isku.fi/haku?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 jimms_fi,Jimm's,jimms.fi,fi,new,computers electronics games,retailer,search_found_unverified,https://www.jimms.fi/fi/Product/Search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 jofogas_hu,Jófogás,jofogas.hu,hu,used,general,classifieds,verified_free,https://www.jofogas.hu/search?q={q},pattern,True,"^/budapest/[^/?#]*\d{3,}[^/?#]*\.htm(?:[/?#]|$)",27,72,True,1.0,
+johnlewis_com,John Lewis,johnlewis.com,gb,new,general home electronics fashion,retailer,no_search,,,False,,0,0,False,0.0,unreachable
+jollyroom_se,Jollyroom,jollyroom.se,se,new,kids toys,retailer,verified_free,http://www.jollyroom.se/sok?text={q},searchaction,True,"^/leksaker/byggsatser\-lego/byggsatser/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",56,270,False,0.9,
+jula_no,Jula,jula.no,no,new,diy tools garden,retailer,verified_free,https://www.jula.no/search?query={q},pattern,True,"^/catalog/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",31,99,False,0.897,
+jula_se,Jula,jula.se,se,new,diy tools garden home,retailer,verified_free,https://www.jula.se/search?query={q},pattern,True,"^/catalog/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",25,99,False,0.898,
 jumblego_com,JumbleGo,jumblego.com,lu eu,used,general,classifieds,search_found_unverified,https://jumblego.com/recherche?q={q},searchaction,False,^/categorie/services/?\?(?:.*&)?sub=,12,2,False,0.4,results page without listing links for a plain fetch
+jumbo_ch,Jumbo,jumbo.ch,ch,new,diy tools garden,retailer,blocked,https://www.jumbo.ch/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+jysk_dk,JYSK,jysk.dk,dk,new,furniture home,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+k_rauta_fi,K-Rauta,k-rauta.fi,fi,new,diy tools garden home,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 kamerastore_com_en_eu,Kamerastore,kamerastore.com,fi eu,used,media music cameras,resale_retailer,search_found_unverified,https://kamerastore.com/en-eu/search?q={q},pattern,False,^/en\-eu/collections/[^/?#]+(?:[/?#]|$),28,14,False,0.5,results drawn by JavaScript (prices in app state)
+kamernet_nl,Kamernet,kamernet.nl,nl,rental,housing,housing,search_found_unverified,https://kamernet.nl/zoeken?query={q},pattern,False,"^/huren/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",3,29,False,0.396,results page without listing links for a plain fetch
+karkkainen_com,Kärkkäinen,karkkainen.com,fi,new,general home fashion electronics,retailer,blocked,https://www.karkkainen.com/verkkokauppa/haku?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+karwei_nl,Karwei,karwei.nl,nl,new,diy tools garden,retailer,search_found_unverified,https://www.karwei.nl/assortiment/zoeken?text={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+kasa_cz,Kasa,kasa.cz,cz,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+kaufland_de,Kaufland,kaufland.de,de,new,general electronics home garden,marketplace,blocked,https://www.kaufland.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 kauppa_kierratyskeskus_fi,Kierrätyskeskus,kauppa.kierratyskeskus.fi,fi,used,fashion home furniture general,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+kiabi_com,Kiabi,kiabi.com,fr,new,fashion kids,retailer,blocked,https://www.kiabi.com/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 kidkanai_fr,KidKanaï,kidkanai.fr,fr,used,fashion kids music,resale_retailer,no_search,,,False,,0,0,False,0.0,unreachable
 kidstaff_com_ua,Kidstaff,kidstaff.com.ua,ua,used,fashion kids home furniture general,classifieds,no_search,,,False,,0,0,False,0.0,unreachable
 kiertonet_fi,Kiertonet,kiertonet.fi,fi,used,general,auction,search_found_unverified,https://kiertonet.fi/kaikki?haku={q},form,False,"^/huutokaupat/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",10,10,True,0.5,results page without listing links for a plain fetch
+kieskeurig_nl,Kieskeurig,kieskeurig.nl,nl,new,electronics appliances general,comparison,verified_free,https://www.kieskeurig.nl/search?q={q},searchaction,True,^/e/c/[A-Za-z0-9]+(?:[/?#]|$),48,73,True,0.9,
+kjell_com_no,Kjell & Company,kjell.com,no,new,electronics,retailer,search_found_unverified,https://www.kjell.com/no/sok?q={q},form,False,"^/no/produkter/mobilt/lese\-nettbrett/samsung\-nettbrett/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",4,39,False,0.275,results drawn by JavaScript (prices in app state)
+kjell_com_se,Kjell & Company,kjell.com,se,new,electronics,retailer,search_found_unverified,https://www.kjell.com/se/sok?q={q},form,False,"^/se/produkter/mobilt/mobiltelefoner/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",4,14,False,0.32,results drawn by JavaScript (prices in app state)
 kleinanzeigen_de,Kleinanzeigen,kleinanzeigen.de,de,used,general,classifieds,verified_free,https://www.kleinanzeigen.de/s-{dash}/k0,known,True,"^/s\-anzeige/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",18,25,False,0.82,
+komplett_no,Komplett,komplett.no,no,new,computers electronics phones,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+komplett_se,Komplett,komplett.se,se,new,computers electronics phones,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+komputronik_pl,Komputronik,komputronik.pl,pl,new,computers electronics,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+kotisiivousvertailu_fi,Kotisiivousvertailu,kotisiivousvertailu.fi,fi,service,cleaning,service,no_search,,,False,,0,0,False,0.0,unreachable
+krefel_be_nl,Krëfel,krefel.be,be,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+kuantokusta_pt,KuantoKusta,kuantokusta.pt,pt,new,general electronics,comparison,blocked,,,False,,0,0,False,0.0,bot wall on the home page
 kufar_by_l,Kufar,kufar.by,by,used,general,classifieds,blocked,https://www.kufar.by/l/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 kupindo_com,Kupindo,kupindo.com,rs,used,collectibles general,marketplace,blocked,https://www.kupindo.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 kupujemprodajem_com,KupujemProdajem,kupujemprodajem.com,rs,used,general,classifieds,search_found_unverified,https://www.kupujemprodajem.com/pretraga?keywords={q},searchaction,False,^/[^/?#]+(?:[/?#]|$),1,0,False,0.025,results page without listing links for a plain fetch
+kwantum_nl,Kwantum,kwantum.nl,nl,new,furniture home,retailer,verified_free,https://www.kwantum.nl/search?q={q},form,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",24,3,True,1.0,
 label_emmaus_co,Label Emmaüs,label-emmaus.co,fr,used,books fashion home furniture,marketplace,verified_free,https://www.label-emmaus.co/fr/catalogue/?q={q},form,True,"^/fr/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",60,77,False,0.9,
 labourseauxlivres_fr,La Bourse aux Livres,labourseauxlivres.fr,fr,used,books,resale_retailer,search_found_unverified,https://labourseauxlivres.fr/search?q={q},searchaction,False,^/products/\d+(?:[/?#]|$),8,14,False,0.3,results drawn by JavaScript (prices in app state)
 lacentrale_fr,La Centrale,lacentrale.fr,fr,used,cars vehicles,vehicles,blocked,https://www.lacentrale.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 lajumate_ro,LaJumate,lajumate.ro,ro,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 laplaca_ad,LaPlaça,laplaca.ad,ad,used,general,classifieds,search_found_unverified,https://laplaca.ad/recherche?q={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
+laredoute_fr,La Redoute,laredoute.fr,fr,new,fashion home furniture,retailer,blocked,https://www.laredoute.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+largo_fr,Largo,largo.fr,fr,refurb,phones,refurbisher,search_found_unverified,https://www.largo.fr/recherche?search_query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+ldlc_com,LDLC,ldlc.com,fr,new,computers electronics,retailer,search_found_unverified,https://www.ldlc.com/recherche/?search%5Bsearch_text%5D={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
 leboncoin_fr,Leboncoin,leboncoin.fr,fr,used,general,classifieds,blocked,https://www.leboncoin.fr/recherche?text={q},known,False,,0,0,False,0.0,bot wall on the results page
+ledenicheur_fr,LeDénicheur,ledenicheur.fr,fr,new,electronics computers appliances,comparison,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+leenbakker_nl,Leen Bakker,leenbakker.nl,nl,new,furniture home,retailer,verified_free,https://www.leenbakker.nl/search?q={q},form,True,^/[^/?#]+/banken/hoekbanken/[^/?#]+(?:[/?#]|$),27,0,True,1.0,
+leroymerlin_es,Leroy Merlin,leroymerlin.es,es,new,diy tools garden home,retailer,blocked,https://www.leroymerlin.es/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+leroymerlin_fr,Leroy Merlin,leroymerlin.fr,fr,new,diy tools garden home,retailer,blocked,https://www.leroymerlin.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+leroymerlin_it,Leroy Merlin,leroymerlin.it,it,new,diy tools garden home,retailer,blocked,https://www.leroymerlin.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+leroymerlin_pl,Leroy Merlin,leroymerlin.pl,pl,new,diy tools garden,retailer,blocked,https://www.leroymerlin.pl/szukaj?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+leroymerlin_pt,Leroy Merlin,leroymerlin.pt,pt,new,diy tools garden home,retailer,blocked,https://www.leroymerlin.pt/pesquisa?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 letgo_com,letgo Türkiye,letgo.com,tr,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+lidl_de,Lidl,lidl.de,de,new,general home garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 limundo_com,Limundo,limundo.com,rs,used,collectibles general,auction,blocked,https://www.limundo.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 list_am_en,List.am,list.am,am,used,general,classifieds,blocked,https://www.list.am/en/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+littlewoodsireland_ie,Littlewoods,littlewoodsireland.ie,ie,new,general fashion home,retailer,blocked,https://www.littlewoodsireland.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 luxembourgexpats_lu_buy_sell,Luxembourg Expats Buy & Sell,luxembourgexpats.lu,lu,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 luxmaart_lu_recherche,LuxMaart,luxmaart.lu,lu eu,used,general,classifieds,search_found_unverified,https://luxmaart.lu/recherche?q={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
+lyko_com_sv,Lyko,lyko.com,se,new,beauty,retailer,verified_free,https://lyko.com/sv/sok?q={q},searchaction,True,"^/sv/nivea/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",16,119,False,0.74,
+maisonsdumonde_com_fr_fr,Maisons du Monde,maisonsdumonde.com,fr,new,furniture home,retailer,blocked,,,False,,0,0,False,0.0,bot wall on the home page
 maltapark_com_listings,Maltapark,maltapark.com,mt,used,general,classifieds,verified_free,https://www.maltapark.com/search?c=s1&search={q},form,True,^/item/details/\d+(?:[/?#]|$),40,144,False,0.878,
+manor_ch,Manor,manor.ch,ch,new,fashion home beauty,retailer,search_found_unverified,https://www.manor.ch/de/search?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+marksandspencer_com,M&S,marksandspencer.com,gb,new,fashion home food,retailer,search_found_unverified,https://www.marksandspencer.com/search?searchTerm={q}&intid=normal&langId=-24&storeId=10151&catalogId=10051&searchType=normal,searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 markt2_nl,Markt2,markt2.nl,nl,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 markt_de,markt.de,markt.de,de,used,general,classifieds,verified_free,https://www.markt.de/suche/{q}/,pattern,True,"^/[^/?#]*\d{3,}[^/?#]*/a/[A-Za-z0-9]+(?:[/?#]|$)",13,19,False,0.635,
 marktplaats_nl,Marktplaats,marktplaats.nl,nl,used,general,classifieds,verified_free,https://www.marktplaats.nl/q/{q}/,known,True,"^/v/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",23,89,False,0.84,
+materiel_net,Materiel.net,materiel.net,fr,new,computers electronics,retailer,search_found_unverified,https://www.materiel.net/recherche/?search%5Bsearch_text%5D={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
+mediaexpert_pl,Media Expert,mediaexpert.pl,pl,new,electronics appliances computers,retailer,blocked,https://www.mediaexpert.pl/szukaj?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+mediamarkt_at,MediaMarkt,mediamarkt.at,at,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediamarkt.at/de/search.html?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+mediamarkt_be_nl,MediaMarkt,mediamarkt.be,be,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediamarkt.be/nl/search.html?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+mediamarkt_ch,MediaMarkt,mediamarkt.ch,ch,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediamarkt.ch/de/search.html?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+mediamarkt_de,MediaMarkt,mediamarkt.de,de,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediamarkt.de/de/search.html?query={q},searchaction,False,^/de/brand/samsung/[^/?#]+(?:[/?#]|$),2,11,False,0.15,results drawn by JavaScript (prices in app state)
+mediamarkt_es,MediaMarkt,mediamarkt.es,es,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediamarkt.es/s?k={q},pattern,False,"^/es/category/[^/?#]*\d{3,}[^/?#]*\.html(?:[/?#]|$)",18,8,False,0.45,results page without listing links for a plain fetch
+mediamarkt_hu,MediaMarkt,mediamarkt.hu,hu,new,electronics appliances,retailer,search_found_unverified,https://www.mediamarkt.hu/s?k={q},pattern,False,"^/hu/category/[^/?#]*\d{3,}[^/?#]*\.html(?:[/?#]|$)",623,7,False,0.502,results page without listing links for a plain fetch
+mediamarkt_nl,MediaMarkt,mediamarkt.nl,nl,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediamarkt.nl/s?k={q},pattern,False,"^/nl/category/[^/?#]*\d{3,}[^/?#]*\.html(?:[/?#]|$)",655,12,False,0.503,results drawn by JavaScript (prices in app state)
+mediamarkt_pl,MediaMarkt,mediamarkt.pl,pl,new,electronics appliances computers,retailer,search_found_unverified,https://mediamarkt.pl/pl/search.html?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+mediamarkt_se,MediaMarkt,mediamarkt.se,se,new,electronics computers phones appliances,retailer,no_search,,,False,,0,0,False,0.0,unreachable
+mediaworld_it,MediaWorld,mediaworld.it,it,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.mediaworld.it/it/search.html?query={q},searchaction,False,^/it/brand/samsung/[^/?#]+(?:[/?#]|$),2,9,False,0.15,results page without listing links for a plain fetch
 medimops_de,medimops,medimops.de,de at,used,books media music collectibles,resale_retailer,search_found_unverified,https://www.medimops.de/?searchparam={q},form,False,,0,25,False,0.0,results page without listing links for a plain fetch
+megekko_nl,Megekko,megekko.nl,nl,new,computers electronics,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 mercatinousato_com,Mercatino dell’Usato,mercatinousato.com,it,used,home furniture general,resale_retailer,blocked,https://www.mercatinousato.com/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 mercatopoli_it,Mercatopoli,mercatopoli.it,it,used,home furniture general,resale_retailer,blocked,https://www.mercatopoli.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 merrjep_al,MerrJep Albania,merrjep.al,al,used,general,classifieds,verified_free,https://www.merrjep.al/njoftimet/q-{q},searchaction,True,^/njoftim/[^/?#]+/\d+(?:[/?#]|$),28,34,True,0.916,
 merrjep_com,MerrJep Kosovo,merrjep.com,xk,used,general,classifieds,search_found_unverified,https://www.merrjep.com/njoftimet/q-{q},searchaction,False,^/[^/?#]+(?:[/?#]|$),1,0,True,0.264,results drawn by JavaScript (prices in app state)
 micolet_com,Micolet,micolet.com,es eu,used,fashion,resale_retailer,search_found_unverified,https://www.micolet.com/s?k={q},pattern,False,^/tops/s/\d+(?:[/?#]|$),9,76,True,0.46,results page without listing links for a plain fetch
+microspot_ch,microspot,microspot.ch,ch,new,electronics computers,retailer,blocked,https://www.interdiscount.ch/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 milanuncios_com,Milanuncios,milanuncios.com,es,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+mittanbud_no,Mittanbud,mittanbud.no,no,service,trades renovation cleaning moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 mobile_de,mobile.de,mobile.de,de eu,used,cars vehicles,vehicles,blocked,https://www.mobile.de/suche/{q}/,pattern,False,,0,0,False,0.0,bot wall on the results page
 mobile_secondhand_ikea_com,IKEA Second-hand,mobile.secondhand.ikea.com,eu,used,home furniture,specialist,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+modivo_pl,Modivo,modivo.pl,pl,new,fashion shoes,retailer,search_found_unverified,https://modivo.pl/s/{q}?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 momox_shop_fr,momox-shop,momox-shop.fr,fr,used,books media music collectibles,resale_retailer,search_found_unverified,https://www.momox-shop.fr/?searchparam={q},form,False,,0,19,False,0.0,results page without listing links for a plain fetch
+morele_net,Morele,morele.net,pl,new,computers electronics,retailer,search_found_unverified,https://www.morele.net/wyszukiwarka/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+motonet_fi,Motonet,motonet.fi,fi,new,auto_parts tools diy bikes outdoor,retailer,search_found_unverified,https://www.motonet.fi/haku?q={q},pattern,False,^/tuote/[^/?#]+(?:[/?#]|$),23,0,False,0.6,results drawn by JavaScript (prices in app state)
 mpb_com_en_eu,MPB,mpb.com,eu gb,used,media music cameras,resale_retailer,blocked,https://www.mpb.com/en-eu/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 musamaailma_fi,Musamaailma Used,musamaailma.fi,fi,used,media music cameras,resale_retailer,search_found_unverified,https://www.musamaailma.fi/en/catalogsearch/result/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 musicmagpie_co_uk_store,musicMagpie,musicmagpie.co.uk,gb,used refurb,media music electronics computers,resale_retailer,blocked,https://www.musicmagpie.co.uk/store/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+musicstore_de,Music Store,musicstore.de,de,new,music,retailer,blocked,,,False,,0,0,False,0.0,bot wall on the home page
+my_hammer_de,MyHammer,my-hammer.de,de,service,trades renovation handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+mybuilder_com,MyBuilder,mybuilder.com,gb,service,trades renovation,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+myhammer_at,MyHammer,myhammer.at,at,service,trades renovation handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 mymarket_ge,Mymarket,mymarket.ge,ge,used,general,classifieds,search_found_unverified,https://mymarket.ge/search?q={q},pattern,False,^/products/[^/?#]+(?:[/?#]|$),12,0,False,0.4,results drawn by JavaScript (prices in app state)
+nay_sk,NAY,nay.sk,sk,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+nehnutelnosti_sk,Nehnuteľnosti,nehnutelnosti.sk,sk,rental service,housing,housing,verified_free,https://www.nehnutelnosti.sk/hladat?q={q},pattern,True,^/detail/[A-Za-z0-9]+(?:[/?#]|$),16,139,True,0.832,
+nejremeslnici_cz,Nejřemeslníci,nejremeslnici.cz,cz,service,trades renovation handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+netonnet_se,NetOnNet,netonnet.se,se,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.netonnet.se/search?q={q},pattern,False,"^/art/mobil\-smartwatch/mobiltelefoner/samsung\-mobil/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",13,0,False,0.425,results page without listing links for a plain fetch
 nettiauto_com,Nettiauto,nettiauto.com,fi,used,cars vehicles,vehicles,blocked,https://www.nettiauto.com/haku?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+next_co_uk,Next,next.co.uk,gb,new,fashion home,retailer,blocked,https://www.next.co.uk/search?w={q},form,False,,0,0,False,0.0,bot wall on the results page
 njuskalo_hr,Njuškalo,njuskalo.hr,hr,used,general,classifieds,search_found_unverified,https://www.njuskalo.hr/search/?keywords={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+notebooksbilliger_de,notebooksbilliger,notebooksbilliger.de,de,new,computers electronics phones,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+notino_cz,Notino,notino.cz,cz,new,beauty,retailer,search_found_unverified,https://www.notino.cz/s?k={q},pattern,False,^/elektronika/?\?(?:.*&)?f=,7,2,False,0.19,results drawn by JavaScript (prices in app state)
+nounou_top_fr,Nounou Top,nounou-top.fr,fr,service,childcare,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+obi_at,OBI,obi.at,at,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+obi_de,OBI,obi.de,de,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+obi_hu,OBI,obi.hu,hu,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+obi_pl,OBI,obi.pl,pl,new,diy tools garden,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+oferteo_pl,Oferteo,oferteo.pl,pl,service,trades renovation cleaning,service,search_found_unverified,https://www.oferteo.pl/?homepage-hero-search={q},form,False,^/rejestracja/wybierz\-klientow/?\?(?:.*&)?pid=,2,18,False,0.05,results page without listing links for a plain fetch
+offerta_se,Offerta,offerta.se,se,service,trades renovation cleaning moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+offerteadviseur_nl,Offerteadviseur,offerteadviseur.nl,nl,service,renovation trades moving,service,search_found_unverified,https://www.offerteadviseur.nl/?s={q},searchaction,False,^/[^/?#]+(?:[/?#]|$),8,0,False,0.214,results page without listing links for a plain fetch
+ofri_ch,Ofri,ofri.ch,ch,service,trades renovation,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 oglasi_me,Oglasi.me,oglasi.me,me,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 oglasnik_hr,Oglasnik,oglasnik.hr,hr,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+oikotie_fi,Oikotie,oikotie.fi,fi,rental service,housing,housing,search_found_unverified,https://asunnot.oikotie.fi/search?q={q},pattern,False,^/myytavat\-asunnot/[^/?#]*\d[^/?#]*(?:[/?#]|$),5,0,False,0.125,results page without listing links for a plain fetch
 okazii_ro,Okazii.ro,okazii.ro,ro,used,collectibles general,marketplace,blocked,https://www.okazii.ro/cautare/{q}.html,opensearch,False,,0,0,False,0.0,bot wall on the results page
 okidoki_ee,Okidoki,okidoki.ee,ee,used,general,classifieds,blocked,https://www.okidoki.ee/otsi?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 olx_ba,OLX.ba,olx.ba,ba,used,general,classifieds,blocked,https://olx.ba/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
@@ -144,69 +467,216 @@ olx_ro,OLX Romania,olx.ro,ro,used,general,classifieds,blocked,https://www.olx.ro
 olx_ua,OLX Ukraine,olx.ua,ua,used,general,classifieds,blocked,https://www.olx.ua/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 onlineshop_oxfam_org_uk,Oxfam Online Shop,onlineshop.oxfam.org.uk,gb,used,books fashion kids home furniture,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 osta_ee,Osta.ee,osta.ee,ee,used,general,marketplace,blocked,https://www.osta.ee/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+otodom_pl,Otodom,otodom.pl,pl,rental service,housing,housing,search_found_unverified,https://www.otodom.pl/pl/wyniki/sprzedaz/mieszkanie/cala-polska?description={q},searchaction,False,^/pl/oferta/[^/?#]+(?:[/?#]|$),33,78,False,0.661,results page without listing links for a plain fetch
 otomoto_pl,OTOMOTO,otomoto.pl,pl,used,cars vehicles,vehicles,verified_free,https://www.otomoto.pl/oferty/?q={q}&amp%3Butm_source=google&amp%3Butm_medium=search&amp%3Butm_campaign=search_organic,searchaction,True,^/osobowe/oferta/[^/?#]+\.html(?:[/?#]|$),31,35,True,0.906,
+otto_at,OTTO Austria,otto.at,at,new,general home fashion,retailer,search_found_unverified,https://www.otto.at/?estate-location={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
 otto_de,OTTO,otto.de,de,new,general home furniture electronics fashion,marketplace,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+overclockers_co_uk,Overclockers,overclockers.co.uk,gb,new,computers electronics,retailer,search_found_unverified,https://www.overclockers.co.uk/search?lang=null&q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 ovoko_com,Ovoko / RRR.LT,ovoko.com,eu,used,cars vehicles collectibles,specialist,blocked,https://about.ovoko.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+pagesjaunes_fr,PagesJaunes,pagesjaunes.fr,fr,service,trades cleaning handyman,service,blocked,https://www.pagesjaunes.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 pamono_eu,Pamono,pamono.eu,eu,used,home furniture,specialist,verified_free,https://www.pamono.eu/catalogsearch/result/?q={q},searchaction,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",66,100,False,0.888,
+pap_fr,PAP,pap.fr,fr,rental service,housing,housing,blocked,https://www.pap.fr/q/{q}/,pattern,False,,0,0,False,0.0,bot wall on the results page
+pararius_nl,Pararius,pararius.nl,nl,rental,housing,housing,blocked,https://www.pararius.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 paruvendu_fr_mondebarras,ParuVendu,paruvendu.fr,fr,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 patuljak_me,Patuljak.me,patuljak.me,me,used,general,classifieds,search_found_unverified,https://patuljak.me/process/prebaciNaPretragu?search={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
 pazar3_mk,Pazar3,pazar3.mk,mk,used,general,classifieds,verified_free,https://www.pazar3.mk/oglasi/q-{q},searchaction,True,^/oglas/elektronika/[^/?#]+/playstation/drug\-model/prodazba/skopje/butel/[^/?#]+/\d+(?:[/?#]|$),7,0,True,0.575,
+pazaruvaj_com,Pazaruvaj,pazaruvaj.com,bg,new,general electronics,comparison,blocked,https://www.pazaruvaj.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+pccomponentes_com,PcComponentes,pccomponentes.com,es,new,computers electronics phones,retailer,blocked,https://www.pccomponentes.com/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+pcdiga_com,PCDIGA,pcdiga.com,pt,new,computers electronics,retailer,blocked,https://www.pcdiga.com/pesquisa?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+pcgarage_ro,PC Garage,pcgarage.ro,ro,new,computers electronics,retailer,blocked,https://www.pcgarage.ro/cauta?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+peerby_com,Peerby,peerby.com,nl,rental,tools outdoor general,rental,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+pfister_ch,Pfister,pfister.ch,ch,new,furniture home,retailer,verified_free,https://www.pfister.ch/de/suche/{q}/,pattern,True,^/de/produkt/\d+(?:[/?#]|$),43,71,False,0.889,
+planity_com,Planity,planity.com,fr,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 plick_se,Plick,plick.se,se,used,fashion,specialist,verified_free,https://plick.se/produkter?query={q},form,True,^/sneakers/[^/?#]+(?:[/?#]|$),10,24,False,0.53,
+poco_de,POCO,poco.de,de,new,furniture home,retailer,search_found_unverified,https://www.poco.de/search?search={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+poptavej_cz,Poptávej,poptavej.cz,cz,service,trades renovation,service,no_search,,,False,,0,0,False,0.0,unreachable
+power_dk,Power,power.dk,dk,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.power.dk/search/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 power_fi,Power,power.fi,fi,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.power.fi/haku/?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+power_no,Power,power.no,no,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.power.no/search/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+power_se,Power,power.se,se,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.power.se/search/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+powercity_ie,PowerCity,powercity.ie,ie,new,electronics appliances,retailer,verified_free,https://www.powercity.ie/groups/groups/search?search={q},form,True,^/product/\d+(?:[/?#]|$),45,225,False,0.9,
+praktiker_hu,Praktiker,praktiker.hu,hu,new,diy tools garden,retailer,search_found_unverified,https://www.praktiker.hu/kereses?q={q},pattern,False,^/epites\-felujitas/[^/?#]+/c/\d+(?:[/?#]|$),4,520,False,0.1,results drawn by JavaScript (prices in app state)
+praxis_nl,Praxis,praxis.nl,nl,new,diy tools garden,retailer,search_found_unverified,https://www.praxis.nl/search?text={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 preloved_co_uk,Preloved,preloved.co.uk,gb,used,general,classifieds,search_found_unverified,https://www.preloved.co.uk/search?keyword={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
+pricemania_sk,Pricemania,pricemania.sk,sk,new,general electronics,comparison,verified_free,https://www.pricemania.sk/?q={q},form,True,"^/lego\-stavebnice/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",11,40,False,0.54,
+pricerunner_com,PriceRunner,pricerunner.com,gb,new,electronics appliances general,comparison,search_found_unverified,https://www.pricerunner.com/results?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+pricerunner_dk,PriceRunner,pricerunner.dk,dk,new,electronics computers appliances general,comparison,search_found_unverified,https://www.pricerunner.dk/results?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+pricerunner_se,PriceRunner,pricerunner.se,se,new,electronics computers appliances general,comparison,search_found_unverified,https://www.pricerunner.se/results?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+pricespy_co_uk,PriceSpy,pricespy.co.uk,gb,new,electronics computers appliances,comparison,search_found_unverified,https://pricespy.co.uk/?s={q}&post_type=product,pattern,False,^/product\.php/?\?(?:.*&)?p=,114,168,False,0.803,results page without listing links for a plain fetch
+prisjakt_no,Prisjakt,prisjakt.no,no,new,electronics computers appliances general,comparison,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+prisjakt_nu,Prisjakt,prisjakt.nu,se,new,electronics computers appliances general,comparison,search_found_unverified,https://www.prisjakt.nu/?s={q}&post_type=product,pattern,False,^/produkt\.php/?\?(?:.*&)?p=,134,199,False,0.805,results page without listing links for a plain fetch
 prisma_fi,Prisma,prisma.fi,fi,new,general home electronics,retailer,search_found_unverified,https://www.prisma.fi/haku?search={q},form,False,,0,0,False,0.0,results page without listing links for a plain fetch
+prontopro_it,ProntoPro,prontopro.it,it,service,trades cleaning handyman tutoring,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+proshop_dk,Proshop,proshop.dk,dk,new,computers electronics phones,retailer,search_found_unverified,https://www.proshop.dk/?s={q},form,False,"^/baerbar/[^/?#]*\d{3,}[^/?#]*/\d+(?:[/?#]|$)",0,65,False,0.0,results page without listing links for a plain fetch
 proshop_fi,Proshop,proshop.fi,fi,new,computers electronics phones,retailer,verified_free,https://www.proshop.fi/?s={q},form,True,"^/[^/?#]+/[^/?#]*\d{3,}[^/?#]*/\d+(?:[/?#]|$)",16,65,False,0.8,
 publi24_ro,Publi24,publi24.ro,ro,used,general,classifieds,verified_free,https://www.publi24.ro/hirdetesek?q={q},form,True,"^/anunturi/[^/?#]+/jucarii/anunt/[^/?#]*\d{3,}[^/?#]*/[A-Za-z0-9]+\.html(?:[/?#]|$)",7,44,False,0.38,
+qasa_se,Qasa,qasa.se,se,rental,housing,housing,search_found_unverified,https://qasa.com/se/sv/search?q={q},pattern,False,^/se/sv/home/\d+(?:[/?#]|$),39,59,False,0.808,results page without listing links for a plain fetch
 quoka_de,Quoka,quoka.de,de,used,general,classifieds,verified_free,https://www.quoka.de/anzeigen?q={q},form,True,"^/anzeigen/haus\-familie/[^/?#]+/spielzeug/[^/?#]+/lego/anzeige/[^/?#]*\d{3,}[^/?#]*/[A-Za-z0-9]+\.html(?:[/?#]|$)",7,29,False,0.395,
+radiopopular_pt,Radio Popular,radiopopular.pt,pt,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+ratedpeople_com,Rated People,ratedpeople.com,gb,service,trades renovation,service,blocked,https://www.ratedpeople.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+raylo_com,Raylo,raylo.com,gb,rental,phones computers,rental,search_found_unverified,https://www.raylo.com/products?q={q},searchaction,False,"^/products/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",18,9,False,0.55,results page without listing links for a plain fetch
 rebuy_de,rebuy,rebuy.de,de eu,used refurb,media music electronics computers,resale_retailer,search_found_unverified,https://www.rebuy.de/kaufen/suchen?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
 recommerce_com,Recommerce,recommerce.com,fr eu,used refurb,phones electronics computers,resale_retailer,search_found_unverified,https://www.recommerce.com/fr/catalogsearch/result/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+refurbed_at,refurbed,refurbed.at,at,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.at/search?query={q},searchaction,True,"^/p/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",8,39,False,0.54,
 refurbed_com,refurbed,refurbed.com,eu,refurb,home furniture electronics computers sports outdoor music general,refurbisher,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+refurbed_cz,refurbed,refurbed.cz,cz,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.cz/search?query={q},searchaction,True,^/p/[^/?#]+/\d+(?:[/?#]|$),5,42,False,0.375,
+refurbed_de,refurbed,refurbed.de,de,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.de/search?query={q},searchaction,True,"^/p/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",8,33,False,0.54,
+refurbed_fr,refurbed,refurbed.fr,fr,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.fr/search?query={q},searchaction,True,^/p/[^/?#]*\d[^/?#]*/\d+(?:[/?#]|$),5,21,False,0.33,
+refurbed_it,refurbed,refurbed.it,it,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.it/search?query={q},searchaction,True,"^/p/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",9,39,False,0.565,
+refurbed_nl,refurbed,refurbed.nl,nl,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.nl/search?query={q},searchaction,True,"^/p/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",8,40,False,0.54,
+refurbed_pl,refurbed,refurbed.pl,pl,refurb,phones computers electronics,refurbisher,verified_free,https://www.refurbed.pl/search?query={q},searchaction,True,^/p/[^/?#]+/\d+(?:[/?#]|$),6,38,False,0.4,
+reichelt_de,reichelt,reichelt.de,de,new,electronics tools,retailer,search_found_unverified,https://www.reichelt.de/suche?query={q},pattern,False,^/de/de/?\?(?:.*&)?ACTION=,4,2,False,0.1,results page without listing links for a plain fetch
 reklama5_mk,Reklama5,reklama5.mk,mk,used,general,classifieds,blocked,https://reklama5.com/Search?q={q},form,False,,0,0,False,0.0,bot wall on the results page
+renovero_ch,Renovero,renovero.ch,ch,service,trades renovation,service,search_found_unverified,https://www.renovero.ch/de/ausschreibung/erstellen?query={q},searchaction,False,^/it/[^/?#]+/creare(?:[/?#]|$),1,0,False,0.025,results page without listing links for a plain fetch
 reshopper_com,Reshopper,reshopper.com,dk,used,fashion kids music,specialist,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 reverb_com,Reverb,reverb.com,eu,used,media music cameras,specialist,blocked,https://reverb.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 ricardo_ch,Ricardo,ricardo.ch,ch,used,general,marketplace,search_found_unverified,https://www.ricardo.ch/de/s/{q}/?utm_source=google&utm_medium=organic&utm_campaign=sitelinks-searchbox,searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+richersounds_com,Richer Sounds,richersounds.com,gb,new,electronics,retailer,search_found_unverified,https://www.richersounds.com/?search_query={q},form,False,,0,7,False,0.0,results page without listing links for a plain fetch
+rightmove_co_uk,Rightmove,rightmove.co.uk,gb,rental service,housing,housing,blocked,https://www.rightmove.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+rosebikes_de,ROSE Bikes,rosebikes.de,de,new,bikes,retailer,verified_free,https://www.rosebikes.de/search/?q={q},pattern,True,"^/p/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",20,42,False,0.9,
+rossmann_de,Rossmann,rossmann.de,de,new,beauty health,retailer,blocked,https://www.rossmann.de/de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+rover_com_uk,Rover,rover.com,gb,service,petcare,service,blocked,https://www.rover.com/s?k={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+rueducommerce_fr,Rue du Commerce,rueducommerce.fr,fr,new,computers electronics home,marketplace,search_found_unverified,https://www.rueducommerce.fr/recherche/?search%5Bsearch_text%5D={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
 sahibinden_com,sahibinden,sahibinden.com,tr,used,cars vehicles general,classifieds,search_found_unverified,https://secure.sahibinden.com/kelime-ile-arama?query_text={q},form,False,,0,0,False,0.0,results page without listing links for a plain fetch
 sanmarinomarket_com,San Marino Market,sanmarinomarket.com,sm,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+saturn_de,Saturn,saturn.de,de,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.saturn.de/de/search.html?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 sbazar_cz,Sbazar,sbazar.cz,cz,used,general,classifieds,search_found_unverified,https://www.sbazar.cz/hledej/{q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+scan_co_uk,Scan,scan.co.uk,gb,new,computers electronics,retailer,blocked,https://www.scan.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+screwfix_com,Screwfix,screwfix.com,gb,new,tools diy,retailer,search_found_unverified,https://www.screwfix.com/search?search={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 selency_fr,Selency,selency.fr,fr eu,used,home furniture,specialist,verified_free,https://www.selency.fr/s/{q},searchaction,True,^/p/[A-Za-z0-9]+(?:[/?#]|$),34,81,False,0.9,
 sellpy_com,Sellpy,sellpy.com,eu,used,fashion kids,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+seloger_com,SeLoger,seloger.com,fr,rental service,housing,housing,blocked,https://www.seloger.com/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+sephora_fr,Sephora,sephora.fr,fr,new,beauty,retailer,blocked,https://www.sephora.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+servicefinder_se,Servicefinder,servicefinder.se,se,service,trades renovation cleaning moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 shafa_ua,Shafa,shafa.ua,ua,used,fashion home furniture electronics computers,marketplace,search_found_unverified,https://shafa.ua/uk/clothes?search_text={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 shpock_com,Shpock,shpock.com,gb de at,used,general,classifieds,verified_free,https://www.shpock.com/en-gb/results?q={q},form,True,^/en\-gb/i/[A-Za-z0-9]+(?:[/?#]|$),16,41,True,0.868,
+sitly_nl,Sitly,sitly.nl,nl,service,childcare,service,search_found_unverified,https://www.sitly.nl?s={q},searchaction,False,,0,6,False,0.0,results page without listing links for a plain fetch
+skapiec_pl,Skąpiec,skapiec.pl,pl,new,general electronics,comparison,search_found_unverified,https://www.skapiec.pl/szukaj?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 skelbiu_lt,Skelbiu.lt,skelbiu.lt,lt,used,general,classifieds,search_found_unverified,https://www.skelbiu.lt/skelbimai/?autocompleted=1&search=1&distance=0&keywords={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+smythstoys_com_ie_en_ie,Smyths,smythstoys.com,ie,new,toys kids games,retailer,blocked,https://www.smythstoys.com/ie/en-ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+sotka_fi,Sotka,sotka.fi,fi,new,furniture home,retailer,search_found_unverified,https://www.sotka.fi/tuotteet/haku/?search_btn=Search&search_string={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
+spareroom_co_uk,SpareRoom,spareroom.co.uk,gb,rental,housing,housing,search_found_unverified,https://www.spareroom.co.uk/flatshare/search.pl?flatshare_type=offered&location_type=area&action=search&search={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+sportsdirect_com,Sports Direct,sportsdirect.com,gb,new,sports fashion,retailer,verified_free,https://www.sportsdirect.com/?s={q}&post_type=product,pattern,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",28,72,False,0.832,
 sprzedajemy_pl,Sprzedajemy.pl,sprzedajemy.pl,pl,used,general,classifieds,verified_free,https://sprzedajemy.pl/temat/{q},searchaction,True,"^/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",31,30,True,0.997,
+sreality_cz,Sreality,sreality.cz,cz,rental service,housing,housing,search_found_unverified,https://www.sreality.cz/hledani?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 ss_com,SS.COM / SS.LV,ss.com,lv,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+stadium_se,Stadium,stadium.se,se,new,sports outdoor fashion,retailer,search_found_unverified,https://www.stadium.se/search/?q={q},pattern,False,^/product/\d+(?:[/?#]|$),22,0,False,0.6,results page without listing links for a plain fetch
+standaardboekhandel_be,Standaard Boekhandel,standaardboekhandel.be,be,new,books,retailer,search_found_unverified,https://www.standaardboekhandel.be/services/Ecom-SB/nl-BE/SuggestionSearch/Search?dataSource=%7BDECFDF39-DC39-4706-B61B-27D0FB06CE38%7D&searchText={q},form,False,,0,0,False,0.0,search form posts (no GET URL)
 standvirtual_com,Standvirtual,standvirtual.com,pt,used,cars vehicles,vehicles,verified_free,https://www.standvirtual.com/anuncios/?q={q}&amp%3Butm_source=google&amp%3Butm_medium=search&amp%3Butm_campaign=search_organic,searchaction,True,^/carros/anuncio/[^/?#]+\.html(?:[/?#]|$),35,38,True,0.9,
+starofservice_be,StarOfService,starofservice.be,be,service,trades cleaning handyman tutoring,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+starofservice_es,StarOfService,starofservice.es,es,service,trades cleaning handyman tutoring,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+starofservice_fr,StarOfService,starofservice.fr,fr,service,trades cleaning handyman tutoring,service,no_search,,,False,,0,0,False,0.0,unreachable
+starofservice_it,StarOfService,starofservice.it,it,service,trades cleaning handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+starofservice_pt,StarOfService,starofservice.pt,pt,service,trades cleaning handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+stockmann_com,Stockmann,stockmann.com,fi,new,fashion beauty home,retailer,search_found_unverified,https://www.stockmann.com/haku?store=ecomm&minChars=3&q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+storia_ro,Storia,storia.ro,ro,rental service,housing,housing,search_found_unverified,https://www.storia.ro/ro/rezultate/vanzare/apartament/toata-romania?description={q},searchaction,False,^/ro/oferta/[^/?#]+(?:[/?#]|$),33,74,False,0.601,results page without listing links for a plain fetch
 subito_it,Subito,subito.it,it,used,general,classifieds,search_found_unverified,https://www.subito.it/annunci-italia/vendita/usato/?q={q},known,False,"^/auto/[^/?#]*\d{3,}[^/?#]*\.htm(?:[/?#]|$)",29,42,False,0.817,results page without listing links for a plain fetch
+superdrug_com,Superdrug,superdrug.com,gb,new,beauty health,retailer,blocked,https://www.superdrug.com/?s={q}&post_type=product,pattern,False,,0,0,False,0.0,bot wall on the results page
+superprof_co_uk,Superprof,superprof.co.uk,gb,service,tutoring,service,blocked,https://www.superprof.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+superprof_es,Superprof,superprof.es,es,service,tutoring,service,blocked,https://www.superprof.es/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+superprof_fr,Superprof,superprof.fr,fr,service,tutoring,service,blocked,https://www.superprof.fr/recherche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+superprof_it,Superprof,superprof.it,it,service,tutoring,service,blocked,https://www.superprof.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 swappie_com,Swappie,swappie.com,eu,used refurb,electronics computers,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+swappie_com_dk,Swappie,swappie.com,dk,refurb,phones,refurbisher,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+swappie_com_fi,Swappie,swappie.com,fi,refurb,phones,refurbisher,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+swappie_com_nl,Swappie,swappie.com,nl,refurb,phones,refurbisher,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+swappie_com_pt,Swappie,swappie.com,pt,refurb,phones,refurbisher,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+swappie_com_se,Swappie,swappie.com,se,refurb,phones,refurbisher,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 tap_az,Tap.az,tap.az,az,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+taskrabbit_co_uk,Taskrabbit,taskrabbit.co.uk,gb,service,handyman cleaning moving,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+tchibo_de,Tchibo,tchibo.de,de,new,general home fashion,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+technomarket_bg,Technomarket,technomarket.bg,bg,new,electronics appliances,retailer,verified_free,https://www.technomarket.bg/search?query={q},pattern,True,"^/[^/?#]+/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",13,34,False,0.725,
+technopolis_bg,Technopolis,technopolis.bg,bg,new,electronics appliances,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+thomann_de_de,Thomann,thomann.de,de,new,music,retailer,search_found_unverified,https://www.thomann.de/de/search.html?sw={q},form,False,"^/de/[^/?#]*\d{3,}[^/?#]*\.htm(?:[/?#]|$)",20,2,False,0.6,results drawn by JavaScript (prices in app state)
+timma_fi,Timma,timma.fi,fi,service,beauty_services,service,blocked,https://timma.fi/haku?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 tise_com,Tise,tise.com,no se dk fi,used,fashion,specialist,search_found_unverified,https://tise.com/search/tise?search={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
 todocoleccion_net,todocoleccion,todocoleccion.net,es,used,books collectibles,auction,blocked,https://www.todocoleccion.net/buscar?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 tokmanni_fi,Tokmanni,tokmanni.fi,fi,new,general home garden toys,retailer,search_found_unverified,https://www.tokmanni.fi/search/?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+toolstation_com,Toolstation,toolstation.com,gb,new,tools diy,retailer,search_found_unverified,https://www.toolstation.com/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+toom_de,toom,toom.de,de,new,diy tools garden,retailer,verified_free,https://toom.de/suche/{q}/,pattern,True,^/p/[^/?#]+/\d+(?:[/?#]|$),46,74,False,0.9,
+toppreise_ch,Toppreise,toppreise.ch,ch,new,electronics computers appliances,comparison,search_found_unverified,https://www.toppreise.ch/?q={q},opensearch,False,^/singles\-day/?\?(?:.*&)?utm_campaign=,1,0,False,0.025,results page without listing links for a plain fetch
 tori_fi,Tori,tori.fi,fi,used,general,classifieds,verified_free,https://www.tori.fi/recommerce/forsale/search?q={q},known,True,^/recommerce/forsale/item/\d+(?:[/?#]|$),54,54,True,0.998,
 tradera_com,Tradera,tradera.com,se,used,home furniture general,marketplace,verified_free,https://www.tradera.com/search/?q={q},pattern,True,^/item/\d+/\d+(?:[/?#]|$),65,95,False,0.887,
+tradesmen_ie,Tradesmen.ie,tradesmen.ie,ie,service,trades handyman,service,blocked,https://www.tradesmen.ie/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+travaux_com,Travaux.com,travaux.com,fr,service,renovation trades,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+treatwell_be,Treatwell,treatwell.be,be,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+treatwell_co_uk,Treatwell,treatwell.co.uk,gb,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+treatwell_de,Treatwell,treatwell.de,de,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+treatwell_es,Treatwell,treatwell.es,es,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+treatwell_fr,Treatwell,treatwell.fr,fr,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+treatwell_it,Treatwell,treatwell.it,it,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 treatwell_nl,Treatwell,treatwell.nl,nl,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 troc_velo_com,Troc-Vélo,troc-velo.com,fr,used,bikes sports outdoor music,specialist,search_found_unverified,https://www.troc-velo.com/recherche?text={q},pattern,False,"^/fr\-fr/annonce/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",24,45,False,0.807,results page without listing links for a plain fetch
+trovaprezzi_it,Trovaprezzi,trovaprezzi.it,it,new,general electronics appliances,comparison,blocked,https://www.trovaprezzi.it/cerca?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+trustatrader_com,TrustATrader,trustatrader.com,gb,service,trades handyman,service,blocked,https://www.trustatrader.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+trustoo_be,Trustoo,trustoo.be,be,service,trades cleaning moving renovation,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+trustoo_nl,Trustoo,trustoo.nl,nl,service,trades cleaning moving renovation,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 tutti_ch,tutti.ch,tutti.ch,ch li,used,general,classifieds,blocked,https://www.tutti.ch/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 tuvalum_eu,Tuvalum,tuvalum.eu,eu,used,bikes sports outdoor,resale_retailer,no_search,,,False,,0,0,False,0.0,unreachable
+tweakers_net,Tweakers Pricewatch,tweakers.net,nl,new used,electronics computers phones,comparison,blocked,https://myprivacy.dpgmedia.nl/consent/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 uk_designerexchange_com,Designer Exchange,uk.designerexchange.com,gb,used,fashion luxury kids home furniture,resale_retailer,blocked,https://uk.designerexchange.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 uk_webuy_com,CeX,uk.webuy.com,gb eu,used refurb,media music electronics computers,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+unieuro_it,Unieuro,unieuro.it,it,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.unieuro.it/online?q={q},searchaction,False,,0,1,False,0.0,results page without listing links for a plain fetch
+universal_at,Universal,universal.at,at,new,general home fashion,retailer,verified_free,https://www.universal.at/s/{q}/?ssb=,searchaction,True,^/p/[A-Za-z0-9]+(?:[/?#]|$),72,20,True,0.85,
 upway_co,Upway,upway.co,eu,used,bikes sports outdoor,resale_retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+urakkamaailma_fi,Urakkamaailma,urakkamaailma.fi,fi,service,renovation trades handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+vandenborre_be_nl,Vanden Borre,vandenborre.be,be,new,electronics appliances,retailer,search_found_unverified,https://www.vandenborre.be/zoekresultaat?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
 vatera_hu,Vatera,vatera.hu,hu,used,general,marketplace,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 vendoo_ad,Vendoo.ad,vendoo.ad,ad,used,general,classifieds,search_found_unverified,https://vendoo.ad/buscar?q={q},searchaction,False,,0,0,False,0.0,results page without listing links for a plain fetch
 vendora_gr,Vendora,vendora.gr,gr eu,used,general,classifieds,verified_free,https://vendora.gr/items?q={q},searchaction,True,^/items/[^/?#]*\d[^/?#]*/[^/?#]+\.html(?:[/?#]|$),16,36,True,0.9,
 verkkokauppa_com_fi,Verkkokauppa.com,verkkokauppa.com,fi,new,electronics computers phones appliances home toys general,retailer,search_found_unverified,https://www.verkkokauppa.com/fi/search?query={q},known,False,,0,0,False,0.0,results page without listing links for a plain fetch
+very_co_uk,Very,very.co.uk,gb,new,general fashion electronics home,retailer,blocked,https://www.very.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 vestiairecollective_com,Vestiaire Collective,vestiairecollective.com,eu,used,fashion luxury kids home furniture,specialist,blocked,https://www.vestiairecollective.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 vinted_com,Vinted,vinted.com,eu,used,fashion home furniture electronics computers,marketplace,search_found_unverified,https://www.vinted.com/catalog?search_text={q},form,False,"^/items/[^/?#]*\d{3,}[^/?#]*(?:[/?#]|$)",96,0,False,0.6,results page without listing links for a plain fetch
 vinted_fi,Vinted,vinted.fi,fi,used,fashion kids home,classifieds,verified_free,https://www.vinted.fi/catalog?search_text={q},known,True,"^/items/[^/?#]*\d{3,}[^/?#]*/?(?:$|\?)",96,192,False,0.9,
 vinterior_co,Vinterior,vinterior.co,gb,used,home furniture,specialist,search_found_unverified,https://www.vinterior.co/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+vuokraovi_com,Vuokraovi,vuokraovi.com,fi,rental,housing,housing,blocked,https://www.vuokraovi.com/haku?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 wallapop_com,Wallapop,wallapop.com,es it pt,used,general,classifieds,search_found_unverified,https://es.wallapop.com/app/search?keywords={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
 watchfinder_com,Watchfinder,watchfinder.com,gb eu,used,books watches collectibles,resale_retailer,search_found_unverified,https://www.watchfinder.com/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+wayfair_co_uk,Wayfair,wayfair.co.uk,gb,new,furniture home,retailer,blocked,https://www.wayfair.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+webhallen_com,Webhallen,webhallen.com,se,new,computers electronics games,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+wecasa_fr,Wecasa,wecasa.fr,fr,service,beauty_services cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+wehkamp_nl,Wehkamp,wehkamp.nl,nl,new,general fashion home electronics,retailer,blocked,https://www.wehkamp.nl/zoeken?query={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 werkspot_nl,Werkspot,werkspot.nl,nl,service,trades renovation handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 wexphotovideo_com_used,Wex Used,wexphotovideo.com,gb,used,media music cameras,resale_retailer,blocked,https://www.wexphotovideo.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+wg_gesucht_de,WG-Gesucht,wg-gesucht.de,de,rental,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 whoppah_com,Whoppah,whoppah.com,eu,used,home furniture collectibles,specialist,blocked,https://www.whoppah.com/s?k={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+wickes_co_uk,Wickes,wickes.co.uk,gb,new,diy tools garden,retailer,search_found_unverified,https://www.wickes.co.uk/search?text={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
 willhaben_at,willhaben,willhaben.at,at,used rental,general housing cars,classifieds,search_found_unverified,https://www.willhaben.at/iad/kaufen-und-verkaufen/marktplatz?keyword={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
 worldofbooks_com,World of Books,worldofbooks.com,gb eu,used,books media music collectibles,resale_retailer,search_found_unverified,https://www.worldofbooks.com/en-gb/search?q={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+worten_es,Worten,worten.es,es,new,electronics appliances computers,retailer,blocked,,,False,,0,0,False,0.0,bot wall on the home page
+worten_pt,Worten,worten.pt,pt,new,electronics appliances computers,retailer,blocked,https://www.worten.pt/pesquisa?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+x_kom_pl,x-kom,x-kom.pl,pl,new,computers electronics phones,retailer,blocked,https://www.x-kom.pl/szukaj?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 xe_gr_marketplace,XE.gr,xe.gr,gr,used,general,classifieds,blocked,https://www.xe.gr/marketplace/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+xxl_fi,XXL,xxl.fi,fi,new,sports outdoor bikes,retailer,search_found_unverified,https://www.xxl.fi/search?query={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+xxl_no,XXL,xxl.no,no,new,sports outdoor bikes,retailer,search_found_unverified,https://www.xxl.no/search?query={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+xxl_se,XXL,xxl.se,se,new,sports outdoor bikes,retailer,search_found_unverified,https://www.xxl.se/search?query={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+xxxlutz_at,XXXLutz,xxxlutz.at,at,new,furniture home,retailer,blocked,https://www.xxxlutz.at/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+xxxlutz_de,XXXLutz,xxxlutz.de,de,new,furniture home,retailer,blocked,https://www.xxxlutz.de/suche?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
 yaga_ee,Yaga Estonia,yaga.ee,ee,used,fashion,specialist,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+yell_com,Yell,yell.com,gb,service,trades cleaning handyman,service,blocked,https://www.yell.com/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+yepstr_com,Yepstr,yepstr.com,se,service,handyman cleaning childcare gardening_services,service,verified_free,https://www.yepstr.com/se/search?query={q},pattern,True,^/se/blog/artikel/[^/?#]+(?:[/?#]|$),5,2,False,0.24,
+yoojo_fr,Yoojo,yoojo.fr,fr,service,handyman cleaning moving gardening_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+yoopies_de,Yoopies,yoopies.de,de,service,childcare eldercare petcare,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+yoopies_es,Yoopies,yoopies.es,es,service,childcare eldercare petcare,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+yoopies_fr,Yoopies,yoopies.fr,fr,service,childcare eldercare petcare cleaning,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+yoox_com_it,YOOX,yoox.com,it,new,fashion luxury,retailer,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
 youla_ru,Youla,youla.ru,ru,used,general,classifieds,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+zaask_pt,Zaask,zaask.pt,pt,service,trades cleaning handyman renovation,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+zalando_ch,Zalando,zalando.ch,ch,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.ch/?q={q},form,False,^/bekleidung/?\?(?:.*&)?occasion=,1,2,False,0.125,results page without listing links for a plain fetch
+zalando_de,Zalando,zalando.de,de,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.de/?q={q},form,False,^/bekleidung/?\?(?:.*&)?occasion=,1,2,False,0.125,results page without listing links for a plain fetch
+zalando_dk,Zalando,zalando.dk,dk,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.dk/?q={q},form,False,^/dametoej\-kjoler/?\?(?:.*&)?q=,1,1,False,0.025,results page without listing links for a plain fetch
+zalando_es,Zalando,zalando.es,es,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.es/?q={q},form,False,,0,1,False,0.0,results page without listing links for a plain fetch
+zalando_fi,Zalando,zalando.fi,fi,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.fi/haku?q={q},pattern,False,^/[^/?#]+(?:[/?#]|$),200,1,False,0.528,results page without listing links for a plain fetch
+zalando_fr,Zalando,zalando.fr,fr,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.fr/?q={q},form,False,,0,2,False,0.0,results page without listing links for a plain fetch
+zalando_it,Zalando,zalando.it,it,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.it/?q={q},form,False,^/abbigliamento/?\?(?:.*&)?assortment_area=,1,1,False,0.125,results page without listing links for a plain fetch
+zalando_nl,Zalando,zalando.nl,nl,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.nl/?q={q},form,False,^/alle/?\?(?:.*&)?q=,1,2,False,0.025,results page without listing links for a plain fetch
+zalando_no,Zalando,zalando.no,no,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.no/?q={q},form,False,^/klaer/?\?(?:.*&)?licensed_character=,1,2,False,0.075,results page without listing links for a plain fetch
+zalando_pl,Zalando,zalando.pl,pl,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.pl/?q={q},form,False,^/rajstopy/?\?(?:.*&)?assortment_area=,1,3,False,0.125,results page without listing links for a plain fetch
+zalando_se,Zalando,zalando.se,se,new,fashion shoes,retailer,search_found_unverified,https://www.zalando.se/?q={q},form,False,^/damklader/?\?(?:.*&)?assortment_area=,1,0,False,0.025,results page without listing links for a plain fetch
+zbozi_cz,Zboží.cz,zbozi.cz,cz,new,general electronics,comparison,search_found_unverified,https://www.zbozi.cz/hledej/?q={q},opensearch,False,,0,0,False,0.0,robots.txt disallows the search path
+zimmo_be,Zimmo,zimmo.be,be,rental service,housing,housing,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+zoofy_nl,Zoofy,zoofy.nl,nl,service,trades handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+zoopla_co_uk,Zoopla,zoopla.co.uk,gb,rental service,housing,housing,blocked,https://www.zoopla.co.uk/search?q={q},pattern,False,,0,0,False,0.0,bot wall on the results page
+zooplus_de,zooplus,zooplus.de,de,new,pets,retailer,verified_free,https://www.zooplus.de/search?q={q},pattern,True,^/shop/katzen/katzenfutter_dose/[^/?#]+/[^/?#]+/\d+(?:[/?#]|$),10,542,False,0.5,
 zvab_com,ZVAB,zvab.com,de at ch,used,books collectibles,specialist,search_found_unverified,https://www.zvab.com/servlet/SearchResults?sts=t&searchprefs=on&kn={q},form,False,,0,0,False,0.0,search form posts (no GET URL)

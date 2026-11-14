@@ -588,6 +588,31 @@ def _comparison(lines: list[str], i: int, before: str) -> bool:
     return bool(COMPARISON.search(near))
 
 
+# words that head a pricing page's prose, never a plan's name ('Approach', 'Find the', 'Starts', 'Sales Tax')
+NOT_A_NAME = re.compile(
+    r"^(?:approach|overview|process|how it works|why\b.*|what\b.*|who\b.*|how\b.*|when\b.*|where\b.*|our\b.*|"
+    r"your\b.*|the\b.*|a|an|this\b.*|that\b.*|these\b.*|those\b.*|find\b.*|get\b.*|see\b.*|compare\b.*|"
+    r"pricing|prices?|plans?|costs?|fees?|rates?|packages?|options?|results?|benefits?|testimonials?|reviews?|"
+    r"faq|faqs|questions?|support|guarantee|money[- ]back.*|total|subtotal|tax|taxes|sales tax|vat|per\b.*|"
+    r"starts?|starting|from|only|just|save\b.*|billed\b.*|annual(?:ly)?|monthly|yearly|month|year|"
+    r"in[- ]house\b.*|freelancers?|agency|agencies|employee|salary|hiring\b.*|both\b.*|unpredictable|average\b.*|"
+    r"typical\b.*|traditional\b.*)$", re.I)
+NAME_TAIL = re.compile(r"\b(?:the|a|an|of|to|for|and|or|with|your|our|at|from|per|in|on|by|is|are)$", re.I)
+
+
+def valid_plan_name(name: str | None) -> bool:
+    """A plan's name looks like one ('Monthly Club', 'Essentials', 'Starter Plan', 'Pro'), not page prose
+    ('Approach', 'Find the', 'Both include the same', 'In-house designer')."""
+    if not name:
+        return False
+    n = name.strip(" :-–|*")
+    if not (2 <= len(n) <= 40) or len(n.split()) > 4 or not re.search(r"[A-Za-zÀ-ÿ]", n):
+        return False
+    if NAME_SKIP.match(n) or BUTTON.match(n) or NOT_A_NAME.match(n) or NAME_TAIL.search(n) or COMPARISON.search(n):
+        return False
+    return not re.search(r"[.?!,;]$|[.?!]\s", n)
+
+
 def _plan_name(lines: list[str], i: int, before: str) -> str | None:
     cands = [before] if before else []
     cands += [lines[j] for j in range(i - 1, max(-1, i - 7), -1)]
@@ -598,8 +623,11 @@ def _plan_name(lines: list[str], i: int, before: str) -> str | None:
             continue
         if not re.search(r"[A-Za-zÀ-ÿ]", c) or NAME_SKIP.match(c) or BUTTON.match(c):
             continue
+        if COMPARISON.search(c):
+            return "\x00comparison"      # the price under it is quoted to compare (in-house, 'both include')
         c = re.sub(r"\s+(?:at|from|for|only|just|starting|starts|ab|alk\.?|alkaen)$", "", c, flags=re.I).strip()
-        return c or None
+        if valid_plan_name(c):
+            return c
     return None
 
 
@@ -627,6 +655,8 @@ def parse_plans_text(html: str, dom: str = "") -> list[dict[str, Any]]:
             if _comparison(lines, i, before):
                 continue
             name = _plan_name(lines, i, before if len(before) <= 40 else "")
+            if name == "\x00comparison":
+                continue
             key = (name or f"plan {len(plans) + 1}").lower()
             if key in names:
                 continue
@@ -726,7 +756,10 @@ def normalize_plans(plans: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
                "annual": "year", "hourly": "hour"}.get(per, per)
         if price <= 0 or per not in ("month", "year", "hour", "job"):
             continue
-        out.append({"name": str(p.get("name") or "Plan")[:60], "price": price,
+        name = str(p.get("name") or "").strip()
+        if not valid_plan_name(name) or len(name) > 60:
+            name = f"Plan {len(out) + 1}"
+        out.append({"name": name[:60], "price": price,
                     "currency": (str(p.get("currency") or "").upper() or None), "period": per,
                     "features": [str(f)[:120] for f in (p.get("features") or [])[:6]]})
     return out
@@ -827,6 +860,13 @@ class _Lane:
         self.unpriced: list[tuple[str, str, str]] = []   # (pricing url, provider, found_via): extract candidates
         self.stats = {"providers": 0, "priced": 0, "listicles": 0, "paid": 0, "registry": 0}
         self.similar_done = False
+        # a service / digital need has no used or refurbished marketplace lanes: the shared bucket's tokens are
+        # this lane's to use from the start, and look-alikes start as soon as one provider shows prices
+        try:
+            from agora.need import is_service
+            self.early = is_service(need)
+        except ImportError:
+            self.early = False
         self.cc = _lang_for(need)[0]
         self.score: dict[str, int] = {}          # registrable -> core words its page title names
         words = re.findall(r"[a-zäöåüß]{4,}", " ".join([core_of(need)] + [str(v) for v in
@@ -865,7 +905,7 @@ class _Lane:
             self.stats["paid"] = self.paid
             return True
         from agora.discover import tokens_available
-        delay = PAID_START_DELAY - (time.monotonic() - self.t_start)
+        delay = (0.0 if self.early else PAID_START_DELAY) - (time.monotonic() - self.t_start)
         if delay > 0:
             await asyncio.sleep(delay)
         while self.left() > 6.0:
@@ -913,6 +953,8 @@ class _Lane:
             self.strong.append((reg, home))
             self.score[reg] = self.about(" ".join([meta.get("title", ""), meta.get("h1", ""),
                                                    meta.get("description", "")]))
+            if self.early and not self.similar_done:
+                self.spawn(self.similar())      # look-alikes of the first priced provider, right away
             for o in offers:
                 await self.put(o)
         else:
@@ -1154,6 +1196,20 @@ class _Lane:
             self.spawn(watch_bag())
         # paid #1: how providers describe themselves; #2: local language when asked, else the listicle query
         first = next((x for x in plan if x[2] == "provider"), plan[0])
+        if self.early:
+            # no marketplace lanes compete for tokens: the second query runs alongside the first
+            second_q = next((x for x in plan if x[2] == "local"), None) or \
+                next((x for x in plan if x[2] == "listicle"), None)
+            got = await asyncio.gather(*(self.search(q, c, k) for q, c, k in [first] + ([second_q] if second_q else [])))
+            for (q, _, _), res in zip([first] + ([second_q] if second_q else []), got):
+                self.take_results(res, "search", origin=q)
+            await self._settle(4.0)
+            await self.similar()
+            await self._settle(5.0)
+            if not self.strong or self.stats["priced"] < 3:
+                await self.extract_unpriced()
+            await self._settle(None)
+            return
         res = await self.search(first[0], first[1], first[2])
         self.take_results(res, "search", origin=first[0])
         await self._settle(4.0)
@@ -1186,7 +1242,7 @@ class _Lane:
 
 
 async def lane(need: Need, *, deadline: float | None = None, seen_urls: set[str] | None = None,
-               paid_max: int = PAID_MAX, category: dict[str, Any] | None = None) -> AsyncIterator[Event | Offer]:
+               paid_max: int | None = None, category: dict[str, Any] | None = None) -> AsyncIterator[Event | Offer]:
     """The long-tail lane: yields Events (lane, source, skip, error) and Offers (accept them like any read).
     `deadline` is a time.monotonic() value (the hunt's budget end); nothing is yielded after it."""
     if os.environ.get("AGORA_LONGTAIL", "1").strip().lower() in ("0", "off", "false", "no"):
@@ -1194,6 +1250,15 @@ async def lane(need: Need, *, deadline: float | None = None, seen_urls: set[str]
     cat = category if category is not None else await asyncio.to_thread(classify, need)
     if cat is None:
         return
+    if need.kind == "product":
+        try:
+            from agora.need import product_head
+            if product_head(need.thing):
+                return          # 'laptop for web developer': an object, the core lanes price it
+        except ImportError:
+            pass
+    if paid_max is None:
+        paid_max = PAID_MAX + (1 if need.kind in ("service", "digital") else 0)   # no marketplace lanes to share with
     if need.kind == "product" and "service" not in need.conditions:
         need.conditions.append("service")     # provider plans are services: resolve must not mark them down
     end = deadline if deadline is not None else time.monotonic() + DEFAULT_LANE_S

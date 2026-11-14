@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import importlib
 import inspect
 import json
@@ -208,6 +209,10 @@ def api_index() -> dict[str, Any]:
         "endpoints": {
             "GET /hunt?q=&replay=<slug>&speed=2": "replay a recorded hunt at its real pace (no credits)",
             "GET /recordings": "slugs of recorded hunts",
+            "GET /api/categories?parent=&lang=": "one level of the tree of everything you can buy (products + services): id, label, count, kind, icon",
+            "GET /api/categories/search?q=&lang=": "categories matching a few words (type-ahead), each with its full path",
+            "GET /api/categories/classify?q=&lang=": "a need in plain words -> best category, path, confidence",
+            "GET /api/categories/nodes?ids=a,b&lang=": "a few categories by id, each with its full path",
             "GET /reviews?hunt_id=&domains=": "SSE: seller reviews after a hunt (review events, then done)",
             "GET|POST /demo/story/refusal?pause=1.5": "SSE: watcher skips, buys, refuses a hidden fee, catches a tampered log",
             "GET|POST /demo/buy?pause=1.2": "SSE: lie detector, haggle counter-offer, auto-buy under open->closed mandates, proof",
@@ -728,3 +733,163 @@ try:  # photo cutouts (GET /cut); optional, a missing or broken module must not 
         app.include_router(_cutout_router)
 except Exception:
     pass
+
+
+# ---------- the category tree (agora/taxonomy): browse, search, classify ----------
+# Everything you can buy, products AND services, as one tree (~35k nodes). The tree and its search index are
+# in memory; answers are small (one level of children at a time) and cached per (node, language).
+
+CAT_LANGS = ("en", "fi", "de", "nl", "sv")
+
+
+def _cat_lang(lang: str | None) -> str:
+    lang = (lang or "en").lower()[:2]
+    return lang if lang in CAT_LANGS else "en"
+
+
+@functools.lru_cache(maxsize=1)
+def _cat_tree() -> tuple[Any, list[int]]:
+    """(Taxonomy, descendants count per node). Parents come before children in the export, so one reverse
+    pass counts every subtree."""
+    from agora import taxonomy
+    T = taxonomy.load()
+    desc = [0] * len(T)
+    for i in range(len(T) - 1, -1, -1):
+        p = T.parent[i]
+        if p >= 0:
+            desc[p] += desc[i] + 1
+    return T, desc
+
+
+def _cat_warm() -> None:
+    """Build the search index in the background the first time anyone browses (the first search would
+    otherwise pay ~1 s)."""
+    T, _ = _cat_tree()
+    if getattr(T, "_post", None) is None:
+        import threading
+        threading.Thread(target=T._build_index, name="taxonomy-index", daemon=True).start()
+
+
+def _cat_item(T: Any, desc: list[int], i: int, lang: str) -> dict[str, Any]:
+    root = T.path_idx(i)[0]
+    return {"id": T.ids[i], "label": T.label(i, lang), "count": desc[i], "n": len(T.children_of[i]),
+            "kind": T.kind[i], "icon": T.ids[root], "leaf": not T.children_of[i]}
+
+
+@functools.lru_cache(maxsize=4096)
+def _cat_children(parent: str | None, lang: str) -> dict[str, Any]:
+    T, desc = _cat_tree()
+    if parent:
+        try:
+            pi = T._i(parent)
+        except KeyError:
+            raise HTTPException(404, f"no category {parent!r}") from None
+        kids = sorted(T.children_of[pi], key=lambda c: (-desc[c], T.label(c, lang).casefold()))
+        crumbs = [{"id": T.ids[j], "label": T.label(j, lang)} for j in T.path_idx(pi)]
+        head = {**_cat_item(T, desc, pi, lang), "path": crumbs}
+    else:
+        kids, head = list(T.roots), None
+    return {"lang": lang, "parent": head, "total": len(T), "items": [_cat_item(T, desc, c, lang) for c in kids]}
+
+
+def _cat_hit(T: Any, desc: list[int], nid: str, lang: str, score: float) -> dict[str, Any]:
+    i = T._i(nid)
+    path = T.path_idx(i)
+    return {**_cat_item(T, desc, i, lang), "path": [T.label(j, lang) for j in path],
+            "path_ids": [T.ids[j] for j in path], "score": round(score, 3)}
+
+
+@functools.lru_cache(maxsize=2048)
+def _cat_search(q: str, lang: str, limit: int) -> dict[str, Any]:
+    from agora import taxonomy
+    T, desc = _cat_tree()
+    best: dict[str, float] = {}
+
+    def add(hits: list[dict[str, Any]], factor: float) -> None:
+        for h in hits:
+            s = h["score"] * factor
+            if s > best.get(h["id"], -1):
+                best[h["id"]] = s
+
+    add(T.search(q, limit=limit * 2, lang=lang), 1.0)
+    # type-ahead: the last word may be half typed ("sof" -> sofa, software): complete it from the index
+    words = taxonomy._WORD.findall(taxonomy.fold(q))
+    if words and not q.endswith(" ") and len(words[-1]) >= 2 and not words[-1].isdigit():
+        last = words[-1]
+        vocab = T._vocab
+        import bisect
+        lo = bisect.bisect_left(vocab, last)
+        cands = []
+        while lo < len(vocab) and vocab[lo].startswith(last) and len(cands) < 400:
+            if vocab[lo] != last:
+                cands.append(vocab[lo])
+            lo += 1
+        cands.sort(key=lambda v: -len(T._post[v]))
+        head = " ".join(words[:-1])
+        for v in cands[:4]:
+            add(T.search(f"{head} {v}".strip(), limit=limit, lang=lang), 0.85)
+    import math
+    ranked = sorted(best.items(), key=lambda kv: -(kv[1] + 0.03 * math.log1p(desc[T._i(kv[0])])))
+    items, seen = [], set()
+    for nid, s in ranked:
+        hit = _cat_hit(T, desc, nid, lang, s)
+        key = tuple(hit["path"])            # two sources can name the same place twice: show it once
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(hit)
+        if len(items) >= limit:
+            break
+    return {"q": q, "lang": lang, "items": items}
+
+
+@app.get("/api/categories")
+def categories(response: Response, parent: str | None = Query(None, description="node id; empty = the roots"),
+               lang: str = Query("en", description="en | fi | de | nl | sv")) -> dict[str, Any]:
+    """One level of the tree of everything you can buy: {parent, items: [{id, label, count, n, kind, icon, leaf}]}.
+    count = all categories under it, n = direct children, icon = its root's id."""
+    _cat_warm()
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return _cat_children(parent or None, _cat_lang(lang))
+
+
+@app.get("/api/categories/search")
+def categories_search(response: Response, q: str = Query("", max_length=120), lang: str = Query("en"),
+                      limit: int = Query(8, ge=1, le=30)) -> dict[str, Any]:
+    """Categories matching a few words in any of the tree's languages, each with its full path (type-ahead:
+    the last word may be unfinished)."""
+    q = re.sub(r"\s+", " ", q).lstrip()
+    response.headers["Cache-Control"] = "public, max-age=600"
+    if len(q.strip()) < 2:
+        return {"q": q, "lang": _cat_lang(lang), "items": []}
+    return _cat_search(q.lower(), _cat_lang(lang), limit)
+
+
+@app.get("/api/categories/nodes")
+def categories_nodes(response: Response, ids: str = Query(..., max_length=2000), lang: str = Query("en")) -> dict[str, Any]:
+    """A few nodes by id (comma separated, max 40), each with its path: for featured tiles and breadcrumbs."""
+    T, desc = _cat_tree()
+    lang = _cat_lang(lang)
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    items = []
+    for nid in [x.strip() for x in ids.split(",") if x.strip()][:40]:
+        if nid in T.by_id:
+            items.append(_cat_hit(T, desc, nid, lang, 1.0))
+    return {"lang": lang, "items": items}
+
+
+@app.get("/api/categories/classify")
+def categories_classify(q: str = Query(..., min_length=2, max_length=200), lang: str = Query("en")) -> dict[str, Any]:
+    """A need in plain words -> the best category, its path and how sure we are (0..1)."""
+    T, desc = _cat_tree()
+    lang = _cat_lang(lang)
+    hit = T.classify(q, lang=lang)
+    if not hit:
+        return {"q": q, "lang": lang, "match": None}
+    i = T._i(hit["id"])
+    return {"q": q, "lang": lang, "match": {
+        **_cat_item(T, desc, i, lang), "path": hit["path"], "path_ids": hit["path_ids"],
+        "confidence": hit["confidence"], "lanes": hit.get("lanes", []), "size": hit.get("size"),
+        "place": hit.get("place"),
+        "alternatives": [{"id": a["id"], "path": [T.label(j, lang) for j in T.path_idx(T._i(a["id"]))]}
+                         for a in hit.get("alternatives", [])[:3]]}}

@@ -34,6 +34,8 @@ class Site:
     itemlist: bool = False        # the page carries schema.org ItemList JSON-LD (free read, no token)
     verified: bool = True         # search URL returned listings live (Robert's platform tests, 13 Nov)
     bulky_ok: bool = True         # worth it for furniture etc. bought from abroad (no: local pickup only)
+    vehicle: bool = False         # a cars category: its listings are vehicles (raw['category'] = 'vehicle')
+    browse: str | None = None     # the category page itself, for a generic need ('car': every car, newest first)
 
     @property
     def domain(self) -> str:
@@ -93,6 +95,34 @@ _SITES: list[Site] = [
     Site("amazon_de", "de", "new", "https://www.amazon.de/s?k={q}", r"/dp/\w+", "de"),
     Site("cdiscount", "fr", "new", "https://www.cdiscount.com/search/10/{q}.html", r"/f-\d+", "fr",
          price_last=True),
+    # vehicles: the cars categories (read first for a vehicle need; the general marketplaces still follow while
+    # tokens last: every listing is judged on its own). Unverified search URLs are marked verified=False.
+    Site("tori_autot", "fi", "used", "https://www.tori.fi/mobility/search/car?q={q}", r"/mobility/item/\d+", "fi",
+         heading_title=True, verified=False, vehicle=True, browse="https://www.tori.fi/mobility/search/car"),
+    Site("nettiauto", "fi", "used", "https://www.nettiauto.com/vaihtoautot?q={q}", r"^/[\w-]+/[\w-]+/\d{6,}", "fi",
+         verified=False, vehicle=True, browse="https://www.nettiauto.com/vaihtoautot"),
+    Site("autotalli", "fi", "used", "https://www.autotalli.com/vaihtoautot/listaa?hakusana={q}",
+         r"/vaihtoautot/tiedot/\d+", "fi", verified=False, vehicle=True,
+         browse="https://www.autotalli.com/vaihtoautot/listaa"),
+    Site("blocket_bil", "se", "used", "https://www.blocket.se/mobility/search/car?q={q}", r"/mobility/item/\d+", "sv",
+         heading_title=True, verified=False, vehicle=True, browse="https://www.blocket.se/mobility/search/car"),
+    Site("finn_bil", "no", "used", "https://www.finn.no/mobility/search/car?q={q}", r"/mobility/item/\d+", "no",
+         heading_title=True, verified=False, vehicle=True, browse="https://www.finn.no/mobility/search/car"),
+    Site("bilbasen", "dk", "used", "https://www.bilbasen.dk/brugt/bil?free={q}", r"/brugt/bil/[\w/-]+/\d+", "da",
+         verified=False, vehicle=True, browse="https://www.bilbasen.dk/brugt/bil"),
+    Site("mobile_de", "de", "used",
+         "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&q={q}",
+         r"/fahrzeuge/details\.html", "de", verified=False, vehicle=True,
+         browse="https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car"),
+    Site("kleinanzeigen_autos", "de", "used", "https://www.kleinanzeigen.de/s-autos/{dash}/k0c216", r"/s-anzeige/",
+         "de", verified=False, vehicle=True, browse="https://www.kleinanzeigen.de/s-autos/c216"),
+    Site("marktplaats_auto", "nl", "used", "https://www.marktplaats.nl/l/auto-s/q/{q}/", r"/v/auto-s/", "nl",
+         verified=False, vehicle=True, browse="https://www.marktplaats.nl/l/auto-s/"),
+    *[Site(f"autoscout24_{cc}", cc, "used", f"https://www.autoscout24.{tld}/lst?atype=C&q={{q}}", rf"/{seg}/[\w-]+",
+           lang, verified=False, vehicle=True, browse=f"https://www.autoscout24.{tld}/lst?atype=C")
+      for cc, tld, seg, lang in (("de", "de", "angebote", "de"), ("nl", "nl", "aanbod", "nl"),
+                                 ("it", "it", "annunci", "it"), ("be", "be", "aanbod", "nl"),
+                                 ("at", "at", "angebote", "de"))],
     # price comparison: 'ab €X' is not an offer (discover.JUNK_DOMAINS); kept for reference, never planned
     Site("idealo", "de", "comparison", "https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q}",
          r"OffersOfProduct", "de"),
@@ -126,8 +156,13 @@ def build_url(site: Site, query: str) -> str:
 
 
 _HOST_SITE: dict[str, Site] = {}
+_HOST_SITES: dict[str, list[Site]] = {}
 for _s in _SITES:
     _HOST_SITE.setdefault(_s.domain, _s)
+    _HOST_SITES.setdefault(_s.domain, []).append(_s)
+for _s in _SITES:
+    if _s.browse:
+        _HOST_SITES.setdefault(urlsplit(_s.browse).netloc.lower().removeprefix("www."), [])
 
 
 def site_for(url: str) -> Site | None:
@@ -140,6 +175,10 @@ def site_for(url: str) -> Site | None:
     s = _HOST_SITE.get(host)
     if s is None:
         return None
+    for cand in _HOST_SITES.get(host, [s]):     # tori.fi: the cars category before the general search
+        if cand.vehicle and (_own_search(cand, parts) or (cand.browse and url.split("?")[0].rstrip("/")
+                                                           == cand.browse.split("?")[0].rstrip("/"))):
+            return cand
     if _own_search(s, parts):
         return s
     if s.listing and re.search(s.listing, parts.path):
@@ -392,6 +431,7 @@ BULKY = re.compile(
 PAID_DIRECT_MIN_TOKENS = {"used": 2.0, "refurbished": 3.0, "new": 4.0}
 MAX_PAID_DIRECT = 5          # paid marketplace pages per hunt (each 1 credit, 1 token of the shared 10/min)
 NEXT_PAGE_MIN_TOKENS = 5.0   # a paid site's page 2 only when this many tokens are left after every page 1
+DEEP_NEXT_PAGE_MIN_TOKENS = 2.0   # 'Compare more': next pages while 2 tokens stay for searches and item reads
 BULKY_EU_MIN_TOKENS = 5.0    # bulky: marketplaces abroad only with tokens to spare after the home country
 # big EU marketplaces read for everybody (small things), best yield first; vinted = the home country's host
 EU_WIDE_USED = ("vinted", "kleinanzeigen", "marktplaats", "blocket", "olx_pl", "dba", "finn", "leboncoin")
@@ -405,7 +445,28 @@ EXTRA_PAGES: set[str] = set()   # planned page URLs that are the bulky 'also in 
 
 
 def is_bulky(thing: str) -> bool:
-    return bool(BULKY.search(thing or ""))
+    if BULKY.search(thing or ""):
+        return True
+    try:
+        from agora.need import vehicle_need
+        return vehicle_need(thing or "")        # a car is picked up near you
+    except ImportError:
+        return False
+
+
+def vehicle_query(thing: str) -> str:
+    """The query for a cars category: make / model words only; '' for a generic 'car' (browse the category)."""
+    from agora.need import ATTRIBUTE_WORDS, VEHICLE_NOUNS
+    words = [w for w in re.sub(r"[^\w\s.+-]", " ", FILLER.sub(" ", ATTRIBUTE_WORDS.sub(" ", thing or ""))).split()
+             if not VEHICLE_NOUNS.match(w)]
+    return " ".join(words).lower()
+
+
+HOME_VEHICLE: dict[str, tuple[str, ...]] = {
+    "fi": ("tori_autot", "nettiauto", "autotalli"), "se": ("blocket_bil",), "no": ("finn_bil",), "dk": ("bilbasen",),
+    "de": ("mobile_de", "autoscout24_de", "kleinanzeigen_autos"), "at": ("autoscout24_at",),
+    "nl": ("marktplaats_auto", "autoscout24_nl"), "be": ("autoscout24_be",), "it": ("autoscout24_it",)}
+EU_VEHICLE = ("autoscout24_de", "mobile_de")
 
 
 def scope_for(thing: str, cc: str | None, home: str | None, eu_included: bool | None = None) -> dict:
@@ -432,18 +493,36 @@ def scope_for(thing: str, cc: str | None, home: str | None, eu_included: bool | 
 
 
 def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens: float,
-                 max_paid: int = MAX_PAID_DIRECT) -> list[Direct]:
+                 max_paid: int = MAX_PAID_DIRECT, pages: int = 1, vehicle: bool | None = None) -> list[Direct]:
     """Marketplace search pages to read directly for one lane.
     Small things: the asked-for (else home) country's marketplaces, then the big EU ones (vinted, kleinanzeigen,
     marktplaats, blocket, olx, dba, finn, leboncoin) while the shared bucket allows; then page 2 of the first
     paid ones. Bulky things (bikes, furniture, white goods): the home country gets the depth (tori paginates
     for free); marketplaces abroad only with tokens to spare, marked `extra` (shown apart, never the pick when
-    pickup only). tori's ItemList read is free (it paginates inside the read)."""
+    pickup only). tori's ItemList read is free (it paginates inside the read).
+    pages ('Compare more', 1-3): 2 = page 2 of the paid sites at a lower token floor, 3 = pages 2 and 3."""
+    pages = max(1, min(3, int(pages or 1)))
+    if pages > 1:
+        max_paid += 2 * (pages - 1)
     where = cc or home
     bulky = is_bulky(thing)
+    if vehicle is None:
+        try:
+            from agora.need import vehicle_need
+            vehicle = vehicle_need(thing)
+        except ImportError:
+            vehicle = False
     home_keys: list[str] = []
     eu_keys: list[str] = []
-    if lane == "used":
+    if vehicle:
+        # a vehicle: the country's cars categories first (priority, not a filter: the general marketplace
+        # follows while tokens last and every listing is judged on its own), the big EU car sites as extras
+        if lane != "used":
+            return []
+        home_keys += [k for k in HOME_VEHICLE.get(where or "", ()) if k in SITES]
+        home_keys += [k for k in HOME_USED.get(where or "", ()) if k not in home_keys]
+        eu_keys += [k for k in EU_VEHICLE if SITES[k].country != where]
+    elif lane == "used":
         home_keys += list(HOME_USED.get(where or "", ()))
         for k in (BULKY_EU_USED if bulky else EU_WIDE_USED):
             if k == "vinted":
@@ -474,20 +553,23 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
                 return
             n_paid += 1
             left -= 1
-        q = site_query(thing, s)
-        out.append(Direct(s, lane, q, build_url(s, q), paid, 1, extra))
+        q = vehicle_query(thing) if s.vehicle else site_query(thing, s)
+        url = build_url(s, q) if q or not s.browse else s.browse
+        out.append(Direct(s, lane, q, url, paid, 1, extra))
 
     def next_pages() -> None:
         nonlocal left, n_paid
-        if lane != "used":
+        if lane != "used" and not (pages > 1 and lane == "refurbished"):
             return
-        for d in [d for d in out if d.paid and d.page == 1 and not d.extra and d.site.verified
-                  and page_url(d.site, d.url, 2) and not any(x.url == page_url(d.site, d.url, 2) for x in out)]:
-            if n_paid >= max_paid + 2 or left < NEXT_PAGE_MIN_TOKENS:
-                break
-            n_paid += 1
-            left -= 1
-            out.append(Direct(d.site, lane, d.query, page_url(d.site, d.url, 2) or d.url, True, 2, False))
+        floor_next = NEXT_PAGE_MIN_TOKENS if pages == 1 else DEEP_NEXT_PAGE_MIN_TOKENS
+        for n in range(2, max(2, pages + 1) + 1):
+            for d in [d for d in out if d.paid and d.page == 1 and not d.extra and d.site.verified
+                      and page_url(d.site, d.url, n) and not any(x.url == page_url(d.site, d.url, n) for x in out)]:
+                if n_paid >= max_paid + 2 or left < floor_next:
+                    return
+                n_paid += 1
+                left -= 1
+                out.append(Direct(d.site, lane, d.query, page_url(d.site, d.url, n) or d.url, True, n, False))
 
     for k in home_keys:
         add(k, False)

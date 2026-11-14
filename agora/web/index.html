@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/web/css/watch.css">
 <link rel="stylesheet" href="/web/css/livelog.css">
 <link rel="stylesheet" href="/web/css/landing.css">
+<link rel="stylesheet" href="/web/css/tree.css">
 <link rel="stylesheet" href="/web/css/listings.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23F4F1EA'/%3E%3Cpath d='M5 21h22' stroke='%231C1B18' stroke-width='2'/%3E%3Ccircle cx='12' cy='16' r='4' fill='%23F5D547' stroke='%231C1B18' stroke-width='1.5'/%3E%3C/svg%3E">
 </head>
@@ -39,6 +40,7 @@
     </nav>
   </header>
 
+  <nav id="crumbs" aria-label="Category" hidden></nav>
   <div id="chips" aria-label="What we understood" hidden></div>
   <div id="ticker" aria-live="polite" hidden>
     <span class="tick-text"><span class="tick-cur"></span></span>
@@ -64,7 +66,7 @@
   </main>
 
   <section id="landing" aria-label="About">
-    <a class="scroll-cue" href="#ld-browse" aria-label="Browse real listings below"><i aria-hidden="true"></i><span>browse ↓</span></a>
+    <a class="scroll-cue" href="#ld-browse" aria-label="Browse everything you can buy, below"><i aria-hidden="true"></i><span>browse everything ↓</span></a>
   </section>
 
   <aside id="sheet" aria-hidden="true"></aside>

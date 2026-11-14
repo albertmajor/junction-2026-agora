@@ -126,7 +126,38 @@ SYNONYMS: dict[str, set[str]] = {
     "tv": {"television", "televisio", "fernseher"},
     "headphones": {"kuulokkeet", "kopfhorer", "headset", "earbuds"},
     "stroller": {"rattaat", "kinderwagen", "pram", "pushchair"},
+    "car": {"auto", "bil", "pkw", "voiture", "coche", "henkiloauto", "personbil", "vehicle", "automobile"},
+    "auto": {"car", "bil", "pkw", "henkiloauto", "vehicle"},
 }
+
+
+# ---------------------------------------------------------------- whole-word matching
+# 'car' must never match 'cargo', 'Carhartt', 'Carlotta' or 'Carrera': a need word matches a title token
+# exactly, with a plural / case ending (cars, autot, Autos, hyllyt), or as the head of a compound
+# (kaupunkipyörä ends in pyörä, Gebrauchtwagen in wagen); never as the start of another word.
+_SHORT_ENDINGS = ("s", "es")
+_ENDINGS = ("s", "es", "n", "en", "e", "er", "t", "a", "ä", "ja", "jä", "ar", "or", "na", "ssa", "sta", "lla", "lle",
+            "ksi", "ine", "an", "on", "un", "yn", "in", "ta")
+
+
+def word_hit(w: str, toks: set[str] | list[str]) -> bool:
+    """`w` (folded, one word) is one of the title tokens, as a whole word."""
+    if not w:
+        return False
+    if " " in w:                       # a phrase synonym: every word of it
+        return all(word_hit(x, toks) for x in w.split())
+    for t in toks:
+        if t == w:
+            return True
+        if t.startswith(w):
+            if t[len(w):] in (_SHORT_ENDINGS if len(w) < 4 else _ENDINGS):
+                return True
+        elif len(w) >= 4 and len(t) >= len(w) + 3 and t.endswith(w):
+            return True                # compound head: henkilöauto, kirjahylly, damenfahrrad
+    return False
+
+
+ATTRIBUTE_ONLY = {"bright", "dark", "pale", "deep", "metallic", "matte", "glossy", "shiny"}
 
 
 @dataclass
@@ -334,6 +365,79 @@ def _host(url: str) -> str:
     return m.group(1).lower() if m else ""
 
 
+# a whole site or category page read as one 'offer': 'Used Cars for Sale' (capitalone.com, €6,333), 'Autot',
+# 'Gebrauchtwagen', '1 234 results'. Its price is some item's on it: never an offer (expanded into its listings
+# by the reader when it knows the site, else skipped).
+CATEGORY_TITLE = re.compile(
+    r"^(?:(?:used|new|cheap|best|all|buy|shop|find|browse|second[- ]hand|pre[- ]owned|certified)\s+)*"
+    r"(?:[a-z]+\s+){0,2}(?:cars|autos|vehicles|trucks|vans|suvs|bikes|bicycles|phones|laptops|cameras|"
+    r"listings|products|items|deals|offers|ads)\b(?:\s+(?:for\s+sale|near\s+(?:you|me)|in\s+\w+(?:\s+\w+)?|"
+    r"online|today|from\s+dealers?|and\s+\w+))*\s*$"
+    r"|^(?:käytetyt|myytävät|vaihtoautot|autot|gebrauchtwagen|gebrauchte\s+autos|occasions?|tweedehands\s+auto'?s|"
+    r"begagnade\s+bilar|brugte\s+biler|bruktbiler|voitures\s+d'occasion|coches\s+de\s+segunda\s+mano|auto\s+usate)"
+    r"(?:\s+\w+){0,3}\s*$"
+    r"|\b\d[\d .,]*\s+(?:results|listings|ads|ilmoitusta|angebote|anzeigen|resultaten|advertenties|annonser|"
+    r"annoncer|cars|autos|autoa)\b", re.I)
+WHOLESALE_TITLE = re.compile(r"\b(?:wholesale|bulk\s+lot|job\s+lot|lot\s+of\s+\d+|\d+\s*(?:x|pcs|pieces|stk|kpl)\b.*"
+                             r"\b(?:lot|pallet|bulk|wholesale)|pallets?\b|partijhandel|grossiste|großhandel|"
+                             r"restposten|moq\b|min(?:imum)?\.?\s+order)", re.I)
+
+
+def category_page(title: str) -> bool:
+    t = re.split(r"\s+[|–—]\s+|\s+-\s+(?=[A-Z][\w.]+$)", (title or "").strip())[0].strip(" .!:")
+    return bool(t) and bool(CATEGORY_TITLE.search(t))
+
+
+# ---------------------------------------------------------------- vehicles: is THIS listing a vehicle?
+NOT_VEHICLE = re.compile(
+    r"\b(?:toys?|lelu\w*|spielzeug\w*|leksak\w*|speelgoed\w*|kids?|children'?s?|lasten|kinder\w*|barn|"
+    r"hot\s?wheels|matchbox|diecast|die-cast|1\s?:\s?\d{2,3}|scale\s+model|pienoismalli\w*|modelauto|modellauto|"
+    r"ride[- ]on|pedal\s+car|slot\s?car|racetrack|race\s?track|carrera|lego|duplo|rc\b|radio[- ]controlled|"
+    r"remote[- ]control\w*|kauko-ohja\w*|bed|sänky|bett|seng|poster|sticker|keychain|key\s?ring|costume|puzzle|"
+    r"tinter|paint|maali|lack|lp\b|vinyl|album|cd\b|dvd|book|kirja|buch|t-?shirt|hoodie|sweat\w*|jacket|"
+    r"spodnie|jeans|trousers|pants|cargo\s+\w*pants|car\s+seat|turvaistuin|kindersitz|bilbarnstol|"
+    r"car\s+charger|cover|mat|matto|cam\b|dashcam|vacuum|imuri)\b", re.I)
+VEHICLE_EVIDENCE = re.compile(
+    r"\b(?:19[5-9]\d|20[0-2]\d)\b|\b\d[\d .]*\s?(?:km|tkm|mi|miles)\b|\b(?:diesel|bensiini|benzin|petrol|"
+    r"gasoline|hybrid|electric|sähkö|automatic|automaatti|manual|manuaali|vaihteisto|kw|hp|ps|hv|cc|tdi|tsi|"
+    r"awd|4wd|4x4|katsastettu|inspected|registered|rekisteröity)\b", re.I)
+VEHICLE_FLOOR_EUR = 500.0      # a whole used car for less is a toy, a part or a scam unless the listing says so
+
+
+def _is_a_vehicle(word: str, offer: Offer) -> bool:
+    """'car' is covered by a listing that is a car without saying so: 'Toyota Corolla 1.6 2012 210 tkm', or a
+    listing filed under a cars category (raw['category'] == 'vehicle', set by the reader)."""
+    try:
+        from agora.need import CAR_MAKES, VEHICLE_NOUNS
+    except ImportError:
+        return False
+    if not VEHICLE_NOUNS.match(word):
+        return False
+    title = offer.title or ""
+    if NOT_VEHICLE.search(title):
+        return False
+    return offer.raw.get("category") == "vehicle" or bool(CAR_MAKES.search(title) and VEHICLE_EVIDENCE.search(title))
+
+
+def vehicle_mismatch(need: Need, offer: Offer) -> str | None:
+    """For a vehicle need, why this listing is not a vehicle: a toy / kids' car / model, an item that only
+    shares a word (paint 'Bright Red', an LP, a bed), or a 'car' under VEHICLE_FLOOR_EUR with nothing that
+    says it is one (no make, year, km, fuel). Judged per listing, whatever the site."""
+    try:
+        from agora.need import CAR_MAKES, vehicle_need
+    except ImportError:
+        return None
+    if need.kind != "product" or not vehicle_need(need.thing):
+        return None
+    title = offer.title or ""
+    if m := NOT_VEHICLE.search(title):
+        return f"not a vehicle ({m.group(0).lower()})"
+    p = offer.price_eur
+    if p is not None and p < VEHICLE_FLOOR_EUR and not (CAR_MAKES.search(title) and VEHICLE_EVIDENCE.search(title)):
+        return f"€{p:,.0f} is too little for a car and the listing names no make, year or mileage"
+    return None
+
+
 def not_an_offer(o: Offer) -> str | None:
     """Reason when the page is not one buyable listing: a search/list/category page, a price-comparison
     or news site. Such a page's price belongs to some item on it, so it must never set the market."""
@@ -356,6 +460,10 @@ def not_an_offer(o: Offer) -> str | None:
         return "search or list page, not one listing"
     if NOT_OFFER_TITLE.search(o.title or ""):
         return "price comparison or news page, not a shop listing"
+    if not o.raw.get("from_list_page") and category_page(o.title or ""):
+        return "a category / search page (many listings), not one listing"
+    if WHOLESALE_TITLE.search(o.title or ""):
+        return "a wholesale lot, not one item"
     return None
 
 
@@ -422,9 +530,11 @@ def relevance(need: Need, offer: Offer) -> float:
     ns = signature(need.thing)
     os_ = signature(offer.title or "", offer.brand)
     title_toks = set(tokenize(offer.title or "")) | os_.words | set(os_.models)
-    need_words = ns.words
+    need_words = {w for w in ns.words if w not in ATTRIBUTE_ONLY}
     hay = " ".join(title_toks) + " " + (os_.brand or "")
-    covered = sum(1 for w in need_words if w in hay or any(x in hay for x in SYNONYMS.get(w, ())))
+    toks = title_toks | ({os_.brand} if os_.brand else set())
+    covered = sum(1 for w in need_words if word_hit(w, toks) or any(word_hit(x, toks) for x in SYNONYMS.get(w, ()))
+                  or _is_a_vehicle(w, offer))
     coverage = covered / len(need_words) if need_words else 1.0
     if need.kind == "service":
         return _service_relevance(need, offer)
@@ -439,6 +549,8 @@ def relevance(need: Need, offer: Offer) -> float:
     score *= brand_ok
     if is_accessory(offer.title or "", need):
         score *= 0.15
+    if vehicle_mismatch(need, offer):
+        score *= 0.05
     if os_.kit and not ns.kit and not need.must_have:
         score *= 0.9   # body asked, kit offered: same camera, slightly different deal
     if offer.condition not in ("unknown", *need.conditions):
@@ -621,6 +733,8 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return r, why
     if need.kind == "service":
         return r, off_topic_reason(need, offer) or "not that service (the page does not name the job)"
+    if why := vehicle_mismatch(need, offer):
+        return r, why
     if is_accessory(offer.title or "", need):
         return r, "accessory, not the item"
     ns, os_ = signature(need.thing), signature(offer.title or "", offer.brand)

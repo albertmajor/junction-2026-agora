@@ -280,6 +280,147 @@ def detect_must_have(text: str) -> tuple[list[str], list[tuple[int, int]]]:
     return out, spans
 
 
+# ---------------------------------------------------------------- kind: product | service | digital
+# A need for a provider's work or a subscription ("web developer for small business", "bookkeeping service
+# finland", "unlimited graphic design subscription") is not a thing to buy used: the hunt skips the
+# marketplace lanes and lets the service + long-tail lanes lead. Rules first, then agora.taxonomy.
+
+DIGITAL_WORDS = re.compile(
+    r"\b(?:subscriptions?|saas|software|licen[cs]es?|vpn|web\s?hosting|hosting|cloud\s+storage|streaming|"
+    r"tilaus|kuukausitilaus|abo|abonnement|abonnemang)\b", re.I)
+# the provider named by its role: 'software developer' is a person to hire, not software
+ROLE_WORDS = re.compile(
+    r"\b(?:developers?|designers?|agency|agencies|freelancers?|consultants?|bookkeepers?|accountants?|auditors?|"
+    r"lawyers?|attorneys?|solicitors?|translators?|copywriters?|illustrators?|videographers?|programmers?|"
+    r"coders?|marketers?|recruiters?|coach|tutors?|virtual\s+assistant)\b", re.I)
+SERVICE_HINTS = re.compile(
+    r"\b(?:services?|palvelu\w*|dienst\w*|tjänst\w*|developers?|designers?|agency|agencies|freelanc\w*|"
+    r"consult\w*|bookkeep\w*|accounting|accountants?|auditors?|lawyers?|attorneys?|solicitors?|notary|"
+    r"translat\w*|copywrit\w*|retainer|productized|seo|marketing|branding|web\s?design|web\s?development|"
+    r"app\s+development|logo\s+design|graphic\s+design|ux\s+design|video\s?edit\w*|videographer|illustrator|"
+    r"virtual\s+assistant|payroll|recruit\w*|coach(?:ing)?|tax\s+advi[sc]\w*|"
+    r"kirjanpi\w*|tilitoimist\w*|verkkosivu\w*|mainostoimist\w*|buchhalt\w*|steuerberat\w*|webdesign\w*|"
+    r"boekhoud\w*|redovisning\w*|bokför\w*)\b", re.I)
+# a thing whose head is an object stays a product: 'laptop for web developer', 'graphic design book'
+PRODUCT_HEAD = re.compile(
+    r"\b(?:books?|kirja|buch|laptops?|notebooks?|computers?|pc|macbook|monitors?|screens?|displays?|tablets?|"
+    r"ipad|phones?|iphone|cameras?|lens(?:es)?|bikes?|bicycles?|chairs?|desks?|tables?|keyboards?|mouse|mice|"
+    r"printers?|pens?|headphones|headsets?|speakers?|tv|television|consoles?|shoes|jackets?|bags?|backpacks?|"
+    r"kits?|toys?|games?|posters?|mugs?|shirts?|t-shirts?|hoodies?|stickers?|cards?|box|boxes|cables?|"
+    r"chargers?|routers?|drives?|ssd|hdd|gpu|cpu|microphones?|mic|lamps?|sofa|bed|shelf|machine|tools?)$",
+    re.I)
+SPLIT_HEAD = re.compile(r"\s+(?:for|with|to|from|by|för|für|voor|pour|para)\s+", re.I)
+TAXO_KIND_ROOTS = {"software": "digital", "professional": "service", "digital-services": "service",
+                   "finance-insurance": "service", "utilities": "service", "education": "service"}
+TAXO_MIN_CONFIDENCE = 0.55
+
+
+def product_head(thing: str) -> bool:
+    """True when the need names an object ('laptop for web developer', 'graphic design book')."""
+    head = SPLIT_HEAD.split(thing.strip(), maxsplit=1)[0].strip()
+    return bool(PRODUCT_HEAD.search(head))
+
+
+def detect_kind(text: str, thing: str | None = None) -> tuple[str | None, str]:
+    """-> ('service' | 'digital' | None, why). None = leave the need a product. Keyword rules first
+    (a subscription or a provider's work), then agora.taxonomy.classify on the B2B / digital roots only
+    (its consumer-service roots catch 'wine club' -> bars), never when the need's head is an object."""
+    thing = (thing or text).strip()
+    if not thing or product_head(thing):
+        return None, "object"
+    hay = f"{thing} {text}"
+    if ROLE_WORDS.search(hay):
+        return "service", "words"
+    if DIGITAL_WORDS.search(hay):
+        # 'coffee subscription', 'dog food subscription': a product delivered every month stays a product
+        core = DIGITAL_WORDS.sub(" ", thing).strip()
+        c = _classify(core) if core else None
+        if c and c.get("kind") in ("product", "food") and (c.get("confidence") or 0) >= 0.6:
+            return None, "physical subscription"
+        return "digital", "words"
+    if SERVICE_HINTS.search(hay):
+        return "service", "words"
+    c = _classify(text)
+    if c and (c.get("confidence") or 0) >= TAXO_MIN_CONFIDENCE:
+        root = (c.get("path_ids") or [""])[0]
+        if root in TAXO_KIND_ROOTS:
+            return TAXO_KIND_ROOTS[root], "taxonomy"
+    return None, "taxonomy"
+
+
+def _classify(text: str) -> dict[str, Any] | None:
+    try:
+        from agora import taxonomy
+        return taxonomy.classify(text)
+    except Exception:            # tree missing or broken: the rules are enough
+        return None
+
+
+def priced_per_period(need: Need) -> bool:
+    """A subscription, retainer or B2B service (bookkeeping, a web developer, a design subscription): its
+    offers are plans per month / year / hour / project, compared period with period. Local trades the rules
+    know (cleaning, plumbing ...) keep the job costing (rate x hours)."""
+    if need.kind == "digital":
+        return True
+    if need.kind != "service":
+        return False
+    return not any(detect_service(t or "")[0] for t in (need.thing, need.raw))
+
+
+def service_view(need: Need) -> Need:
+    """The need as the service-only stages (agora.resolve, agora.relevance) understand it: a digital need is
+    matched like a service (the provider's page names the work), never by product model numbers."""
+    if need.kind != "digital":
+        return need
+    import dataclasses
+    return dataclasses.replace(need, kind="service", conditions=list(need.conditions),
+                               must_have=list(need.must_have))
+
+
+# ---------------------------------------------------------------- vehicles
+# The tree files 'car' under Scale Models (a toy), so vehicles are told by words: the need's head noun is a
+# vehicle ('bright red car', 'volvo xc90', 'käytetty auto'), not something for one ('car seat', 'car charger').
+VEHICLE_NOUNS = re.compile(
+    r"^(?:cars?|autos?|automobiles?|vehicles?|suvs?|sedans?|saloons?|hatchbacks?|estates?|wagons?|"
+    r"station\s?wagons?|convertibles?|cabrio(?:let)?s?|coupes?|minivans?|vans?|pick-?ups?|pickup\s+trucks?|"
+    r"autot|henkilöauto\w*|farmari\w*|bil|bilar|bilen|biler|pkw|gebrauchtwagen|kombi|voitures?|coches?|"
+    r"macchinas?|samochód|samochody)$", re.I)
+CAR_MAKES = re.compile(
+    r"\b(?:volvo|toyota|bmw|audi|vw|volkswagen|skoda|škoda|ford|mercedes(?:-benz)?|tesla|nissan|honda|mazda|kia|"
+    r"hyundai|peugeot|renault|citroen|citroën|opel|seat|cupra|fiat|alfa romeo|porsche|lexus|subaru|mitsubishi|"
+    r"suzuki|dacia|mini cooper|jeep|land rover|range rover|jaguar|polestar|byd|mg|saab|chevrolet|dodge)\b", re.I)
+CAR_NOT = re.compile(r"\b(?:seats?|chargers?|holders?|mounts?|covers?|wash|washing|vacuum|cleaner|wax|polish|"
+                     r"mats?|parts?|tyres?|tires?|wheels?|rims?|radio|stereo|speakers?|battery|batteries|keys?|"
+                     r"rental|rent|insurance|repair|service|toys?|models?|lego|kids?|bed|sticker)\b", re.I)
+ATTRIBUTE_WORDS = re.compile(
+    r"\b(?:bright|dark|light|pale|deep|metallic|matte|glossy|shiny|red|blue|green|black|white|silver|grey|gray|"
+    r"yellow|orange|purple|pink|brown|beige|gold|punainen|sininen|musta|valkoinen|harmaa|rot|blau|schwarz|weiss|"
+    r"weiß|röd|blå|svart|vit|rood|blauw|zwart|wit|rouge|noir|blanc)\b", re.I)
+
+
+def vehicle_need(thing: str) -> bool:
+    """True when the need is a vehicle itself: its head noun is one ('bright red car', 'used auto'), or a car
+    make heads it without a part/accessory word ('volvo xc90', not 'volvo key cover')."""
+    head = SPLIT_HEAD.split((thing or "").strip(), maxsplit=1)[0].strip()
+    words = head.split()
+    if not words or CAR_NOT.search(head):
+        return False
+    return bool(VEHICLE_NOUNS.match(words[-1])) or (bool(CAR_MAKES.search(head)) and len(words) <= 5)
+
+
+def split_attributes(thing: str) -> tuple[str, list[str]]:
+    """'bright red car' -> ('car', ['bright red']): colours are a preference, not the item."""
+    attrs = [m.group(0) for m in ATTRIBUTE_WORDS.finditer(thing)]
+    rest = re.sub(r"\s+", " ", ATTRIBUTE_WORDS.sub(" ", thing)).strip()
+    return (rest, [" ".join(attrs).lower()]) if attrs and rest else (thing, [])
+
+
+def is_service(need: Need) -> bool:
+    """Service-like needs (a provider's work, or a digital subscription): no used / refurbished lanes,
+    priced per hour / job / month, never resold."""
+    return need.kind in ("service", "digital")
+
+
 def _cut(text: str, spans: list[tuple[int, int]]) -> str:
     chars = list(text)
     for a, b in spans:
@@ -320,9 +461,27 @@ def parse_need_rules(text: str) -> Need:
             need.thing = service
         if service not in need.must_have and service not in need.thing:
             need.must_have.insert(0, service)
-    elif conds:
-        need.conditions = conds
+    else:
+        _kind_rules(need, raw, conds)    # 'used ...' = a product; else a service / digital need by words + tree
+    if need.kind == "product" and vehicle_need(need.thing):
+        thing, attrs = split_attributes(need.thing)     # 'bright red car': the thing is 'car', red is a wish
+        need.thing = thing
+        need.must_have += [a for a in attrs if a not in need.must_have]
+        if "refurbished" in need.conditions and len(need.conditions) > 1:
+            need.conditions = [c for c in need.conditions if c != "refurbished"]
     return need
+
+
+def _kind_rules(need: Need, raw: str, conds: list[Condition]) -> None:
+    if conds and conds != ["rental"] and any(c != "new" for c in conds):
+        need.conditions = conds
+    else:
+        kind, _ = detect_kind(raw, need.thing)
+        if kind is not None:
+            need.kind = kind             # type: ignore[assignment]
+            need.conditions = ["service"]
+        elif conds:
+            need.conditions = conds
 
 
 # ---------------------------------------------------------------- Gemini (optional)
@@ -368,7 +527,7 @@ def _merge(rules: Need, llm: dict[str, Any]) -> Need:
     thing = llm.get("thing")
     if isinstance(thing, str) and 1 < len(thing) < 120:
         rules.thing = thing.strip().lower()
-    if llm.get("kind") in ("product", "service") and rules.kind == "product":
+    if llm.get("kind") in ("product", "service") and rules.kind == "product" and not product_head(rules.thing):
         rules.kind = llm["kind"]
         if rules.kind == "service":
             rules.conditions = ["service"]

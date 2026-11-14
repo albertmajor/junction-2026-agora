@@ -39,6 +39,8 @@ async function mountAll() {
   }
   const ll = await load('livelog');
   if (ll && ll.mountLivelog) { try { ll.mountLivelog($('reading'), line); } catch (e) { console.warn('[agora] mountLivelog failed', e); } }
+  const sg = await load('suggest');
+  if (sg && sg.mountSuggest) { try { sg.mountSuggest(ask, qIn); } catch (e) { console.warn('[agora] mountSuggest failed', e); } }
   const lm = await load('landing');
   if (lm && lm.mountLanding) { try { lm.mountLanding($('landing')); } catch (e) { console.warn('[agora] mountLanding failed', e); } }
   const plan = [
@@ -72,16 +74,18 @@ async function renderExamples() {
 }
 
 // ---------- run / URL state ----------
-async function run(q, { push = true } = {}) {
+async function run(q, { push = true, cat = null } = {}) {
   q = String(q || '').trim().replace(/\s+/g, ' ');
   if (q.length < 2) { qIn.focus(); return; }
   qIn.value = q;
   if (push) {
     const u = new URL(location.href);
     u.searchParams.set('q', q);
-    for (const k of ['share', 'by']) u.searchParams.delete(k);
+    if (cat && cat.id) u.searchParams.set('cat', cat.id); else u.searchParams.delete('cat');
+    for (const k of ['share', 'by', 'browse']) u.searchParams.delete(k);
     if (u.href !== location.href) history.pushState({ q }, '', u);
   }
+  showCrumbs(q, cat);
   setStatus('hunt', 'reading the question…');
   setPhase('hunting');
   await stream.startHunt(q);
@@ -94,21 +98,60 @@ function goHome({ push = true } = {}) {
     const u = new URL(location.href); u.searchParams.delete('q');
     if (u.href !== location.href) history.pushState({}, '', u);
   }
-  clearChips(); tickerOff(); setStatus(null);
+  clearChips(); tickerOff(); setStatus(null); showCrumbs(null);
   setPhase('start');
   emit('reset', { q: '' });
   document.title = BRAND;
 }
 ask.addEventListener('submit', e => { e.preventDefault(); run(qIn.value); });
 // a landing card (or 'what an agent sees') asks for a search: back to the top, then run it
-on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q); });
+on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null }); });
 bar.querySelector('.logo').addEventListener('click', e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault(); goHome();
 });
 addEventListener('popstate', () => {
-  const q = new URLSearchParams(location.search).get('q');
-  if (q) run(q, { push: false }); else goHome({ push: false });
+  const sp = new URLSearchParams(location.search), q = sp.get('q');
+  if (q) run(q, { push: false, cat: sp.get('cat') ? { id: sp.get('cat') } : null }); else goHome({ push: false });
+});
+
+// ---------- category breadcrumb (from the tree of everything you can buy) ----------
+// A hunt started from a category shows its path; a typed one shows the tree's best guess when it is sure.
+let crumbSeq = 0;
+async function showCrumbs(q, cat) {
+  const el = $('crumbs');
+  if (!el) return;
+  const my = ++crumbSeq;
+  el.hidden = true; el.innerHTML = '';
+  if (!q) return;
+  let C = null;
+  try { C = await import('./cats.js'); } catch { return; }
+  let ids = cat && cat.ids, path = cat && cat.path, guess = false;
+  if (cat && cat.id && !(ids && path && ids.length === path.length)) {
+    const r = await C.nodes([cat.id]);
+    const n = r && r.items && r.items[0];
+    if (n) { ids = n.path_ids; path = n.path; }
+  }
+  if (!ids) {
+    const r = await C.api('/api/categories/classify', { q });
+    const m = r && r.match;
+    if (!m || m.confidence < 0.6) return;
+    ids = m.path_ids; path = m.path; guess = true;
+  }
+  if (my !== crumbSeq || !ids || !ids.length) return;
+  const sep = '<span class="cb-sep" aria-hidden="true">›</span>';
+  el.dataset.guess = guess ? '1' : '';
+  el.innerHTML = `${C.icon(ids[0], 'ct-ic cb-ic')}<span class="sr">Category: </span>` + ids.map((id, k) =>
+    `<a href="/?browse=${encodeURIComponent(id)}#ld-browse" data-browse="${esc(id)}"${k === ids.length - 1 ? ' aria-current="page"' : ''}>${esc(String(path[k] || '').replace(/\u00ad/g, ''))}</a>`).join(sep)
+    + (guess ? `<span class="cb-guess" title="The category tree's best guess for what you typed">best guess</span>` : '');
+  el.hidden = false;
+}
+$('crumbs') && $('crumbs').addEventListener('click', e => {
+  const a = e.target.closest('[data-browse]');
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  goHome();
+  emit('browse', { id: a.dataset.browse });
 });
 
 // ---------- status line ----------
@@ -598,7 +641,7 @@ async function boot() {
   if (params.get('lab') === '1') toggleLab(true);
   const q = params.get('q');
   if (params.get('stage') === '1') stage();
-  else if (q) run(q, { push: false });
+  else if (q) run(q, { push: false, cat: params.get('cat') ? { id: params.get('cat') } : null });
   else if (matchMedia('(min-width: 641px)').matches) qIn.focus({ preventScroll: true });
 }
 boot();

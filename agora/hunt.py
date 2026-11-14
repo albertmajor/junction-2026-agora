@@ -27,6 +27,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from agora.models import Event, Need, Offer, Thing, Verdict, to_dict
+from agora.need import is_service, service_view
 from agora.origin import origin_for, origin_from_payload
 
 ParseNeed = Callable[[str], Need]
@@ -341,17 +342,26 @@ class Leaderboard:
             """Only rank a price once something can vouch for it: a second witness, or at least one other
             offer of its condition within 0.5x-2.5x of it. (Otherwise the first too-cheap listing 'leads'
             for a second before the market can call it out.)"""
-            if self.need.kind == "service" or o.raw.get("price_check") == "verified":
+            if is_service(self.need) or o.raw.get("price_check") == "verified":
                 return True
             others = [x.price_eur for x in peers if x is not o and x.condition == o.condition and x.price_eur]
             if not others or not o.price_eur:
                 return False
             return 0.5 <= o.price_eur / statistics.median(others) <= 2.5
 
-        ranked = sorted((o for t in things for o in t.offers
-                         if o.true_cost is not None and not judge_mod._risky(o) and o.in_stock is not False
-                         and settled(o, t.offers)),
-                        key=lambda o: o.true_cost.per_month_eur)[: self.size]  # type: ignore[union-attr]
+        pool = [o for t in things for o in t.offers
+                if o.true_cost is not None and not judge_mod._risky(o) and o.in_stock is not False
+                and settled(o, t.offers)]
+        groups = {str(o.raw.get("period_group")) for o in pool if o.raw.get("period_group")}
+        if groups and is_service(self.need):
+            # like with like: monthly plans are never ranked against hourly rates or project prices
+            by: dict[str, list[Offer]] = {}
+            for o in pool:
+                if o.raw.get("period_group"):
+                    by.setdefault(str(o.raw["period_group"]), []).append(o)
+            lead = getattr(judge_mod, "lead_group", lambda n, g: max(g, key=lambda k: len(g[k])))(self.need, by)
+            pool = by[lead]
+        ranked = sorted(pool, key=lambda o: o.true_cost.per_month_eur)[: self.size]  # type: ignore[union-attr]
         top = [{"url": o.url, "source": o.source, "cond": o.condition, "price_eur": o.price_eur,
                 "per_month": o.true_cost.per_month_eur, "per": getattr(o.true_cost, "per", "month")}  # type: ignore[union-attr]
                for o in ranked]
@@ -365,12 +375,15 @@ class Leaderboard:
         reason = None
         if changed:
             new = top[0]
-            unit = "/job" if new["per"] == "job" else "/mo"
+            unit = PER_SUFFIX.get(new["per"], "/mo")
             reason = (f"{new['cond']} at {new['source']} €{new['per_month']:,.0f}{unit} "
                       + (f"overtook {old_leader['cond']} at {old_leader['source']} €{old_leader['per_month']:,.0f}{unit}"
                          if old_leader else "takes the lead"))
         self.top = top
         return {"top": top, "leader_changed": changed, "reason": reason}
+
+
+PER_SUFFIX = {"job": "/job", "hour": "/h", "day": "/day", "month": "/mo"}
 
 
 # thing_id -> offer URLs seen in hunts of this process (lets the API build a thing's price history)
@@ -450,13 +463,25 @@ async def hunt(
     fresh: bool = False,
     hunt_id: str | None = None,
     longtail: bool = True,
+    depth: int = 1,
 ) -> AsyncIterator[Event]:
     """Run one hunt, yielding Events as they happen. Pass `result` to also collect the final objects.
 
     `budget_s`: wall-clock seconds after which unfinished page reads stop (True = DEFAULT_BUDGET_S or
     AGORA_HUNT_BUDGET_S, None/False/0 = no cap). A read cut by the budget or its own timeout falls back to
-    the price in its search snippet when that is safe (real reader only), else it becomes a `skip`."""
+    the price in its search snippet when that is safe (real reader only), else it becomes a `skip`.
+
+    `depth` ("Compare more", 1-3): 2-3 read deeper. More pages (max_sources x depth, <= 60, unless a cap was
+    passed), a longer budget (x1.5 / x2), more free tori pages (reader.READ_DEPTH) and page 2-3 of the paid
+    marketplaces while the shared bucket allows (discover(pages=depth) -> marketplaces.direct_pages)."""
     t0 = time.monotonic()
+    depth = max(1, min(3, int(depth or 1)))
+    if depth > 1:
+        if max_sources == DEFAULT_MAX_SOURCES:
+            max_sources = min(60, max_sources * depth)
+        if budget_s is True:
+            b = _budget_default()
+            budget_s = b * (1 + 0.5 * (depth - 1)) if b else None
     out = result if result is not None else HuntResult()
     out.hunt_id = hunt_id = hunt_id or new_hunt_id()
     queue: asyncio.Queue[Event | None] = asyncio.Queue()
@@ -494,6 +519,10 @@ async def hunt(
     deadline = t0 + float(budget_s) if budget_s else None
     if resolve is None:
         resolve = getattr(_module("resolve"), "resolve", None) or _fallback_resolve
+    base_resolve = resolve
+
+    def resolve(need: Need, offers: list[Offer]) -> list[Thing]:   # noqa: F811
+        return base_resolve(service_view(need), offers)    # a digital need is matched like a service
     if judge is None:
         judge = getattr(_module("judge"), "judge", None) or _fallback_judge
 
@@ -507,6 +536,9 @@ async def hunt(
         cd.MAX_AGE_MS.set(0)           # watcher re-hunts: every paid read past the scrape caches
     if two_phase:
         FETCH_MEMO.set({})
+    rd_mod = _module("reader")
+    if rd_mod is not None and hasattr(rd_mod, "READ_DEPTH"):
+        rd_mod.READ_DEPTH.set(depth)    # read tasks created below inherit it: more free tori pages
     tokens0 = _tokens_now()            # the shared 10/min bucket as this hunt starts
     trust_mod = _module("trust") if judge is getattr(_module("judge"), "judge", None) else None
     trust_tasks: list[asyncio.Task[Any]] = []
@@ -767,7 +799,10 @@ async def hunt(
     if _accepts(discover, "max_sources"):
         disc_kw["max_sources"] = max_sources
     if _accepts(discover, "tokens"):
-        disc_kw["tokens"] = tokens0 - sib_tokens
+        # a deeper hunt runs longer, so the shared bucket refills ~2 tokens per extra 12 s
+        disc_kw["tokens"] = tokens0 - sib_tokens + (2.0 * (depth - 1) if depth > 1 else 0.0)
+    if depth > 1 and _accepts(discover, "pages"):
+        disc_kw["pages"] = depth
 
     async def produce() -> None:
         try:
@@ -893,7 +928,7 @@ async def hunt(
     rel_mod = _module("relevance")
     if rel_mod is not None:
         try:
-            await rel_mod.prefetch(need, out.offers)
+            await rel_mod.prefetch(service_view(need), out.offers)
         except Exception:
             pass
     things: list[Thing] = []
@@ -911,7 +946,7 @@ async def hunt(
         reason = "not the thing you asked for"
         if explain is not None:
             try:
-                reason = explain(need, o)[1] or reason
+                reason = explain(service_view(need), o)[1] or reason
             except Exception:
                 pass
         yield ev("skip", url=o.url, reason=reason, rejected=True, title=o.title)

@@ -1,22 +1,13 @@
-// The landing page under the start search (UI round A, section 3): a browse grid of real listings,
-// how it works, the sources we read, the agent door, and "Powered by Context.dev".
+// The landing page under the start search (UI round A, section 3): the tree of everything you can buy
+// (tree.js, 'Browse everything'), how it works, the sources we read, the agent door, and "Powered by Context.dev".
 // main.js calls mountLanding($('landing')) and listens for the bus event 'ask' {q}.
 import * as core from './core.js';
-import { recordings, labelFor, queryFor } from './stream.js';
-import { flagSrc } from './flags.js';
+import { queryFor } from './stream.js';
+import { mountTree } from './tree.js';
 
 const brand = () => core.BRAND || document.documentElement.dataset.brand || 'Agora';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-// the recorded live hunts: the pick's photo (or a monogram plate) and what the hunt read
-const RECORDED = {
-  'sony-a7-iii-body': { img: '/web/assets/shelf/kamera-0.png', meta: '24 pages · 17 offers' },
-  'iphone-15-128gb-used': { img: '/web/assets/shelf/iphone-15-0.png', meta: '11 pages · 6 offers' },
-  'home-cleaning-helsinki-60m2': { svg: 'clean', meta: '13 pages · 10 offers', wide: true },
-  'city-bike-with-basket': { img: '/web/assets/shelf/rennrad-0.png', meta: '32 pages · 320 listings' },
-};
-const REC_ORDER = Object.keys(RECORDED);
 
 const SOURCES = [
   ['Second-hand', ['tori', 'blocket', 'finn', 'dba', 'kleinanzeigen', 'marktplaats', '2dehands', 'olx_pl', 'vinted',
@@ -40,14 +31,6 @@ const CD_FACTS = [
 ];
 
 // ---------- small pieces ----------
-const COUNTRY = { FI: 'Finland', SE: 'Sweden', DE: 'Germany', NL: 'the Netherlands', NO: 'Norway', DK: 'Denmark',
-  BE: 'Belgium', FR: 'France', IT: 'Italy', ES: 'Spain', AT: 'Austria', PL: 'Poland', GB: 'the United Kingdom' };
-function flag(cc) {
-  if (!cc || !/^[A-Za-z]{2}$/.test(cc)) return '';
-  const c = cc.toUpperCase(), name = COUNTRY[c] || c;
-  const t = `Listed in ${name}, from the marketplace the listing is on.`;
-  return `<span class="ld-flag" title="${esc(t)}" aria-label="${esc(t)}"><img src="${flagSrc(c)}" alt="" width="12" height="9" loading="lazy"><span class="ld-cc">${c}</span></span>`;
-}
 const cdMark = () => `<a class="cd-mark" href="https://context.dev" target="_blank" rel="noopener">Powered by <img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="14" height="14" data-fb="sq"> <b>Context.dev</b></a>`;
 const head = (n, kicker, h, id) => `<p class="ld-kicker"><span class="ld-n">${n}</span>${esc(kicker)}</p><h2 class="ld-h" id="${id}">${h}</h2>`;
 
@@ -59,18 +42,6 @@ const SVG = {
 };
 
 // ---------- sections ----------
-function browseHtml() {
-  return `<section class="ld-band" id="ld-browse" aria-labelledby="ld-browse-h">
-    <div class="ld-in">
-      <header class="ld-head ld-rv">
-        ${head('01', 'Browse', 'Or start from something real.', 'ld-browse-h')}
-        <p class="ld-sub">Real listings our hunts have read, at the price on their tag. Pick one and we hunt it across Europe, all in.</p>
-      </header>
-      <p class="ld-note" role="status" hidden>This demo server runs offline, so it replays the recorded live hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki, a city bike). The other searches run live when a Context.dev key is set.</p>
-      <ul class="ld-grid" role="list"></ul>
-    </div>
-  </section>`;
-}
 function howHtml() {
   const steps = [
     ['ask', 'You ask once.', 'Anything you can buy: a camera, a used iPhone, someone to clean your flat.'],
@@ -155,61 +126,9 @@ function cdHtml() {
   </section>`;
 }
 
-// ---------- browse cards ----------
-// a cleaning job has no product photo: a drawn spray bottle and bucket, in the same muted cut-out look
-const CLEAN_SVG = `<svg class="ld-draw" viewBox="0 0 220 120" aria-hidden="true">
-  <ellipse cx="110" cy="110" rx="78" ry="5" class="sh"/>
-  <path d="M58 44h22l6 10v52a4 4 0 0 1-4 4H56a4 4 0 0 1-4-4V58z" class="b1"/>
-  <path d="M56 70h28v24H56z" class="lb"/><path d="M61 78h18M61 84h12" class="ln"/>
-  <path d="M60 30h18v14H60z" class="b2"/><path d="M60 30h-14l-4 6h18z" class="b3"/>
-  <path d="M74 44c4 6 6 10 4 16" class="ln"/>
-  <circle cx="36" cy="32" r="1.6" class="mist"/><circle cx="30" cy="27" r="1.2" class="mist"/><circle cx="29" cy="36" r="1.1" class="mist"/>
-  <path d="M112 62h64l-7 44a5 5 0 0 1-5 4h-40a5 5 0 0 1-5-4z" class="b2"/>
-  <path d="M112 62c0-26 64-26 64 0" class="hd"/>
-  <path d="M108 62h72" class="rim"/>
-  <path d="M150 52c6-12 18-12 22-4" class="sp"/><path d="M146 54c2-8 10-10 14-6" class="sp2"/>
-</svg>`;
-function cardHtml(c, i) {
-  const plate = c.svg === 'clean' ? CLEAN_SVG
-    : c.img ? `<img src="${esc(c.img)}" alt="" loading="lazy" decoding="async">`
-    : `<span class="ld-mono" aria-hidden="true">${esc(c.mono || '')}</span>`;
-  const label = c.label ? `<span class="ld-label${c.recorded ? ' rec' : ''}">${esc(c.label)}</span>` : '';
-  return `<li class="ld-item ld-rv${c.wide ? ' wide' : ''}${i === 0 ? ' first' : ''}" style="--d:${(i % 6) * 40}ms">
-    <button type="button" class="ld-card" data-q="${esc(c.q)}" data-ok="${c.ok ? 1 : 0}" aria-label="${esc(`Hunt for ${c.title}`)}">
-      <span class="ld-plate">${plate}${label}</span>
-      <span class="ld-title">${esc(c.title)}</span>
-      <span class="ld-meta">${c.cc ? flag(c.cc) : ''}<span>${esc(c.meta)}</span></span>
-    </button></li>`;
-}
 async function getJson(url) {
   try { const r = await fetch(url, { headers: { accept: 'application/json' } }); return r.ok ? await r.json() : null; }
   catch { return null; }
-}
-async function cards() {
-  const [recs, shelf, status] = await Promise.all([
-    recordings().catch(() => []), getJson('/web/assets/shelf.json'), getJson('/status'),
-  ]);
-  const live = !!(status && status.live);
-  const have = new Set(recs || []);
-  const out = [];
-  const used = new Set();
-  for (const slug of [...REC_ORDER.filter(s => have.has(s)), ...[...have].filter(s => !REC_ORDER.includes(s))]) {
-    const r = RECORDED[slug] || { mono: labelFor(slug).slice(0, 5).toLowerCase(), meta: 'recorded live hunt' };
-    if (r.img) used.add(r.img);
-    out.push({ title: labelFor(slug), q: queryFor(slug), img: r.img, mono: r.mono, svg: r.svg, wide: r.wide, meta: r.meta, recorded: true, ok: true, label: 'instant replay' });
-  }
-  const items = (Array.isArray(shelf) ? shelf : []).filter(s => s && s.title && s.query && !used.has(s.img))
-    .sort((a, b) => (a.price_eur || 0) - (b.price_eur || 0));
-  for (const s of items) {
-    const rec = s.recording && have.has(s.recording);
-    out.push({
-      title: s.title, q: rec ? queryFor(s.recording) : s.query, img: s.img, cc: s.country,
-      // the price as listed is a tag, and says so (the main number everywhere else is all in)
-      meta: [s.price_eur ? 'tag ' + core.eur(s.price_eur, { dp: 0 }) : '', s.site, s.condition].filter(Boolean).join(' · '),
-      recorded: rec, ok: rec || live, label: rec ? 'instant replay' : '',
-    });
-  }
-  return out;
 }
 
 function brandsWall(el, brands) {
@@ -283,14 +202,9 @@ export function mountLanding(el) {
   el.dataset.mounted = '1';
   el.classList.add('ld-js');
   const cue = el.querySelector('.scroll-cue');
-  el.insertAdjacentHTML('beforeend', browseHtml() + cdHtml() + howHtml() + sourcesHtml() + agentsHtml());
+  el.insertAdjacentHTML('beforeend', cdHtml() + howHtml() + sourcesHtml() + agentsHtml());
+  mountTree(el);
   if (cue) el.prepend(cue);
-
-  const grid = el.querySelector('.ld-grid');
-  cards().then(list => {
-    grid.innerHTML = list.map(cardHtml).join('');
-    fallbacks(grid); reveal(grid);
-  });
   getJson('/web/assets/brands.json').then(b => {
     const wall = el.querySelector('.ld-wall');
     brandsWall(wall, b || {}); fallbacks(wall); reveal(wall);
@@ -298,16 +212,6 @@ export function mountLanding(el) {
   fallbacks(el); reveal(el);
 
   el.addEventListener('click', e => {
-    const card = e.target.closest('.ld-card');
-    if (card) {
-      if (card.dataset.ok === '1') { ask(card.dataset.q); return; }
-      const note = el.querySelector('.ld-note');
-      if (note) {
-        note.hidden = false; note.classList.remove('flash'); void note.offsetWidth; note.classList.add('flash');
-        note.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'nearest' });
-      }
-      return;
-    }
     const cp = e.target.closest('.ld-copy');
     if (cp) {
       const done = ok => { cp.textContent = ok ? 'copied' : 'select to copy'; cp.classList.toggle('ok', ok); setTimeout(() => { cp.textContent = 'copy'; cp.classList.remove('ok'); }, 1600); };
