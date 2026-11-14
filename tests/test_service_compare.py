@@ -89,7 +89,7 @@ def serve(pages: dict[str, str]) -> None:
 
 
 def test_provider_price_list_becomes_hourly_rate_plus_callout(monkeypatch):
-    url = "https://www.kennstdueinen.de/branche-klempner-356.html"
+    url = "https://www.werkstueck-berlin.de/leistungen/preisliste/"   # a provider (kennstdueinen.de is a directory)
 
     async def extract(u, schema, instructions=None, **kw):
         return {"page_type": "service", "offers": [

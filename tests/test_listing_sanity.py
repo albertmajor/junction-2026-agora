@@ -157,7 +157,8 @@ def test_flooded_market_never_picks_a_too_good_listing():
 def test_private_new_is_used_like_and_labelled():
     offers = [_o("https://www.gigantti.fi/p/1", "gigantti.fi", "Apple AirPods Pro 2", 229, "new"),
               _o("https://hinta.fi/1", "hinta.fi", "Apple AirPods Pro 2", 225, "new"),
-              _o("https://www.vinted.fi/items/1", "vinted.fi", "Apple AirPods Pro 2 sealed", 150, "new"),
+              # (round 4: vinted's buyer protection fee, €0.70 + 5%, is now always in 'all in')
+              _o("https://www.vinted.fi/items/1", "vinted.fi", "Apple AirPods Pro 2 sealed", 140, "new"),
               _o("https://www.tori.fi/item/2", "tori.fi", "Apple AirPods Pro 2", 160),
               _o("https://www.tori.fi/item/3", "tori.fi", "Apple AirPods Pro 2", 170)]
     v = J.judge(AIRPODS, resolve(AIRPODS, offers), history=False)
@@ -165,7 +166,7 @@ def test_private_new_is_used_like_and_labelled():
     assert J.private_new(priv) and J.market_condition(priv) == "used"
     assert v.best_offer_url == priv.url
     assert "new (private seller) at vinted.fi" in v.headline and "New from €2" in v.headline
-    assert 150.0 in J.market_prices(offers, "used") and 150.0 not in J.market_prices(offers, "new")
+    assert 140.0 in J.market_prices(offers, "used") and 140.0 not in J.market_prices(offers, "new")
 
 
 def test_red_flagged_listing_is_never_the_pick_nor_a_market_price():
@@ -202,11 +203,14 @@ def test_live_airpods_flood_replay_gives_a_sane_pick_fast():
     assert time.perf_counter() - t < 3.0                        # ~0.7 s here; generous for slow CI
     kept = [o for th in things for o in th.offers]
     pick = next(o for o in kept if o.url == v.best_offer_url)
-    assert pick.price_eur >= 84, v.headline                     # nothing under the reference floor
+    # nothing under the reference floor (round 4: hinta.fi, a price-comparison site, no longer sets the new
+    # reference, and the floor is at most 75% of the plain used median, so it is ~€72 rather than €84; the €30 pick
+    # this guards against stays out and the pick sits in the typical used band)
+    assert pick.price_eur >= 70 and not J._risky(pick), v.headline
     assert "New from €75" not in v.headline and "new from €75" not in v.headline
     tori30 = next(o for o in kept if o.url.endswith("/49683131"))
     assert J._risky(tori30)
-    assert sum(1 for o in kept if J._risky(o)) > 150
+    assert sum(1 for o in kept if J._risky(o)) > 100      # the flood of €5-€60 fakes and cases (round 4: lower floor)
 
 
 # ---------------------------------------------------------------- the pick check (listing page description)

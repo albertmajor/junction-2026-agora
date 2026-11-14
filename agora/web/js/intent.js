@@ -9,15 +9,20 @@ import * as C from './cats.js';
 
 const { esc } = C;
 const W = {
-  en: { mean: 'We think you mean:', now: 'Searching for', none: x => `Nothing found for “${x}” yet. Try:`, other: 'Something else? Search the words as typed',
+  en: { which: 'That could be a few things. Which one?', pick: x => `We see a few products called “${x}”. Which one?`, keep: 'Meanwhile we keep hunting the likeliest one.',
+        mean: 'We think you mean:', now: 'Searching for', none: x => `Nothing found for “${x}” yet. Try:`, other: 'Something else? Search the words as typed',
         near: 'Search providers near you', can: 'We can search these for you:', open: 'Browse' },
-  fi: { mean: 'Tarkoititko:', now: 'Haetaan', none: x => `”${x}” ei tuottanut vielä tuloksia. Kokeile:`, other: 'Jotain muuta? Hae sanoilla sellaisenaan',
+  fi: { which: 'Tämä voi tarkoittaa montaa asiaa. Mitä haet?', pick: x => `Nimellä ”${x}” löytyy useita tuotteita. Mikä niistä?`, keep: 'Haemme sillä välin todennäköisintä.',
+        mean: 'Tarkoititko:', now: 'Haetaan', none: x => `”${x}” ei tuottanut vielä tuloksia. Kokeile:`, other: 'Jotain muuta? Hae sanoilla sellaisenaan',
         near: 'Hae palveluntarjoajia läheltäsi', can: 'Voimme hakea nämä puolestasi:', open: 'Selaa' },
-  sv: { mean: 'Vi tror du menar:', now: 'Söker', none: x => `Inget hittades för ”${x}” än. Prova:`, other: 'Något annat? Sök orden som de är',
+  sv: { which: 'Det kan betyda flera saker. Vilken?', pick: x => `Vi ser flera produkter som heter ”${x}”. Vilken menar du?`, keep: 'Under tiden letar vi vidare efter den troligaste.',
+        mean: 'Vi tror du menar:', now: 'Söker', none: x => `Inget hittades för ”${x}” än. Prova:`, other: 'Något annat? Sök orden som de är',
         near: 'Sök leverantörer nära dig', can: 'Vi kan söka de här åt dig:', open: 'Bläddra' },
-  de: { mean: 'Meinst du:', now: 'Wir suchen', none: x => `Noch nichts für „${x}“ gefunden. Versuch:`, other: 'Etwas anderes? Die Wörter so suchen',
+  de: { which: 'Das kann mehreres sein. Welches?', pick: x => `Es gibt mehrere Produkte namens „${x}“. Welches meinst du?`, keep: 'Wir suchen derweil weiter nach dem wahrscheinlichsten.',
+        mean: 'Meinst du:', now: 'Wir suchen', none: x => `Noch nichts für „${x}“ gefunden. Versuch:`, other: 'Etwas anderes? Die Wörter so suchen',
         near: 'Anbieter in deiner Nähe suchen', can: 'Das können wir für dich suchen:', open: 'Ansehen' },
-  nl: { mean: 'We denken dat je bedoelt:', now: 'We zoeken', none: x => `Nog niets gevonden voor “${x}”. Probeer:`, other: 'Iets anders? Zoek de woorden zoals getypt',
+  nl: { which: 'Dat kan van alles zijn. Welke bedoel je?', pick: x => `We zien een paar producten die “${x}” heten. Welke bedoel je?`, keep: 'Ondertussen zoeken we door naar de meest waarschijnlijke.',
+        mean: 'We denken dat je bedoelt:', now: 'We zoeken', none: x => `Nog niets gevonden voor “${x}”. Probeer:`, other: 'Iets anders? Zoek de woorden zoals getypt',
         near: 'Zoek aanbieders bij jou in de buurt', can: 'Dit kunnen we voor je zoeken:', open: 'Bekijk' },
 };
 const w = (k, ...a) => { const L = W[C.getLang()] || W.en; const v = L[k] ?? W.en[k]; return typeof v === 'function' ? v(...a) : v; };
@@ -43,7 +48,28 @@ export const rewrites = it => !!(it && it.hunt && !it.as_typed);
 
 // ---------- the row under the search box ----------
 let el = null;
-const st = { q: '', interp: null, chosen: null, empty: false };
+const st = { q: '', interp: null, chosen: null, empty: false, clarify: null };
+
+// ---------- "which one?" (judges, F3: "We see multiple products with this name.") ----------
+// The engine may send `clarify` {question?, name?, options:[{label, q, image?}]} while the hunt keeps streaming
+// its top guess. It is optional: until one arrives nothing here changes. A tap re-asks with the option's q.
+const okImg = u => typeof u === 'string' && /^(https?:\/\/|data:image\/|\/)/i.test(u) ? u : '';
+function readClarify(d) {
+  const opts = (d && Array.isArray(d.options) ? d.options : [])
+    .filter(o => o && typeof o.label === 'string' && o.label.trim() && typeof o.q === 'string' && o.q.trim().length > 1)
+    .slice(0, 6).map(o => ({ label: o.label.trim(), q: o.q.trim(), image: okImg(o.image) }));
+  if (opts.length < 2) return null;
+  const name = [d.name, d.term, d.thing].find(x => typeof x === 'string' && x.trim()) || st.q;
+  const question = typeof d.question === 'string' && d.question.trim() ? d.question.trim() : w('pick', name);
+  return { question, options: opts };
+}
+function clarifyHtml(c) {
+  return `<div class="it-clarify" role="group" aria-labelledby="it-q"><p class="it-q" id="it-q">${esc(c.question)}</p><div class="it-row it-ask">`
+    + c.options.map((o, i) => `<button type="button" class="it-chip it-pic${o.image ? '' : ' no-img'}" data-clarify="${i}" title="${esc(o.q)}">`
+      + (o.image ? `<img src="${esc(o.image)}" alt="" width="40" height="40" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '')
+      + `<span>${esc(o.label)}</span></button>`).join('')
+    + `</div><p class="it-keep">${esc(w('keep'))}</p></div>`;
+}
 
 function where(it) {
   const d = (it.domains || []).filter(x => x.includes('.')).slice(0, 3);
@@ -56,18 +82,20 @@ function chip(it, pressed) {
 }
 function render() {
   if (!el) return;
-  const I = st.interp, it = st.chosen;
+  const I = st.interp, it = st.chosen, ask = st.clarify;
+  if (ask && (!I || !it)) { el.innerHTML = clarifyHtml(ask); el.hidden = false; return; }
   if (!I || !it || (!I.intents.length && !(I.next || []).length)) { el.hidden = true; el.innerHTML = ''; return; }
   const showNow = rewrites(it);
-  const showChips = !I.dominant && I.intents.length > 1;
-  if (!showNow && !showChips && !st.empty) { el.hidden = true; el.innerHTML = ''; return; }
+  const showChips = !ask && !I.dominant && I.intents.length > 1;
+  if (!showNow && !showChips && !st.empty && !ask) { el.hidden = true; el.innerHTML = ''; return; }
   const others = I.intents.filter(x => x.id !== it.id && !(it.id === '_typed' && x.hunt && x.hunt.q === st.q));
   let html = '';
+  if (ask) html += clarifyHtml(ask);
   if (showNow || showChips) {
     html += `<p class="it-now"><span class="it-k">${esc(w('now'))}</span> <b>${esc(it.label)}</b>${where(it)}</p>`;
   }
   if (showChips && !st.empty) {
-    html += `<div class="it-row" role="group" aria-label="${esc(w('mean'))}"><span class="it-h">${esc(w('mean'))}</span>`
+    html += `<div class="it-row" role="group" aria-label="${esc(w('mean'))}"><span class="it-h">${esc(w('which'))}</span>`
       + I.intents.map(x => chip(x, x.id === it.id)).join('') + '</div>';
   }
   if (st.empty) {
@@ -94,12 +122,18 @@ function stepsFor(I, it) {
 
 /** main.js: the hunt is starting with this interpretation (or none). */
 export function show(q, interp, chosen) {
-  st.q = q; st.interp = interp; st.chosen = chosen; st.empty = false;
+  st.q = q; st.interp = interp; st.chosen = chosen; st.empty = false; st.clarify = null;
   render();
 }
-export function clear() { st.interp = null; st.chosen = null; st.empty = false; render(); }
+export function clear() { st.interp = null; st.chosen = null; st.empty = false; st.clarify = null; render(); }
 
 function onClick(e) {
+  const c = e.target.closest('[data-clarify]');
+  if (c) {
+    const o = st.clarify && st.clarify.options[Number(c.dataset.clarify)];
+    if (o) core.emit('ask', { q: o.q, free: false });
+    return;
+  }
   const I = st.interp;
   if (!I) return;
   const b = e.target.closest('[data-intent]');
@@ -127,6 +161,15 @@ export function mountIntents(host) {
     render();
   });
   core.on('catpage', clear);
+  core.on('clarify', d => {
+    try { st.clarify = readClarify(d); } catch { st.clarify = null; }
+    if (st.clarify) render();
+  });
+  // a broken picture leaves a clean text chip
+  el.addEventListener('error', e => {
+    const im = e.target;
+    if (im && im.tagName === 'IMG' && im.closest('.it-pic')) { im.closest('.it-pic').classList.add('no-img'); im.remove(); }
+  }, true);
 }
 
 // ---------- category page: an empty category is never a dead end ----------

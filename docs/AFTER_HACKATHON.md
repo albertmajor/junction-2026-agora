@@ -167,3 +167,27 @@ items.yaml -> nightly hunt (existing hunt.py, fresh=False)    -> store.py snapsh
 - **Shops block us or object.** Mitigations: low frequency, opt-out, no Amazon scraping.
 - **Single machine, single SQLite file.** Mitigation: nightly off-box backup.
 - **Agent buying with a markup** (phase 3) brings payments, consumer-law and liability work. Do not start before affiliate revenue is proven.
+
+## 9. From the judges' feedback (LATER items)
+
+Source: `docs/JUDGE_FEEDBACK.md`. These are the items marked LATER there; the UI and engine items are done or
+tracked in that file.
+
+- **A playful voice for the monkey (F11).** A judge called the voice in the monkey-AI demo "so serious"
+  (Gemini Live, in the second prototype; there is no TTS in `agora/web/js`). Give it a warmer persona prompt:
+  short, a little cheeky, never cutesy, the same voice as the landing copy. Keep the facts exact; the jokes
+  never touch the numbers.
+- **Product images from Context.dev (F5).** Judges wanted "more pictures … right away". Many offers arrive
+  without a usable photo. Context.dev has an image endpoint that pulls and categorises every image on a page in
+  one request. Use it only to fill missing photos on offers we already read, within the daily credit cap in
+  section 2, and cache the result per URL. Check its credit price in `docs/contextdev/credits.md` first.
+- **SEO and LLM price pages (F10).** This is section 3 of this file. The judge's example is the target page:
+  "Cheapest Sony A7 III delivered to Finland, today", built only from real hunts, with the all-in receipt.
+- **Affiliate links as a labelled tie-breaker (F10).** Section 5. An affiliate link may only break a tie
+  between equal all-in prices, and it is labelled on the row. Never a better spot. Write this rule into the
+  "how we rank" page.
+- **The Context.dev newsletter (F10).** The judges mentioned a newsletter of about 40,000 people. Once the
+  price pages are live, ask Context.dev for a showcase feature.
+- **Real tester quotes on the landing (F1).** The landing has a testers strip that renders only when
+  `REAL_QUOTES` in `agora/web/js/landing.js` is non-empty. Fill it only from the hallway test protocol in
+  `docs/PITCH_NOTES.md` section 2, verbatim, with permission.

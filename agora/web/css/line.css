@@ -678,3 +678,71 @@ html.agent-on #ledger { opacity: 0; pointer-events: none; }
 .ln-v .ln-why .t { overflow: hidden; text-overflow: ellipsis; }
 .ln-v .ln-why-more { left: 0; min-width: 0; width: calc(100vw - 112px); }
 @media (prefers-reduced-motion: reduce) { .ln-why, .ln-why.on { transition: opacity 160ms linear; } }
+
+/* ---------- off the scale (judges, F6): a far-off price waits at the line's end as a small marker ---------- */
+.ln-pins { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.ln-pin {
+  position: absolute; pointer-events: auto; height: 22px; padding: 0 8px; border: 0; border-radius: var(--r-pill);
+  background: var(--paper); box-shadow: inset 0 0 0 1px var(--hair); cursor: pointer;
+  font: 400 11.5px/22px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap;
+}
+.ln-pin[data-side="hi"] { right: 8px; }
+.ln-pin[data-side="lo"] { left: 8px; }
+.ln-pin:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.ln-pin:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ln-pin-more { position: absolute; font: 400 11px/1.2 var(--sans); color: var(--ink-3); white-space: nowrap; }
+.ln-pin-more[data-side="hi"] { right: 10px; }
+.ln-pin-more[data-side="lo"] { left: 10px; }
+.ln-v .ln-pins { display: none; }
+
+/* ---------- zoom (owner: "as you move the tag the scale should move with it") ----------
+   The axis follows your price tag, the wheel / a pinch zooms around the cursor, a drag on empty line pans.
+   Offers past either end wait in a small "+N dearer →" stack at that edge; [− + fit cluster fit all] sit in
+   the toolbar. Phones keep their list (no zoom). */
+.ln-o.ln-out { visibility: hidden; pointer-events: none; }
+.ln-zooming .ln-ghosts { opacity: 0; }
+.ln-zooming .ln-hlg, .ln-zooming .ln-why, .ln-zooming .ln-why.on { transition: opacity 160ms linear; }
+.ln-zooming .ln-o.full .ln-cap { transition: none; }
+.ln-zoomable .ln-stage { cursor: grab; }
+.ln-zoomable.ln-panning .ln-stage, .ln-zoomable.ln-panning .ln-o { cursor: grabbing; }
+.ln-zoomable .ln-o { cursor: pointer; }
+
+/* toolbar: [switch] [axis caption ……] [− + fit cluster fit all] [not counted ▸] */
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-axislab { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+#line:not(.ln-v) .ln-zoom { grid-column: 3; grid-row: 1; }
+#line:not(.ln-v) .ln-trayc { grid-column: 4; }
+.ln-zoom {
+  display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: var(--r-pill);
+  background: var(--stage); box-shadow: inset 0 0 0 1px var(--hair); pointer-events: auto; white-space: nowrap;
+}
+.ln-zoom[hidden], .ln-zoom button[hidden], .ln-v .ln-zoom { display: none; }
+.ln-zoom button {
+  border: 0; margin: 0; height: 24px; min-width: 24px; padding: 0 9px; border-radius: var(--r-pill);
+  background: none; color: var(--ink-2); font: 500 12px/24px var(--sans); cursor: pointer;
+  transition: background var(--t-ui) var(--ease), color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+.ln-zoom button[data-z="in"], .ln-zoom button[data-z="out"] { padding: 0; width: 24px; font: 400 15px/24px var(--mono); }
+.ln-zoom button:hover { color: var(--ink); }
+.ln-zoom button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 0 0 1px var(--hair); }
+.ln-zoom button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* the edge stacks: a tiny column of pips and the count, under the axis's end (where "dearer →" was) */
+.ln-stack {
+  position: absolute; top: 0; z-index: 5; display: inline-flex; align-items: center; gap: 6px;
+  height: 20px; margin: 0; padding: 0 6px; border: 0; border-radius: var(--r-pill); background: var(--paper);
+  font: 400 12px/20px var(--sans); color: var(--ink-2); white-space: nowrap; cursor: pointer;
+  animation: ln-fade 200ms linear both;
+}
+.ln-stack[hidden] { display: none; }
+.ln-stack.r { right: 6px; }
+.ln-stack.l { left: 6px; flex-direction: row-reverse; }
+.ln-stack i { position: relative; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); flex: none;
+  box-shadow: 3px -4px 0 -0.5px var(--ink-3), 6px -8px 0 -1px var(--ink-3); margin-right: 5px; }
+.ln-stack.l i { margin: 0 0 0 5px; box-shadow: -3px -4px 0 -0.5px var(--ink-3), -6px -8px 0 -1px var(--ink-3); }
+.ln-stack:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); }
+.ln-stack:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+#app[data-phase="finale"] .ln-stack, #app[data-phase="finale"] .ln-zoom { display: none; }
+@media (prefers-reduced-motion: reduce) { .ln-stack { animation: none; } }
+/* hundreds of pips: no compositor layer each (a zoom frame moves them all), and no restack glide mid-zoom */
+.ln-dense .ln-o.dot.pip { will-change: auto; }
+#line.ln-zooming .ln-o.pip .ln-face { transition: none; }

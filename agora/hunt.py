@@ -46,6 +46,7 @@ MAX_QUEUE_ALLOWANCE = 120.0  # never wait more than this for the rate limiter on
 DEFAULT_BUDGET_S = 24.0      # a live hunt stops waiting for pages after this (AGORA_HUNT_BUDGET_S; 0 = no cap)
 PROVISIONAL_AFTER = 8.0      # send a provisional verdict by this many seconds...
 FOREIGN_PRIO = 4             # paid-read priority penalty for a page abroad when the hunt is scoped home
+HOME_SHOP_BOOST = 2          # paid-read priority bonus for a big home-country retailer of the need's kind (new lane)
 SIBLING_DEADLINE = 20.0      # the depreciation lane must be done this many seconds into the hunt
 STABLE_FOR = 3.0             # ...or as soon as the leaderboard has not moved for this long
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -949,6 +950,8 @@ async def hunt(
                 prio = None
         if prio is not None and abroad_last(url):
             prio += FOREIGN_PRIO      # bulky, searched at home: the home shops get the paid reads first
+        elif prio is not None and lane_of.get(url) == "new" and home_shop_first(url):
+            prio -= HOME_SHOP_BOOST   # eval r4: zalando.fi / stockmann waited behind small shops until the budget
         acquire = gate.acquire(lane_of.get(url, ""), listy, prio)
         await (asyncio.wait_for(acquire, timeout=left) if left is not None else acquire)
         waited = time.monotonic() - t
@@ -1003,8 +1006,14 @@ async def hunt(
             await accept(url, one)
 
     async def accept(url: str, offer: Offer) -> None:
+        if not offer.raw.get("from_list_page") and (why := one_from_list(url, offer)):
+            await queue.put(ev("skip", url=url, reason=why))
+            return
         if offer.raw.get("from_list_page"):
             url = offer.url            # each listing of a search page is its own source
+        if avoid_reason is not None and (why := avoid_reason(need, offer.title or "")):
+            await queue.put(ev("skip", url=offer.url or url, reason=why))
+            return
         _ensure_eur(offer)
         adopt_redirect(offer)
         key = dedupe_key(offer)
@@ -1018,6 +1027,25 @@ async def hunt(
         if rank is not None:
             await queue.put(ev("rank", **rank))
         maybe_lookalike(offer)
+
+    src_titles: dict[str, str] = {}      # source url -> its search title (a shop's category page or a product)
+    direct_src: set[str] = set()         # every planned marketplace page (any results page)
+    try:
+        from agora.intent import avoid_reason
+    except ImportError:
+        avoid_reason = None
+
+    def one_from_list(url: str, offer: Offer) -> str | None:
+        """A single offer read off a shop's category page carries the category URL, not its own (eval r4: 'New
+        from €95' was one EMP jacket linked to emp.fi/naisten-vaatteet/takit/talvitakit/): never streamed."""
+        dv = _module("discover")
+        fn = getattr(dv, "category_page_offer", None)
+        if fn is None or need.kind != "product" or url in direct_src or not src_titles.get(url):
+            return None           # a marketplace's own search page (discover's direct plan) is cut by the reader
+        try:
+            return fn(url, src_titles.get(url, ""), offer.url or url, offer.title or "")
+        except Exception:
+            return None
 
     latest: dict[str, Any] = {}
 
@@ -1058,6 +1086,14 @@ async def hunt(
 
     scope_now: dict[str, Any] = {}
 
+    def home_shop_first(url: str) -> bool:
+        """A big retailer of the home country for this kind of thing (the source registry lists it)."""
+        fn = getattr(_module("discover"), "home_retailer", None)
+        try:
+            return fn is not None and bool(fn(url, need))
+        except Exception:
+            return False
+
     def abroad_last(url: str) -> bool:
         """A page from abroad in a hunt scoped to the home country (a sofa, a bike, a car)."""
         if scope_now.get("scope") != "home" or not scope_now.get("country"):
@@ -1081,6 +1117,9 @@ async def hunt(
                         continue
                     seen.add(url)
                     lane_of[url] = str(e.data.get("lane") or "")
+                    src_titles[url] = str(e.data.get("title") or "")
+                    if e.data.get("direct"):
+                        direct_src.add(url)
                     if e.data.get("direct") and e.data.get("page", 1) in (1, None):
                         direct_pages.add(url)
                     e.data.setdefault("domain", urlparse(url).netloc.removeprefix("www."))

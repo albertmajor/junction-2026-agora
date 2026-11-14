@@ -238,6 +238,45 @@ def detect_conditions(text: str) -> tuple[list[Condition], list[tuple[int, int]]
     return conds, [(a, b) for _, a, b in hits]
 
 
+# a specific job inside a trade: the job is what is hunted, never the trade's generic name (eval r4: 'glazenwasser
+# utrecht' became 'cleaning' and every result was a house cleaner). phrase (any language) -> the job in English
+SPECIFIC_JOBS: dict[str, str] = {
+    "window cleaning": "window cleaning", "window cleaner": "window cleaning", "window cleaners": "window cleaning",
+    "window washing": "window cleaning", "window washer": "window cleaning",
+    "glazenwasser": "window cleaning", "glazenwassers": "window cleaning", "glazenwassen": "window cleaning",
+    "glazenwasserij": "window cleaning", "ramen wassen": "window cleaning", "glasbewassing": "window cleaning",
+    "fensterputzer": "window cleaning", "fensterreinigung": "window cleaning", "fensterputzen": "window cleaning",
+    "glasreinigung": "window cleaning", "ikkunanpesu": "window cleaning", "ikkunanpesijä": "window cleaning",
+    "ikkunanpesua": "window cleaning", "ikkunoiden pesu": "window cleaning", "fönsterputs": "window cleaning",
+    "fönsterputsning": "window cleaning", "fönsterputsare": "window cleaning", "vinduespudsning": "window cleaning",
+    "vinduespudser": "window cleaning", "vindusvask": "window cleaning", "laveur de vitres": "window cleaning",
+    "nettoyage de vitres": "window cleaning", "limpieza de cristales": "window cleaning",
+    "lavavetri": "window cleaning", "mycie okien": "window cleaning",
+    "carpet cleaning": "carpet cleaning", "carpet cleaner": "carpet cleaning", "tapijtreiniging": "carpet cleaning",
+    "teppichreinigung": "carpet cleaning", "mattopesu": "carpet cleaning", "mattojen pesu": "carpet cleaning",
+    "mattvätt": "carpet cleaning", "tæpperens": "carpet cleaning",
+    "gutter cleaning": "gutter cleaning", "dakgootreiniging": "gutter cleaning", "dachrinnenreinigung": "gutter cleaning",
+    "rännien puhdistus": "gutter cleaning", "kattorännien puhdistus": "gutter cleaning",
+    "upholstery cleaning": "upholstery cleaning", "sohvan pesu": "upholstery cleaning",
+    "bankstel reinigen": "upholstery cleaning", "polsterreinigung": "upholstery cleaning",
+    "oven cleaning": "oven cleaning", "end of tenancy cleaning": "end of tenancy cleaning",
+    "muuttosiivous": "end of tenancy cleaning", "eindschoonmaak": "end of tenancy cleaning",
+    "opleveringsschoonmaak": "end of tenancy cleaning", "endreinigung": "end of tenancy cleaning",
+    "flyttstädning": "end of tenancy cleaning",
+}
+_FOLD_JOBS = {re.sub(r"\s+", " ", k.lower()): v for k, v in SPECIFIC_JOBS.items()}
+
+
+def specific_job(text: str) -> str | None:
+    """'glazenwasser utrecht' -> 'window cleaning', 'Fensterputzer Berlin' -> 'window cleaning'; None when the
+    words name no specific job inside a trade."""
+    hits = _find_words((text or "").lower(), _FOLD_JOBS)
+    if not hits:
+        return None
+    first = min(hits, key=lambda h: h[1])
+    return _FOLD_JOBS[first[0]]
+
+
 def detect_service(text: str) -> tuple[str | None, list[tuple[int, int]]]:
     hits = _find_words(text, SERVICE_WORDS)
     if not hits:
@@ -696,7 +735,9 @@ def parse_need_rules(text: str) -> Need:
     if service:
         need.kind = "service"
         need.conditions = ["service"]
-        if not need.thing or need.thing in SERVICE_WORDS:
+        if job := specific_job(raw):
+            need.thing = job              # 'glazenwasser' is a window cleaner, not any cleaner
+        elif not need.thing or need.thing in SERVICE_WORDS:
             need.thing = service
         if service not in need.must_have and service not in need.thing:
             need.must_have.insert(0, service)

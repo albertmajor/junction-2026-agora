@@ -7,6 +7,10 @@
 //      sentinel, plus a "show 50 more" button), rows keyed by URL and reused, so hundreds stay smooth.
 //   4. "Also in the EU (+ shipping est.)": the bulky hunt's extra marketplaces, folded.
 //   5. Set aside: too cheap to trust, price unconfirmed, red-flag reviews. Dimmed, at the bottom, with reasons.
+//   6. "Not this" on every row (judges, F5): one click takes a listing out (it joins "not counted" with
+//      "you took it out", and can be put back); the pick, the verdict and the line re-pick in the browser.
+//   The main list shows the top 12 first, then "show all N" (F8: hunts with 40+ listings stay one scroll).
+//   A price in another currency shows its original next to the euros (F7).
 // Click a row or card for its receipt (the sheet).
 import { S, on, emit, eur, cutSrc, domainOf, isProductPhoto, allIn, isUnsure, unsureWhy, pickUrl as corePick, trustMark,
   isSetAside, isExtra, extraDomains, isPickupOnly, isRisky, riskWhy, reviewFor, netAfterResale, shipsUnconfirmed } from './core.js';
@@ -14,15 +18,17 @@ import { flagHtml, originFor, countryName, flagSrc } from './flags.js';
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const n0 = n => Math.round(n || 0).toLocaleString('en-US');
-const STEP = 50;                      // rows added per scroll step
+const STEP = 50;                      // rows added per scroll step (the folded groups)
+const COLLAPSE = 12;                  // the main list shows this many until "show all N"
 const HUNT_THROTTLE_MS = 350;         // while offers stream in, redraw at most this often
 const CONDS = ['new', 'refurbished', 'used'];
 
 let root = null, els = {}, raf = 0, throttleT = 0, lastDraw = 0, io = null;
 let limits = { main: STEP, eu: STEP, risky: 30 };
 let filt = freshFilter();
-let euOpen = false, riskOpen = true;
+let euOpen = false, riskOpen = true, mainAll = false;
 const cache = new Map();              // url -> {sig, li}
+const dismissed = new Map();          // url -> Item the shopper took out ("not this"); out of S.offers until put back
 
 let mids = {};                        // middle price per condition, for the value icons (set each render)
 let sortMode = 'value';               // 'value': best price value first · 'price': what you pay
@@ -63,6 +69,55 @@ function money(v, it) {
   return eur(v >= 100 ? Math.round(v) : v, { dp: v < 100 && Math.abs(v % 1) > 0.004 ? 2 : 0 }) + (isJob(it) ? ' a job' : '');
 }
 const shopOf = it => (it.offer && it.offer.source) || domainOf(it.url);
+
+// ---------- the original currency (F7) ----------
+// The engine sends the shop's own price and currency next to price_eur (agora/fx.py did the conversion).
+// The rate shown is the one that conversion used (price_eur / price), never a rate we look up here.
+function fmtCur(n, cur) {
+  const dp = Math.abs(n % 1) > 0.004 ? 2 : 0;
+  try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur, minimumFractionDigits: dp, maximumFractionDigits: dp }).format(n); }
+  catch { return `${n.toLocaleString('en-US', { maximumFractionDigits: dp })} ${cur}`; }
+}
+/** {orig: "$699.95", eur: "€633.32", rate: "1 USD = €0.905", cur} when the shop priced it in another currency; else null. */
+export function origPrice(it) {
+  const o = (it && it.offer) || {};
+  const cur = typeof o.currency === 'string' ? o.currency.trim().toUpperCase() : '';
+  const p = o.price, pe = o.price_eur;
+  if (!/^[A-Z]{3}$/.test(cur) || cur === 'EUR' || !(typeof p === 'number' && p > 0 && isFinite(p)) || !(typeof pe === 'number' && pe > 0 && isFinite(pe))) return null;
+  const r = pe / p;
+  const rate = r >= 0.1 ? `1 ${cur} = ${eur(r, { dp: r >= 10 ? 2 : 3 })}` : `€1 = ${(1 / r).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${cur}`;
+  return { orig: fmtCur(p, cur), eur: eur(pe, { dp: Math.abs(pe % 1) > 0.004 ? 2 : 0 }), rate, cur };
+}
+const fxTip = f => `${f.orig} on the page, ${f.eur} converted (${f.rate})`;
+
+// ---------- "not this" (F5) ----------
+export const isDismissed = url => dismissed.has(url);
+export const dismissedItem = url => dismissed.get(url) || null;
+/** Take a listing out: it leaves the ranking (the pick, the verdict and the line follow) and waits in
+ *  "not counted" as "you took it out", until put back. Client side only; the engine is not told. */
+export function notThis(url) {
+  const it = S.offers.get(url);
+  if (!it) return false;
+  it.userOut = true;
+  dismissed.set(url, it);
+  S.offers.delete(url);
+  if (S.leader === url) S.leader = null;
+  if (S.turned) { const u = corePick(); if (u) S.leader = u; }
+  emit('offer-removed', it);
+  emit('rank', S.rank);           // the verdict, the line's pick and the sheet re-read the store
+  return true;
+}
+export function putBack(url) {
+  const it = dismissed.get(url);
+  if (!it) return false;
+  dismissed.delete(url);
+  it.userOut = false;
+  S.offers.set(url, it);
+  if (S.turned) { const u = corePick(); if (u) S.leader = u; }
+  emit('offer-restored', it);
+  emit('rank', S.rank);
+  return true;
+}
 const ccOf = it => { const o = originFor(it); return o && o.country_code ? String(o.country_code).toUpperCase() : ''; };
 function meaningful(tm) { return !!tm && tm.state !== 'none' && !(tm.state === 'done' && tm.label === 'unknown' && !/★/.test(tm.text)); }
 
@@ -141,6 +196,8 @@ export function groups(offers = S.offers, { turned = S.turned } = {}) {
     else if (isExtra(it, ex)) out.eu.push(it);
     else out.main.push(it);
   }
+  // taken out by you: with the set-aside ones, so you can see (and undo) everything that is not counted
+  if (offers === S.offers) for (const it of dismissed.values()) if (tagEur(it) != null || allIn(it) != null) out.risky.push(it);
   const by = (a, b) => (val(a) ?? Infinity) - (val(b) ?? Infinity);
   out.main.sort(by); out.eu.sort(by); out.costing.sort(by);
   out.risky.sort((a, b) => (tagEur(a) ?? Infinity) - (tagEur(b) ?? Infinity));
@@ -149,7 +206,7 @@ export function groups(offers = S.offers, { turned = S.turned } = {}) {
 /** Kept for older callers: the ranked rows (main, then costing), set-aside ones excluded. */
 export function rows(offers, { turned = false } = {}) {
   const g = groups(offers, { turned });
-  return g.main.concat(g.eu, g.costing).filter(it => !(it.tc && isSetAside(it)));
+  return g.main.concat(g.eu, g.costing).filter(it => !(it.tc && isSetAside(it)) && !it.userOut);
 }
 
 // ---------- the better ones ----------
@@ -249,6 +306,7 @@ function facets(all) {
 // ---------- rows (keyed, reused) ----------
 function noteFor(it, kind, pick) {
   const notes = [];
+  if (it.userOut) return '<i class="lg-why">you took it out</i>';
   if (kind === 'risky') return `<i class="lg-why">${esc(riskWhy(it))}</i>`;
   if (it.url === pick) notes.push('<b>the pick</b>');
   if (!it.tc && S.turned) notes.push('still costing');
@@ -262,7 +320,7 @@ function noteFor(it, kind, pick) {
 function rowSig(it, i, kind, pick) {
   const tm = trustMark(it);
   return [i, kind, val(it), tagEur(it), it.url === pick, !!it.tc, it.late, tm && tm.text, ccOf(it), isPickupOnly(it),
-    it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to, valueHtml(it, kind), JSON.stringify(bananasOf(it))].join('|');
+    it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to, valueHtml(it, kind), JSON.stringify(bananasOf(it)), !!it.userOut].join('|');
 }
 // no photo (yet): a calm tile with the shop's own mark over its initial, so it reads as "from this shop", not broken
 const shopIcon = d => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
@@ -300,16 +358,24 @@ function rowHtml(it, i, kind, pick) {
   const pic = src ? `<img alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${esc(src)}" data-raw="${esc(isProductPhoto(raw) ? raw : '')}">`
                   : placeholder(it);
   const title = String(it.offer.title || '').trim();
-  const cls = ['lg-r', it.url === pick ? 'pick' : '', it.tc && isUnsure(it) ? 'unsure' : '', kind === 'risky' ? 'risky' : ''].filter(Boolean).join(' ');
-  return `<button type="button" class="${cls}" data-url="${esc(it.url)}">
+  const cls = ['lg-r', it.url === pick ? 'pick' : '', it.tc && isUnsure(it) ? 'unsure' : '', kind === 'risky' ? 'risky' : '', it.userOut ? 'out' : ''].filter(Boolean).join(' ');
+  const fx = origPrice(it);
+  const fxS = fx ? `<small class="lg-fx" title="${esc(fxTip(fx))}">${esc(fx.orig)}</small>` : '';
+  const name = title || site;
+  // a sibling of the row (never inside it: a button in a button is not allowed), top right of the row
+  const out = it.userOut
+    ? `<button type="button" class="lg-out back" data-back="${esc(it.url)}" aria-label="${esc('Put back: ' + name)}">put back</button>`
+    : kind === 'risky' ? ''
+    : `<button type="button" class="lg-out" data-out="${esc(it.url)}" aria-label="${esc('Not this one, take it out: ' + name)}" title="Not what you want? Take it out and we re-pick"><span aria-hidden="true">×</span> not this</button>`;
+  return `<button type="button" class="${cls}" data-url="${esc(it.url)}"${fx ? ` title="${esc(fxTip(fx))}"` : ''}>
     <span class="lg-n">${i + 1}</span><span class="lg-pic">${pic}</span>
     <span class="lg-main"><span class="lg-ti">${esc(title || site)}</span>
-      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${bananaHtml(it)}${mark}</span></span>
+      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${fx ? `<span class="lg-fxm">${esc(fx.orig)} on the page</span>` : ''}${bananaHtml(it)}${mark}</span></span>
     <span class="lg-v">${valueHtml(it, kind)}</span>
     <span class="lg-c">${esc(condWord(it.offer.condition))}</span>
-    <span class="lg-tag">${esc(eur(tagEur(it), { dp: 0 }))}</span>
+    <span class="lg-tag">${esc(eur(tagEur(it), { dp: 0 }))}${fxS}</span>
     <span class="lg-tc">${kind === 'risky' && v == null ? '<span class="lg-nc">not costed</span>' : esc(money(v, it))}</span>
-    <span class="lg-x">${noteFor(it, kind, pick)}</span></button>`;
+    <span class="lg-x">${noteFor(it, kind, pick)}</span></button>${out}`;
 }
 function rowEl(it, i, kind, pick) {
   const sig = rowSig(it, i, kind, pick);
@@ -422,7 +488,7 @@ function scaffold() {
       for (const e of ents) {
         if (!e.isIntersecting) continue;
         const g = e.target.dataset.g;
-        if (e.target.hidden || !els.more[g] || els.more[g].hidden) continue;
+        if (g === 'main' || e.target.hidden || !els.more[g] || els.more[g].hidden) continue;   // main waits for "show all"
         limits[g] += STEP; queue(true);
       }
     }, { rootMargin: '600px 0px' });
@@ -473,16 +539,21 @@ function render() {
   const shown = main.length + eu.length + risky.length;
   const order = sortMode === 'value' ? 'best value first' : S.turned ? 'by what you pay, all in' : 'by the price on the tag';
   els.h.innerHTML = `${n === 1 ? 'The one listing' : `All ${n0(n)} listings`}, <span>${order}</span>`;
-  els.cnt.innerHTML = filtering() ? `showing ${n0(shown)} of ${n0(n)}` : (g.risky.length ? `${n0(n - g.risky.length)} compared · ${n0(g.risky.length)} set aside` : '');
+  els.cnt.innerHTML = filtering() ? `showing ${n0(shown)} of ${n0(n)}` : (g.risky.length ? `${n0(n - g.risky.length)} compared · ${n0(g.risky.length)} not counted` : '');
 
   const part = (key, list, kind) => {
-    const lim = Math.min(list.length, limits[key]);
+    // the main list: the top 12, then every one at once ("show all N"); the folded groups grow 50 at a time
+    const lim = key === 'main' ? (mainAll ? list.length : Math.min(list.length, COLLAPSE)) : Math.min(list.length, limits[key]);
     fill(els.list[key], list.slice(0, lim), kind, pick);
     const left = list.length - lim;
     const b = els.more[key];
-    b.hidden = left <= 0;
-    b.parentElement.hidden = left <= 0;
-    if (left > 0) b.textContent = `show ${Math.min(STEP, left)} more · ${n0(left)} left`;
+    const fold = key === 'main' && mainAll && list.length > COLLAPSE + 3;
+    b.hidden = left <= 0 && !fold;
+    b.parentElement.hidden = b.hidden;
+    b.dataset.fold = fold && left <= 0 ? '1' : '';
+    if (key === 'main' && left > 0) b.textContent = `show all ${n0(list.length)}`;
+    else if (fold && left <= 0) b.textContent = `show the top ${COLLAPSE} only`;
+    else if (left > 0) b.textContent = `show ${Math.min(STEP, left)} more · ${n0(left)} left`;
   };
   part('main', main, 'main');
   els.head.hidden = !main.length;
@@ -507,21 +578,23 @@ function render() {
   els.risk.hidden = !rOn;
   if (rOn) {
     const why = new Map();
-    for (const it of g.risky) { const w = riskWhy(it).split(':')[0]; why.set(w, (why.get(w) || 0) + 1); }
-    els.risk.querySelector('.lg-gt').textContent = `Set aside (${n0(g.risky.length)})`;
+    for (const it of g.risky) { const w = it.userOut ? 'taken out by you' : riskWhy(it).split(':')[0]; why.set(w, (why.get(w) || 0) + 1); }
+    const mine = g.risky.filter(it => it.userOut).length;
+    els.risk.querySelector('.lg-gt').textContent = `Not counted (${n0(g.risky.length)})`;
     els.risk.querySelector('.lg-gs').textContent = [...why.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w, k]) => `${w} ${n0(k)}`).join(' · ');
     els.risk.querySelector('.lg-gh').setAttribute('aria-expanded', String(riskOpen));
     els.risk.querySelector('.lg-gb').hidden = !riskOpen;
-    els.risk.querySelector('.lg-gn').textContent = 'We would not buy these at that price: too cheap to trust, a price we could not confirm, or a seller with red flags. Shown so you can see everything we found.';
+    els.risk.querySelector('.lg-gn').textContent = (g.risky.length > mine ? 'We would not buy these at that price: too cheap to trust, a price we could not confirm, or a seller with red flags. Shown so you can see everything we found.' : '')
+      + (mine ? `${g.risky.length > mine ? ' ' : ''}${mine === 1 ? 'One you took out' : `${n0(mine)} you took out`}: “put back” returns it to the ranking.` : '');
     if (riskOpen) part('risky', risky, 'risky'); else fill(els.list.risky, [], 'risky', pick);
   }
   // the folded groups sit under a long list: say they exist, and jump there
   const jumps = [];
   if (euOn) jumps.push(`<button type="button" data-jump="eu">Also in the EU (+ shipping est.): ${n0(eu.length)} ↓</button>`);
-  if (rOn) jumps.push(`<button type="button" data-jump="risky">Set aside: ${n0(risky.length)} ↓</button>`);
+  if (rOn) jumps.push(`<button type="button" data-jump="risky">Not counted: ${n0(risky.length)} ↓</button>`);
   const jk = jumps.join('');
   if (els.jump.dataset.k !== jk) { els.jump.dataset.k = jk; els.jump.innerHTML = jk; }
-  els.jump.hidden = !jumps.length || main.length < 12;
+  els.jump.hidden = !jumps.length || !mainAll || main.length < COLLAPSE;
   // rows that left for good (removed offers, a reset) free their nodes
   if (cache.size > S.offers.size + 64) for (const u of cache.keys()) if (!S.offers.has(u)) cache.delete(u);
 }
@@ -543,15 +616,25 @@ export function mountLedger(el) {
   root.hidden = true;
   scaffold();
   root.addEventListener('click', e => {
+    const ob = e.target.closest('[data-out], [data-back]');
+    if (ob) { notOrBack(ob); return; }
     const more = e.target.closest('.lg-more');
-    if (more) { limits[more.dataset.g] += STEP; render(); return; }
+    if (more) {
+      if (more.dataset.g === 'main') {
+        const fold = more.dataset.fold === '1';
+        mainAll = !fold; render();
+        if (fold) root.scrollIntoView({ behavior: 'auto', block: 'start' });
+        return;
+      }
+      limits[more.dataset.g] += STEP; render(); return;
+    }
     const tg = e.target.closest('.lg-gh');
     if (tg) { if (tg.dataset.tg === 'eu') euOpen = !euOpen; else riskOpen = !riskOpen; render(); return; }
     const chip = e.target.closest('.lg-chip');
     if (chip) {
       const [k, v] = chip.dataset.cond != null ? ['cond', chip.dataset.cond] : ['cc', chip.dataset.cc];
       filt[k].has(v) ? filt[k].delete(v) : filt[k].add(v);
-      limits.main = limits.eu = STEP; render(); refocus(`.lg-chip[data-${k}="${CSS.escape(v)}"]`); return;
+      limits.eu = STEP; render(); refocus(`.lg-chip[data-${k}="${CSS.escape(v)}"]`); return;
     }
     if (e.target.closest('.lg-fbtn')) {
       menuOpen = !menuOpen; render();
@@ -559,14 +642,14 @@ export function mountLedger(el) {
       return;
     }
     const so = e.target.closest('[data-sort]');
-    if (so) { sortMode = so.dataset.sort === 'price' ? 'price' : 'value'; limits.main = limits.eu = STEP; render(); return; }
+    if (so) { sortMode = so.dataset.sort === 'price' ? 'price' : 'value'; limits.eu = STEP; render(); return; }
     const vw = e.target.closest('[data-view]');
     if (vw) { view = vw.dataset.view === 'grid' ? 'grid' : 'list'; saveView(view); render(); return; }
     const st = e.target.closest('[data-bn], [data-vt]');
     if (st) {
       const k = st.dataset.bn != null ? 'bn' : 'vt';
       filt[k] = Math.max(0, Math.min(3, Number(st.dataset[k]) || 0));
-      limits.main = limits.eu = STEP; render(); refocus(`[data-${k}="${filt[k]}"]`); return;
+      limits.eu = STEP; render(); refocus(`[data-${k}="${filt[k]}"]`); return;
     }
     const sh = e.target.closest('[data-ship]');
     if (sh) { filt.ship = sh.dataset.ship; render(); refocus(`[data-ship="${sh.dataset.ship}"]`); return; }
@@ -612,17 +695,40 @@ export function mountLedger(el) {
     img.replaceWith(ph);
   }, true);
   on('reset', () => {
-    limits = { main: STEP, eu: STEP, risky: 30 }; filt = freshFilter(); euOpen = false; riskOpen = true; menuOpen = false;
-    cache.clear(); hlKey = ''; fbKey = '';
+    limits = { main: STEP, eu: STEP, risky: 30 }; filt = freshFilter(); euOpen = false; riskOpen = true; menuOpen = false; mainAll = false;
+    cache.clear(); dismissed.clear(); hlKey = ''; fbKey = '';
     for (const ol of Object.values(els.list)) ol.textContent = '';
     queue(true);
   });
-  for (const t of ['offer', 'offer-removed', 'truecost', 'verdict', 'rank', 'late', 'watch', 'review', 'reviews', 'recheck', 'market', 'scope']) on(t, () => queue());
+  for (const t of ['offer', 'offer-removed', 'offer-restored', 'truecost', 'verdict', 'rank', 'late', 'watch', 'review', 'reviews', 'recheck', 'market', 'scope']) on(t, () => queue());
+  // a listing you took out that streams in again (a later read of the same page) stays out
+  on('offer', it => {
+    if (!it || !dismissed.has(it.url) || S.offers.get(it.url) !== it) return;
+    const old = dismissed.get(it.url);
+    old.offer = Object.assign({}, old.offer, it.offer);
+    S.offers.delete(it.url);
+    if (S.leader === it.url) S.leader = null;
+    emit('offer-removed', old);
+  });
   for (const t of ['turn', 'done', 'finale:start']) on(t, () => queue(true));
   // the phone's line shows the cheapest few; "all N listings" brings you here
   on('ledger:show', () => { if (!root.hidden) root.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); });
   queue(true);
 }
+/** "not this" / "put back": keep the keyboard where it was (the next row's button, or the moved row's). */
+function notOrBack(b) {
+  const url = b.dataset.out || b.dataset.back;
+  const li = b.closest('li');
+  const next = li && (li.nextElementSibling || li.previousElementSibling);
+  const nextUrl = next && next.querySelector('.lg-r') ? next.querySelector('.lg-r').dataset.url : null;
+  const ok = b.dataset.out ? notThis(url) : putBack(url);
+  if (!ok) return;
+  render();
+  const sel = b.dataset.out
+    ? (nextUrl ? `[data-out="${CSS.escape(nextUrl)}"], .lg-r[data-url="${CSS.escape(nextUrl)}"]` : `[data-back="${CSS.escape(url)}"]`)
+    : `.lg-r[data-url="${CSS.escape(url)}"]`;
+  refocus(sel);
+}
 function refocus(sel) { const b = root.querySelector(sel); if (b) b.focus({ preventScroll: true }); }
 
-export const _test = { groups, highlights, rows, passes, setFilter(f) { filt = Object.assign(freshFilter(), f); }, setMids(m) { mids = m || {}; } };
+export const _test = { groups, highlights, rows, passes, notThis, putBack, origPrice, setFilter(f) { filt = Object.assign(freshFilter(), f); }, setMids(m) { mids = m || {}; } };

@@ -1,8 +1,9 @@
-"""AGENT API: the logic behind the agent door (MCP tools today, a plain HTTP JSON route later).
+"""AGENT API: the logic behind the agent door (MCP tools in mcp_server.py, HTTP JSON at /api/offers in agent_http.py).
 
 An agent asks for a thing and gets listings (new, refurbished, used, rental, services) ranked by ALL-IN
 price (sticker + shipping + import VAT/fees we could source), each with a link to the listing page.
-Read-only: nothing here buys, signs or pays. Written at Junction 2026.
+Prices are EUR; other currencies are converted at the day's ECB rate (fx.py) and explain_price keeps the
+original price in the sticker line. Read-only: nothing here buys, signs or pays. Written at Junction 2026.
 
 Safety rules kept in this one place, so the MCP server and any HTTP handler share them:
   - Page text is untrusted. Titles and seller names are cleaned (`fence.clean_field`), listed in

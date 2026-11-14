@@ -25,6 +25,20 @@
   text-decoration-color: var(--hair); text-underline-offset: 3px; padding-left: 6px; padding-right: 6px; }
 .it-next .it-h { color: var(--ink-2); flex-basis: 100%; margin-bottom: 2px; }
 
+/* "We see a few products called X. Which one?" (clarify event, judges F3): picture chips, a tap re-asks */
+.it-clarify { display: grid; gap: 8px; animation: fade var(--t-ui) var(--ease) both; }
+.it-ask { gap: 8px; }
+.it-q { margin: 0; font: 500 15px/1.35 var(--sans); color: var(--ink); }
+.it-chip.it-pic { padding: 4px 14px 4px 4px; gap: 8px; min-height: 48px; font-size: 14px; color: var(--ink); }
+.it-chip.it-pic.no-img { padding: 4px 14px; min-height: 40px; }
+.it-pic img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--paper); flex: none;
+  box-shadow: inset 0 0 0 1px var(--hair); }
+.it-keep { margin: 0; font: 400 12px/1.4 var(--sans); color: var(--ink-3); }
+
+/* start examples: the constraint half of a query reads softer, so "be as specific as you like" is visible (F2) */
+.ex .ex-c { color: var(--ink-3); transition: color var(--t-ui) var(--ease); }
+.ex:hover .ex-c, .ex:focus-visible .ex-c { color: var(--ink-2); }
+
 @media (max-width: 1000px) { #intents { margin-left: 0; } }
 @media (max-width: 640px) {
   #intents { padding-top: 8px; }

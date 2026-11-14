@@ -161,7 +161,8 @@ def test_the_makers_own_shop_price_is_not_too_good_to_be_true():
                  price=p, currency="EUR", price_eur=p, condition="new") for i, p in enumerate([114, 199, 149])]
     v = J.judge(n, R.resolve(n, [shop, *big]), history=False)
     assert not any(f.startswith("too good") for f in shop.flags) and shop.true_cost is not None
-    assert "New from €29" in v.headline or "€29 all in" in v.headline
+    # round 4: a shop page with no delivery fee gets a labelled parcel / furniture delivery estimate in 'all in'
+    assert v.best_offer_url == shop.url and "€44 all in" in v.headline, v.headline
 
 
 def test_kitchen_table_keeps_tables_with_legs_and_rejects_chairs_and_other_tables():
@@ -259,7 +260,10 @@ def test_coffee_maker_toys_filters_and_magazines_go():
     for t in ["Bosch Tassimo Spielzeug-Kaffeemaschine für Kinder", "5kpl suodatinpusseja", "Mocca masterin kansi",
               "Suuri Käsityö lehti syyskuu 2006", "Leikkikeittiön kahvinkeitin"]:
         assert not kept(n, row(t, 2)), t
-    assert kept(n, row("Krups Dolce Gusto Circolo – flot stand", 40, "dba.dk"))
+    # round 4: 'kahvinkeitin' is a drip coffee maker; a capsule machine is another kind for it, but still a coffee
+    # machine for a plain 'coffee machine' hunt
+    assert not kept(n, row("Krups Dolce Gusto Circolo – flot stand", 40, "dba.dk"))
+    assert kept(need("coffee machine"), row("Krups Dolce Gusto Circolo – flot stand", 40, "dba.dk"))
 
 
 # ------------------------------------------------------------------ ps5 (defects 22, 23, 33)

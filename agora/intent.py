@@ -823,6 +823,34 @@ GIFT_MATCH = ["koru", "korut", "kaulakoru", "rannekoru", "korvakorut", "sormus",
               "sjaal", "muki", "mug", "becher", "mok", "kello", "watch", "klocka", "uhr", "horloge"]
 
 
+# eval r4, 'gift for mom': 'Romanttinen kasvohoito ja hieronta kahdelle' (a couple's spa day) was among the picks.
+# A present for a parent, grandparent, child or teacher is never a romantic experience for two or an adult item.
+FAMILY_RECIPIENTS = {"for mom", "for dad", "for grandma", "for grandpa", "for a child", "for a teacher"}
+AVOID_FAMILY = re.compile(
+    r"\b(?:kahdelle|kaksin|pariskunn\w*|romant\w*|rakastavaisille|treffi\w*|for\s+two|for\s+couples?|"
+    r"couples?\s+(?:massage|spa|retreat)|date\s+night|f[uü]r\s+zwei|f[uü]r\s+paare|zu\s+zweit|voor\s+twee|"
+    r"voor\s+koppels|f[oö]r\s+tv[aå]|parmassage|parbehandling|valentin\w*|ystävänpäiv\w*|erot\w*|"
+    r"sexy|lingerie|alusasu\w*)\b", re.I)
+
+
+def avoid_for(rest: str) -> str | None:
+    """The pattern name of what never suits this recipient ('family' for a parent, child, teacher), else None."""
+    words, _who = recipient(rest) if rest else (None, None)
+    return "family" if words and words.get("en") in FAMILY_RECIPIENTS else None
+
+
+def avoid_reason(need: Any, title: str) -> str | None:
+    """Why a listing is the wrong kind of present for who it is for ('a romantic experience for two, not a gift
+    for mom'), else None. Reads need.category['intent']['avoid'] (set by apply for a gift meaning)."""
+    it = ((getattr(need, "category", None) or {}).get("intent") or {})
+    if it.get("avoid") != "family" or not title:
+        return None
+    m = AVOID_FAMILY.search(title)
+    if not m:
+        return None
+    return f"for a couple or adults ({m.group(0).strip()}), not a gift {it.get('for') or 'for family'}"
+
+
 def recipient(rest: str) -> tuple[dict[str, str] | None, str | None]:
     """'for mom' -> ({lang: 'äidille' ...}, 'female'); (None, None) when the words name no recipient."""
     f = fold(rest)
@@ -874,6 +902,7 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
             queries.setdefault(lg, [])
             queries[lg] = list(dict.fromkeys(queries[lg] + extra))
         match = list(GIFT_MATCH)
+    avoid = avoid_for(rest) if concept == "gift" else None
     doms = list(tpl["domains"].get(cc, [])) + [d for d in tpl["domains"].get("*", []) if "." in d]
     look = list(tpl["look"])
     for d in tpl["domains"].get("*", []):
@@ -893,6 +922,7 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
         "why": tpl["why"], "local": tpl["local"], "travel": tpl["travel"] or "",
         "place": where_p if tpl["local"] else place if tpl["travel"] else None,
         "source": "curated", "w": tpl["w"], **({"match": match} if match else {}),
+        **({"avoid": avoid, "for": (recipient(rest)[0] or {}).get("en")} if avoid else {}),
     }
 
 
@@ -1463,7 +1493,8 @@ def apply(need: Any, intent_id: str, *, country: str | None = None, lang: str = 
         cat["kind"] = it["kind"] if it["kind"] in ("service", "digital") else cat.get("kind") or it["kind"]
         cat["intent"] = {"id": it["id"], "label": it["label"], "queries": it["queries"], "look": it["look"],
                          "why": it["why"], "domains": it["domains"], "travel": bool(it.get("travel")),
-                         "local": bool(it.get("local")), "vague": not it.get("node")}
+                         "local": bool(it.get("local")), "vague": not it.get("node"),
+                         **({"avoid": it["avoid"], "for": it.get("for")} if it.get("avoid") else {})}
         if it.get("match"):
             # a vague present: any listing naming a kind of present counts (resolve reads the category synonyms),
             # never the recipient's word ('mom shorts'); it browses like a hunt from the tree (a kind, no model)

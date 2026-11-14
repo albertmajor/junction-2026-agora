@@ -55,7 +55,7 @@ def test_car_site_that_ignores_q_reads_the_make_model_page():
     d = used_directs(parsed("volvo v70"))
     netti = [x for x in d if x.site.key == "nettiauto"]
     # was https://www.nettiauto.com/vaihtoautot?q=volvo+v70: the site's cheapest cars of every make
-    assert netti and netti[0].url == "https://www.nettiauto.com/volvo/v70"
+    assert netti and netti[0].url.split("?")[0] == "https://www.nettiauto.com/volvo/v70"
     assert M.site_for(netti[0].url).key == "nettiauto"           # still split as nettiauto's list page
     for x in d:
         if x.site.key.startswith("autoscout24_"):

@@ -33,9 +33,11 @@ Any MCP client (JSON config):
 ```
 
 Without a Context.dev key (or with `AGORA_OFFLINE=1`) every answer comes from the recorded live hunts in
-`tests/fixtures/live_*.jsonl` (`sony a7 iii body`, `iphone 15 128gb used`, `home cleaning helsinki 60m2`) and
-says so: `"source_mode": "recording"`. With a key, `find_offers` runs a live hunt (about 20 s, cached 10 min
-per query).
+`tests/fixtures/live_*.jsonl` (`sony a7 iii body`, `iphone 15 128gb used`, `home cleaning helsinki 60m2`,
+`city bike with basket`) and says so: `"source_mode": "recording"` plus the `recording` name and a `note`.
+With a key, `find_offers` runs a live hunt (capped at about 20 s by `AGORA_HUNT_BUDGET_S`, cached 10 min per
+query). If a live hunt finds no priced offers, the answer falls back to the closest recording and says so in
+`note`.
 
 Raw JSON-RPC over stdio (one JSON object per line):
 
@@ -50,10 +52,12 @@ Raw JSON-RPC over stdio (one JSON object per line):
 
 | tool | arguments | returns |
 |---|---|---|
-| `find_offers` | `query` (2..200 chars), `country`? (ISO code or name, default Finland), `max_price_eur`? (all-in cap), `conditions`? (list of `new` `refurbished` `used` `rental` `service`), `limit`? (1..25, default 10) | `offers` ranked by `all_in_eur`, `verdict` (one line), `ownership_verdict` (PriceMonkey's pick on cost of ownership), `n_offers`, `source_mode` |
-| `get_offer` | `url` (a `listing_url` from `find_offers`) | the offer card + `price_check`, `price_band`, `per_month_eur`, `location`, `read_via` |
-| `explain_price` | `url` | `receipt` lines {label, eur, kind: price/tax/fee/resale/other, source_url, via, quote_untrusted}, `all_in_eur`, `true_cost_total_eur`, `per_month_eur`, `confidence`, `basis`, `beat_eur` |
-| `watch_price` | `query`, `target_eur`, `conditions`? | `watch_id`, `rule`, `status_url`. **Notify only**: fires a notification (ntfy topic or webhook lease) when an offer's price is at or under target. Never buys. |
+| `find_offers` | `query` (2..200 chars), `country`? (ISO code or name, default Finland), `max_price_eur`? (all-in cap), `conditions`? (list of `new` `refurbished` `used` `rental` `service`), `limit`? (1..25, default 10) | `offers` (cards, ranked by `all_in_eur`), `n_offers` (all matching offers, before `limit`), `verdict` (one line), `ownership_verdict` (PriceMonkey's pick on cost of ownership), `ranked_by`, echoed `query` `country` `max_price_eur` `conditions`, `untrusted_fields`, `untrusted_note`, `source_mode` (+ `recording`, `note`) |
+| `get_offer` | `url` (a `listing_url` from `find_offers`) | `found`; the offer card + `location`, `read_via`, `price_check`, `price_band`, `per_month_eur`, `source_mode` |
+| `explain_price` | `url` | `found`, `source`, `condition`, `price_eur`, `all_in_eur`, `shipping_note`, `flags`, `price_check`; `receipt` lines {label, eur, kind: price/tax/fee/resale/other, source_url?, via?, quote_untrusted?}; `sticker_eur`, `extras_eur`, `resale_eur`, `true_cost_total_eur`, `per` (month/job), `per_month_eur`, `months`, `confidence`, `basis`, `price_band`, `beat_eur`, `gap_eur`, `how` |
+| `watch_price` | `query`, `target_eur`, `conditions`? | `watch_id`, `query`, `target_eur`, `action: "notify"`, `rule`, `how_it_fires`, `status_url`. **Notify only**: fires a notification (ntfy topic `AGORA_NTFY_TOPIC` or a signed webhook lease) when an offer's price is at or under target while the server runs. Never buys. |
+
+`get_offer` and `explain_price` return `{"ok": true, "found": false, "note": ...}` for a URL no search has found.
 
 An offer card:
 
@@ -71,7 +75,13 @@ An offer card:
 | `flags` | PriceMonkey's warnings (too good to be true, grey import, outside the EU, out of stock, ...) |
 | `origin` | where the seller is and whether it ships to Finland: {`country_code` (ISO alpha-2, `GB` for the UK, `null` = unknown), `country_name`, `city`, `basis` (listing_location / seller_address / service_area / marketplace / known_shop / domain / currency / domain_currency / unknown), `basis_text`, `confident` (false = a guess from the domain, currency or shop), `eu`, `ships_to_fi` (true / false / `null` = not stated), `ships_text`} |
 | `job_total_eur`, `unit` | services: the total for one job and the rate's unit |
-| `injection` | present when the page tried to steer AI agents; the title is then replaced |
+| `in_stock` | true / false, present only when the page said |
+| `seller` | seller name from the page (cleaned; **untrusted**), present when known and there is no `injection` |
+| `injection` | present when the page tried to steer AI agents; the title is then replaced and `seller` left out |
+
+Prices are in EUR. A listing in another currency is converted at the day's ECB reference rate (via
+frankfurter, `agora/fx.py`); `explain_price` keeps the original in the sticker line's `quote_untrusted`
+(e.g. "price 699.95 USD") and the rate in `basis`.
 
 ## Example
 
@@ -121,8 +131,9 @@ curl 'http://localhost:8765/api/offer?url=https%3A%2F%2Fwww.tori.fi%2Frecommerce
 curl 'http://localhost:8765/api/offer/receipt?url=...'
 ```
 
-Same JSON as the MCP tools. (`/api/offers` needs the one-line `include_router` in `api.py`; until then use
-`/hunt`.)
+Same JSON as the MCP tools. The router (`agora/agent_http.py`) is mounted by `agora/api.py`. `/api/offers`
+takes the same filters as `find_offers` (`q`, `country`, `max_price_eur`, `conditions` as a comma list,
+`limit`). Rate limits are per client IP; a limit returns 429 with `Retry-After: 60`, bad input 422.
 
 `GET /hunt?q=...` is the full live stream (server-sent events: `need`, `lane`, `source`, `offer`, `truecost`,
 `rank`, `verdict` (provisional, then final), `late`, `budget`, `done`; see `CONTRACT.md`). Add

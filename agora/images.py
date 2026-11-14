@@ -704,8 +704,60 @@ def offer_image_ok(image: str | None, page_url: str, seller: str | None = None, 
     return not seller_words or any(brand.startswith(w) or w in brand for w in seller_words)
 
 
+def _face(u: str | None, base: str) -> str | None:
+    """_any_image that a viewer can show as the offer's picture: never an .svg / .ico / .gif (offer_image_ok
+    drops those later, so taking one here would leave the provider with no picture at all)."""
+    u = _any_image(u, base)
+    if not u:
+        return None
+    try:
+        return None if IMG_EXT_BAD.search(urlsplit(u).path) else u
+    except ValueError:
+        return None
+
+
+_TOUCH_ICON = re.compile(r"\bapple-touch-icon(?:-precomposed)?\b|\bmask-icon\b|\bicon\b", re.I)
+
+
+def touch_icon(page: str, url: str) -> str | None:
+    """The site's own square brand mark: <link rel=apple-touch-icon> (180-256 px PNG), else the largest
+    PNG/JPG/WebP <link rel=icon sizes=NxN> of at least 96 px. Tiny favicons (16/32/48 px) are no picture."""
+    best: tuple[int, str] | None = None
+    for m in _LINK.finditer(page[:400_000]):
+        a = attrs(m.group(0))
+        rel = (a.get("rel") or "").lower()
+        if not _TOUCH_ICON.search(rel) or "mask-icon" in rel:
+            continue
+        href = a.get("href")
+        if not href:
+            continue
+        u = urljoin(url, _html.unescape(href.strip()))
+        if not u.startswith(("https://", "http://")):
+            continue
+        try:
+            path = urlsplit(u).path
+        except ValueError:
+            continue
+        if IMG_EXT_BAD.search(path):
+            continue
+        sizes = [int(x) for x in re.findall(r"(\d{2,4})x\d{2,4}", a.get("sizes") or "")]
+        size = max(sizes) if sizes else 0
+        if "apple-touch-icon" in rel:
+            size = size or 180
+        elif not size:
+            size = int(m2.group(1)) if (m2 := re.search(r"(\d{2,4})(?:x\d{2,4})?\D*\.(?:png|jpe?g|webp)$", path,
+                                                        re.I)) else 0
+        if size < 96:
+            continue
+        if best is None or size > best[0]:
+            best = (size, u)
+    return best[1] if best else None
+
+
 def service_image(page: str, url: str) -> str | None:
-    """og:image > JSON-LD business image > JSON-LD logo > a real product-style photo on the page."""
+    """A provider's picture (eval r4 'unlimited graphic design subscription': 0 of 10 studios had one):
+    og:image > JSON-LD business image > JSON-LD logo > the site's apple-touch-icon (its own brand mark)
+    > a real product-style photo on the page. An .svg / .ico / favicon candidate is passed over, not taken."""
     if not page:
         return None
     head = page[:400_000]
@@ -717,7 +769,7 @@ def service_image(page: str, url: str) -> str | None:
                 and a.get("content"):
             found.setdefault(k, a["content"])
     for k in ("og:image:secure_url", "og:image", "og:image:url", "twitter:image", "twitter:image:src"):
-        u = _any_image(found.get(k), url)
+        u = _face(found.get(k), url)
         if u:
             return u
     logo = None
@@ -727,14 +779,20 @@ def service_image(page: str, url: str) -> str | None:
                 types = " ".join(_types(node))
                 if not any(h in types for h in BUSINESS_HINT):
                     continue
-                u = _any_image(_img_value(node.get("image")), url)
+                u = _face(_img_value(node.get("image")), url)
                 if u:
                     return u
-                logo = logo or _any_image(_img_value(node.get("logo")), url)
+                logo = logo or _face(_img_value(node.get("logo")), url)
     except Exception:
         pass
     if logo:
         return logo
+    try:
+        icon = touch_icon(page, url)
+    except Exception:
+        icon = None
+    if icon:
+        return icon
     try:
         return dom_image(page, url)
     except Exception:

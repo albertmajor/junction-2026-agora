@@ -41,6 +41,8 @@
 #tag.is-parked .tg-needle, #tag.is-parked .tg-zone { opacity: 0 !important; }
 #tag .tg-tag { transition: left 300ms var(--ease), transform var(--t-ui) var(--ease); }
 #tag.is-active:not(.is-glide) .tg-tag { transition: transform var(--t-ui) var(--ease); }
+/* the line is zooming (line.js): the tag rides the axis frame by frame, no lagging glide on left */
+#tag.is-zoom .tg-tag, #tag.is-zoom.is-glide .tg-tag { transition: transform var(--t-ui) var(--ease); }
 #tag .tg-watch { transition: opacity var(--t-ui) var(--ease); }
 #tag.is-active .tg-watch { opacity: .35; }
 #tag.is-active .tg-needle, #tag.is-armed .tg-needle { opacity: .55; }

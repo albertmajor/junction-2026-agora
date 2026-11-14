@@ -1,5 +1,8 @@
-// The landing page under the start search: a "Powered by Context.dev" banner, the problem, how it works (one real example,
-// start to finish), the all-in price (two receipts side by side), the sources we read, and the agent door.
+// The landing page under the start search. It sells PriceMonkey in the order a doubter needs:
+// Context.dev banner → the problem → watch it happen → be as specific as you like → the all-in price (proof)
+// → anywhere it's sold → honest by design → for agents → go on, ask.
+// Every number is real: the recorded "sony a7 iii body" hunt for a buyer in Finland (tests/fixtures/
+// live_sony-a7-iii-body.jsonl), the four recorded hunts, and marketplaces.py (193 second-hand sources).
 // main.js calls mountLanding($('landing')) and listens for the bus event 'ask' {q}.
 import * as core from './core.js';
 import { queryFor } from './stream.js';
@@ -7,6 +10,10 @@ import { queryFor } from './stream.js';
 const brand = () => core.BRAND || document.documentElement.dataset.brand || 'PriceMonkey';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// What real testers told us, word for word: { quote, who }. It ships empty and the strip stays hidden until it isn't.
+// Never put an invented or paraphrased quote here.
+export const REAL_QUOTES = [];
 
 const SOURCES = [
   ['Second-hand', 193, ['tori', 'blocket', 'finn', 'dba', 'kleinanzeigen', 'marktplaats', '2dehands', 'olx_pl', 'vinted',
@@ -22,72 +29,81 @@ const TOOLS = [
   ['watch_price', 'query, target_eur', 'notifies you when an offer hits the target. Never buys.'],
 ];
 
-const CD_TOOLS = [
-  ['search', 'finds the shops and listings for a question'],
-  ['product', 'reads a product page: price, stock, condition'],
-  ['extract', 'structured JSON from listing pages'],
-  ['scrape', 'markdown of marketplace search results'],
-];
+// The four recorded hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki, a city bike): `source` events and
+// their distinct domains. Recount from tests/fixtures/live_*.jsonl if a recording changes.
+const READ = { pages: 80, sites: 64, hunts: 4 };
 
-// One worked example, used by every section below: a read of "sony a7 iii body" for a buyer in Finland.
+// The worked example: a read of "sony a7 iii body" for a buyer in Finland (recorded live).
 const EX = {
-  n: 17,
+  n: 17, skipped: 23, firstPickS: 3.4, doneS: 20,
   rows: [
-    { dom: 'allenscamera.net', from: 'United States', tag: 633.32, vat: 161.50, all: 794.82, eu: false, ships: 'not confirmed by the shop' },
-    { dom: 'tori.fi', from: 'Finland', tag: 825, vat: 0, all: 825, eu: true, ships: 'domestic' },
-    { dom: 'wexphotovideo.com', from: 'United Kingdom', tag: 978.95, vat: 0, all: 1023.82, eu: false, ships: 'not confirmed by the shop' },
+    { dom: 'allenscamera.net', from: 'United States', orig: '$699.95', tag: 633.32, vat: 161.50, all: 794.82, eu: false, ships: 'not confirmed by the shop' },
+    { dom: 'tori.fi', from: 'Finland', orig: '', tag: 825, vat: 0, all: 825, eu: true, ships: 'domestic' },
+    { dom: 'wexphotovideo.com', from: 'United Kingdom', orig: '£818', tag: 978.95, vat: 0, all: 1023.82, eu: false, ships: 'not confirmed by the shop' },
   ],
 };
 const eur = (v, d = 2) => '€' + Number(v).toLocaleString('en-IE', { minimumFractionDigits: d, maximumFractionDigits: d });
 const fav = (dom, sz = 16) => `<img src="https://www.google.com/s2/favicons?domain=${esc(dom)}&amp;sz=64" alt="" width="${sz}" height="${sz}" loading="lazy" data-fb="sq">`;
 
 // ---------- small pieces ----------
-const head = (n, kicker, h, id) => `<p class="ld-kicker"><span class="ld-n">${n}</span>${esc(kicker)}</p><h2 class="ld-h" id="${id}">${h}</h2>`;
+const head = (n, kicker, h, id) => `<p class="ld-kicker">${n ? `<span class="ld-n">${n}</span>` : ''}${esc(kicker)}</p><h2 class="ld-h" id="${id}">${h}</h2>`;
+const band = (id, tone, inner, extra = '') => `<section class="ld-band t-${tone}${extra ? ' ' + extra : ''}" id="${id}" aria-labelledby="${id}-h">${inner}</section>`;
 
-// ---------- sections ----------
-function stripHtml() {
-  return `<aside class="ld-strip" id="ld-cd" aria-labelledby="ld-cd-h">
-    <div class="ld-strip-in ld-rv">
-      <div class="ld-strip-top">
-        <h2 class="ld-strip-h" id="ld-cd-h">Powered by <a class="ld-strip-mark" href="https://context.dev" target="_blank" rel="noopener">${fav('context.dev', 28)}Context.dev</a></h2>
-        <p class="ld-strip-count"><span class="ld-pulse" aria-hidden="true"></span><span><b>48</b> pages on <b>35</b> sites, read live in the recorded hunts</span></p>
+// ---------- 0. Context.dev ----------
+function bannerHtml() {
+  const pts = [
+    ['Reads what the page knows', 'Shops hide the real product data (price, stock, condition) in structured data behind the page. Context.dev reads that, not just the words you see.'],
+    ['Gets past the walls', 'Every shop builds its pages its own way, and plenty block fast readers. Context.dev deals with page structures and rate blocks, so one stubborn shop never stalls the hunt.'],
+    ['Search, product, extract, scrape', 'It finds the shops for your question, reads product pages, pulls JSON from listings and turns marketplace searches into rows we can rank.'],
+  ];
+  return `<aside class="ld-band t-ink ld-cd" id="ld-cd" aria-labelledby="ld-cd-h">
+    <div class="ld-in">
+      <div class="ld-cd-top ld-rv">
+        <div>
+          <p class="ld-kicker">Powered by <a class="ld-cd-mark" href="https://context.dev" target="_blank" rel="noopener">${fav('context.dev', 22)}Context.dev</a></p>
+          <h2 class="ld-h ld-h-xl" id="ld-cd-h">Reading the internet’s shops is hard. <span>Context.dev makes it our job, not yours.</span></h2>
+        </div>
+        <div class="ld-cd-count"><p><b>${READ.pages}</b><span>pages read</span></p><p><b>${READ.sites}</b><span>sites</span></p><p class="ld-cd-live"><span class="ld-pulse" aria-hidden="true"></span>read live in our ${READ.hunts} recorded hunts</p></div>
       </div>
-      <ul class="ld-strip-tools" role="list">
-        ${CD_TOOLS.map(([k, v]) => `<li><b>${k}</b><span>${esc(v)}</span></li>`).join('')}
+      <ul class="ld-cd-pts" role="list">
+        ${pts.map(([t, b], i) => `<li class="ld-rv" style="--d:${i * 70}ms"><h3>${esc(t)}</h3><p>${esc(b)}</p></li>`).join('')}
       </ul>
+      <p class="ld-cd-link ld-rv"><a href="https://context.dev" target="_blank" rel="noopener">context.dev →</a></p>
     </div>
   </aside>`;
 }
 
+// ---------- 1. the problem ----------
 function whyHtml() {
-  const rows = [
-    ['A dozen tabs: a marketplace here, a refurbisher there, a shop in another country.', 'One search box.'],
-    ['New, refurbished and used each live on different sites.', 'Every way to buy it, on one line.'],
-    ['Prices in dollars, pounds and kronor.', 'Everything in euros.'],
-    ['Shipping and import VAT show up at checkout.', 'Counted before you look, and marked when a shop will not say.'],
-    ['No idea whether a seller even ships to you.', 'Where it ships from, and whether it reaches you.'],
-    ['Sponsored results first.', 'No paid placements. The cheapest all-in price comes first.'],
+  const [us, fi] = EX.rows;
+  const night = [
+    ['21:04', `tori.fi: a used Sony A7 III for <b>${eur(fi.tag, 0)}</b>, here in Finland. Is that a good price? No idea.`],
+    ['21:11', `A shop in the US has one for <b>${esc(us.orig)}</b>. Cheaper! In dollars.`],
+    ['21:14', `A currency-converter tab. <b>${eur(us.tag, 0)}</b>. Still cheaper.`],
+    ['21:26', `Checkout. Import VAT: about <b>+${eur(us.vat, 0)}</b>. Shipping: “calculated at the next step”.`],
+    ['21:33', 'Does it even ship to Finland? The shop never says.'],
+    ['21:47', 'A comparison site. The first three results are sponsored.'],
+    ['22:20', 'Fourteen tabs later you buy the first one you saw, and hope.'],
   ];
-  return `<section class="ld-band" id="ld-why" aria-labelledby="ld-why-h">
-    <div class="ld-in ld-why">
+  return band('ld-why', 'cream', `<div class="ld-in ld-split">
       <header class="ld-head ld-rv">
-        ${head('01', 'The problem', 'Buying online is a research project.', 'ld-why-h')}
-        <p class="ld-sub">The same camera is on a marketplace in Finland, at a refurbisher in Germany and in a shop in the United States. Each has its own currency, its own shipping and its own fine print, and none of them will tell you about the others.</p>
-        <p class="ld-sub">Comparing them properly takes an evening. So most of us check two sites, pick one and hope.</p>
-        <p class="ld-gap">${esc(brand())} does the evening for you,<br><b>while you watch.</b></p>
+        ${head('01', 'The problem', 'Buying online shouldn’t be a research project.', 'ld-why-h')}
+        <p class="ld-sub">The camera you want is on a marketplace in Finland, in a shop in the US and at a refurbisher in South Africa. Our one recorded hunt for it met prices in euros, dollars, pounds and rand. Every shop has its own shipping and its own fine print, and none of them mentions the others.</p>
+        <p class="ld-pull">Fourteen tabs. <em>One camera.</em></p>
       </header>
-      <div class="ld-vs ld-rv" role="table" aria-label="Buying on your own, and with ${esc(brand())}">
-        <div class="ld-vs-r ld-vs-h" role="row"><span role="columnheader">On your own</span><span role="columnheader">With ${esc(brand())}</span></div>
-        ${rows.map(([x, y]) => `<div class="ld-vs-r" role="row"><span role="cell">${esc(x)}</span><span role="cell">${esc(y)}</span></div>`).join('')}
-      </div>
-    </div>
-  </section>`;
+      <figure class="ld-night ld-rv" style="--d:80ms" aria-label="A Tuesday night of comparing prices">
+        <div class="ld-tabs" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i${i === 13 ? ' class="on"' : ''}></i>`).join('')}</div>
+        <figcaption>Tuesday night</figcaption>
+        <ol role="list">${night.map(([t, s]) => `<li><time>${t}</time><span>${s}</span></li>`).join('')}</ol>
+        <p class="ld-night-end">${esc(brand())} does the evening for you, <b>in under a minute.</b></p>
+      </figure>
+    </div>`);
 }
 
-// three small mock-ups, drawn from the worked example
+// ---------- 2. watch it happen (three small mock-ups, drawn from the worked example) ----------
 function mockAsk() {
   return `<div class="ld-mock m-ask" aria-hidden="true">
-    <div class="mk-box"><span>Sony A7 III camera</span><i></i><b>→</b></div>
+    <div class="mk-box"><span>Sony A7 III body</span><i></i><b>→</b></div>
     <div class="mk-pills"><span>iPhone 15, used</span><span>Home cleaning, Helsinki</span><span>City bike with basket</span></div>
   </div>`;
 }
@@ -112,69 +128,146 @@ function mockLine() {
 }
 function howHtml() {
   const steps = [
-    [mockAsk(), 'You ask once.', 'Say what you want in plain words: a camera, a used iPhone, someone to clean your flat. No categories to pick, no filters to set.'],
-    [mockRead(), 'We do the legwork, live.', 'Context.dev reads marketplace searches and shop pages for you: price, condition, shipping and where it ships from. The evening of tabs happens while you watch.'],
-    [mockLine(), 'You see what you’d really pay.', 'Every offer lands on one euro line at tag + shipping + import VAT + fees. The cheapest you can surely buy gets the circle.'],
+    [mockAsk(), 'Ask in plain words.', 'A camera, a used iPhone, someone to clean your flat. No categories to pick, no filters to find.'],
+    [mockRead(), 'Prices snow in.', 'Context.dev reads the shops while you watch, and each offer drops onto the line the moment it’s priced. Nobody waits for the slowest shop.'],
+    [mockLine(), 'The pick lands, all in.', 'Every offer sits on one euro line at tag + shipping + import VAT + fees. The cheapest one you can surely buy gets the circle, often before the last shop has answered.'],
   ];
-  return `<section class="ld-band alt" id="ld-how" aria-labelledby="ld-how-h">
-    <div class="ld-in">
-      <header class="ld-head ld-rv">
-        ${head('02', 'How it works', 'One question. Every shop. One line.', 'ld-how-h')}
-        <p class="ld-sub">One real example, start to finish: a used Sony A7 III body for a buyer in Finland.</p>
-      </header>
+  return band('ld-how', 'paper', `<div class="ld-in">
+      <div class="ld-headrow">
+        <header class="ld-head ld-rv">
+          ${head('02', 'Watch it happen', 'Ask once. Watch every shop answer.', 'ld-how-h')}
+          <p class="ld-sub">Offers stream in as each page is read, so you watch the market take shape instead of waiting for a list.</p>
+        </header>
+        <p class="ld-stat ld-rv" style="--d:60ms"><b>${EX.firstPickS} s</b><span>to the first pick in our recorded Sony A7 III hunt. All ${EX.n} offers in ${EX.doneS} s.</span></p>
+      </div>
       <ol class="ld-steps" role="list">
         ${steps.map(([m, t, b], i) => `<li class="ld-step ld-rv" style="--d:${i * 80}ms">${m}<h3><span class="ld-n">${i + 1}</span>${esc(t)}</h3><p>${esc(b)}</p></li>`).join('')}
       </ol>
-      <p class="ld-after ld-rv">Not ready? Drag your price onto the line and we’ll watch it for you.</p>
-    </div>
-  </section>`;
+      <p class="ld-after ld-rv">Not ready yet? Drag your price onto the line and we’ll watch it for you.</p>
+    </div>`);
 }
+
+// ---------- 3. be as specific as you like ----------
+// marks: the words in the query that carry a constraint, with a tag saying what we heard. tone: ok | flag | plain
+const SPECIFIC = [
+  { q: 'PS5 Pro, no GTA bundle, delivered to Helsinki',
+    marks: [['no GTA bundle', 'flag'], ['delivered to Helsinki', 'ok']],
+    tags: [['exact model: PS5 Pro', 'plain'], ['not the GTA bundle', 'flag'], ['delivery: Helsinki', 'ok']] },
+  { q: 'Sony A7 III body only, used is fine, under €900',
+    marks: [['body only', 'plain'], ['used is fine', 'ok'], ['under €900', 'ok']],
+    tags: [['body, no lens', 'plain'], ['condition: used OK', 'ok'], ['budget: €900', 'ok']] },
+  { q: 'someone to clean a 2-room flat in Kallio on Friday',
+    marks: [['2-room flat', 'plain'], ['in Kallio', 'ok']],
+    tags: [['a service, not a product', 'plain'], ['size: 2 rooms', 'plain'], ['place: Kallio', 'ok']] },
+  { q: 'city bike with a basket, pickup near me',
+    marks: [['with a basket', 'flag'], ['pickup near me', 'ok']],
+    tags: [['must have: basket', 'flag'], ['local pickup', 'ok']] },
+];
+function markQuery({ q, marks }) {
+  let html = esc(q);
+  for (const [w, tone] of marks) html = html.replace(esc(w), `<mark class="k-${tone}">${esc(w)}</mark>`);
+  return html;
+}
+function specificHtml() {
+  return band('ld-spec', 'sun', `<div class="ld-in">
+      <header class="ld-head ld-rv">
+        ${head('03', 'Be as specific as you like', 'Say it like you’d say it to a friend.', 'ld-spec-h')}
+        <p class="ld-sub">Budgets, places, conditions and must-haves come straight out of your sentence. No filter panel, no boxes to tick. Try one:</p>
+      </header>
+      <ul class="ld-qs" role="list">
+        ${SPECIFIC.map((s, i) => `<li class="ld-rv" style="--d:${(i % 2) * 70 + Math.floor(i / 2) * 50}ms">
+          <button type="button" class="ld-q" data-q="${esc(s.q)}" aria-label="Search: ${esc(s.q)}">
+            <span class="ld-q-text">“${markQuery(s)}”</span>
+            <span class="ld-q-tags">${s.tags.map(([t, tone]) => `<span class="ld-tag k-${tone}">${esc(t)}</span>`).join('')}</span>
+            <span class="ld-q-go">Run this search <span aria-hidden="true">→</span></span>
+          </button>
+        </li>`).join('')}
+      </ul>
+      <div class="ld-ask ld-rv">
+        <p class="ld-ask-k">If it could mean a few things, we ask:</p>
+        <p class="ld-pull ld-pull-c">“That could be a few things. Which one?”</p>
+        <p class="ld-ask-s">and keep hunting the likeliest one while you decide.</p>
+      </div>
+    </div>`);
+}
+
+// ---------- 4. the all-in price ----------
 function receipt(r, i) {
   const line = (k, v, cls = '') => `<div class="rc-l ${cls}"><span>${k}</span><span>${v}</span></div>`;
-  return `<figure class="ld-rc ld-rv" style="--d:${i * 80}ms">
+  return `<figure class="ld-rc ld-rv${r.eu ? ' pick' : ''}" style="--d:${i * 80}ms">
     <figcaption>${fav(r.dom)}<b>${esc(r.dom)}</b><span>ships from ${esc(r.from)} · used</span></figcaption>
-    ${line('Tag', eur(r.tag))}
-    ${line('Shipping', 'unknown, not included', 'q')}
+    ${line('Tag', r.orig ? `<span class="rc-o">${esc(r.orig)} →</span> ${eur(r.tag)}` : eur(r.tag))}
+    ${line('Shipping', 'not quoted, counted as €0', 'q')}
     ${line(r.eu ? 'Import VAT' : 'Import VAT, estimated', r.eu ? 'none, inside the EU' : '+ ' + eur(r.vat), r.eu ? 'q' : 'add')}
     ${line('All in', eur(r.all), 'sum')}
-    <p class="rc-n">Ships to Finland: ${esc(r.ships)}.</p>
+    <p class="rc-n">Ships to Finland: ${esc(r.ships)}.${r.eu ? ' <b>Our pick.</b>' : ''}</p>
   </figure>`;
 }
 function priceHtml() {
   const [us, fi] = EX.rows;
-  return `<section class="ld-band" id="ld-price" aria-labelledby="ld-price-h">
-    <div class="ld-in ld-price">
-      <header class="ld-head ld-rv">
-        ${head('03', 'The all-in price', 'The sticker is not the price.', 'ld-price-h')}
-        <p class="ld-sub">The cheapest listing is often not the cheapest purchase. Shipping, import VAT and fees turn up at checkout, after you have already decided. We add them before you look, say where each number came from, and mark anything a shop would not confirm.</p>
-        <p class="ld-gap"><b>${eur(fi.tag - us.tag, 0)}</b> apart on the sticker.<br><b>${eur(fi.all - us.all, 0)}</b> apart at your door.</p>
-        <p class="ld-own">And what it costs to own: buy at ${eur(fi.all, 0)}, resell in 12 months for about €715. That is €9.16 a month.</p>
-      </header>
+  return band('ld-price', 'paper', `<div class="ld-in ld-split ld-flip">
       <div class="ld-rcs">${[us, fi].map(receipt).join('')}</div>
-    </div>
-  </section>`;
+      <header class="ld-head ld-rv">
+        ${head('04', 'The all-in price', 'The sticker is not the price.', 'ld-price-h')}
+        <p class="ld-pull">${eur(us.tag, 0)} on the tag. <em>${eur(us.all, 0)} at your door.</em></p>
+        <p class="ld-sub">Shipping, import VAT and fees turn up at checkout, after you’ve already decided. We add them before you look, say where each number came from, and mark anything a shop won’t confirm.</p>
+        <p class="ld-gap"><b>${eur(fi.tag - us.tag, 0)}</b> cheaper on the sticker. Only <b>${eur(fi.all - us.all, 0)}</b> at your door, before a shipping fee nobody quoted, from a shop that never said it ships to Finland. We picked the one in Finland.</p>
+        <p class="ld-fx">Converted to euros at the day’s ECB reference rate. The shop’s own price stays with every offer: ${esc(us.orig)} here.</p>
+        <p class="ld-own">And what it costs to own: buy at ${eur(fi.all, 0)}, resell in 12 months for about €715. That’s €9.16 a month.</p>
+      </header>
+    </div>`);
 }
+
+// ---------- 5. sources ----------
 function sourcesHtml() {
   const lanes = [
-    ['The open web', 'A fresh web search for every question, in English and in the local language. Guides, news and forums are dropped. Any shop that sells it stays, whether we have heard of it or not.'],
+    ['The open web', 'A fresh web search for every question, in English and in the local language. Guides, news and forums are dropped. Any shop that sells it stays, whether we’ve heard of it or not.'],
     ['Marketplaces, searched directly', 'The big European marketplaces are read through their own search pages, around twenty listings per read. 193 second-hand sources are known by name.'],
-    ['The long tail', 'Small providers that live on their own sites: found through “best of” articles and look-alikes, priced from their pricing pages, and remembered for the next search.'],
+    ['The long tail', 'Small providers on their own sites: found through “best of” articles and look-alikes, priced from their pricing pages, and remembered for next time.'],
   ];
-  return `<section class="ld-band alt" id="ld-sources" aria-labelledby="ld-sources-h">
-    <div class="ld-in">
-      <header class="ld-head ld-rv">
-        ${head('04', 'Sources', 'Anywhere it’s sold.', 'ld-sources-h')}
-        <p class="ld-sub">There is no fixed list of shops. Every question starts with a live search of the web, so an offer can come from any shop that sells it. Three ways in:</p>
-      </header>
+  return band('ld-sources', 'cream', `<div class="ld-in">
+      <div class="ld-headrow">
+        <header class="ld-head ld-rv">
+          ${head('05', 'Sources', 'Anywhere it’s sold.', 'ld-sources-h')}
+          <p class="ld-sub">If a shop sells it, we can find it. Every question starts with a live search of the web, so an offer can come from a shop we’d never heard of a minute earlier. Three ways in:</p>
+        </header>
+        <p class="ld-pull ld-rv" style="--d:60ms">There’s no list.</p>
+      </div>
       <ol class="ld-lanes" role="list">
         ${lanes.map(([t, b], i) => `<li class="ld-rv" style="--d:${i * 80}ms"><span class="ld-n">${'abc'[i]}</span><h3>${esc(t)}</h3><p>${esc(b)}</p></li>`).join('')}
       </ol>
-      <p class="ld-wall-h ld-rv"><b>A few of the places we read</b><span>examples, not the full list</span></p>
+      <p class="ld-wall-h ld-rv"><b>A few places we’ve read</b><span>examples, not the list</span></p>
       <div class="ld-wall"></div>
-      <p class="ld-foot ld-rv">Brand marks fetched by the Context.dev brand API · free JSON-LD first, Context.dev where it matters.</p>
-    </div>
-  </section>`;
+      <p class="ld-foot ld-rv">Brand marks from the Context.dev brand API · free JSON-LD first, Context.dev where it matters.</p>
+    </div>`);
 }
+
+// ---------- 6. honest by design ----------
+function quotesHtml() {
+  const qs = (Array.isArray(REAL_QUOTES) ? REAL_QUOTES : []).filter(x => x && x.quote);
+  if (!qs.length) return '';
+  return `<ul class="ld-quotes" role="list" aria-label="What testers told us">${qs.map((x, i) =>
+    `<li class="ld-rv" style="--d:${i * 70}ms"><blockquote>“${esc(x.quote)}”</blockquote>${x.who ? `<p>${esc(x.who)}</p>` : ''}</li>`).join('')}</ul>`;
+}
+function honestHtml() {
+  const pts = [
+    ['Ranked by what you pay.', 'The all-in price sets the order. Not who pays us, not who shouts loudest. No paid placements.'],
+    ['We may earn a fee, never a better spot.', 'If a shop ever pays us for a click, it still sits exactly where its all-in price puts it.'],
+    ['We show what we left out, and why.', 'Offers we didn’t count stay in view with the reason: a different model, a dead link, a shop too slow to answer.'],
+  ];
+  return band('ld-honest', 'sky', `<div class="ld-in ld-narrow">
+      <header class="ld-head ld-rv">
+        ${head('06', 'Honest by design', 'Built to be on your side of the till.', 'ld-honest-h')}
+      </header>
+      <p class="ld-big ld-rv"><b>${EX.skipped}</b><span>pages set aside in the Sony hunt, each with its reason. One was an A7R III: close, but a different camera.</span></p>
+      <ol class="ld-promises" role="list">
+        ${pts.map(([t, b], i) => `<li class="ld-rv" style="--d:${i * 70}ms"><h3>${esc(t)}</h3><p>${esc(b)}</p></li>`).join('')}
+      </ol>
+      ${quotesHtml()}
+    </div>`);
+}
+
+// ---------- 7. for agents ----------
 function codeLine(kind, origin) {
   if (kind === 'mcp') {
     // runs as written from the repo folder (uv reads the project's lockfile); no machine-specific path
@@ -220,12 +313,14 @@ function agentsHtml() {
       <pre><code>${c.html}</code></pre>
       <button type="button" class="ld-copy" data-copy="${esc(c.text)}" aria-label="Copy: ${esc(label)}">copy</button></figure>`;
   };
-  return `<section class="ld-band" id="ld-agents" aria-labelledby="ld-agents-h">
-    <div class="ld-in">
-      <header class="ld-head ld-rv">
-        ${head('05', 'For agents', 'Same line, for your agent.', 'ld-agents-h')}
-        <p class="ld-sub">Agents get the same offers in the same order, ranked by all-in price, over MCP or plain JSON. Read-only: ${esc(brand())} never buys for an agent.</p>
-      </header>
+  return band('ld-agents', 'paper', `<div class="ld-in">
+      <div class="ld-headrow">
+        <header class="ld-head ld-rv">
+          ${head('07', 'For agents', 'Your agent gets the same line.', 'ld-agents-h')}
+          <p class="ld-sub">Same offers, same order, same all-in prices, over MCP or plain JSON. One call instead of a scraper per shop.</p>
+        </header>
+        <p class="ld-pull ld-rv" style="--d:60ms">Read-only. <em>It never buys.</em></p>
+      </div>
       <div class="ld-agent">
         <div class="ld-codes">
           ${block('mcp', 'MCP, for Claude Code · run it in the repo folder')}
@@ -238,8 +333,17 @@ function agentsHtml() {
         <div class="ld-tr ld-th" role="row"><span role="columnheader">tool</span><span role="columnheader">takes</span><span role="columnheader">gives back</span></div>
         ${TOOLS.map(([n, a, r]) => `<div class="ld-tr" role="row"><code role="cell">${n}</code><span role="cell" class="ld-args">${esc(a)}</span><span role="cell">${esc(r)}</span></div>`).join('')}
       </div>
-    </div>
-  </section>`;
+    </div>`);
+}
+
+// ---------- 8. close ----------
+function closeHtml() {
+  return band('ld-close', 'sun', `<div class="ld-in ld-close-in ld-rv">
+      <img class="ld-banana" src="/web/assets/mascot/banana.png" alt="" width="54" height="34" loading="lazy">
+      <h2 class="ld-close-h" id="ld-close-h">What do you want to <em>buy</em>?</h2>
+      <p class="ld-close-s">Go on, ask the monkey. Every shop answers, all in, in under a minute.</p>
+      <button type="button" class="ld-cta">Start a search <span aria-hidden="true">↑</span></button>
+    </div>`);
 }
 
 async function getJson(url) {
@@ -277,18 +381,22 @@ function ask(q) {
   }
 }
 
+// the closing button: back to the box, cursor in it (focus without a second jump)
+function toBox() {
+  const qIn = document.getElementById('q');
+  scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' });
+  if (qIn) { try { qIn.focus({ preventScroll: true }); } catch { qIn.focus(); } }
+}
+
 function fallbacks(root) {
   root.querySelectorAll('img').forEach(img => {
     if (img.dataset.fbOn) return;
     img.dataset.fbOn = '1';
     img.addEventListener('error', () => {
       if (img.dataset.fb === 'sq') { const i = document.createElement('i'); i.className = 'cd-sq'; img.replaceWith(i); return; }
-      const fl = img.closest('.ld-flag');
-      if (fl) { fl.classList.add('txt'); img.remove(); return; }
       const lg = img.closest('.ld-logo');
       if (lg) { const i = document.createElement('i'); i.textContent = lg.dataset.mono || ''; img.replaceWith(i); return; }
-      const pl = img.closest('.ld-plate');
-      if (pl) { img.remove(); pl.classList.add('empty'); }
+      img.remove();
     }, { once: true });
     if (img.complete && img.naturalWidth === 0 && img.src) img.dispatchEvent(new Event('error'));
   });
@@ -320,7 +428,8 @@ export function mountLanding(el) {
   el.dataset.mounted = '1';
   el.classList.add('ld-js');
   const cue = el.querySelector('.scroll-cue');
-  el.insertAdjacentHTML('beforeend', stripHtml() + whyHtml() + howHtml() + priceHtml() + sourcesHtml() + agentsHtml());
+  el.insertAdjacentHTML('beforeend', bannerHtml() + whyHtml() + howHtml() + specificHtml() + priceHtml()
+    + sourcesHtml() + honestHtml() + agentsHtml() + closeHtml());
   if (cue) el.prepend(cue);
   getJson('/web/assets/brands.json').then(b => {
     const wall = el.querySelector('.ld-wall');
@@ -335,6 +444,9 @@ export function mountLanding(el) {
       try { navigator.clipboard.writeText(cp.dataset.copy).then(() => done(true), () => done(false)); } catch { done(false); }
       return;
     }
+    const q = e.target.closest('.ld-q');
+    if (q) { ask(q.dataset.q); return; }
+    if (e.target.closest('.ld-cta')) { toBox(); return; }
     const demo = e.target.closest('.ld-agent-demo');
     if (demo) {
       e.preventDefault();
@@ -345,7 +457,7 @@ export function mountLanding(el) {
     const cueA = e.target.closest('.scroll-cue');
     if (cueA) {
       e.preventDefault();
-      const t = el.querySelector('#ld-why');
+      const t = el.querySelector('#ld-cd');
       if (t) t.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
     }
   });

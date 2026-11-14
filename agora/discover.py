@@ -157,7 +157,16 @@ def _registry_service_markets(per_country: int = 8) -> None:
 _registry_service_markets()
 SERVICE_DIRECTORIES = tuple(sorted({d for ds in SERVICE_MARKETS.values() for d in ds}
                                    | {"yelp.", "treatwell.", "fresha.com", "booksy.com", "yoopies.", "yoojo.",
-                                      "helpling.", "hulp.nl", "klusjebij.app", "care.com", "sittercity.com"}))
+                                      "helpling.", "hulp.nl", "klusjebij.app", "care.com", "sittercity.com",
+                                      # review / matching directories: many providers, not one (eval r4: a
+                                      # kennstdueinen.de cost section was priced as a Berlin plumber)
+                                      "my-hammer.de", "kennstdueinen.de", "fragbabsi.de", "11880.com",
+                                      "gelbeseiten.de", "werkenntdenbesten.de", "golocal.de", "trustlocal.",
+                                      "trustoo.", "werkspot.nl", "starofservice."}))
+# cost-of-living statistics: a crowd-sourced average, never a provider (eval r4: expatistan.com 'Hourly rate for
+# cleaning help' was priced as an offer)
+COST_STATS = ("expatistan.com", "numbeo.com", "livingcost.org", "costoflive.net", "budgetyourtrip.com",
+              "salaryexplorer.com", "teleport.org")
 PROFILE_PATH = re.compile(r"/(?:profiel|profile|profil|pro|biz|bedrijf|company|firma|yritys|anbieter|handwerker|"
                           r"cleaner|schoonmaker|urakoitsija|yritykset|palveluntarjoaja|tekija)/[^/]+/?$", re.I)
 DIRECTORY_PROFILES = 5        # provider profiles read from one directory (each its own provider and price)
@@ -368,11 +377,42 @@ def service_name(need: Need) -> str | None:
 ISO_OF_LOCAL = {"se": "sv", "dk": "da", "no": "nb", "cz": "cs"}
 
 
+# a specific job inside a trade (agora.need.SPECIFIC_JOBS), in the local languages (LOCAL keys)
+JOB_LOCAL: dict[str, dict[str, str]] = {
+    "window cleaning": {"nl": "glazenwasser", "de": "Fensterputzer", "fi": "ikkunanpesu", "se": "fönsterputs",
+                        "dk": "vinduespudser", "no": "vindusvask", "fr": "laveur de vitres",
+                        "es": "limpieza de cristales", "it": "lavavetri", "pl": "mycie okien", "pt": "limpeza de vidros",
+                        "cz": "mytí oken"},
+    "carpet cleaning": {"nl": "tapijtreiniging", "de": "Teppichreinigung", "fi": "mattopesu", "se": "mattvätt",
+                        "dk": "tæpperens", "fr": "nettoyage de tapis", "es": "limpieza de alfombras",
+                        "it": "lavaggio tappeti", "pl": "pranie dywanów"},
+    "gutter cleaning": {"nl": "dakgootreiniging", "de": "Dachrinnenreinigung", "fi": "rännien puhdistus",
+                        "se": "takrännor rensning", "dk": "tagrenderens", "fr": "nettoyage de gouttières"},
+    "upholstery cleaning": {"nl": "bankstel reinigen", "de": "Polsterreinigung", "fi": "sohvan pesu",
+                            "se": "möbeltvätt", "fr": "nettoyage canapé"},
+    "end of tenancy cleaning": {"nl": "eindschoonmaak", "de": "Endreinigung", "fi": "muuttosiivous",
+                                "se": "flyttstädning", "dk": "fraflytningsrengøring", "fr": "ménage fin de bail"},
+}
+
+
+def _specific_job(need: Need) -> str | None:
+    try:
+        from agora.need import specific_job
+    except ImportError:
+        return None
+    for text in (need.thing, need.raw):
+        if job := specific_job(text or ""):
+            return job
+    return None
+
+
 def local_words(need: Need, lang: str | None) -> str | None:
     """The job in the local language: the trade's word (SERVICE_LOCAL), else the category node's label in that
     language (a hunt from the tree: 'Gunsmith' -> 'aseseppä'), else None."""
     if not lang:
         return None
+    if w := JOB_LOCAL.get(_specific_job(need) or "", {}).get(lang):
+        return w                 # 'glazenwasser', never the trade's 'schoonmaker' (eval r4)
     svc = service_name(need)
     if w := SERVICE_LOCAL.get(svc or "", {}).get(lang):
         return w
@@ -391,6 +431,10 @@ UNIT_PHRASE = {
                "nl": "prijs per persoon", "dk": "pris pr person", "no": "pris per person", "fr": "prix par personne",
                "es": "precio por persona", "it": "prezzo a persona", "pl": "cena za osobę", "pt": "preço por pessoa",
                "cz": "cena za osobu"},
+    # window / gutter / carpet cleaners price per window, per visit or per m², rarely per hour
+    "job": {"en": "prices", "fi": "hinnasto", "de": "Preise", "se": "priser", "nl": "prijzen", "dk": "priser",
+            "no": "priser", "fr": "tarifs", "es": "precios", "it": "prezzi", "pl": "cennik", "pt": "preços",
+            "cz": "ceník"},
     "package": {"en": "prices packages", "fi": "hinnasto", "de": "Preise Pakete", "se": "priser paket",
                 "nl": "prijzen pakketten", "dk": "priser pakker", "no": "priser pakker", "fr": "tarifs forfaits",
                 "es": "precios paquetes", "it": "prezzi pacchetti", "pl": "cennik pakiety", "pt": "preços pacotes",
@@ -407,6 +451,8 @@ def service_unit(need: Need) -> str:
         return "person"
     if UNIT_PACKAGE.search(hay):
         return "package"
+    if _specific_job(need) in ("window cleaning", "gutter cleaning", "carpet cleaning", "upholstery cleaning"):
+        return "job"
     return "hour"
 
 
@@ -1040,7 +1086,9 @@ def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int, pa
         got = with_site_language(need, got, thing)
         got = with_audience(need, got)
         if vehicle(need):
-            got = car_directs(got, cc or home)
+            before = sum(1 for d in got if d.paid)
+            got = car_directs(got, cc or home, left)
+            left -= max(0, sum(1 for d in got if d.paid) - before)
         if got:
             out[lane] = got
     return out
@@ -1128,17 +1176,51 @@ def car_make_model(query: str) -> tuple[str, str | None] | None:
     return make, model
 
 
-def car_directs(directs: list[Any], where: str | None) -> list[Any]:
+# car sites whose list pages are paged and sorted by URL (checked live 14 Nov: nettiauto.com/volvo/v70?page=23 is
+# the last of 664 V70s; its default order is cheapest first, so page 1 of a site-wide list was 30 scrap cars at
+# €51-€300 (eval r4, 'bright red car'). Newest first is a fair sample of what is for sale.
+CAR_SORT = {"nettiauto": "sortCol=dateCreated&ord=DESC"}
+CAR_PAGED = {"nettiauto"}
+CAR_MORE_PAGES = 2            # paid: pages 2-3 of the home cars site while the shared bucket allows
+CAR_MORE_PAGES_FREE = 5       # free (read without a token): pages 2-6
+CAR_PAGE_MIN_TOKENS = 2.0     # a paid next page (30 cars for 1 token) only while this many stay for item reads
+
+
+def _with_query(url: str, extra: str) -> str:
+    parts = urlsplit(url)
+    have = dict(parse_qsl(parts.query, keep_blank_values=True))
+    add = [(k, v) for k, v in parse_qsl(extra) if k not in have]
+    query = urlencode(list(parse_qsl(parts.query, keep_blank_values=True)) + add)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
+
+
+def _hint_list(url: str) -> None:
+    if len(_LIST_HINTS) > 5000:
+        _LIST_HINTS.clear()
+    _LIST_HINTS.add(normalize_url(url))     # a list page of that site (marketplaces.site_for)
+
+
+def car_directs(directs: list[Any], where: str | None, tokens: float | None = None) -> list[Any]:
     """A car hunt's marketplace pages (eval r3, 'volvo v70' and 'bright red car'):
     - a car site that ignores ?q= reads the make / model page (nettiauto.com/volvo/v70); a query naming no make
       ('electric') cannot be put in its URL, so that site is not read (its site-wide list is any car);
     - when a cars site of the home country is planned, the general goods marketplace (tori's goods search:
-      toys, LEGO, tyres, parts) is not read for a car: it spent the read budget and filled the market count."""
+      toys, LEGO, tyres, parts) is not read for a car: it spent the read budget and filled the market count.
+    eval r4: the home cars site is read newest first (CAR_SORT, never its cheapest-first scrap list) and paged
+    (CAR_PAGED: pages 2-3 while `tokens` allow, deeper when the site reads free): 1 page was 32 of 664 V70s."""
     import dataclasses
+
+    from agora import marketplaces
     out: list[Any] = []
+    left = float(tokens) if tokens is not None else 0.0
     for d in directs:
         tpl = CAR_MODEL_PAGES.get(d.site.key) if d.site.vehicle else None
+        sort = CAR_SORT.get(d.site.key) if d.site.vehicle else None
         if tpl is None or not d.query:
+            if sort and d.page <= 1:
+                url = _with_query(d.url, sort)
+                _hint_list(url)
+                d = dataclasses.replace(d, url=url)
             out.append(d)            # a generic car browses the category (no query): the site's own list
             continue
         mm = car_make_model(d.query)
@@ -1147,13 +1229,43 @@ def car_directs(directs: list[Any], where: str | None) -> list[Any]:
         make, model = mm
         url = tpl[0].format(make=make, model=model) if model else tpl[1].format(make=make)
         if d.page > 1:
-            continue                 # the model page has no ?page= of ours: one page
-        if len(_LIST_HINTS) > 5000:
-            _LIST_HINTS.clear()
-        _LIST_HINTS.add(normalize_url(url))     # a list page of that site (marketplaces.site_for)
+            continue                 # the model page is paged below (CAR_PAGED), never with a search's ?page=
+        if sort:
+            url = _with_query(url, sort)
+        _hint_list(url)
         out.append(dataclasses.replace(d, url=url))
     if any(d.site.vehicle and d.site.country == where for d in out):
         out = [d for d in out if d.site.vehicle or d.category]
+    # a car is bought near you: the home cars site's next pages come before the marketplaces abroad (`extra`)
+    extras = [d for d in out if d.extra and d.paid]
+    left += len(extras)
+    more: list[Any] = []
+    for d in out:
+        if d.site.key not in CAR_PAGED or d.page > 1 or d.extra or (where and d.site.country != where):
+            continue
+        free = not d.paid
+        for n in range(2, 2 + (CAR_MORE_PAGES_FREE if free else CAR_MORE_PAGES)):
+            if not free and (tokens is None or left - 1 < CAR_PAGE_MIN_TOKENS):
+                break
+            url = marketplaces.page_url(d.site, d.url, n)
+            if not url or any(x.url == url for x in out + more):
+                break
+            if not free:
+                left -= 1
+            _hint_list(url)
+            more.append(dataclasses.replace(d, url=url, page=n))
+    if extras:
+        keep = max(0, int(left - CAR_PAGE_MIN_TOKENS + 1)) if more else len(extras)
+        drop = {id(d) for d in extras[keep:]}
+        out = [d for d in out if id(d) not in drop]
+    if more:
+        # page 2+ go right after their site's page 1 (discover emits directs in order)
+        ordered: list[Any] = []
+        for d in out:
+            ordered.append(d)
+            ordered += [m for m in more if m.site.key == d.site.key and d.page == 1 and m.url.split("?")[0]
+                        == d.url.split("?")[0]]
+        out = ordered + [m for m in more if m not in ordered]
     return out
 
 
@@ -1297,6 +1409,49 @@ def colour_clash(need: Need, url: str, title: str) -> str | None:
         for c in clashes:
             if c in hay and c not in asked:
                 return f"another colour ({c}), not {colour}"
+    return None
+
+
+# a used-car list narrowed by a filter in its path ('/vaihtoautot/listaa/volvo/v70/vuosimalli_min/2007/
+# vuosimalli_max/2007': 12 cars of one model year, eval r4) is read as the whole make / model list
+_CAR_FILTER_SEG = re.compile(r"^[a-z]+_(?:min|max|from|to|alku|loppu)$", re.I)
+# a car site's front page or a valuation / price-history tool is no car and no list of cars (eval r4, 'bright red
+# car': autouncle.fi/, nettiauto.com/en, mobile.de/en, oma.almaajo.fi/auton-hinta-arvio, auto1.fi/hintaseuranta)
+_CAR_TOOL = re.compile(r"hinta-?arvio|hintaseuranta|arvonm[aä][aä]ritys|valuation|bewertung|price-?tracker|"
+                       r"rahoitus|financing|vakuutus|insurance|uudet-autot/uusi-haku|myy-autosi|sell-your-car|"
+                       r"auto-verkaufen", re.I)
+_FRONT_PATH = re.compile(r"^/(?:[a-z]{2}(?:[-_][a-z]{2})?/?)?$", re.I)
+
+
+def car_list_base(url: str) -> str:
+    """The used-car list without its path filters (autotalli's year range), else the URL unchanged."""
+    parts = urlsplit(url)
+    segs = parts.path.split("/")
+    for i, seg in enumerate(segs):
+        if i >= 3 and _CAR_FILTER_SEG.match(seg) and car_list_page(url):
+            return urlunsplit((parts.scheme, parts.netloc, "/".join(segs[:i]), parts.query, ""))
+    return url
+
+
+def car_page_skip(url: str, title: str = "", home_cars: bool = False) -> str | None:
+    """Why a page found by search is no car and no list of cars for a car hunt, else None:
+    - a site's front page (autouncle.fi/, mobile.de/en): no car on it;
+    - a valuation / price-history / financing tool;
+    - the general goods marketplace's search (tori's 'volvo v70' = rims, tyres, seats; 'punainen auto' = toys)
+      when the home country's cars site is read anyway (`home_cars`); its car listings come from there."""
+    parts = urlsplit(url)
+    if _FRONT_PATH.match(parts.path or "/") and not parts.query:
+        return "a car site's front page, not a car or a list of cars"
+    if _CAR_TOOL.search(parts.path):
+        return "a valuation, finance or configurator tool, not a car for sale"
+    if home_cars and is_marketplace(domain_of(url)) and is_list_page(url):
+        try:
+            from agora import marketplaces
+            site = marketplaces.site_for(url)
+        except Exception:
+            site = None
+        if site is not None and not site.vehicle:
+            return "the goods marketplace's search (parts, tyres, toys); cars are read from the cars site"
     return None
 
 
@@ -1463,6 +1618,8 @@ def service_skip(need: Need, url: str, title: str) -> str | None:
     dom = domain_of(url)
     if any(dom_match(dom, d) for d in APP_STORES):
         return "an app store page, not a provider"
+    if any(dom_match(dom, d) for d in COST_STATS):
+        return "a cost-of-living statistic (an average), not a provider"
     cc = country_of(need) or home_country()
     if _local_service(need) and cc and cc not in ("gb", "ie") and _foreign_generic(dom) \
             and (cost_guide(url, title) or _COST_WORDS.search(f"{urlsplit(url).path.replace('-', ' ')} {title}")):
@@ -1634,6 +1791,9 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
         if vehicle(need):
             scope = vehicle_scope(scope, cc or home)
         yield ev("scope", **scope)
+    # a car hunt reading a cars site of the home country: the goods marketplaces' searches list parts and toys
+    home_cars = car and any(d.site.vehicle and d.site.country == (cc or home)
+                            for ds in directs.values() for d in ds)
     for lane in lanes:
         qp = plans[lane]
         extra: dict[str, Any] = {}
@@ -1780,6 +1940,9 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                     url = r.get("url") or ""
                     if not url.startswith("http"):
                         continue
+                    if car and (base := car_list_base(url)) != url:
+                        r = {**r, "url": base, "narrowed_from": url}     # the whole list, not one model year
+                        url = base
                     if need.kind == "product" and (local_url := localize(url, rank_cc)) != url:
                         r = {**r, "url": local_url, "localized_from": url}
                         url = local_url
@@ -1810,7 +1973,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                         if car_abroad(domain_of(url), title):
                             reason = "a car seller outside Europe (a car is bought near you)"
                         else:
-                            reason = colour_clash(need, url, title)
+                            reason = colour_clash(need, url, title) or car_page_skip(url, title, home_cars)
                     if not reason and car:
                         if lane == "new" and "used" in pool and used_car_page(need, url, title):
                             lane = "used"      # a used-car dealer / aggregator page is no new car (eval r2)
@@ -1844,3 +2007,79 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
     finally:
         for t in tasks:
             t.cancel()
+
+
+# --------------------------------------------------------------------------- eval r4: shop category pages, home shops
+
+_CAT_MARKER = re.compile(r"/(?:c|cat|category|categories|collections?|kategoria|kategorie|kategori|catalog|"
+                         r"catalogue|osasto|tuote-osasto|tuoteryhma|g)/", re.I)
+_WORD = re.compile(r"[^\W\d_]{3,}", re.U)
+
+
+def category_like(url: str) -> bool:
+    """A shop's category path (/naisten-vaatteet/takit/talvitakit/, /c/..., /collections/...), not one product:
+    no product id, a short last segment, at least two levels."""
+    if is_list_page(url):
+        return True
+    path = urlsplit(url).path
+    low = path.lower()
+    if "/products/" in low or "/product/" in low or "/p/" in low or low.endswith((".html", ".htm")) \
+            and re.search(r"\d{4,}", low):
+        return False
+    if _CAT_MARKER.search(path + "/"):
+        return True
+    segs = [x for x in path.split("/") if x]
+    if len(segs) < 2:
+        return False
+    last = segs[-1]
+    return not re.search(r"\d", last) and len(last.split("-")) <= 3
+
+
+def category_page_offer(src_url: str, src_title: str, offer_url: str, offer_title: str) -> str | None:
+    """Why a single offer read off a page is not one product's own offer, else None: the offer carries the
+    page's own URL, the page is a shop's category page, and the page title is not that product's title
+    (eval r4: emp.fi / fyndiq.fi / cellbes.fi category pages each gave one jacket linked to the category)."""
+    if normalize_url(offer_url or src_url) != normalize_url(src_url) or not category_like(src_url):
+        return None
+    a = {w.lower() for w in _WORD.findall(offer_title or "")}
+    b = {w.lower() for w in _WORD.findall(src_title or "")}
+    if a and b and len(a & b) / max(1, min(len(a), len(b))) >= 0.6:
+        return None              # the page title names this product: a product page with a category-like path
+    return "a shop's category page: one product picked off a list, its own page unknown"
+
+
+_RETAILERS: dict[str, list[dict[str, Any]]] | None = None
+
+
+def home_retailer(url: str, need: Need) -> bool:
+    """A retailer of the hunt's country (asked-for, else home) that the source registry lists for this kind of
+    thing (zalando.fi for a winter jacket): its pages are read before small shops'."""
+    global _RETAILERS
+    cc = country_of(need) or home_country()
+    if not cc or need.kind != "product":
+        return False
+    if _RETAILERS is None:
+        try:
+            from agora import sources as _src
+            idx: dict[str, list[dict[str, Any]]] = {}
+            for rec in _src.load():
+                if rec.get("kind") in ("retailer", "department_store", "shop") and "new" in (rec.get("lanes") or []):
+                    idx.setdefault(str(rec.get("domain") or "").lower().removeprefix("www."), []).append(rec)
+            _RETAILERS = idx
+        except Exception:
+            _RETAILERS = {}
+    recs = _RETAILERS.get(domain_of(url))
+    if not recs:
+        return False
+    try:
+        from agora import marketplaces
+        cats = set(marketplaces.categories_for(need.thing or ""))
+    except Exception:
+        cats = set()
+    for rec in recs:
+        if cc not in (rec.get("countries") or []):
+            continue
+        rc = set(rec.get("categories") or [])
+        if not cats or cats & rc:
+            return True
+    return False

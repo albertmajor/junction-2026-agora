@@ -82,6 +82,11 @@ function pickInfo() {
 
 // ---------- geometry ----------
 function lineEl() { return document.getElementById('line'); }
+// the line's optional zoom hooks (an older line without them just does not zoom)
+function lineCall(fn, ...a) {
+  if (!line || typeof line[fn] !== 'function') return;
+  try { line[fn](...a); } catch (e) { console.warn('[agora] line.' + fn, e); }
+}
 
 // Is THE LINE drawn as a vertical list (phones)? Asks the line first, then its class.
 function isVert() {
@@ -461,6 +466,8 @@ function onDown(e, jump = false) {
     else if (jump || st.v == null) { st.v = valueAt(railCoord(last, g), g); paint(); }
     const at = (g.raw || g.pos)(st.v);
     anchor = { at: at == null ? railCoord(last, g) : at, p: railCoord(last, g) };
+    // from here the line's axis follows the tag (line.js: tagDrag / tagAt)
+    lineCall('tagDrag', true, st.v);
     el.classList.remove('is-glide');
   };
   const wait = (wasParked || jump) && !RM.matches ? 310 : 0;
@@ -474,10 +481,12 @@ function onDown(e, jump = false) {
     // a scale that clamps at its ends must never move the price against the finger
     if (v == null || v === st.v || (d < 0 && v > st.v) || (d > 0 && v < st.v)) return;
     st.v = v; paint();
+    lineCall('tagAt', st.v);
   };
   const up = () => {
     clearTimeout(t);
     if (!anchor) ready();
+    lineCall('tagDrag', false, st.v);
     ui.tag.removeEventListener('pointermove', move);
     ui.tag.removeEventListener('pointerup', up);
     ui.tag.removeEventListener('pointercancel', up);
@@ -518,6 +527,7 @@ function onKey(e) {
     st.v = n;
   }
   paint();
+  lineCall('tagAt', st.v);          // the axis glides after the tag, key by key
   clearTimeout(keyTimer);
   keyTimer = setTimeout(() => { leaveTagMode(); arm(); }, 1400);
 }
@@ -567,6 +577,7 @@ export function setTag(v, { silent = false, arm: doArm = false, buy = null } = {
   }
   enterTagMode();
   paint();
+  lineCall('tagAt', st.v);
   if (doArm) setTimeout(() => { leaveTagMode(); arm(); }, RM.matches ? 200 : 1300);
 }
 
@@ -713,7 +724,12 @@ export function mountTag(root, lineApi) {
   on('done', () => { if (S.offers.size) { show(); paint(); } });
   on('offer', () => { if (st.shown) paint(); });
   on('truecost', () => { if (st.shown) layout(); });
-  on('line:layout', () => { if (st.shown) layout(); });
+  // a zoom frame: the tag rides the axis without its own 300 ms glide lagging behind
+  let zoomT = 0;
+  on('line:layout', d => {
+    if (d && d.zoom) { el.classList.add('is-zoom'); clearTimeout(zoomT); zoomT = setTimeout(() => el.classList.remove('is-zoom'), 220); }
+    if (st.shown) layout();
+  });
   on('mode', () => { if (st.shown) setTimeout(layout, RM.matches ? 0 : 680); });
   on('tag', d => {
     if (!d || d.eur == null || !isFinite(d.eur)) return;

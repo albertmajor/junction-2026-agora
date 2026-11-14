@@ -117,9 +117,22 @@ function flagText(f) {
   return String(f).replace(/^outside the EU \((\w+)\): /, 'outside the EU, priced in $1: ');
 }
 
+/** The listing behind a url: in the store, or taken out by you ("not this" in the list). */
+function itemAt(url) {
+  return S.offers.get(url) || (ledger && ledger.dismissedItem ? ledger.dismissedItem(url) : null);
+}
+// the shop's own price when it is not in euros (judges, F7): the rate is the one our conversion used
+function fxHtml(it) {
+  const f = ledger && ledger.origPrice ? ledger.origPrice(it) : null;
+  if (!f) return '';
+  return `<p class="s-fx"><span class="s-fx-o">${esc(f.orig)}</span> on the page <span aria-hidden="true">→</span><span class="sr"> is</span> <span class="s-fx-e">${esc(f.eur)}</span>
+    <span class="s-fx-r">converted at ${esc(f.rate)}. Every price here is in euros; the shop's own price stays shown.</span></p>`;
+}
+
 function render(url) {
-  const it = S.offers.get(url);
+  const it = itemAt(url);
   if (!it) return false;
+  const out = !!it.userOut;
   const o = it.offer || {};
   const tc = it.tc || {};
   const t = tc.true_cost || null;
@@ -201,14 +214,14 @@ function render(url) {
   if (t && t.basis) folds.push(`<details class="fold"><summary>How this was worked out</summary><p class="basis">${esc(t.basis)}</p></details>`);
 
   // ranked all in: the tag at which this one would cost you less than the pick
-  const bw = aside ? null : beatAllIn(it);
+  const bw = aside || out ? null : beatAllIn(it);
   const beat = bw ? bw.beat : null;
   const isLead = (pickUrl() || S.leader) === url;
   let beatNote = '';
   if (beat != null && !isLead && bw.gap > 0) beatNote = `<p class="beat">It would win at ${eur(beat, { dp: 0 })} on the tag, ${eur(bw.gap, { dp: 0 })} less than today.</p>`;
   else if (beat != null && !isLead && bw.gap === 0) beatNote = `<p class="beat">Cheaper all in, but we cannot say you can surely buy it at this price.</p>`;
   else if (isLead) beatNote = `<p class="beat lead">This is the one we would buy: the lowest all-in price we can be sure of${per === 'job' ? '' : ' (it ships to Finland, or you can pick it up)'}.</p>`;
-  else if (beat == null && t && !aside) beatNote = `<p class="beat">It cannot win at any price today.</p>`;
+  else if (beat == null && t && !aside && !out) beatNote = `<p class="beat">It cannot win at any price today.</p>`;
   // the pick is watched at its own tag price; any other offer at the price where it would win
   const watchAt = isLead && o.price_eur != null && isFinite(o.price_eur) ? Math.round(o.price_eur) : (beat != null && isFinite(beat) && bw.gap > 0 ? Math.round(beat) : null);
 
@@ -228,7 +241,8 @@ function render(url) {
   const hl = highlightWhy(url);
   const risky = !!(it.tc && isRisky(it));
   const unsure = !risky && isUnsure(it) ? unsureWhy(it) : '';
-  const holdBack = risky ? `<p class="m-hold" data-tone="warn"><b>${aside ? 'Set aside' : 'Risky'}:</b> ${esc(riskWhy(it))}.${aside ? ' It is not ranked.' : ''}</p>`
+  const holdBack = out ? `<p class="m-hold"><b>Not counted:</b> you took it out, so it is not ranked and cannot be the pick. “Put it back” returns it.</p>`
+    : risky ? `<p class="m-hold" data-tone="warn"><b>${aside ? 'Set aside' : 'Risky'}:</b> ${esc(riskWhy(it))}.${aside ? ' It is not ranked.' : ''}</p>`
     : unsure ? `<p class="m-hold"><b>Not the pick:</b> ${esc(/[.?!]$/.test(unsure) ? unsure : unsure + '.')}</p>` : '';
   const whyBody = (hl.length ? `<ul class="m-chips">${hl.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '') + holdBack + beatNote + flagsHtml;
   const whyHtml = whyBody ? `<section class="m-sec m-why" aria-labelledby="m-why-h"><h3 class="m-h" id="m-why-h">Why</h3>${whyBody}</section>` : '';
@@ -257,6 +271,7 @@ function render(url) {
         <section class="m-price" aria-label="What you pay">
           <div class="sum">${total}</div>
           <ol class="receipt">${rows}</ol>
+          ${fxHtml(it)}
         </section>
         ${whyHtml}
         ${originHtml}
@@ -267,7 +282,10 @@ function render(url) {
   foot.innerHTML = `
       <a class="btn primary" href="${esc(goHref(url))}" target="_blank" rel="noopener">Open listing <span aria-hidden="true">↗</span></a>
       ${watchAt != null ? `<button type="button" class="btn watch" data-beat="${watchAt}">Watch at ${eur(watchAt, { dp: 0 })}</button>` : ''}
-      <button type="button" class="btn ghost-btn share" data-share>Share</button>`;
+      <button type="button" class="btn ghost-btn share" data-share>Share</button>
+      ${ledger && ledger.notThis ? (out
+        ? `<button type="button" class="btn ghost-btn s-out" data-back>Put it back</button>`
+        : `<button type="button" class="btn ghost-btn s-out" data-not title="Not what you want? Take it out and we re-pick">Not this one</button>`) : ''}`;
   panel.dataset.url = url;
   navState();
 
@@ -358,7 +376,7 @@ export function openSheet(url) {
   if (was !== url) body.scrollTop = 0;
   const it = S.offers.get(url);
   const lead = (pickUrl() || S.leader) === url;
-  const bw = it && !isSetAside(it) ? beatAllIn(it) : null;
+  const bw = it && !isSetAside(it) ? beatAllIn(it) : null;   // a listing you took out is not in the store: no notch
   try { line && line.ghostNotch && line.ghostNotch(lead || !bw || !(bw.gap > 0) ? null : bw.beat); } catch {}
 }
 
@@ -390,7 +408,7 @@ export function closeSheet() {
 }
 
 async function share(btn) {
-  const it = openUrl && S.offers.get(openUrl);
+  const it = openUrl && itemAt(openUrl);
   if (!it) return;
   const o = it.offer || {};
   const a = allIn(it);
@@ -465,6 +483,13 @@ export function mountSheet(el) {
       }, 600);
       return;
     }
+    const nt = e.target.closest('[data-not], [data-back]');
+    if (nt && ledger && openUrl) {
+      const u = openUrl;
+      if (nt.hasAttribute('data-not')) ledger.notThis(u); else ledger.putBack(u);
+      if (openUrl === u && render(u)) { const b = foot.querySelector('.s-out'); if (b) b.focus({ preventScroll: true }); }
+      return;
+    }
     const sh = e.target.closest('[data-share]');
     if (sh) { share(sh); return; }
     const c = e.target.closest('.copy');
@@ -526,7 +551,7 @@ export function mountSheet(el) {
     body.scrollTop = y;
   };
   on('truecost', item => { if (openUrl && item && item.url === openUrl) rerender(); });
-  on('review', d => { const it = openUrl && S.offers.get(openUrl); if (it && reviewFor(it) === d) rerender(); });
+  on('review', d => { const it = openUrl && itemAt(openUrl); if (it && reviewFor(it) === d) rerender(); });
   on('reviews', () => { const it = openUrl && S.offers.get(openUrl); const tm = it && trustMark(it);
     if (it && (!tm || tm.state !== 'done')) rerender(); });
   // a photo arrives later (imagefill swaps the big one in place): keep the first thumbnail in step

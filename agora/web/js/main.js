@@ -69,16 +69,38 @@ async function mountAll() {
 }
 
 // ---------- start screen ----------
+// Judges (Junction, F2): "how specific can I be?" The examples say it the way a person would, constraints and all
+// (the part after the thing is the constraint, shown softer). Live, a tap hunts those exact words. Offline only the
+// recorded searches can run, so an example with a recording (rec) replays it and one without is left out.
+const EXAMPLES = [
+  { thing: 'Sony A7 III body', also: 'used, under €900', rec: 'sony-a7-iii-body' },
+  { thing: 'PS5 Pro', also: 'no GTA bundle', rec: null },
+  { thing: 'iPhone 15', also: 'used, under €600', rec: 'iphone-15-128gb-used' },
+  { thing: 'flat cleaning', also: 'in Helsinki, 60 m²', sep: ' ', rec: 'home-cleaning-helsinki-60m2' },
+  { thing: 'city bike', also: 'with a basket, pickup near me', sep: ' ', rec: 'city-bike-with-basket' },
+];
+const exSep = x => x.sep == null ? ', ' : x.sep;
+const exText = x => `${x.thing}${exSep(x)}${x.also}`;
 async function renderExamples() {
   const list = await stream.recordings();
-  const order = ['sony-a7-iii-body', 'iphone-15-128gb-used', 'home-cleaning-helsinki-60m2'];
-  const slugs = [...order.filter(s => list.includes(s)), ...list.filter(s => !order.includes(s))].slice(0, 3);
+  await stream.liveReady;
+  const live = stream.isLive();
+  const order = live ? [0, 1, 3] : [0, 2, 3, 4];
+  const picks = order.map(i => EXAMPLES[i]).filter(x => live || (x.rec && list.includes(x.rec)));
+  // offline with recordings we have no wording for: the old plain labels
+  const known = new Set(EXAMPLES.map(x => x.rec));
+  const extra = live ? [] : list.filter(s => !known.has(s)).map(s => ({ plain: stream.labelFor(s), rec: s }));
   const box = $('examples');
   box.innerHTML = '';
-  slugs.forEach(slug => {
+  [...picks, ...extra].slice(0, 3).forEach(x => {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'ex'; b.textContent = stream.labelFor(slug);
-    b.dataset.q = stream.queryFor(slug);
+    b.type = 'button'; b.className = 'ex';
+    if (x.plain) b.textContent = x.plain;
+    else b.innerHTML = `${esc(x.thing)}<span class="ex-c">${esc(exSep(x))}${esc(x.also)}</span>`;
+    const recQ = x.rec ? stream.queryFor(x.rec) : '';
+    b.dataset.q = live && !x.plain ? exText(x) : recQ;
+    if (x.rec) b.dataset.rec = x.rec;
+    if (!live && x.rec && !x.plain) b.title = `Offline: replays the recorded search “${recQ}”`;
     b.addEventListener('click', () => run(b.dataset.q));
     box.appendChild(b);
   });
@@ -456,7 +478,7 @@ on('error', e => {
     // the examples are right there: put the closest recording first instead of repeating them
     const box = $('examples');
     (e.suggestions || []).slice().reverse().forEach(slug => {
-      const b = box.querySelector(`.ex[data-q="${CSS.escape(stream.queryFor(slug))}"]`);
+      const b = box.querySelector(`.ex[data-rec="${CSS.escape(slug)}"]`) || box.querySelector(`.ex[data-q="${CSS.escape(stream.queryFor(slug))}"]`);
       if (b) box.prepend(b);
     });
     setStatus('err', e.message, '', { monkey: true });
@@ -723,7 +745,8 @@ async function boot() {
   app.dataset.phase = 'start';
   placeBox();
   const narrowPh = matchMedia('(max-width: 480px)');
-  const ph = () => { qIn.placeholder = narrowPh.matches ? 'a camera, a cleaner, anything…' : 'a camera, a used iPhone, someone to clean my flat…'; };
+  // say it like you'd say it to a friend: the placeholder shows that constraints are welcome (judges, F2)
+  const ph = () => { qIn.placeholder = narrowPh.matches ? 'PS5 Pro, no GTA bundle…' : 'PS5 Pro, no GTA bundle · a used A7 III under €900…'; };
   ph(); narrowPh.addEventListener && narrowPh.addEventListener('change', ph);
   if (params.has('lab')) { const l = $('lab-link'); if (l) l.hidden = false; }
   renderExamples();

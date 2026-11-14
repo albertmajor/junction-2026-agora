@@ -42,6 +42,7 @@ let notchEur = null, selected = null;
 let focusDom = null;               // the finale's close-up: [lo, hi] tag euros around your price
 let ghostDomain = null;            // tag-scale domain frozen at the Turn
 const objs = new Map();            // key -> Obj
+let pinLayer = null, pinLo = false, pinHi = false;   // offers far off the scale: small "→ €4,900" markers at the ends (F6)
 let rdLayer = null, readingOn = false;   // pages being read: a pulsing dot each, in a zone at the end of the line
 const reading = new Map();         // domain -> {urls:Set, el, slot}
 const rdRecent = new Map();        // domain -> {rect, t}: a dot that just became an object (B4 flies a pill to it)
@@ -53,7 +54,20 @@ let marksReady = null;
 const DENSE = 40, PIP = 7, PIP_MAX = 14, BEADS_DENSE = 12;
 let dense = false;
 // why the pick: a short note beside the ring (under the pick's row on phones), its reasons on hover or tap
-let whyEl = null, whyCur = null, whyBox = null, whyKey = '';
+let whyEl = null, whyCur = null, whyBox = null, whyKey = '', whyAt = null;
+// Zoom: which euros the line shows. The default fits the cluster (the outliers wait in a "+N dearer →"
+// stack at the edge); dragging your price tag drives it (the axis's right end follows the tag); the wheel or
+// a pinch zooms around the cursor, a drag on empty line pans, a double-click or "fit cluster" resets.
+const ZA = 0.7;            // mid-drag the axis follows the tag this much (1 = all the way: the tag could never move)
+const TAG_HEAD = 1.15;     // after you let go, the axis ends 15% past your price
+const EDGE = 22;           // px past either end of the axis an object may still stand (in the padding)
+let view = null;           // {mode, d0, d1} | {mode, all: true}; null = the default fit
+let fitDom = null, allDom = null;           // [lo, hi] of the default fit and of "fit all" (last layout)
+let clusHi = null;                           // where the cluster alone ends (no pick, no tag): the zoom's floor scales with it
+let tagDrag = null;        // the price tag is being dragged: {lo, h0, b0, v0, minHi, cap}
+let lastList = [];         // what the last layout placed, by x: a zoom frame moves exactly these
+let chase = null, chaseRaf = 0, frameRaf = 0, settleT = 0, animUntil = 0;
+let zoomBar = null, stackR = null, stackL = null, pan = null, wheelPageAt = 0;
 
 // Obj = {key, item|null, extra|null, shelf|null, el, face, img, kind:'full'|'dot', x, lvl, y,
 //        placed:bool, tray:bool, cur:'transform string', ghost: tagEur|null}
@@ -120,7 +134,66 @@ function range() {
   if (vertical) return [0, 0];
   const pad = Math.max(48, Math.min(96, W * 0.06));
   const zone = readingOn && phase === 'hunt' ? RD_ZONE : 0;
-  return [pad, Math.max(pad + 10, W - pad - zone)];
+  // a pinned outlier's marker needs its own room at that end
+  const l = pad + (pinLo ? PIN_ROOM : 0), r = pad + (pinHi ? PIN_ROOM : 0);
+  return [l, Math.max(l + 10, W - r - zone)];
+}
+// ---------- robust domain (judges, F6: "one extreme outlier, so now it's all going…") ----------
+// The scale spans the bulk of the prices, not raw min/max. Fences are taken on a log scale (prices are
+// ratios): the quartiles ± 2 × the interquartile range (at least ×1.25 wide), and a price only leaves when
+// it is also 1.5× past its nearest neighbour inside (no near-fence price is cut off). Fewer than 6 prices,
+// or more than a quarter outside (the prices are just spread), and nothing is pinned.
+const PIN_MIN_N = 6, PIN_K = 2, PIN_IQR_MIN = Math.log10(1.25), PIN_GAP = 1.5, PIN_MAX_SHARE = 0.25, PIN_ROOM = 56, PIN_SHOW = 3;
+export function robustBounds(vals) {
+  const v = vals.filter(x => typeof x === 'number' && isFinite(x) && x > 0).sort((a, b) => a - b);
+  if (v.length < PIN_MIN_N) return null;
+  const L = v.map(Math.log10);
+  const q = p => { const i = (L.length - 1) * p, a = Math.floor(i), b = Math.ceil(i); return L[a] + (L[b] - L[a]) * (i - a); };
+  const q1 = q(0.25), q3 = q(0.75), iqr = Math.max(q3 - q1, PIN_IQR_MIN);
+  const f0 = Math.pow(10, q1 - PIN_K * iqr), f1 = Math.pow(10, q3 + PIN_K * iqr);
+  const inside = v.filter(x => x >= f0 && x <= f1);
+  if (!inside.length) return null;
+  const lo = Math.min(f0, inside[0] / PIN_GAP), hi = Math.max(f1, inside[inside.length - 1] * PIN_GAP);
+  const out = v.filter(x => x < lo || x > hi).length;
+  if (!out || out > PIN_MAX_SHARE * v.length) return null;
+  return { lo, hi };
+}
+// Ticks: the step (1, 2, 2.5 or 5 × 10^n) whose labels never touch, nearest to one tick per ~120 px.
+const TICK_FONT = '400 12px "IBM Plex Mono", ui-monospace, monospace';
+function labW(text) { try { return textW(text, TICK_FONT); } catch { return 7.3 * String(text).length; } }
+function tickStep(lo, hi, px) {
+  const span = hi - lo;
+  if (!(span > 0) || !(px > 40)) return niceStep(span > 0 ? span : 1, 4);
+  const e0 = Math.floor(Math.log10(span / 10));
+  let best = null;
+  for (let e = e0 - 1; e <= e0 + 2; e++) for (const m of [1, 2, 2.5, 5]) {
+    const s = m * Math.pow(10, e);
+    if (m === 2.5 && e < 1) continue;                 // €0.25 / €2.5 steps print odd cents
+    const per = s / span * px;
+    const need = labW(eur(Math.max(Math.abs(lo), Math.abs(hi)), { dp: s < 1 ? 2 : 0 })) + 26;
+    if (per < Math.max(need, 64)) continue;
+    const score = Math.abs(Math.log(per / 120));
+    if (!best || score < best.score) best = { s, score };
+  }
+  return best ? best.s : niceStep(span, Math.max(3, Math.floor(px / 120)));
+}
+// a linear scale over exactly [lo, hi] (a zoomed view, a glide frame); linScale pads, this does not
+function domScale(lo, hi) {
+  const [r0, r1] = range();
+  const step = tickStep(lo, hi, r1 - r0);
+  const ticks = [];
+  const i0 = Math.ceil(lo / step - 1e-9);
+  for (let i = i0; i * step <= hi + 1e-9 && ticks.length < 60; i++) ticks.push(+(i * step).toFixed(6));
+  return { log: false, d0: lo, d1: hi, r0, r1, ticks, step };
+}
+// The default view fits the cluster, not the outliers: up to the 90th percentile plus a margin. With fewer
+// than 8 offers there is no crowd to protect: every one stays.
+function robustVals(vals) {
+  const s = vals.filter(v => v != null && isFinite(v)).sort((a, b) => a - b);
+  if (s.length < 8) return s;
+  const lo = s[0], q = s[Math.floor(0.9 * (s.length - 1))];
+  const cap = q + Math.max(0.3 * (q - lo), 0.05 * Math.abs(q));
+  return s.filter(v => v <= cap);
 }
 function linScale(vals, minSpan = false) {
   let lo = vals.length ? Math.min(...vals) : 0, hi = vals.length ? Math.max(...vals) : 100;
@@ -136,13 +209,11 @@ function linScale(vals, minSpan = false) {
   const pad = (hi - lo) * 0.08;
   lo -= pad; hi += pad;
   if (minV >= 0 && lo < 0) lo = 0;
-  const [r0, r1] = range();
-  const step = niceStep(hi - lo, Math.max(3, Math.min(9, Math.floor((r1 - r0) / 120))));
-  const ticks = [];
-  for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) ticks.push(+t.toFixed(6));
-  return { log: false, d0: lo, d1: hi, r0, r1, ticks, step };
+  return domScale(lo, hi);
 }
 function logScale(vals) {
+  const rb = robustBounds(vals);
+  if (rb) vals = vals.filter(v => v >= rb.lo && v <= rb.hi);
   const lo = Math.max(1, Math.min(...vals) / 1.6), hi = Math.max(...vals) * 1.5;
   const [r0, r1] = range();
   const ticks = [];
@@ -199,6 +270,8 @@ export function mountLine(el) {
   gTicks = svgEl('g', { class: 'ln-ticks' }, svg);
   gNotch = svgEl('g', { class: 'ln-notch' }, svg);
   gSplit = svgEl('g', { class: 'ln-split' }, svg);
+  pinLayer = div('ln-pins', stage);
+  pinLayer.addEventListener('click', e => { const b = e.target.closest('.ln-pin'); if (b && b.dataset.key) emit('select', b.dataset.key); });
   rdLayer = div('ln-reading', stage);
   rdLayer.setAttribute('aria-hidden', 'true');
   figs = div('ln-figs', stage);
@@ -236,6 +309,7 @@ export function mountLine(el) {
   axisLabB = div('ln-lab b', labs, 'span');
   axisRight = div('ln-dearer', axisLab, 'span');
   axisRight.hidden = true;                 // "dearer →" is drawn under the axis end (drawAxis)
+  mountZoom();
   // the set-aside offers: a compact chip in the toolbar that opens its list inline, under the toolbar
   trayChip = div('ln-trayc', axisLab, 'button');
   trayChip.type = 'button'; trayChip.hidden = true;
@@ -284,6 +358,7 @@ export function mountLine(el) {
   on('reviews', () => relabelAll());
   on('recheck', () => { if (syncWinner()) setCaption('re-checked after reviews'); });
   on('offer-removed', it => onRemoved(it));
+  on('offer-restored', it => onRestored(it));
   on('select', url => { selected = url; drawNotch(); });
   on('agent', d => {
     root.classList.toggle('ln-agent', !!(d && d.on));
@@ -299,6 +374,319 @@ export function mountLine(el) {
   else { phase = 'hunt'; for (const it of S.offers.values()) addItem(it, { instant: true }); }
   setAxisLabel(true);
   return line;
+}
+
+// ---------- zoom: controls, wheel, pan, the edge stacks ----------
+function mountZoom() {
+  zoomBar = div('ln-zoom', axisLab, 'span');
+  zoomBar.setAttribute('role', 'group');
+  zoomBar.setAttribute('aria-label', 'Zoom the line');
+  zoomBar.hidden = true;
+  zoomBar.innerHTML =
+    '<button type="button" data-z="out" aria-label="Zoom out" title="Zoom out (−)">−</button>' +
+    '<button type="button" data-z="in" aria-label="Zoom in" title="Zoom in (+)">+</button>' +
+    '<button type="button" data-z="fit" aria-pressed="true" title="Where most offers are (0, or double-click the line)">fit cluster</button>' +
+    '<button type="button" data-z="all" aria-pressed="false" title="Every offer, outliers included">fit all</button>';
+  zoomBar.addEventListener('click', e => {
+    const b = e.target.closest('button[data-z]');
+    if (!b) return;
+    const z = b.dataset.z;
+    if (z === 'in' || z === 'out') zoomBy(z === 'in' ? 1 / 1.6 : 1.6, null);
+    else zoomFit(z);
+  });
+  const stack = (side, label) => {
+    const b = div('ln-stack ' + side, stage, 'button');
+    b.type = 'button'; b.hidden = true;
+    b.innerHTML = '<i aria-hidden="true"></i><span></span>';
+    b.addEventListener('click', e => { e.stopPropagation(); zoomFit('all'); });
+    b.dataset.label = label;
+    return b;
+  };
+  stackR = stack('r', 'dearer');
+  stackL = stack('l', 'cheaper');
+  stage.addEventListener('wheel', onWheel, { passive: false });
+  stage.addEventListener('pointerdown', onPanDown);
+  stage.addEventListener('pointermove', onPanMove);
+  for (const t of ['pointerup', 'pointercancel']) stage.addEventListener(t, onPanUp);
+  stage.addEventListener('dblclick', e => {
+    if (!canZoom() || (e.target.closest && e.target.closest('.ln-o, .ln-why, .ln-stack, button'))) return;
+    zoomFit('fit');
+  });
+  root.addEventListener('keydown', e => {
+    if (!canZoom() || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest('input, textarea, select, #tag')) return;
+    const k = e.key;
+    if (k !== '+' && k !== '=' && k !== '-' && k !== '_' && k !== '0') return;
+    e.preventDefault();
+    if (k === '0') return zoomFit('fit');
+    // around the focused offer when there is one, else around the middle
+    const f = e.target.closest && e.target.closest('.ln-o');
+    const o = f && objs.get(f.dataset.key);
+    zoomBy(k === '-' || k === '_' ? 1.6 : 1 / 1.6, o && !o.out && o.x != null ? o.x : null);
+  });
+}
+function canZoom() {
+  return !!(root && scale && !scale.log && !vertical && phase === 'hunt' && !focusDom && !turning && lastList.length);
+}
+function activeView() { return view && view.mode === vmode && !focusDom && !vertical ? view : null; }
+function viewDom() {
+  const v = activeView();
+  if (!v) return fitDom;
+  return v.all ? allDom : [v.d0, v.d1];
+}
+// the hunt's scale: a chosen view, else the default fit (the cluster, the pick, your price, the notch)
+function huntScale(list, extra) {
+  const vals = [], keep = extra.slice();
+  for (const o of list) { const v = valOf(o); if (v != null) vals.push(v); }
+  const pk = objs.get(turned ? winner : S.leader);
+  if (pk && pk.placed && !pk.tray && valOf(pk) != null) keep.push(valOf(pk));
+  if (vmode === 'tag' && lit != null) keep.push(lit);
+  const minSpan = vmode === 'true';
+  const all = linScale(vals.concat(keep), minSpan);
+  const rv = robustVals(vals);
+  const fit = rv.length < vals.length ? linScale(rv.concat(keep), minSpan) : all;
+  allDom = [all.d0, all.d1];
+  fitDom = [fit.d0, fit.d1];
+  clusHi = rv.length ? linScale(rv, minSpan).d1 : fit.d1;
+  const v = activeView();
+  if (!v) return fit;
+  const d = v.all ? allDom : [v.d0, v.d1];
+  return domScale(d[0], d[1]);
+}
+// the narrowest and widest a zoom may go (euros)
+function spanLimits() {
+  const f = fitDom ? fitDom[1] - fitDom[0] : 100, a = allDom ? allDom[1] - allDom[0] : f;
+  return [Math.max(2, f * 0.03), Math.max(a, f) * 1.5];
+}
+function zoomBy(k, px) {
+  if (!canZoom()) return;
+  const [lo, hi] = chase ? [chase.lo, chase.hi] : [scale.d0, scale.d1];
+  const [smin, smax] = spanLimits();
+  const span = Math.min(smax, Math.max(smin, (hi - lo) * k));
+  // the euro under the cursor stays under the cursor
+  const f = px == null ? 0.5 : Math.min(1, Math.max(0, (px - scale.r0) / (scale.r1 - scale.r0)));
+  const at = lo + f * (hi - lo);
+  let nlo = at - f * span;
+  if (nlo < 0 && lo >= 0) nlo = 0;
+  setView({ mode: vmode, d0: nlo, d1: nlo + span });
+}
+function zoomFit(kind) {
+  if (!canZoom()) return;
+  setView(kind === 'all' ? { mode: vmode, all: true } : null);
+}
+// a new view: glide there (reduced motion, a drag, a pan: at once)
+function setView(nv, { instant = false } = {}) {
+  view = nv;
+  syncZoomBar();
+  if (!canZoom()) return;
+  const t = viewDom();
+  if (!t) return;
+  root.classList.add('ln-zooming');
+  if (instant || reduced()) {
+    chase = null; cancelAnimationFrame(chaseRaf); chaseRaf = 0;
+    scale = domScale(t[0], t[1]);
+    queueFrame();
+    if (!tagDrag && !pan) scheduleSettle(reduced() ? 0 : 160);
+    return;
+  }
+  chase = { lo: t[0], hi: t[1], last: performance.now() };
+  if (!chaseRaf) chaseRaf = requestAnimationFrame(chaseStep);
+}
+function chaseStep(now) {
+  chaseRaf = 0;
+  if (!chase || !canZoom()) { chase = null; return; }
+  // a mode slide or the Turn is still moving everything: the zoom waits for it
+  if (now < animUntil) { chase.last = now; chaseRaf = requestAnimationFrame(chaseStep); return; }
+  const dt = Math.min(64, Math.max(1, now - chase.last)); chase.last = now;
+  const k = 1 - Math.exp(-dt / 75);
+  const s0 = Math.max(1e-6, scale.d1 - scale.d0), s1 = Math.max(1e-6, chase.hi - chase.lo);
+  // the left end glides straight, the span in log space: a 20× zoom does not rush its first frames
+  let lo = scale.d0 + (chase.lo - scale.d0) * k;
+  let hi = lo + Math.exp(Math.log(s0) + (Math.log(s1) - Math.log(s0)) * k);
+  const pxPer = (scale.r1 - scale.r0) / s1;
+  const done = Math.abs(lo - chase.lo) * pxPer < 0.5 && Math.abs(hi - chase.hi) * pxPer < 0.5;
+  if (done) { lo = chase.lo; hi = chase.hi; chase = null; }
+  scale = domScale(lo, hi);
+  reflow();
+  if (done) scheduleSettle(0); else chaseRaf = requestAnimationFrame(chaseStep);
+}
+function queueFrame() {
+  if (frameRaf) return;
+  frameRaf = requestAnimationFrame(() => { frameRaf = 0; reflow(); });
+}
+// once the axis rests: one full layout (plates find room again, captions, the why note, the ghosts)
+function scheduleSettle(ms) {
+  clearTimeout(settleT);
+  const my = gen;
+  settleT = setTimeout(() => {
+    if (my !== gen || chase || tagDrag || pan) return;
+    layout({ dur: reduced() ? 0 : T_MODE });
+  }, ms);
+}
+// One zoom frame, cheap enough for 2,000 offers: every placed object to its x on the current scale (no
+// collision pass), pip columns restacked, the axis, bracket, notch, highlighter, why note and edge stacks.
+function reflow() {
+  if (!scale || scale.log || vertical || phase !== 'hunt') return;
+  const a = scale.r0 - EDGE, b = scale.r1 + EDGE;
+  let nL = 0, nR = 0, minL = Infinity, maxR = -Infinity;
+  const bins = dense ? new Map() : null;
+  for (const o of lastList) {
+    const v = valOf(o);
+    if (v == null || !o.placed || o.tray) continue;
+    const x = sx(scale, v);
+    o.x = x;
+    const out = x < a || x > b;
+    if (out) { if (x > b) { nR++; if (v > maxR) maxR = v; } else { nL++; if (v < minL) minL = v; } }
+    if (out !== !!o.out) {
+      o.out = out;
+      o.el.classList.toggle('ln-out', out);
+      if (!out && o.kind !== 'full' && !o.el.classList.contains('pip') && !o.img && o.src) ensureImg(o);
+    }
+    if (out) continue;
+    if (bins && o.kind !== 'full' && o.el.classList.contains('pip')) {
+      const c = Math.round(x / PIP), k = bins.get(c) || 0;
+      bins.set(c, k + 1);
+      const l = Math.min(k, PIP_MAX - 1) * PIP;
+      if (l !== o.lvl) { o.lvl = l; o.top = l + 6; o.el.style.setProperty('--lvl', l); }
+    }
+    const to = `translate(${x.toFixed(1)}px, ${AX}px)`;
+    if (to !== o.cur) {
+      if (o.anims && o.anims.length) { for (const an of o.anims) an.cancel(); o.anims.length = 0; }
+      o.el.style.transform = to; o.cur = to;
+    }
+  }
+  syncStacks(nL, nR, minL, maxR);
+  drawAxis();
+  drawBand();
+  drawNotch();
+  const lo = !turned && objs.get(S.leader);
+  if (lo && !lo.out && gHl.classList.contains('on')) gHl.style.transform = `translate(${lo.x.toFixed(1)}px, ${AX}px)`;
+  else if (lo && lo.out) gHl.classList.remove('on');
+  if (whyAt && whyEl && !whyEl.hidden) {
+    const wo = objs.get(winner);
+    if (!wo || wo.out) whyEl.style.visibility = 'hidden';
+    else { whyEl.style.visibility = ''; whyEl.style.transform = `translate(${Math.round(whyAt.x + wo.x - whyAt.ox)}px, ${Math.round(whyAt.y)}px)`; }
+  }
+  emit('line:layout', { zoom: true });
+}
+// "+12 dearer →" / "← 3 cheaper": what stands past the ends of the axis, one small stack at each edge
+function syncStacks(nL, nR, minL, maxR) {
+  if (!stackR) return;
+  const set = (btn, n, ext) => {
+    const on = n > 0 && canZoom();
+    btn.hidden = !on;
+    if (!on) return;
+    const r = btn.classList.contains('r');
+    const t = r ? `+${n} dearer →` : `← ${n} cheaper`;
+    const s = btn.querySelector('span');
+    if (s.textContent !== t) s.textContent = t;
+    btn.style.top = (AX + 5) + 'px';
+    btn.setAttribute('aria-label', `${n} ${r ? 'dearer' : 'cheaper'} offer${n === 1 ? '' : 's'} past the ${r ? 'end' : 'start'} of the line` +
+      `${isFinite(ext) ? `, ${r ? 'up to' : 'from'} ${eur(ext, { dp: 0 })}` : ''}: show every offer`);
+  };
+  set(stackR, nR, maxR);
+  set(stackL, nL, minL);
+  root.classList.toggle('ln-stackr', !stackR.hidden);
+}
+function syncZoomBar() {
+  if (!zoomBar) return;
+  const on = canZoom();
+  zoomBar.hidden = !on;
+  root.classList.toggle('ln-zoomable', on);
+  if (!on) return;
+  const v = activeView();
+  const same = fitDom && allDom && Math.abs(fitDom[1] - allDom[1]) < 1e-6 && Math.abs(fitDom[0] - allDom[0]) < 1e-6;
+  const fit = zoomBar.querySelector('[data-z="fit"]'), all = zoomBar.querySelector('[data-z="all"]');
+  fit.hidden = same && !v;
+  fit.textContent = same ? 'fit' : 'fit cluster';
+  fit.setAttribute('aria-pressed', String(!v));
+  all.setAttribute('aria-pressed', String(!!(v && v.all) || (same && !v)));
+}
+// wheel / pinch over the line zooms around the cursor; a sideways swipe pans. A plain wheel zooms only
+// right over the axis band, and never while the page is being scrolled through it.
+function onWheel(e) {
+  if (!canZoom()) return;
+  const r = stage.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const pinch = e.ctrlKey, mod = e.metaKey || e.altKey;
+  const side = !pinch && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2);
+  const nearAxis = y > AX - 70 && y < AX + 46;
+  const now = performance.now();
+  if (!pinch && !mod && !side && (!nearAxis || now - wheelPageAt < 350)) { wheelPageAt = now; return; }
+  e.preventDefault();
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  if (side) {
+    const d = (e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX) * unit;
+    const [lo, hi] = chase ? [chase.lo, chase.hi] : [scale.d0, scale.d1];
+    const per = (hi - lo) / (scale.r1 - scale.r0);
+    let nlo = lo + d * per;
+    if (nlo < 0 && lo >= 0) nlo = 0;
+    setView({ mode: vmode, d0: nlo, d1: nlo + (hi - lo) }, { instant: true });
+    return;
+  }
+  const dy = Math.max(-240, Math.min(240, e.deltaY * unit));
+  zoomBy(Math.exp(dy * (pinch ? 0.012 : 0.0022)), x);
+}
+// drag on empty line: pan (a 3 px dead zone keeps clicks clicks)
+function onPanDown(e) {
+  if (!canZoom() || (e.button !== 0 && e.pointerType === 'mouse')) return;
+  if (e.target.closest && e.target.closest('.ln-o, .ln-why, .ln-stack, button')) return;
+  if (e.pointerType === 'touch') return;          // touch scrolls the page
+  pan = { id: e.pointerId, x: e.clientX, lo: scale.d0, hi: scale.d1, on: false };
+}
+function onPanMove(e) {
+  if (!pan || e.pointerId !== pan.id) return;
+  const dx = e.clientX - pan.x;
+  if (!pan.on) {
+    if (Math.abs(dx) < 3) return;
+    pan.on = true;
+    root.classList.add('ln-panning');
+    try { stage.setPointerCapture(pan.id); } catch { /* gone */ }
+  }
+  const per = (pan.hi - pan.lo) / (scale.r1 - scale.r0);
+  let nlo = pan.lo - dx * per;
+  if (nlo < 0 && pan.lo >= 0) nlo = 0;
+  setView({ mode: vmode, d0: nlo, d1: nlo + (pan.hi - pan.lo) }, { instant: true });
+}
+function onPanUp(e) {
+  if (!pan || e.pointerId !== pan.id) return;
+  const was = pan.on;
+  pan = null;
+  root.classList.remove('ln-panning');
+  if (was) { eatClick = true; setTimeout(() => { eatClick = false; }, 0); scheduleSettle(60); }
+}
+// The price tag drives the zoom. Mid-drag the axis's right end follows the tag part of the way (a fixed
+// curve from where the drag began, so the tag stays under your finger); on release it glides the rest,
+// to 15% past your price. Left zooms in on the cheap cluster, right zooms out.
+function dragHi(D, v) {
+  const b = Math.max(TAG_HEAD * v - D.lo, 1e-9);
+  return Math.min(D.cap, Math.max(D.minHi, D.lo + (D.h0 - D.lo) * Math.pow(b / D.b0, ZA)));
+}
+// the price whose tag sits at fraction f of the axis on its own drag scale (monotone: bisection)
+function dragEur(D, f) {
+  let a = D.lo - 2 * (D.h0 - D.lo), b = D.lo + 4 * (D.cap - D.lo) + 1;
+  for (let i = 0; i < 64; i++) {
+    const m = (a + b) / 2;
+    if ((m - D.lo) / (dragHi(D, m) - D.lo) < f) a = m; else b = m;
+  }
+  return (a + b) / 2;
+}
+function dragRef(v0, sc, fit, all) {
+  const lo = sc.d0, h0 = sc.d1;
+  const minHi = Math.min(h0, floorHi(lo, fit ? fit[1] : h0));
+  const cap = Math.max(h0, (all ? all[1] : h0) * 1.25, TAG_HEAD * v0);
+  const b0 = Math.max(TAG_HEAD * v0 - lo, 0.05 * (h0 - lo), 1e-9);
+  return { lo, h0, b0, v0, minHi, cap };
+}
+function tagTarget(v) {
+  const t = viewDom() || [scale.d0, scale.d1];
+  const lo = Math.min(t[0], Math.max(0, v * 0.8));
+  return [lo, Math.max(TAG_HEAD * v, floorHi(lo, t[1]))];
+}
+// the narrowest the tag may zoom the axis: a sensible span over the cluster (never a €1-wide ruler)
+function floorHi(lo, fallback) {
+  const c = clusHi != null ? clusHi : fallback;
+  return lo + Math.max(10, 0.06 * (c - lo));
 }
 
 function isVertical() { return (root ? root.clientWidth : innerWidth) < 640 || innerWidth < 640; }
@@ -317,6 +705,7 @@ function clearAll() {
   objs.clear();
   gGhost.textContent = ''; gBand.textContent = ''; gNotch.textContent = '';
   endSplit(); readClear();
+  pinLo = pinHi = false; if (pinLayer) pinLayer.textContent = '';
   tray.textContent = ''; tray.hidden = true; trayOpen = false; syncTray();
   turned = false; turning = false; turnBusyUntil = 0; winner = null; leaderShown = null;
   cheapKey = null; expanded = false; axFloor = AX_MIN; clearTimeout(turnCapTimer);
@@ -324,8 +713,12 @@ function clearAll() {
   if (moreBtn) moreBtn.hidden = true;
   whyCur = null; whyBox = null; syncWhy(null);
   lit = null; notchEur = null; selected = null; ghostDomain = null; focusDom = null;
+  view = null; tagDrag = null; pan = null; chase = null; lastList = []; fitDom = allDom = clusHi = null; whyAt = null;
+  cancelAnimationFrame(chaseRaf); chaseRaf = 0; cancelAnimationFrame(frameRaf); frameRaf = 0; clearTimeout(settleT);
+  for (const o of objs.values()) o.out = false;
+  if (stackR) { stackR.hidden = stackL.hidden = true; } syncZoomBar();
   vmode = 'tag'; dripAt = 0;
-  root.classList.remove('ln-turned', 'ln-lit', 'ln-calm', 'ln-focus', 'ln-turning');
+  root.classList.remove('ln-turned', 'ln-lit', 'ln-calm', 'ln-focus', 'ln-turning', 'ln-zooming', 'ln-panning', 'ln-stackr');
   setCaption('');
 }
 function reset(d) {
@@ -952,23 +1345,67 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   // the finale's close-up: only what stands near your price, so a €40 move is a long glide
   const focusing = focusDom && vmode === 'tag' && phase === 'hunt' && !vertical;
   if (focusing) list = list.filter(o => { const v = valOf(o); return v >= focusDom[0] && v <= focusDom[1]; });
+  // far-off prices (an accessory at €12, a bundle at €4,900) leave the scale and wait at its ends as markers
+  let pins = [];
+  for (const o of objs.values()) o.pinned = false;
+  if (phase === 'hunt' && !focusing && !vertical) {
+    const rb = robustBounds(list.map(o => valOf(o)));
+    const keep = new Set([winner, S.leader, selected].filter(Boolean));
+    if (rb) pins = list.filter(o => !keep.has(o.key) && (valOf(o) < rb.lo || valOf(o) > rb.hi));
+    for (const o of pins) o.pinned = valOf(o) < rb.lo ? 'lo' : 'hi';
+    if (pins.length) list = list.filter(o => !o.pinned);
+  }
+  pinLo = pins.some(o => o.pinned === 'lo'); pinHi = pins.some(o => o.pinned === 'hi');
+  // a full layout ends any zoom glide: it places everything on the view's own scale
+  if (chase || chaseRaf) { chase = null; cancelAnimationFrame(chaseRaf); chaseRaf = 0; }
+  cancelAnimationFrame(frameRaf); frameRaf = 0; clearTimeout(settleT);
+  if (!tagDrag && !pan) root.classList.remove('ln-zooming');
   // anything not on the line right now (pending a true cost, an extra in the true view) is hidden
-  for (const o of objs.values()) if (!o.tray) o.el.classList.toggle('ln-gone', !list.includes(o) && !o.pending);
+  let inList = new Set(list);
+  for (const o of objs.values()) if (!o.tray) o.el.classList.toggle('ln-gone', !inList.has(o) && !o.pending);
   const rm = reduced();
   cheapKey = findCheap(list);
   const wo = objs.get(winner);
-  whyCur = phase === 'hunt' && turned && vmode === 'true' && !focusing && wo && list.includes(wo) ? pickWhy(wo) : null;
-  whyBox = null;
-  if (vertical) return layoutVertical({ dur, stagger, list, rm });
+  whyCur = phase === 'hunt' && turned && vmode === 'true' && !focusing && wo && inList.has(wo) ? pickWhy(wo) : null;
+  whyBox = null; whyAt = null;
+  if (vertical) {
+    for (const o of objs.values()) if (o.out) { o.out = false; o.el.classList.remove('ln-out'); }
+    lastList = []; syncZoomBar(); syncStacks(0, 0);
+    drawPins([]); return layoutVertical({ dur, stagger, list, rm });
+  }
   moreBtn.hidden = true;
-  for (const o of objs.values()) if (o.el.classList.contains('ln-gone') && list.includes(o)) o.el.classList.remove('ln-gone');
+  for (const o of objs.values()) if (o.el.classList.contains('ln-gone') && inList.has(o)) o.el.classList.remove('ln-gone');
   const vals = list.map(o => valOf(o));
   const extraVals = notchEur != null && vmode === 'tag' ? [notchEur] : [];
   scale = phase === 'start' ? (vals.length ? logScale(vals) : logScale([10, 10000]))
-        : focusing ? linScale(focusDom) : linScale(vals.concat(extraVals), vmode === 'true');
+        : focusing ? linScale(focusDom) : huntScale(list, extraVals);
   list.forEach(o => { o.x = sx(scale, valOf(o)); o.lvl = 0; });
   dense = phase === 'hunt' && list.length > DENSE;
   root.classList.toggle('ln-dense', dense);
+  // zoomed in: what stands past either end of the axis waits in a small stack at that edge (it keeps its
+  // place, hidden, so a zoom frame can bring it back without a layout)
+  lastList = phase === 'hunt' ? list.slice().sort((a, b) => a.x - b.x) : [];
+  let nL = 0, nR = 0, minL = Infinity, maxR = -Infinity;
+  if (phase === 'hunt') {
+    const a = scale.r0 - EDGE, b = scale.r1 + EDGE;
+    list = list.filter(o => {
+      const out = o.x < a || o.x > b;
+      if (out !== !!o.out) { o.out = out; o.el.classList.toggle('ln-out', out); }
+      if (!out) return true;
+      const v = valOf(o);
+      if (o.x > b) { nR++; if (v > maxR) maxR = v; } else { nL++; if (v < minL) minL = v; }
+      o.kind = 'dot'; o.lvl = 0; o.top = 0;
+      o.el.classList.remove('full', 'raised', 'tuck', 'late-lab');
+      o.el.classList.add('dot');
+      o.el.classList.toggle('pip', dense);
+      o.el.style.setProperty('--lvl', 0);
+      const to = `translate(${o.x.toFixed(1)}px, ${AX}px)`;
+      if (o.cur !== to) { anims(o).forEach(an => an.cancel()); o.el.style.transform = to; o.cur = to; }
+      return false;
+    });
+    inList = new Set(list);
+    if (whyCur && !inList.has(wo)) whyCur = null;
+  } else for (const o of objs.values()) if (o.out) { o.out = false; o.el.classList.remove('ln-out'); }
   if (phase === 'start') spreadShelf(list);
   chooseFull(list);
   list.forEach(label);
@@ -992,7 +1429,14 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
     move(o, to, rm ? 0 : dur, stagger * i);
   });
   placeCaps(list);
+  drawPins(pins);
+  if (whyBox && wo) whyAt = { x: whyBox.x0, y: AX - whyBox.y1, ox: wo.x };
+  if (whyEl) whyEl.style.visibility = '';
   syncWhy(whyBox ? { x: whyBox.x0, y: AX - whyBox.y1, side: whyBox.side } : null);
+  // a zoom glide waits for this layout's own slide (a mode flip, the Turn) before it moves anything
+  if (dur > 0 && !rm) animUntil = Math.max(animUntil, performance.now() + Math.min(1200, dur + stagger * seq.length));
+  syncStacks(nL, nR, minL, maxR);
+  syncZoomBar();
   readPlace();
   drawAxis();
   drawGhosts(false);
@@ -1003,6 +1447,37 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   syncTabStop();
   emit('line:layout', {});
   void t0;
+}
+// The pinned outliers: "→ €4,900" at the dearer end, "€12 ←" at the cheaper one, closest first, at most
+// three a side ("+2 more" under them). Each opens its listing like any object on the line.
+function drawPins(pins) {
+  if (!pinLayer) return;
+  pinLayer.textContent = '';
+  if (!pins.length) return;
+  for (const side of ['lo', 'hi']) {
+    const list = pins.filter(o => o.pinned === side).sort((a, b) => side === 'hi' ? valOf(a) - valOf(b) : valOf(b) - valOf(a));
+    list.slice(0, PIN_SHOW).forEach((o, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ln-pin';
+      b.dataset.side = side;
+      b.dataset.key = o.key;
+      const v = fmtVal(valOf(o), vmode, o);
+      b.textContent = side === 'hi' ? `→ ${v}` : `${v} ←`;
+      b.title = `${siteOf(o)}: ${v}, far ${side === 'hi' ? 'above' : 'below'} the rest, so it sits off the scale`;
+      b.setAttribute('aria-label', `${siteOf(o)}, ${v}, off the scale. Open the listing`);
+      b.style.top = (AX - 30 - i * 26) + 'px';
+      pinLayer.appendChild(b);
+    });
+    if (list.length > PIN_SHOW) {
+      const m = document.createElement('span');
+      m.className = 'ln-pin-more';
+      m.dataset.side = side;
+      m.textContent = `+${list.length - PIN_SHOW} more`;
+      m.style.top = (AX - 24 - PIN_SHOW * 26) + 'px';   // above the markers: under the axis is "dearer →"
+      pinLayer.appendChild(m);
+    }
+  }
 }
 // the small "late" word above a bead only where nothing else stands within reach of it
 function lateRoom(o, list) {
@@ -1181,7 +1656,8 @@ function drawAxis(vh) {
   }
   const x0 = 12, x1 = W - 12;
   svgEl('line', { x1: x0, x2: x1, y1: AX, y2: AX, class: 'ln-rule' }, gAxis);
-  if (phase === 'hunt') {
+  // the "+N dearer →" stack stands in for the plain words when offers wait past the end
+  if (phase === 'hunt' && !(stackR && !stackR.hidden)) {
     const d = svgEl('text', { x: x1, y: AX + 17, class: 'ln-dearer-t', 'text-anchor': 'end' }, gAxis);
     d.textContent = 'dearer →';
   }
@@ -1246,7 +1722,7 @@ function markLeader() {
     o.el.classList.toggle('lead', on);
   }
   // the yellow highlighter swipe lives in the svg, under the axis ink, and follows the leader
-  if (lo && !vertical && lo.x != null) {
+  if (lo && !vertical && lo.x != null && !lo.out) {
     const first = !gHl.classList.contains('on');
     gHl.style.transition = first ? 'none' : '';
     gHl.style.transform = `translate(${lo.x.toFixed(1)}px, ${AX}px)`;
@@ -1299,11 +1775,12 @@ function settleGhosts(delay) {
 function drawGhosts(animate) {
   gGhost.textContent = '';
   if (!turned || vertical || !ghostDomain || vmode !== 'true') return;
-  const gs = { ...ghostDomain, ...(() => { const [r0, r1] = range(); return { r0, r1 }; })() };
+  // zoomed by hand: the ghost stands at its tag price on this same axis (the frozen Turn scale no longer fits)
+  const gs = activeView() && scale ? scale : { ...ghostDomain, ...(() => { const [r0, r1] = range(); return { r0, r1 }; })() };
   const rm = reduced();
   if (animate) ghostsSettled = false;
   for (const o of objs.values()) {
-    if (o.ghost == null || o.tray || !o.placed) continue;
+    if (o.ghost == null || o.tray || !o.placed || o.pinned || o.out) continue;
     const gx = sx(gs, o.ghost), x = o.x;
     if (gx == null || x == null) continue;
     const keep = o.key === winner || o.key === cheapKey;
@@ -1327,9 +1804,10 @@ function drawNotch() {
   else {
     const w = objs.get(winner) || objs.get(S.leader);
     if (!w) return;
+    if (w.out) return;
     x = w.x - 2; text = `at ${eur(notchEur, { dp: 0 })} it would win`;
   }
-  if (x == null) return;
+  if (x == null || x < 0 || x > W) return;
   svgEl('line', { x1: x, x2: x, y1: AX - 46, y2: AX + 6, class: 'ln-notchl' }, gNotch);
   const t = svgEl('text', { x: x + 6, y: AX - 38, class: 'ln-notcht' }, gNotch);
   t.textContent = text;
@@ -1360,6 +1838,17 @@ function onLate(d) {
 function onRemoved(it) {
   const o = it && objs.get(it.url);
   if (!o) return;
+  // taken out by the shopper ("not this" in the list): into "not counted", where it can be put back
+  if (it.userOut) {
+    if (o.tray) return;
+    if (winner === o.key) winner = null;
+    if (cheapKey === o.key) cheapKey = null;
+    o.pending = false;
+    toTray(o, { fast: true });
+    syncWinner();
+    if (phase === 'hunt') scheduleRelayout();
+    return;
+  }
   objs.delete(o.key);
   if (winner === o.key) winner = null;
   if (cheapKey === o.key) cheapKey = null;
@@ -1374,6 +1863,29 @@ function onRemoved(it) {
     if (list && head) { head.textContent = `not counted (${list.children.length})`; syncTray(); }
   }
   if (phase === 'hunt') { if (turning) scheduleRelayout(); else queueLayout(T_DROP); }
+}
+// put back from "not counted": back on the line, and the pick is worked out again
+function onRestored(it) {
+  const o = it && objs.get(it.url);
+  if (!o) { if (phase === 'hunt') addItem(it, { instant: true }); return; }
+  if (!o.tray) return;
+  o.tray = false;
+  anims(o).forEach(a => a.cancel());
+  o.el.style.visibility = ''; o.el.style.opacity = ''; o.el.style.zIndex = '';
+  const cap = o.el.querySelector('.ln-cap');
+  if (cap) cap.getAnimations().forEach(a => a.cancel());
+  if (turned && trueOf(o) == null) o.pending = true; else o.placed = true;
+  const list = tray.querySelector('.ln-tray-l'), head = tray.querySelector('.ln-tray-h');
+  const row = tray.querySelector(`.ln-tray-i[data-key="${CSS.escape(o.key)}"]`);
+  if (row && +row.dataset.n > 1) {
+    // a "×2" row: the other one stays
+    const n = +row.dataset.n - 1; row.dataset.n = n;
+    const c = row.querySelector('.ln-x2'); if (c) c.textContent = n > 1 ? ` ×${n}` : '';
+  } else if (row) row.remove();
+  if (list && head) head.textContent = `not counted (${list.children.length})`;
+  syncTray();
+  syncWinner();
+  if (phase === 'hunt') scheduleRelayout();
 }
 function onVerdict() {
   const v = S.verdict && S.verdict.verdict;
@@ -1576,6 +2088,7 @@ function ringWinner() {
 
 // ---------- set aside tray ----------
 function trayReason(it) {
+  if (it && it.userOut) return 'you took it out';
   const flags = [].concat((it.tc && it.tc.flags) || []).map(String);
   const f = flags.find(x => /too good to be true/i.test(x));
   if (f) return 'too good to be true';
@@ -1664,7 +2177,7 @@ function applyLit() {
 
 // ---------- input ----------
 function ordered() {
-  const list = [...objs.values()].filter(o => o.placed && !o.tray && o.el.style.visibility !== 'hidden' && !o.el.classList.contains('ln-gone'));
+  const list = [...objs.values()].filter(o => o.placed && !o.tray && !o.out && o.el.style.visibility !== 'hidden' && !o.el.classList.contains('ln-gone'));
   return list.sort((a, b) => vertical ? a.y - b.y : (a.x - b.x) || (a.lvl - b.lvl));
 }
 function focusObj(o) {
@@ -1871,7 +2384,43 @@ export const line = {
   eurFor(px) {
     if (px == null) return null;
     if (vertical) return eurForY(px);
+    // mid-drag the price tag reads its own drag curve, so the tag stays under the finger while the axis zooms
+    if (tagDrag && scale) return dragEur(tagDrag, (px - scale.r0) / (scale.r1 - scale.r0));
     return sinv(scale, px);
+  },
+  /** The price tag drives the zoom. tagDrag(true, v): a drag begins at v; tagDrag(false, v): released at v
+   * (the axis glides to end 15% past it). tagAt(v): the tag moved (mid-drag: at once; by keys: a glide). */
+  tagDrag(on, v) {
+    if (on) {
+      if (!canZoom() || vmode !== 'tag' || num(v) == null) { tagDrag = null; return; }
+      if (chase) { chase = null; cancelAnimationFrame(chaseRaf); chaseRaf = 0; }
+      tagDrag = dragRef(v, scale, fitDom, allDom);
+      root.classList.add('ln-zooming');
+      return;
+    }
+    const D = tagDrag;
+    tagDrag = null;
+    if (!D || !canZoom()) { root.classList.remove('ln-zooming'); return; }
+    if (num(v) == null || Math.abs(v - D.v0) < 1e-9) { scheduleSettle(0); return; }
+    const hi = Math.max(floorHi(D.lo, D.h0), TAG_HEAD * v);
+    setView({ mode: 'tag', d0: Math.min(D.lo, Math.max(0, v * 0.8)), d1: hi });
+  },
+  tagAt(v) {
+    if (num(v) == null || !canZoom() || vmode !== 'tag') return;
+    if (tagDrag) { setView({ mode: 'tag', d0: tagDrag.lo, d1: dragHi(tagDrag, v) }, { instant: true }); return; }
+    const [lo, hi] = tagTarget(v);
+    setView({ mode: 'tag', d0: lo, d1: hi });
+  },
+  /** zoom(kind): 'in' | 'out' | 'fit' (the cluster, the default) | 'all' (every offer). */
+  zoom(kind) {
+    if (kind === 'in' || kind === 'out') zoomBy(kind === 'in' ? 1 / 1.6 : 1.6, null);
+    else zoomFit(kind === 'all' ? 'all' : 'fit');
+  },
+  /** the euros the line shows now: {lo, hi, view: 'fit' | 'all' | 'zoom'}, or null (phones, the shelf) */
+  viewRange() {
+    if (!scale || scale.log || vertical) return null;
+    const v = activeView();
+    return { lo: scale.d0, hi: scale.d1, view: !v ? 'fit' : v.all ? 'all' : 'zoom' };
   },
   axisY() { return vertical ? null : (stage.offsetTop + AX); },
   rect(url) {
@@ -1993,3 +2542,6 @@ function eurForY(y) {
   const [a, ya] = r[r.length - 2], [b, yb] = r[r.length - 1];
   return b + (y - yb) / ((yb - ya) || 1) * (b - a);
 }
+
+// pure helpers, for tests/web/line_zoom.test.mjs
+export const _test = { robustVals, tickStep, domScale, dragHi, dragEur, dragRef, TAG_HEAD, ZA };

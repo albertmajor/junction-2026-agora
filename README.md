@@ -27,7 +27,7 @@ cp .env.example .env            # or create .env yourself; the only key is CONTE
 .venv/bin/uvicorn agora.api:app --port 8765
 ```
 
-Open **http://localhost:8765**. Pick one of the three examples, or type anything. Every product lands on
+Open **http://localhost:8765**. Pick one of the examples, or type anything. Every product lands on
 **one price line** (cheaper left, dearer right) as a photo cutout; then the line turns to what each one really
 costs you per month. Tap an object for its receipt, drag the yellow tag to set your price.
 
@@ -66,8 +66,11 @@ claude mcp add pricemonkey -- "$PWD/.venv/bin/python" -m agora.mcp_server
 Tools: `find_offers(query, country?, max_price_eur?, conditions?, limit?)`, `get_offer(url)`,
 `explain_price(url)` (the receipt), `watch_price(query, target_eur)` (notify only). Offline, answers come
 from the recorded hunts and say so. Page text is fenced and labelled untrusted; calls are rate-limited per
-client; buying tools stay hidden unless `AGORA_MCP_EXPERIMENTAL_BUY=1`. Non-MCP agents: `GET /api/offers?q=`
-(`agora/agent_http.py`) or the `GET /hunt?q=` stream. Schemas and examples: `docs/AGENTS_GUIDE.md`.
+client; buying tools stay hidden unless `AGORA_MCP_EXPERIMENTAL_BUY=1`. Each offer card carries `price_eur`,
+`all_in_eur`, a `shipping_note` saying what is and is not included, `source`, `url`/`listing_url`,
+`seller_trust`, `flags` and `origin` (where the seller is, whether it ships to Finland). Non-MCP agents:
+`GET /api/offers?q=&country=&max_price_eur=&conditions=used,refurbished&limit=` (`agora/agent_http.py`,
+mounted by `api.py`) or the `GET /hunt?q=` stream. Schemas and examples: `docs/AGENTS_GUIDE.md`.
 
 ## Architecture in brief
 
@@ -92,7 +95,7 @@ need  ->  discover  ->  read  ->  resolve  ->  judge  ->  verdict          (SSE 
 | `watch.py`, `buy.py`, `mockshop.py` | standing orders: JSON Logic rules, the sold-out lie detector, the haggle loop, L1 notify / L2 one-tap / L3 auto-buy |
 | `proof.py` | HMAC-signed open and closed mandates, signed carts, a hash-chained decision log |
 | `lease.py` | agents lease signed webhooks for a watch (Standard Webhooks format) |
-| `mcp_server.py` | the agent door: find_offers, true_cost, watch, get_buy_link, why_not, arm_watches, subscribe_watch |
+| `agent_api.py`, `mcp_server.py`, `agent_http.py` | the agent door: MCP tools find_offers, get_offer, explain_price, watch_price (notify only), and the same JSON at `GET /api/offers`, `/api/offer`, `/api/offer/receipt`. The buying tools (true_cost, watch, get_buy_link, why_not, arm_watches, subscribe_watch) appear only with `AGORA_MCP_EXPERIMENTAL_BUY=1` |
 | `api.py`, `web/`, `static/` | FastAPI + server-sent events; the viewer "the line" (`web/`, vanilla ES modules, no build step) and the old lab viewer (`static/`, at `/lab`) |
 
 Safety, in short: page text is data, never instructions (fenced, with a random id per block). The agent
@@ -100,7 +103,9 @@ only buys offers that PriceMonkey's own reader stored, at the price it read. Aut
 under a signed mandate with a cap. The shop checks the mandate, the signed cart and the closed mandate
 itself, keeps its own spend ledger, and refuses replays. State-changing routes refuse other web origins.
 
-More detail: `CONTRACT.md` (data contract and module map) and `SYSTEM.md` (product design).
+More detail: `CONTRACT.md` (data contract and module map) and `SYSTEM.md` (product design). Judge feedback
+and what we did with it: `docs/JUDGE_FEEDBACK.md`; pitch notes and the demo script: `docs/PITCH_NOTES.md`;
+the post-hackathon plan: `docs/AFTER_HACKATHON.md`.
 
 ## Sponsor tech
 

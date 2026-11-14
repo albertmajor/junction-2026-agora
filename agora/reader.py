@@ -2102,6 +2102,7 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
         if plan is not None:
             contextdev.note_free_read()
             add_witnesses(plan, "jsonld")
+            _annotate(plan, html, snippet, title)      # the studio's picture too (eval r4: 0 of 10 had one)
             return plan, "jsonld"
     if html and not blocked:
         data = await asyncio.to_thread(_extruct, html, url)

@@ -185,6 +185,7 @@ MIXED_LOW_BULKY = 0.10
 GENERIC_PICK_MIN = 0.5  # ... and a vague need's pick costs at least half the hunt's median of its condition
 MIXED_PICK_MIN = 0.35  # a mixed bag's pick sits in its usual range: a €45 road bike among €450 ones is never it
 MIXED_FLOOR = 0.08     # a mixed bag of models (a kind of thing): only under 8% of its median is a part / misread
+SHOWN_FLOOR = 0.20    # a vague need's "new from" / "used from" line skips prices under 20% of their median
 SCALE_FLOOR = 0.25     # a price under 25% of the item's overall median is a part/accessory or a misread
 
 
@@ -262,7 +263,7 @@ def _market_prices(offers: list[Offer], condition: str) -> list[float]:
     floor = market_floor(offers)
     sel = [x for x in _one_vote_per_listing(offers) if market_condition(x) == condition
            and (p := price_of(x)) is not None and p > 1 and p >= floor and not _disputed(x)
-           and not _list_offer(x) and not x.raw.get("from_price") and not _junk(x)]
+           and not _list_offer(x) and not x.raw.get("from_price") and not _junk(x) and not x.raw.get("with_lens")]
     if condition == "service":
         votes: dict[str, list[float]] = {}
         for x in sel:   # one directory page = one voice in the median, however many providers it listed
@@ -434,7 +435,7 @@ def _red_kinds(o: Offer) -> set[str]:
 def _ref_usable(o: Offer) -> bool:
     p = price_of(o)
     return (p is not None and p > 1 and not _disputed(o) and not _list_offer(o) and not o.raw.get("from_price")
-            and not _red_kinds(o) and o.condition in ("new", "used", "refurbished"))
+            and not _red_kinds(o) and o.condition in ("new", "used", "refurbished") and not o.raw.get("with_lens"))
 
 
 def reference_price(offers: list[Offer], cat: Category, need: Need | None = None) -> Reference | None:
@@ -489,12 +490,40 @@ def reference_price(offers: list[Offer], cat: Category, need: Need | None = None
         # (the upper-60% median: only when the ratio floor sits right under what sellers ask, at over 85% of it,
         # is that 'new' price stale; a floor well under it is guarding a flood of ear tips and cases)
         med = market_ref or 0.0
+        plain = statistics.median(market)
         if STALE_FLOOR_SHARE * med < floor <= med:
             floor = USED_FLOOR_SHARE * med
             floor_basis = (f"{USED_FLOOR_SHARE:.0%} of what {len(market)} marketplace listings ask (upper "
                            f"{UPPER_SHARE:.0%} median {fmt(med)})")
+        if USED_FLOOR_SHARE * plain < floor <= plain:
+            # no gap between 75% and 85%: a floor at 83% of the plain used median (live, iphone 13: €192 vs a €200
+            # median of 907 listings) threw out 407 ordinary used phones; the floor is 75% of what they sell for
+            floor = USED_FLOOR_SHARE * plain
+            floor_basis = (f"{USED_FLOOR_SHARE:.0%} of the median of {len(market)} marketplace listings "
+                           f"({fmt(plain)})")
     return Reference(round(new, 2), round(floor, 2), ratio, basis, len(shop_new), len(shop_ref),
                      round(market_ref, 2) if market_ref is not None else None, len(market), floor_basis)
+
+
+def _tier_key(title: str) -> frozenset[str]:
+    """The version a title names ('pro', 'mini', 'ultra'; 'slim' is the same console): {} for the base model."""
+    try:
+        from agora.resolve import _tiers, signature
+        return frozenset(_tiers(signature(title).variants))
+    except Exception:
+        return frozenset()
+
+
+def reference_line(ref: Reference, n_low: int) -> str:
+    """One plain sentence: what the item costs new and where the 'too cheap to be real' line sits."""
+    if "raised to the marketplace level" in ref.basis:
+        head = (f"reference: private sellers ask about {fmt(ref.market_eur or ref.new_eur)} for it (shop prices "
+                f"found were lower, so they were probably accessories or another version)")
+    else:
+        head = f"reference: new {fmt(ref.new_eur)} ({ref.basis})"
+    return (head + f"; used or private listings under {fmt(ref.floor_eur)}"
+            + (f" ({ref.floor_basis})" if ref.floor_basis else "")
+            + f" are treated as parts, broken or fakes ({n_low} flagged)")
 
 
 def _what_junk(cat: Category) -> str:
@@ -543,7 +572,11 @@ def mark_listings(need: Need, offers: list[Offer]) -> None:
     except ImportError:
         return
     vehicle = _is_vehicle_need(need)
+    body = asks_body(need)
     for o in offers:
+        o.raw.pop("with_lens", None)
+        if body and _with_lens(o):
+            o.raw["with_lens"] = True     # a lens kit never sets the body's reference, band or median
         found = list(title_red_flags(o, need))
         page = o.raw.get("page_red_flags") or []
         found += [tuple(x) for x in page if tuple(x) not in found]
@@ -1525,6 +1558,7 @@ def _dedupe_service(offers: list[Offer]) -> list[Offer]:
     """One provider's same plan read twice (adcount.fi/en/prices and /en/prices.html, 'EU Sales' €50 both): one
     vote in the median and in 'N plans compared'."""
     seen: set[tuple[str, str, float]] = set()
+    by_seller: dict[tuple[str, str], Offer] = {}
     out: list[Offer] = []
     for o in offers:
         key = (_host(o.url).removeprefix("www."), re.sub(r"\W+", " ", (o.title or "").lower()).strip(),
@@ -1532,6 +1566,17 @@ def _dedupe_service(offers: list[Offer]) -> list[Offer]:
         if key in seen and key[2]:
             continue
         seen.add(key)
+        # one restaurant / provider listed by several aggregators (live, lunch: UniCafe Kaivopiha 4 times on
+        # lounasmenu.fi, luncher.fi and lunchmenu.fi): one row, its lowest price
+        sk = (re.sub(r"\W+", " ", (o.seller or "").lower()).strip(), re.sub(r"\W+", " ", (o.location or "").lower()).strip())
+        if sk[0] and len(sk[0]) >= 4 and any(h in (o.source or "") for h in AGGREGATOR_HOSTS):
+            prev = by_seller.get(sk)
+            if prev is not None:
+                if (o.price_eur or 1e9) < (prev.price_eur or 1e9):
+                    out[next(i for i, x in enumerate(out) if x is prev)] = o
+                    by_seller[sk] = o
+                continue
+            by_seller[sk] = o
         out.append(o)
     return out
 
@@ -1977,7 +2022,48 @@ def buyer_fee(o: Offer) -> float:
         fee = 0.0
     if not fee and (fee := _title_buyer_fee(o)):
         o.raw["buyer_fee_eur"] = fee
+    if not fee:
+        for k in ("price_with_buyer_fee", "price_with_fee"):
+            try:
+                withfee = float(o.raw.get(k) or 0.0)
+            except (TypeError, ValueError):
+                withfee = 0.0
+            if o.price and withfee and o.price < withfee <= o.price * 1.25 + 3:
+                rate = (o.price_eur / o.price) if o.price_eur and o.price else 1.0
+                fee = round((withfee - o.price) * rate, 2)
+                o.raw["buyer_fee_eur"] = fee
+                break
+    if not fee and ("vinted." in (o.source or "") or "vinted." in (o.url or "")) and (p := price_of(o)):
+        # Vinted always adds its buyer protection fee (€0.70 + 5% of the item price) at checkout: never left out
+        # of 'all in' (live: 0 of 3,000+ vinted offers carried it)
+        fee = round(VINTED_FEE_FIXED + VINTED_FEE_RATE * p, 2)
+        o.raw["buyer_fee_eur"] = fee
+        o.raw["buyer_fee_est"] = True
     return fee
+
+
+VINTED_FEE_FIXED = 0.70
+VINTED_FEE_RATE = 0.05
+
+
+SMALL_DELIVERY = (10.0, 20.0)    # a small flat-pack piece (a €29 shelf) goes as a parcel
+SMALL_FURNITURE_EUR = 80.0
+BULKY_DELIVERY = (30.0, 70.0)    # home delivery of a table / sofa from a Finnish web shop, when the page says nothing
+
+
+def _bulky_delivery(o: Offer, need: Need) -> None:
+    """A bulky thing new from a shop with no delivery fee on the page is not delivered for €0 (live, kitchen table:
+    homeroom.fi tables were 'shipping unknown, counted as €0'): a labelled furniture-delivery estimate."""
+    if not _bulky(need) or o.condition != "new" or is_marketplace(o) or o.shipping_eur is not None \
+            or o.raw.get("shipping_est") or o.raw.get("abroad"):
+        return
+    lo, hi = BULKY_DELIVERY if (price_of(o) or 0) >= SMALL_FURNITURE_EUR else SMALL_DELIVERY
+    o.shipping_eur = round((lo + hi) / 2, 2)
+    home = (_home() or "fi").upper()
+    o.raw["shipping_est"] = {"src": home, "dst": home, "text": f"€{lo:.0f}–{hi:.0f}", "low": lo, "high": hi,
+                             "how": "usual furniture home delivery; the shop's own fee was not on the page",
+                             "basis": "furniture delivery estimate"}
+    o.flags.append(f"delivery not on the page: €{lo:.0f}–{hi:.0f} estimated for a bulky item")
 
 
 def _shipping_line(o: Offer) -> str:
@@ -2069,7 +2155,14 @@ def _mixed(need: Need, t: Thing) -> str | None:
     if is_service(need) or not t.offers:
         return None
     marked = sum(1 for o in t.offers if o.raw.get("generic_thing"))
-    if not (_generic_need(need) or marked * 2 > len(t.offers)):
+    try:
+        from agora.resolve import _is_vehicle_need
+        vehicle = _is_vehicle_need(need)
+    except Exception:
+        vehicle = False
+    # one car model spans 20 model years (live, volvo v70: €700 V70s of 2001 were 'under a quarter of this item's
+    # going price' next to €4,190 2014 cars): no price ratio says a car is fake; under €500 is flagged on its own
+    if not (_generic_need(need) or marked * 2 > len(t.offers) or vehicle):
         return None
     return "mixed-bulky" if _bulky(need) else "mixed"
 
@@ -2130,6 +2223,13 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
     brand = _need_brand(need)
     body = asks_body(need)
     for o in t.offers:
+        # the body asked: a lens kit, whatever the site, is marked before any median is taken, so kits never set the
+        # 'typical used' band (live, sony a7 iii body: marktplaats / tori / blocket kits made it €799-€1,000)
+        o.raw.pop("with_lens", None)
+        if body and _with_lens(o):
+            o.raw["with_lens"] = True
+    _memo_clear()
+    for o in t.offers:
         discount = discount_check(o, t.offers, history=history)
         own = bool(brand) and brand in _host(o.url).split(".")[0]
         o.trust, new_flags = assess_trust(o, t.offers if mixed else _peers_for(o, t.offers, everyone or []),
@@ -2139,9 +2239,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
             o.flags.append(note)
-        o.raw.pop("with_lens", None)
-        if body and _with_lens(o):
-            o.raw["with_lens"] = True
+        if o.raw.get("with_lens"):
             o.flags.append("with a lens (you asked for the body only): ranked after body-only offers")
         if o.raw.get("net_of_deduction_eur") is not None:
             o.flags.append(f"page shows {fmt(o.raw['net_of_deduction_eur'])} after the household deduction; "
@@ -2152,6 +2250,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
             o.raw["seen_hunts"] = n        # kept for the record; not a flag a shopper needs to read
         if not is_service(need) and not is_periodic(o):
             _shipping_flags(o, need)
+            _bulky_delivery(o, need)
         if is_service(need):
             o.raw.pop("partial_job", None)
             if portrait_only(o, need):
@@ -2232,11 +2331,24 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         mark_listings(need, everyone)
         # a mixed bag of models (a kind of thing) has no one 'new price': a €142 VoIP phone or a €20 headset must
         # never become every smartphone's yardstick
+        refs: dict[frozenset[str], Reference | None] = {}
         if not any(o.raw.get("generic_thing") for o in everyone) and not _generic_need(need):
-            ref = reference_price(everyone, category_for(" ".join([need.thing] + [o.title for o in everyone[:5]])),
-                                  need)
+            refcat = category_for(" ".join([need.thing] + [o.title for o in everyone[:5]]))
+            # one reference per version: a PS5 Pro is never judged against the base PS5's new price, nor sets it
+            # (live, ps5: Pro listings made the reference €1,068 and were 'costs more than new (€699)')
+            by_tier: dict[frozenset[str], list[Offer]] = {}
+            for o in everyone:
+                by_tier.setdefault(_tier_key(o.title or ""), []).append(o)
+            want = _tier_key(need.thing)
+            if len(by_tier) > 1 and len(by_tier.get(want, [])) >= MIN_MARKET_REF:
+                for k, group in by_tier.items():
+                    refs[k] = reference_price(group, refcat, need) if len(group) >= MIN_MARKET_REF else None
+                ref = refs.get(want)
+            else:
+                ref = reference_price(everyone, refcat, need)
         for o in everyone:
-            o.raw["ref_suspect"] = bool(ref and reference_flag(o, ref, DEFAULT_CATEGORY))
+            own = refs.get(_tier_key(o.title or ""), ref) if refs else ref
+            o.raw["ref_suspect"] = bool(own and reference_flag(o, own, DEFAULT_CATEGORY))
     else:
         for o in everyone:
             o.raw.pop("red_flags", None)
@@ -2281,6 +2393,15 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             pass
     if not is_service(need) and (main := _main_model_ids(need, things)):
         good = [o for o in good if o.thing_id in main] or good
+    # the 'New from / refurbished from' line names the cheapest kept offer of each condition, even one too cheap to
+    # crown (live, kitchen table: 'New from €165' while €112 and €120 new tables at homeroom.fi were kept)
+    shown = list(good)
+    if not is_service(need) and _generic_need(need):
+        # ... but not a vague need's giveaway end ('Used from €20' for a bicycle): under a fifth of its median
+        cmeds = {c: statistics.median(xs) for c in ("new", "used", "refurbished")
+                 if len(xs := [x for o in shown if market_condition(o) == c and (x := price_of(o))]) >= 5}
+        shown = [o for o in shown if not (cmeds.get(market_condition(o)) and (price_of(o) or 0)
+                                          < SHOWN_FLOOR * cmeds[market_condition(o)])] or shown
     # a kind of thing ('road bike', 'puhelin', 'sofa'): the pick is a sensibly priced one, not the €35 frame or
     # the €19 diaper bag at the bottom of the bag (live): shown, but crowned only when nothing else is left
     good = [o for o in good if (o.raw.get("mixed_ratio") or 1.0) >= MIXED_PICK_MIN] or good
@@ -2307,12 +2428,19 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         if home_set:
             eu_extra = [o for o in good if o.raw.get("abroad")]
             good = home_set
+            shown = [o for o in shown if not o.raw.get("abroad")] or shown
     eu = [o for o in good if not outside_eu(o)]
 
     cheapest = min(good, key=_landed)
     best_link = min(eu, key=_landed) if eu else cheapest
     owned = [o for o in good if o.true_cost]
     best_tc = min(owned, key=lambda o: o.true_cost.per_month_eur) if owned else None  # type: ignore[union-attr]
+    if is_service(need) and best_tc is not None and best_tc.raw.get("job_what"):
+        # a provider's fixed price for exactly this job size beats an hourly rate x a guessed number of hours (live,
+        # Umzug Hamburg 2-Zimmer: 'Umzug für kleine 1-2 Zimmer Wohnung (bis 60 m²)' €400 lost to €80/h x 4 h)
+        sized = [o for o in owned if (o.unit or "") == "job" and fits_job_size(need, o)]
+        if sized:
+            best_tc = min(sized, key=lambda o: o.true_cost.per_month_eur)  # type: ignore[union-attr]
     lines: list[str] = []
 
     periodic = [o for o in owned if o.raw.get("period_group")] if priced_per_period(need) else []
@@ -2353,13 +2481,19 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             why = sorted({o.raw["not_comparable"] for o in apart})
             shown = ", ".join(f"{o.source} {fmt(o.price_eur or 0)} ({(o.title or '')[:30]})" for o in apart[:3])
             lines.append(f"{len(apart)} more not compared ({'; '.join(why)}): {shown}")
-        no_unit = len(priced) - len(owned) - len(apart)
+        partial = [o for o in priced if o.raw.get("partial_job") and all(o is not x for x in apart)]
+        if partial:
+            # live, wedding photographer: twelve portrait-only packages were '12 more offers without a clear unit'
+            lines.append(f"{len(partial)} portrait-only or partial package{'s' * (len(partial) != 1)}, ranked after "
+                         f"full packages")
+        no_unit = len([o for o in priced if o.true_cost is None and all(o is not x for x in apart)
+                       and all(o is not x for x in partial)])
         if no_unit:
             lines.append(f"{no_unit} more offer{'s' * (no_unit != 1)} without a clear unit (per hour / m² / job)")
         best_link = best_tc
     elif is_service(need) or best_tc is None:
         unit = f"/{cheapest.unit}" if cheapest.unit else ""
-        headline = f"Cheapest: {fmt(_landed(cheapest))}{unit} at {cheapest.source}."
+        headline = f"Cheapest: {fmt(_landed(cheapest))}{unit} at {_who(cheapest)}."
         if len(good) > 1:
             med = statistics.median(o.price_eur or 0 for o in good)
             lines.append(f"{len(good)} trustworthy offers, median {fmt(med)}{unit}")
@@ -2388,14 +2522,12 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             o.raw["beat_eur"] = beat
             o.raw["gap_eur"] = round((o.price_eur or 0) - beat, 2)
         # a vague need ('puhelin', a tree hunt): say which one the price buys ('used iPhone 13 128GB at tori.fi')
-        headline = all_in_headline(good, best_all, lines, named=_generic_need(need),
-                                   titled=_names_more_than_asked(need, best_all))
+        headline = all_in_headline(_headline_pool(good, shown, best_all), best_all, lines, named=_generic_need(need),
+                                   titled=_names_more_than_asked(need, best_all), ref=ref)
         lines[0:0] = skipped_lines(priced)
         if ref is not None:
             n_low = sum(1 for o in all_offers if o.raw.get("ref_suspect"))
-            lines.append(f"reference: new {fmt(ref.new_eur)} ({ref.basis}); used or private listings under "
-                         f"{fmt(ref.floor_eur)}" + (f" ({ref.floor_basis})" if ref.floor_basis else "")
-                         + f" are treated as parts, broken or fakes ({n_low} flagged)")
+            lines.append(reference_line(ref, n_low))
         if best_all is not cheapest and not surely_buyable(cheapest):
             lines.append(f"{cheapest.source} is cheaper ({fmt(_landed(cheapest))} all in) but does not say it ships to Finland")
         if eu_extra:
@@ -2448,8 +2580,10 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     vband = band_of.get(id(led)) or band_of.get(id(pick))
     if vband:
         which = led if id(led) in band_of else pick
-        lines.append(f"price band ({vband.get('what') or which.condition}): {fmt(vband['p25'])}-{fmt(vband['p75'])} is typical; "
-                     f"{which.source} at {fmt(which.price_eur or 0)} is {vband['label']}"
+        typical = (f"about {fmt(vband['p25'])}" if fmt(vband['p25']) == fmt(vband['p75'])
+                   else f"{fmt(vband['p25'])}-{fmt(vband['p75'])}")      # never '€14-€14' (live, lunch)
+        lines.append(f"price band ({vband.get('what') or which.condition}): {typical} is typical; "
+                     f"{_who(which)} at {fmt(which.price_eur or 0)} is {vband['label']}"
                      + (f" ({vband['badges'][0]})" if vband["badges"] else ""))
         vband = {**vband, "url": which.url, "thing_id": which.thing_id}
     return Verdict(headline, best_link.url, best_tc.url if best_tc else None, buy_or_wait, lines, price_band=vband)
@@ -2560,8 +2694,15 @@ def _names_more_than_asked(need: Need, o: Offer) -> bool:
 LANE_OUTLIER = 5.0     # a condition's cheapest offer over 5x the cheapest used one is no useful 'from' line
 
 
+def _headline_pool(good: list[Offer], shown: list[Offer], best: Offer) -> list[Offer]:
+    """The pick's own condition comes from `good` (what may be crowned); the other conditions' 'from' prices from
+    every kept, unflagged offer (`shown`)."""
+    mine = market_condition(best)
+    return [o for o in good if market_condition(o) == mine] + [o for o in shown if market_condition(o) != mine]
+
+
 def all_in_headline(good: list[Offer], best: Offer, lines: list[str], named: bool = False,
-                    titled: bool = False) -> str:
+                    titled: bool = False, ref: Reference | None = None) -> str:
     """'€825 all in: used at tori.fi. New from €1,029, refurbished from €899.' Every number is the full
     price you pay once (tag + shipping + import VAT + fees)."""
     per_cond: dict[str, Offer] = {}
@@ -2588,6 +2729,10 @@ def all_in_headline(good: list[Offer], best: Offer, lines: list[str], named: boo
     head = f"{fmt(_landed(best))} all in: {_cond(best)}{what} at {best.source}{after}."
     others = [f"{c} from {fmt(_landed(o))}" + ("" if surely_buyable(o) else " (may not ship to Finland)")
               for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])) if c != market_condition(best)]
+    if "new" not in per_cond and market_condition(best) != "new" and ref is not None and ref.shop_new:
+        # no new offer survived, but shops' new prices were seen: say it (live, macbook air m2: '€475 all in ...
+        # Refurbished from €699' with the €968 new price only deep in the lines)
+        others.append(f"new about {fmt(ref.new_eur)} in shops")
     if others:
         tail = ", ".join(others)
         head += f" {tail[0].upper()}{tail[1:]}."
@@ -2671,6 +2816,22 @@ def _period_verdict(need: Need, periodic: list[Offer], priced: list[Offer], mont
     return headline, best
 
 
+_ROOMS = r"(?:zimmer|zi\.?|rooms?|huone\w*|h\b|rum|rok|kamer\w*|værelse\w*|vaerelse\w*|pokoj\w*)"
+
+
+def fits_job_size(need: Need, o: Offer) -> bool:
+    """The offer's own title names the asked job size: '2-Zimmer' asked, '1-2 Zimmer Wohnung' / '2 Zimmer' offered."""
+    m = re.search(rf"\b(\d)\s*-?\s*{_ROOMS}", f"{need.raw} {need.thing}", re.I)
+    if not m:
+        return False
+    n = int(m.group(1))
+    for a, b in re.findall(rf"\b(\d)(?:\s*[-–]\s*(\d))?\s*-?\s*{_ROOMS}", o.title or "", re.I):
+        lo, hi = int(a), int(b or a)
+        if lo <= n <= hi:
+            return True
+    return False
+
+
 def _service_headline(need: Need, best: Offer) -> str:
     from agora import resolve
     btc = best.true_cost
@@ -2685,6 +2846,9 @@ def _service_headline(need: Need, best: Offer) -> str:
         job = f"{best.raw['job_what']} (estimate)"
     else:
         job = f"one {size:g} m² {noun}" if size else f"one {noun}"
+        what = _job_title(best)
+        if what and not size and (best.unit or "") == "job":
+            job = f"{job} (“{what}”)"      # '€60 for one job (“Perushuolto”) at aseteam.fi': which job it is
     tier = f" ({best.raw['tier']} rate)" if best.raw.get("tier") else ""
     tier += " (deal)" if best.raw.get("deal") else ""
     calc = f", {best.raw['calc']}" if best.raw.get("calc") else ""
@@ -2697,7 +2861,34 @@ def _service_headline(need: Need, best: Offer) -> str:
     else:
         after = (f", about {fmt(btc.total_eur - ded)} after the household deduction if you claim it"
                  if ded else "")
-    return f"{fmt(btc.total_eur)} for {job} at {best.source}{tier}{calc}{after}."
+    return f"{fmt(btc.total_eur)} for {job} at {_who(best)}{tier}{calc}{after}."
+
+
+AGGREGATOR_HOSTS = ("lounasmenu.", "lunchmenu.", "luncher.", "lounaat.", "lounasinfo.", "lounastutka.", "trustoo.",
+                    "yoojo.", "helpling.", "treatwell.", "fresha.", "timma.", "varaaheti.", "werkspot.", "myhammer.",
+                    "check24.", "checkatrade.", "mittanbud.", "offerta.", "tori.fi", "pro.tori.")
+
+
+def _who(o: Offer) -> str:
+    """'UniCafe Kaivopiha (via lounasmenu.fi)' when an aggregator or platform lists the provider; else the site."""
+    src = o.source or _host(o.url)
+    seller = (o.seller or "").strip()
+    if seller and any(h in src for h in AGGREGATOR_HOSTS) and seller.lower() not in src.lower() \
+            and len(seller) <= 60:
+        return f"{seller} (via {src})"
+    return src
+
+
+def _job_title(o: Offer) -> str | None:
+    """The offer's own name for the job when it says more than the provider's name ('Perushuolto', 'Umzug für
+    kleine 1-2 Zimmer Wohnung'), cut short."""
+    t = re.split(r"\s+[|–—]\s+|\s+-\s+", (o.title or "").strip())[0].strip(" .:")
+    if not t or len(t) < 3:
+        return None
+    host = _host(o.url).split(".")[0]
+    if host and host.replace("-", "") in re.sub(r"\W", "", t.lower()):
+        return None
+    return t[:48] + ("…" if len(t) > 48 else "")
 
 
 def _sure_headline(safe: Offer, best: Offer, months: int) -> str:
