@@ -145,7 +145,8 @@ def test_wedding_packages_are_never_ranked_against_hourly_rates():
     hourly = page("https://hourly.fi/hinnat", "Hääkuvaus tuntihinta", 120, "hour")
     _, v = run(WEDDING, pk + [hourly])
     assert hourly.true_cost is None and hourly.raw["apart_kind"] == "hourly_vs_package"
-    assert v.best_true_cost_url == pk[0].url
+    # round 6: packages are compared by coverage, so the 4 h package ranks after the 8 h (full-day) ones
+    assert v.best_true_cost_url == pk[1].url
     assert any("not compared with full-day packages" in ln for ln in v.lines)
 
 

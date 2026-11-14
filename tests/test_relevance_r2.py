@@ -398,8 +398,10 @@ def test_wedding_portraits_only_package_is_not_the_pick():
               line("Hääpaketti 8 h", 1900, "https://annikuitula.com/hinnasto/")]
     things = R.resolve(n, offers)
     v = J.judge(n, things, history=False)
-    assert v.best_true_cost_url == offers[1].url, v.headline
+    # round 6: a ceremony-only package no longer wins against a full-day one (like with like by coverage)
+    assert v.best_true_cost_url not in (offers[0].url, offers[1].url), v.headline
     assert any("portraits only" in f for f in offers[0].flags)
+    assert any("ceremony" in f for f in offers[1].flags)
 
 
 def test_directory_price_in_dollars_on_a_local_provider_is_flagged():

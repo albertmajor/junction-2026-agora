@@ -16,6 +16,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from agora.models import Need, Offer, Thing
 
@@ -1146,6 +1147,58 @@ def other_make(need: Need, offer: Offer) -> str | None:
     return None
 
 
+# eval r5 'bright red car': autoline.info (a commercial-vehicle marketplace) fed trucks, vans and tractors into a
+# passenger-car hunt. Judged per listing, never per site: its address path, its title words, a truck / tractor make
+# or a cargo-van model say what it is. A need that names such a vehicle keeps them.
+COMMERCIAL_PATH = re.compile(r"/(?:-/)?(?:sale/)?(trucks?|tractor-units?|semi-trailers?|trailers?|vans?|light-trucks?|"
+                             r"lcv|buses|bus|coaches|minibuses|farm-tractors?|tractors?|agricultural\w*|"
+                             r"construction\w*|forklifts?|excavators?|kuorma-autot|pakettiautot|linja-autot|traktorit|"
+                             r"lkw|transporter|nutzfahrzeuge|kleintransporter)(?:/|--|$)", re.I)
+COMMERCIAL_WORDS = {
+    "truck": re.compile(r"\b(?:trucks?|lorry|lorries|tipper|dump\s+truck|box\s+truck|tractor\s+unit|semi[- ]?truck|"
+                        r"kuorma-?auto\w*|lkw|sattelzug\w*|kipper|kühlkoffer|kuhlkoffer|koffer-?lkw|vetoauto\w*|"
+                        r"lastbil\w*|vrachtwagen\w*|sattelzugmaschine)\b", re.I),
+    "van": re.compile(r"\b(?:pakettiauto\w*|cargo\s+van|panel\s+van|kastenwagen|transporter|kleintransporter|"
+                      r"skåpbil|skapbil|varebil|bestelbus|bestelwagen|sprinter|crafter|ducato|movano|citro[eë]n\s+jumper|"
+                      r"peugeot\s+boxer|iveco\s+daily|transit(?!\s+connect\s+kombi)|nv400|interstar)\b", re.I),
+    "bus": re.compile(r"\b(?:bus|buses|coach|minibus\w*|linja-?auto\w*|reisebus|omnibus|turistbuss)\b", re.I),
+    "tractor": re.compile(r"\b(?:tractors?|traktori\w*|traktor\w*|trekker|forklift|trukki|excavator|kaivinkone\w*|"
+                          r"bagger|wheel\s+loader|pyöräkuormaaja|combine\s+harvester|puimuri)\b", re.I),
+}
+COMMERCIAL_MAKES = re.compile(
+    r"\b(?:scania|daf|iveco|kenworth|peterbilt|freightliner|mack|man\s+tg\w*|volvo\s+f[hml]\d*\b|"
+    r"mercedes(?:-benz)?\s+(?:actros|atego|arocs|axor|antos|econic|unimog)|renault\s+(?:magnum|premium|kerax|"
+    r"trucks?\s+\w+)|john\s+deere|valtra|fendt|claas|massey\s+ferguson|new\s+holland|deutz-?fahr|zetor|"
+    r"case\s+ih|kubota|jcb|caterpillar|komatsu|hitachi\s+zx|liebherr|setra|neoplan|van\s+hool)\b", re.I)
+_COMMERCIAL_ASKED = re.compile(r"\b(?:truck|lorry|van|vans|bus|coach|tractor|pickup|pick-up|camper|motorhome|"
+                               r"kuorma|paketti|linja|traktori|lkw|transporter|kastenwagen|minibus|sprinter|"
+                               r"commercial|hyötyajoneuvo\w*|hyotyajoneuvo\w*|nutzfahrzeug\w*)", re.I)
+
+
+def commercial_vehicle(need: Need, offer: Offer) -> str | None:
+    """'truck' / 'van' / 'bus' / 'tractor' when this listing is a commercial vehicle and the need is a passenger
+    car ('bright red car', 'volvo v70'); None when it is a car, unknown, or the need asks for such a vehicle."""
+    asked = f"{need.raw or ''} {need.thing or ''} {' '.join(need.must_have or [])}"
+    if _COMMERCIAL_ASKED.search(asked):
+        return None
+    title = offer.title or ""
+    veh = offer.raw.get("vehicle") if isinstance(offer.raw, dict) else None
+    body = str(veh.get("body") or "") if isinstance(veh, dict) else ""
+    for kind, rx in COMMERCIAL_WORDS.items():
+        if rx.search(title) or (body and rx.search(body)):
+            return kind
+    if m := COMMERCIAL_PATH.search(urlsplit(offer.url or "").path):
+        seg = m.group(1).lower()
+        return ("tractor" if "tract" in seg or "agri" in seg or "forklift" in seg or "excavat" in seg
+                or "construct" in seg or "traktor" in seg
+                else "bus" if "bus" in seg or "coach" in seg or "linja" in seg
+                else "van" if "van" in seg or "paketti" in seg or "transporter" in seg or seg == "lcv"
+                else "truck")
+    if COMMERCIAL_MAKES.search(title):
+        return "truck"
+    return None
+
+
 def vehicle_mismatch(need: Need, offer: Offer) -> str | None:
     """For a vehicle need, why this listing is not a vehicle: a toy / kids' car / model, an item that only
     shares a word (paint 'Bright Red', an LP, a bed), or a 'car' under VEHICLE_FLOOR_EUR with nothing that
@@ -1159,6 +1212,8 @@ def vehicle_mismatch(need: Need, offer: Offer) -> str | None:
     title = offer.title or ""
     if m := NOT_VEHICLE.search(title):
         return f"not a vehicle ({m.group(0).lower()})"
+    if kind := commercial_vehicle(need, offer):
+        return f"a {kind}, not a passenger car (you asked for {need.thing})"
     if offer.raw.get("category") == "vehicle":
         return None            # listed in a cars category (nettiauto, tori autot ...): a vehicle, cheap or not
     # under the floor only a mileage says it is a car: 'Volvo V70 Mk2 Tdi maf' (€30, a sensor) and
@@ -2254,6 +2309,44 @@ TRADE_STEMS: dict[frozenset[str], tuple[str, ...]] = {
     CLEANING_GROUP: ("siivo", "clean", "schoonm", "reinig", "stadning", "stadfirma"),
 }
 TRADE_HOURS = 1.0     # a standard call: 1 h of labour (+ call-out fee), shown as an estimate
+# workshop trades: you bring the item in (a gunsmith makes no house calls), so a standard job is the hourly rate x
+# WORKSHOP_HOURS and never a call-out fee; a price for one specific job (threading, deactivation, machining) is
+# listed apart, never ranked against the hourly rate (eval r5, gunsmith)
+WORKSHOP_TRADES = (GUNSMITH_GROUP,)
+WORKSHOP_HOURS = 1.0
+# words a workshop's general price line uses without naming a specific job ('Aseseppä palvelut', 'Työhinnasto')
+_GENERIC_LINE_WORDS = frozenset({
+    "palvelut", "palvelu", "palvelut", "palvelumme", "services", "service", "work", "works", "tyot", "tyo", "tyota",
+    "tyohinnasto", "hinnasto", "hinnat", "hinta", "hintaan", "prices", "price", "pricing", "pricelist", "list",
+    "alkaen", "alk", "from", "and", "ja", "och", "und", "en", "et", "oy", "oyj", "ltd", "gmbh", "tmi", "ky",
+    "general", "yleinen", "yleiset", "korjaus", "korjaukset", "korjaustyot", "huolto", "huollot", "huoltotyot",
+    "repair", "repairs", "maintenance", "tunti", "tuntia", "hour", "hours", "per", "hourly", "tuntihinta",
+    "tuntiveloitus", "workshop", "paja", "verkstad", "werkstatt", "leistungen", "dienstleistungen", "preise",
+    "preisliste", "tjanster", "prislista", "diensten", "prijzen", "tarifs", "the", "our", "all", "kaikki",
+    "perushinta", "starting", "basic", "standard", "vakio", "metsastysaseet", "ampumaurheiluaseet", "aseet",
+    "aseille", "aseisiin", "aseita", "weapons", "guns", "gun", "rifles", "kivaarit", "haulikot", "pistoolit"})
+
+
+def is_workshop_trade(need: Need) -> bool:
+    """A workshop trade (gunsmith) asked for without a specific job: compare a standard workshop hour."""
+    g = service_group(need)
+    return g is not None and g in WORKSHOP_TRADES and not _task_words(need)
+
+
+def generic_trade_line(need: Need, title: str, source: str = "", seller: str = "") -> bool:
+    """A price line that names no specific job, only the trade, the firm and general words ('Aseseppä palvelut',
+    'Asesepäntyöt / tunti – Aawee Oy'); 'Äänenvaimenninkierre' or 'Aseiden deaktivointi' names a job."""
+    g = service_group(need) or frozenset()
+    own = {w for w in re.findall(r"[a-z0-9]+", _fold(f"{source.split('.')[0] if source else ''} {seller or ''}"))
+           if len(w) > 2}
+    stems = tuple(w for w in g if len(w) >= 6)
+    for w in re.findall(r"[a-z0-9]+", _fold(title or "")):
+        if len(w) <= 2 or w.isdigit() or w in g or w in own or w in _GENERIC_LINE_WORDS:
+            continue
+        if stems and w.startswith(stems):
+            continue           # 'aseseppapalvelut', 'asesepantyot': the trade's own compound
+        return False
+    return True
 
 # a line on a price list that is not a price for the job at all: an admin fee, a surcharge, materials, parking
 FEE_LINE = re.compile(
@@ -2377,6 +2470,9 @@ def service_line_kind(need: Need, title: str, unit: str | None) -> str:
         tw = _task_words(need)
         if not (tw and any(w in t for w in tw)):
             return "task"
+    if g in WORKSHOP_TRADES and (unit or "") in ("job", "m2", "visit") and not _task_words(need) \
+            and not generic_trade_line(need, title):
+        return "task"      # 'Äänenvaimenninkierre' €100, 'Aseiden deaktivointi' €450: one specific job
     return "main"
 
 

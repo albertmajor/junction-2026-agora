@@ -1104,6 +1104,19 @@ def best_service_offer(offers: list[Offer], need: Need) -> Offer | None:
         by.setdefault(kinds[id(o)], []).append(o)
     callouts = [o for o in by.get("callout", []) if o.price_eur is not None or o.price is not None]
     pick = None
+    if by.get("main"):
+        try:
+            from agora.judge import package_coverage, wedding_need, COVER_RANK
+            if wedding_need(need):
+                # a photographer's list (eval r5): 'Vihkiminen ja häämuotokuvat' €900 was the page's offer over its
+                # 'Koko päivän hääkuvaus' €1,800; the page's most complete package is what it offers for the day
+                cov = {id(o): COVER_RANK.get(package_coverage(o.title or "", o.raw.get("min_hours"))[0], 2)
+                       for o in by["main"] if (o.unit or "") == "job"}
+                if cov:
+                    best = max(cov.values())
+                    by["main"] = [o for o in by["main"] if cov.get(id(o), -1) == best] or by["main"]
+        except ImportError:
+            pass
     for kind in ("main", "premium", "callout", "task"):
         if by.get(kind):
             pick = _pick_tier(by[kind], need) if kind == "main" else min(
@@ -1697,7 +1710,61 @@ def _as_car(o: Offer, need: Need, facts: dict[str, Any], used: bool) -> Offer:
     if used and o.condition == "new":
         o.condition = "used"
     mark_colour(o, need, facts.get("colour_text"))
+    set_car_subtitle(o, facts.get("colour_text"))
     return o
+
+
+# eval r5 'volvo v70' / 'bright red car': list offers were bare 'Make Model' titles, so twenty 'Volvo V70' rows could
+# not be told apart. The car's own facts (year, km, fuel, gearbox, colour) ride along as a visible subtitle.
+_TEXT_KM = re.compile(r"(?<![\d.,])(\d{1,3}(?:[ \u00a0.,]\d{3})+|\d{1,6})\s?(tkm|km)\b", re.I)
+_TEXT_FUEL = re.compile(r"\b(diesel|bensiini|benzin|petrol|gasoline|hybridi?|plug-in(?:\s?hybrid)?|sähkö|sahko|"
+                        r"electric|elektro|kaasu|cng|lpg|e85)\b", re.I)
+_TEXT_GEARBOX = re.compile(r"\b(automaatti|automatic|automatik|aut\.|manuaali|manual|manuell|schaltgetriebe|dsg|"
+                           r"cvt)\b", re.I)
+
+
+def car_facts_from_text(text: str) -> dict[str, Any]:
+    """A car list row's own words -> {year, km, fuel, gearbox} (only what it states). For list reads that carry
+    no structured Car item (nettiauto's markdown split: '2012 · 182 000 km · Diesel · Manuaali')."""
+    facts: dict[str, Any] = {}
+    t = text or ""
+    if m := _YEAR_IN.search(t):
+        facts["year"] = int(m.group(1))
+    if m := _TEXT_KM.search(t):
+        n = int(re.sub(r"\D", "", m.group(1)) or 0)
+        facts["km"] = n * 1000 if m.group(2).lower() == "tkm" else n
+    if m := _TEXT_FUEL.search(t):
+        facts["fuel"] = m.group(1)
+    if m := _TEXT_GEARBOX.search(t):
+        facts["gearbox"] = m.group(1).rstrip(".")
+    return facts
+
+
+def car_subtitle(title: str, facts: dict[str, Any], colour: str | None = None) -> str:
+    """'2012 · 182 000 km · Diesel · Manuaali · Punainen': what tells one car of a list from the next (the bits
+    the title already says are left out)."""
+    low = (title or "").lower()
+    bits: list[str] = []
+    if facts.get("year") and str(facts["year"]) not in low:
+        bits.append(str(facts["year"]))
+    if isinstance(facts.get("km"), (int, float)) and facts["km"] > 0:
+        bits.append(f"{int(facts['km']):,} km".replace(",", " "))
+    for k in ("fuel", "gearbox"):
+        v = str(facts.get(k) or "").strip()
+        if v and v.lower() not in low:
+            bits.append(v)
+    if colour and colour.lower() not in low:
+        bits.append(colour)
+    return " · ".join(bits)[:120]
+
+
+def set_car_subtitle(o: Offer, colour_text: str | None = None) -> None:
+    """raw['subtitle'] from raw['vehicle'] and the car's colour (its own word, else the English one)."""
+    facts = o.raw.get("vehicle") if isinstance(o.raw.get("vehicle"), dict) else {}
+    colour = fence.clean_field(str(colour_text or ""))[:30] if colour_text else (o.raw.get("colour") or None)
+    sub = car_subtitle(o.title or "", facts, colour)
+    if sub:
+        o.raw["subtitle"] = sub
 
 
 def _itemlist_cars(data: dict[str, Any], page_url: str) -> dict[str, dict[str, Any]]:
@@ -1856,6 +1923,12 @@ FREE_PAGE_HARD_S = 9.5       # a batch still out at this point is dropped: the p
 HUNT_LISTING_CAP = 2000      # listings read from free marketplace pages per hunt (generic needs; resolve stays fast)
 # per hunt: [listings read so far, cap]; the hunt sets it (reads inherit the context), None = no cap
 HUNT_LISTINGS: contextvars.ContextVar[list[int] | None] = contextvars.ContextVar("agora_hunt_listings", default=None)
+# the hunt's 'reads stop here' clock (a callable -> monotonic time, or None): no new batch of result pages is started
+# when less than PAGE_START_MARGIN_S is left, a batch in flight is dropped at it, and one page's parse never runs
+# past PAGE_PARSE_CAP_S (eval r5, winter jacket women: big marketplace pages ran the hunt 10 s over its budget)
+HUNT_DEADLINE: contextvars.ContextVar[Any] = contextvars.ContextVar("agora_hunt_deadline", default=None)
+PAGE_START_MARGIN_S = 3.0
+PAGE_PARSE_CAP_S = 2.5
 _HOST_SEMS: dict[tuple[int, str], asyncio.Semaphore] = {}
 
 
@@ -1899,6 +1972,37 @@ async def _gather_until(coros: list[Any], t_end: float) -> list[Any]:
         else:
             out.append(t.result())
     return out
+
+
+def _time_left() -> float | None:
+    """Seconds until the hunt's reads stop (None: no hunt deadline)."""
+    fn = HUNT_DEADLINE.get()
+    try:
+        end = fn() if callable(fn) else fn
+    except Exception:
+        return None
+    return None if end is None else float(end) - time.monotonic()
+
+
+def _may_start_page() -> bool:
+    left = _time_left()
+    return left is None or left > PAGE_START_MARGIN_S
+
+
+def _batch_end(t0: float) -> float:
+    """When a batch of result pages is given up: the read's own hard limit or the hunt's reads end, if sooner."""
+    left = _time_left()
+    hard = t0 + FREE_PAGE_HARD_S
+    return hard if left is None else min(hard, time.monotonic() + max(0.5, left - 0.3))
+
+
+async def _parse_capped(fn: Any, *args: Any) -> Any:
+    """One page's parse in a worker thread, waited for at most PAGE_PARSE_CAP_S (None when it runs over: the page
+    is dropped, the pages parsed so far are kept)."""
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=PAGE_PARSE_CAP_S)
+    except TimeoutError:
+        return None
 
 
 def _budget_left() -> int | None:
@@ -2050,6 +2154,12 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
             o.raw["price_with_buyer_fee"] = row["price_with_fee"]     # vinted's buyer protection, as shown
         if row.get("text"):
             o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
+        if getattr(site, "vehicle", False):
+            # the car's facts from its row (year, km, fuel, gearbox): a visible subtitle, so the cars differ
+            facts = car_facts_from_text(f"{title} {row.get('text') or ''}")
+            if facts:
+                o.raw["vehicle"] = facts
+            set_car_subtitle(o)
         o.raw["market"] = market
         if cat_page := category_page(page_url):
             o.raw["category_page"] = dict(cat_page)
@@ -2142,19 +2252,24 @@ async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str
         """One results page -> offers: the site's own structured list first (Schibsted ItemList JSON-LD; the
         Next.js result JSON of marktplaats / 2dehands), else the HTML anchors. The anchors gave junk titles there
         ('Gå till annonsen', 'Product images, 1 of 2', whole cards with 'onderdelen' in the description)."""
-        if rec.get("itemlist"):
-            data = await asyncio.to_thread(_extruct, h, u)
-            items = offers_from_itemlist(data, url, need, hint, MAX_SPLIT_OFFERS)
-            if len(items) >= 3:
-                for o in items:
-                    o.raw["page"] = k
-                return items
-        if rec.get("next_data"):
-            rows = _src.rows_from_next_data(h, u, rec)
-            if len(rows) >= 3:
-                return _rows_to_offers(rows, url, need, hint, site, k)
-        return _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, k,
-                               html=h)
+        def parse() -> list[Offer]:
+            # the whole parse off the event loop (one big page no longer stalls every other read)
+            if rec.get("itemlist"):
+                items = offers_from_itemlist(_extruct(h, u), url, need, hint, MAX_SPLIT_OFFERS)
+                if len(items) >= 3:
+                    for o in items:
+                        o.raw["page"] = k
+                    return items
+            if rec.get("next_data"):
+                rows = _src.rows_from_next_data(h, u, rec)
+                if len(rows) >= 3:
+                    return _rows_to_offers(rows, url, need, hint, site, k)
+            return _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site,
+                                   k, html=h)
+
+        if k > 1:
+            return await _parse_capped(parse) or []
+        return await asyncio.to_thread(parse)     # page 1 is the source itself: parsed whatever it takes
 
     async with _host_sem(url):
         status, html = await fetch_html(url)
@@ -2184,9 +2299,10 @@ async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str
         return [o for o in got if o.url not in seen]
 
     n = 2
-    while n <= last and time.monotonic() - t0 < FREE_PAGE_TIME_S and (_budget_left() is None or _budget_left() > 0):
+    while n <= last and time.monotonic() - t0 < FREE_PAGE_TIME_S and (_budget_left() is None or _budget_left() > 0) \
+            and _may_start_page():
         batch = list(range(n, min(last, n + FREE_PAGE_CONCURRENCY - 1) + 1))
-        got = await _gather_until([one(k) for k in batch], t0 + FREE_PAGE_HARD_S)
+        got = await _gather_until([one(k) for k in batch], _batch_end(t0))
         stop = False
         for items in got:
             if isinstance(items, BaseException) or not items:
@@ -2228,15 +2344,16 @@ async def more_itemlist_pages(page_url: str, site: Any, need: Need, hint: str | 
             status, h = await fetch_html(u)
         if status != 200 or not h or looks_blocked(status, h):
             return []
-        data = await asyncio.to_thread(_extruct, h, u)
-        items = offers_from_itemlist(data, page_url, need, hint, MAX_SPLIT_OFFERS)
+        items = await _parse_capped(lambda: offers_from_itemlist(_extruct(h, u), page_url, need, hint,
+                                                                 MAX_SPLIT_OFFERS)) or []
         for o in items:
             o.raw["page"] = k
         return items
 
-    while n <= last and time.monotonic() - t0 < FREE_PAGE_TIME_S and (_budget_left() is None or _budget_left() > 0):
+    while n <= last and time.monotonic() - t0 < FREE_PAGE_TIME_S and (_budget_left() is None or _budget_left() > 0) \
+            and _may_start_page():
         batch = list(range(n, min(last, n + FREE_PAGE_CONCURRENCY - 1) + 1))
-        got = await _gather_until([one(k) for k in batch], t0 + FREE_PAGE_HARD_S)
+        got = await _gather_until([one(k) for k in batch], _batch_end(t0))
         stop = False
         for items in got:
             if isinstance(items, BaseException) or not items:
@@ -2485,6 +2602,20 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
         # ONE markdown read for a known marketplace's search page, cut into listings by code
         try:
             md, page = await scrape_markdown(url, site.country, max_age_ms)
+            if vehicle and getattr(site, "vehicle", False) and page and "ld+json" in page[:MAX_HTML].lower():
+                # the scrape's own HTML carries the cars' ItemList (nettiauto: year, km, fuel, gearbox, colour per
+                # car): every car with its facts, where the markdown rows give bare 'Make Model' titles (eval r5)
+                cars = car_page_offers(page, await asyncio.to_thread(_extruct, page, url), url, need, lane)
+                if len(cars) >= 3:
+                    market = note_market(url, site, md[:20000], len(cars))
+                    cat_page = category_page(url)
+                    for o in cars:
+                        o.raw["site"] = site.key
+                        o.raw["market"] = market
+                        o.read_via = "contextdev_markdown_split"
+                        if cat_page:
+                            o.raw["category_page"] = dict(cat_page)
+                    return listed(cars, "contextdev_markdown_split")
             items = offers_from_split(md, page, url, site, need, lane)
             if items:
                 return listed(items, "contextdev_markdown_split")
@@ -2719,6 +2850,13 @@ def _finish(offer: Offer, need: Need, search_title: str = "") -> Offer:
         offer.title = search_title.split(" | ")[0].strip()   # JSON-LD without a name: use the search title
     if need.kind == "product" and vehicle_need_of(need):
         mark_colour(offer, need)               # a colour asked ('bright red car'): marked per listing, never a filter
+        if not offer.raw.get("vehicle"):
+            # a dealer / aggregator list read (auto1, autouncle, carvago): the title's own year, km, fuel, gearbox
+            facts = car_facts_from_text(f"{offer.title} {offer.raw.get('row_text') or ''}")
+            if facts:
+                offer.raw["vehicle"] = facts
+        if not offer.raw.get("subtitle"):
+            set_car_subtitle(offer)
     if need.kind == "product" and offer.condition in ("used", "refurbished") and not offer.raw.get("grade"):
         # the seller's own grade ("Excellent (9)", "Like new", Back Market "Fair"), shutter count, battery health
         units.apply_grade(offer.raw, units.grade_info(offer.title, str(offer.raw.get("search_text") or ""),

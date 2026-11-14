@@ -68,6 +68,13 @@ def offer_payload(offer: Offer) -> dict[str, Any]:
     for k in ("grade", "grade_score", "shutter_count", "battery_health"):   # used-dealer condition, small
         if raw.get(k) is not None:
             d[k] = raw[k]
+    if raw.get("subtitle"):
+        # a car's year / km / fuel / gearbox / colour (eval r5: twenty bare 'Volvo V70' rows): its own field, and
+        # in the shown title too, so list cars can be told apart wherever the title is drawn
+        d["subtitle"] = str(raw["subtitle"])
+        d["title"] = f"{offer.title} · {d['subtitle']}"
+        if isinstance(raw.get("vehicle"), dict):
+            d["vehicle"] = dict(raw["vehicle"])
     d["origin"] = _origin(offer)
     return d
 
@@ -705,6 +712,11 @@ async def hunt(
     if budget_s is True:
         budget_s = _budget_default()
     deadline = t0 + float(budget_s) if budget_s else None
+
+    def reads_end() -> float | None:
+        """When page reads stop: the budget minus the time resolving, judging and checking the pick take for the
+        offers read so far (eval r5: 2,164 offers finished 10 s after a 25 s budget)."""
+        return None if deadline is None else deadline - finish_reserve(len(out.offers), budget_s)
     if resolve is None:
         resolve = getattr(_module("resolve"), "resolve", None) or _fallback_resolve
     base_resolve = resolve
@@ -727,6 +739,8 @@ async def hunt(
     rd_mod = _module("reader")
     if rd_mod is not None and hasattr(rd_mod, "READ_DEPTH"):
         rd_mod.READ_DEPTH.set(depth)    # read tasks created below inherit it: more free tori pages
+    if rd_mod is not None and hasattr(rd_mod, "HUNT_DEADLINE"):
+        rd_mod.HUNT_DEADLINE.set(reads_end)   # reads stop starting new result pages near it (inherited by reads)
     if rd_mod is not None and hasattr(rd_mod, "HUNT_LISTINGS"):
         # free marketplace listings for the whole hunt (a generic need reads category pages deep): one shared cap
         rd_mod.HUNT_LISTINGS.set([0, int(rd_mod.HUNT_LISTING_CAP * (1 + 0.5 * (depth - 1)))])
@@ -909,8 +923,8 @@ async def hunt(
                 left = limit + min(waited(queued), MAX_QUEUE_ALLOWANCE) - (now - start)
                 if wall is not None:
                     left = min(left, wall - (now - start))
-                if deadline is not None:
-                    left = min(left, deadline - now)
+                if (end := reads_end()) is not None:
+                    left = min(left, end - now)
                 if left <= 0:
                     raise TimeoutError
                 done, _ = await asyncio.wait({task}, timeout=min(left, 1.0) if queued[1] else left)
@@ -934,7 +948,8 @@ async def hunt(
             (FETCH_MEMO.get() or {}).pop(url, None)      # free: JSON-LD, or a service rate stated in the snippet
             return got, q1
         t = time.monotonic()
-        left = None if deadline is None else deadline - t
+        end = reads_end()
+        left = None if end is None else end - t
         if left is not None and left <= 0:
             raise TimeoutError
         dv = _module("discover")
@@ -984,7 +999,8 @@ async def hunt(
         except TimeoutError:
             was_slow = slow.is_slow(_domain(url)) and url not in direct_pages
             limit = read_timeout if url in direct_pages else slow.timeout_for(_domain(url), read_timeout)
-            over_budget = deadline is not None and time.monotonic() >= deadline - 0.05
+            end = reads_end()
+            over_budget = end is not None and time.monotonic() >= end - 0.05
             if not over_budget:           # running out of hunt time says nothing about the domain
                 slow.record(_domain(url), timed_out=True)
             why = (f"hunt budget {budget_s:.0f}s reached" if over_budget else f"timeout after {limit:.0f}s"
@@ -1150,7 +1166,7 @@ async def hunt(
 
     async def longtail_lane() -> None:
         try:
-            async for item in lt_mod.lane(need, deadline=deadline, seen_urls=seen):
+            async for item in lt_mod.lane(need, deadline=reads_end(), seen_urls=seen):
                 if isinstance(item, Offer):
                     await accept(item.url, item)
                 else:
@@ -1221,7 +1237,8 @@ async def hunt(
     prefetch_trust()               # pages that landed after the provisional verdict (cache skips the rest)
     if trust_tasks:
         try:
-            await asyncio.wait_for(asyncio.gather(*trust_tasks, return_exceptions=True), timeout=3.5)
+            await asyncio.wait_for(asyncio.gather(*trust_tasks, return_exceptions=True),
+                                   timeout=_finish_slice(deadline, 3.5, keep=finish_reserve(len(out.offers), budget_s) - 1.0))
         except TimeoutError:
             pass                   # late lookups keep filling the cache in their threads
 
@@ -1239,7 +1256,11 @@ async def hunt(
     rel_mod = _module("relevance")
     if rel_mod is not None:
         try:
-            await rel_mod.prefetch(service_view(need), out.offers)
+            if deadline is not None and _accepts(rel_mod.prefetch, "timeout"):
+                await rel_mod.prefetch(service_view(need), out.offers,
+                                       timeout=_finish_slice(deadline, 2.5, keep=finish_reserve(len(out.offers), budget_s) - 2.0))
+            else:
+                await rel_mod.prefetch(service_view(need), out.offers)
         except Exception:
             pass
     things: list[Thing] = []
@@ -1304,7 +1325,13 @@ async def hunt(
     # 5b CHECK THE PICK: the top marketplace candidates' own pages (free fetch), description scanned for red flags
     if judged and check_pick and not is_service(need):
         try:
-            verdict, checks = await verify_pick(need, things, verdict, judge_all)
+            if deadline is not None:
+                # the pick check never runs the hunt past its budget: what is left of it, at least a second
+                verdict, checks = await verify_pick(need, things, verdict, judge_all,
+                                                    budget_s=_finish_slice(deadline, PICK_CHECK_BUDGET_S, keep=0.8,
+                                                                           floor=1.0))
+            else:
+                verdict, checks = await verify_pick(need, things, verdict, judge_all)
         except Exception as exc:
             checks = []
             yield ev("error", where="pick_check", message=f"{type(exc).__name__}: {exc}"[:300])
@@ -1332,10 +1359,14 @@ async def hunt(
     yield ev("verdict", verdict=final, **extra)
 
     if persist:
-        try:
-            await asyncio.to_thread(_persist, need, out.offers, things)
-        except Exception:
-            pass
+        if deadline is not None:
+            # the price history write (2 s for 2,000 offers) never holds the stream open past the verdict
+            _background(asyncio.to_thread(_persist, need, list(out.offers), list(things)))
+        else:
+            try:
+                await asyncio.to_thread(_persist, need, out.offers, things)
+            except Exception:
+                pass
 
     # 6 BUDGET
     ledger1 = _ledger()
@@ -1364,6 +1395,41 @@ async def hunt(
         out.budget["credit_eur_basis"] = f"{delta['credits_used']:g} credits x €{per_credit:g} (AGORA_EUR_PER_CREDIT)"
     yield ev("budget", **out.budget)
     yield ev("done", ms=int((time.monotonic() - t0) * 1000))
+
+
+# ---------- the hunt budget covers the whole hunt, not just the page reads ----------
+
+FINISH_BASE_S = 1.0          # resolve + judge + verdict of a small hunt
+FINISH_PER_OFFER_S = 0.0025  # ... and per offer read (2,000 offers: ~6 s incl. the pick check)
+FINISH_MAX_S = 6.0
+_BACKGROUND: set[asyncio.Task[Any]] = set()
+
+
+FINISH_SHARE = 0.25          # ... never more than this share of the budget
+
+
+def finish_reserve(n_offers: int, budget_s: float | None = None) -> float:
+    """Seconds kept at the end of the hunt budget for everything after the reads, by the number of offers."""
+    r = min(FINISH_MAX_S, FINISH_BASE_S + FINISH_PER_OFFER_S * max(0, n_offers))
+    return min(r, FINISH_SHARE * float(budget_s)) if budget_s else r
+
+
+def _finish_slice(deadline: float, cap: float, *, keep: float = 0.0, floor: float = 0.2) -> float:
+    """A post-read step's wait: at most `cap`, and only what is left of the budget after `keep` seconds for the
+    steps after it (never under `floor`)."""
+    return max(floor, min(cap, deadline - time.monotonic() - max(0.0, keep)))
+
+
+def _background(coro: Awaitable[Any]) -> None:
+    """Run a write after the stream ends (kept referenced so it is not garbage-collected mid-way)."""
+    async def run() -> None:
+        try:
+            await coro
+        except Exception:
+            pass
+    t = asyncio.ensure_future(run())
+    _BACKGROUND.add(t)
+    t.add_done_callback(_BACKGROUND.discard)
 
 
 # ---------- pick check: read the would-be pick's own page before the verdict is final ----------

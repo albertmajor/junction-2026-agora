@@ -34,6 +34,7 @@ import functools
 import re
 import statistics
 import time
+import unicodedata
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -839,7 +840,8 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
         flags.append(f"too good to be true: {fmt(p)} is under a quarter of this item's going price "
                      f"({fmt(floor / SCALE_FLOOR)} median): probably a part, an accessory or a misread")
     # services: an hourly rate is compared with hourly rates, never with a €3/m² line
-    same = market_prices([x for x in pool if x.unit == o.unit] if o.condition == "service" else pool, cond)
+    same = market_prices([x for x in pool if x.unit == o.unit and x.raw.get("coverage") == o.raw.get("coverage")]
+                         if o.condition == "service" else pool, cond)
     med_same = _median(same)
     # services: a 'median' of 2 job prices (a €15 surcharge line and an €80 estimate) is no market
     if p and med_same and len(same) >= (3 if o.condition == "service" else 2) and not _disputed(o) \
@@ -1036,10 +1038,21 @@ def price_band(thing: Thing, *, history: bool = True, now: float | None = None) 
         b = band_for(thing.offers, cond, unit=unit, history=history, now=now)
         if b:
             out[cond if unit is None else f"{cond}/{unit}"] = b
+    # event packages: one band per coverage (a full day is never 'high' against ceremony-only packages)
+    covers = {o.raw.get("coverage") for o in thing.offers if o.condition == "service" and "coverage" in o.raw}
+    for cov in covers:
+        group = [o for o in thing.offers if o.condition == "service" and "coverage" in o.raw
+                 and o.raw.get("coverage") == cov]
+        b = band_for(group, "service", unit="job", history=history, now=now)
+        if b:
+            b["coverage"] = COVER_WORDS.get(cov, "coverage not stated")
+            out[f"service/job/{cov}"] = b
     return out
 
 
 def _band_key(o: Offer) -> str:
+    if o.condition == "service" and "coverage" in o.raw:
+        return f"service/job/{o.raw.get('coverage')}"
     return o.condition if o.condition != "service" or not o.unit else f"{o.condition}/{o.unit}"
 
 
@@ -1074,6 +1087,8 @@ def _band_what(o: Offer) -> str:
     """What the band is about, in words: 'used', 'new', or for services 'hourly rate' / 'price per m²'."""
     if o.condition != "service":
         return o.condition
+    if "coverage" in o.raw:
+        return f"price per package ({COVER_WORDS.get(o.raw.get('coverage'), 'coverage not stated')})"
     return {"hour": "hourly rate", "m2": "price per m²", "job": "price per job", "visit": "price per visit"}.get(
         (o.unit or "").lower(), "service price")
 
@@ -1612,17 +1627,63 @@ def _dedupe_service(offers: list[Offer]) -> list[Offer]:
             same_provider.add(pk)
         # one restaurant / provider listed by several aggregators (live, lunch: UniCafe Kaivopiha 4 times on
         # lounasmenu.fi, luncher.fi and lunchmenu.fi): one row, its lowest price
-        sk = (re.sub(r"\W+", " ", (o.seller or "").lower()).strip(), re.sub(r"\W+", " ", (o.location or "").lower()).strip())
+        # (eval r5: €8.70 at luncher.fi and €9.80 at lunchmenu.fi were two rows): ONE offer, the lower price, with
+        # every site that lists it in raw['also_at'] and a note saying so
+        sk = (_seller_key(o.seller or ""), (o.unit or "").lower())
         if sk[0] and len(sk[0]) >= 4 and any(h in (o.source or "") for h in AGGREGATOR_HOSTS):
             prev = by_seller.get(sk)
-            if prev is not None:
-                if (o.price_eur or 1e9) < (prev.price_eur or 1e9):
+            if prev is not None and _same_place(prev, o):
+                keep, drop = (o, prev) if (o.price_eur or 1e9) < (prev.price_eur or 1e9) else (prev, o)
+                if keep is o:
                     out[next(i for i, x in enumerate(out) if x is prev)] = o
                     by_seller[sk] = o
+                _note_also_at(keep, drop)
                 continue
-            by_seller[sk] = o
+            if prev is None:
+                by_seller[sk] = o
         out.append(o)
+    for o in out:
+        others = [x for x in o.raw.get("also_at") or [] if x.get("source") != o.source]
+        if others:
+            o.raw["merged_sources"] = sorted({o.source, *(x["source"] for x in others)})
     return out
+
+
+def also_at_note(o: Offer) -> str | None:
+    """'same place also listed at lunchmenu.fi for €9.80: the lower price shown' (a merged aggregator duplicate)."""
+    dear = {}
+    for x in o.raw.get("also_at") or []:
+        if x.get("source") != o.source and (x.get("price_eur") or 0) > (o.price_eur or 0) + 0.004:
+            dear.setdefault(x["source"], x)
+    if not dear:
+        return None
+    return ("same place also listed at " + ", ".join(f"{x['source']} for {fmt(x['price_eur'])}"
+                                                     for x in list(dear.values())[:3]) + ": the lower price shown")
+
+
+def _seller_key(name: str) -> str:
+    """'UniCafe Kaivopiha' / 'Unicafe Kaivopiha' / 'Lunch – UniCafe Kaivopiha' -> 'unicafe kaivopiha'."""
+    t = re.sub(r"\W+", " ", unicodedata.normalize("NFKD", name.lower())).strip()
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    return re.sub(r"^(?:lunch|lounas|ravintola|restaurant|cafe)\s+(?=\w{4})", "", t).strip()
+
+
+def _same_place(a: Offer, b: Offer) -> bool:
+    """Two aggregator rows of one name are one place unless both state different towns ('Fazer Food & Co' in
+    Helsinki and in Tampere are two)."""
+    la, lb = (_seller_key(x.location or "") for x in (a, b))
+    if not la or not lb or la == lb or la in lb or lb in la:
+        return True
+    ta, tb = la.split()[-1], lb.split()[-1]
+    return ta == tb
+
+
+def _note_also_at(keep: Offer, drop: Offer) -> None:
+    seen = keep.raw.setdefault("also_at", [])
+    for x in [{"source": drop.source, "url": drop.url, "price_eur": drop.price_eur},
+              *(drop.raw.get("also_at") or [])]:
+        if x.get("url") != keep.url and all(y.get("url") != x.get("url") for y in seen):
+            seen.append(x)
 
 
 def _merge_net_gross(offers: list[Offer]) -> list[Offer]:
@@ -1672,6 +1733,8 @@ def deduction_back(gross_labour: float, other_work_this_year: float = 0.0) -> fl
 NOT_COMPARABLE = {"fee": "a fee or surcharge, not a price for the job",
                   "off_topic": "a different service",
                   "task": "price for one specific task, not a standard call",
+                  "workshop_task": "a price for one specific job (e.g. threading, deactivation), not the hourly "
+                                   "rate",
                   "callout": "call-out / visit fee only, labour extra",
                   "premium": "emergency / urgent / weekend rate, not the standard price",
                   "extra": "an add-on line (extra hour, gallery, album), not the package",
@@ -1693,6 +1756,66 @@ DAY_COVERAGE = re.compile(r"vihki\w*|ceremony|seremonia|dokumentaar\w*|documenta
                           r"paketti|package|basic|perus|klassinen|premium", re.I)
 TRAVEL_PER_KM = re.compile(r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)\s*/\s*km|(?:km|kilometri)\w*\s*(?:korvaus|fee|charge)?"
                            r"\s*:?\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)", re.I)
+
+
+# eval r5 'wedding photographer helsinki': a €550 package of unknown length won over €1,500 full-day ones, which were
+# flagged '2.7x median'. A package's coverage (hours / full day / ceremony only) is read from its own line, and
+# packages are compared with packages of the same coverage.
+COVER_FULL = re.compile(r"koko\s+(?:hää)?päiv\w*|koko\s+(?:haa)?paiv\w*|full[- ]?day|whole\s+day|all[- ]day|"
+                        r"ganztag\w*|ganze[nr]?\s+tag|hele\s+dag|heldag\w*|pitkä\s+hääpäivä|pitka\s+haapaiva|"
+                        r"long\s+(?:wedding\s+)?day|getting\s+ready\s+(?:to|until|till)\s+(?:the\s+)?(?:first\s+)?"
+                        r"dance|aamusta\s+iltaan|from\s+morning", re.I)
+COVER_PART = re.compile(r"lyhyt\s+hääpäivä|lyhyt\s+haapaiva|short\s+(?:wedding\s+)?day|half[- ]day|puol\w*\s+päiv\w*|"
+                        r"puol\w*\s+paiv\w*|halbtag\w*|halbe[nr]?\s+tag|halve\s+dag|halvdag\w*|mini\s*-?paketti|"
+                        r"minipaketti|mini\s+package", re.I)
+COVER_CEREMONY = re.compile(r"vihki\w*|ceremony|seremonia\w*|trauung|standesamt\w*|maistraat\w*|elope\w*|"
+                            r"registry\s+office|vigsel\w*|bryllupsceremoni|ceremonie", re.I)
+COVER_HOURS = re.compile(r"\b(\d{1,2}(?:[.,]5)?)\s*(?:-|–)?\s*(?:h|t|tuntia|tunnin|tunti|hours?|hrs?|stunden|std|uur|"
+                         r"timmar|timer|heures)\b", re.I)
+COVER_RANK = {"full_day": 4, "part_day": 3, None: 2, "ceremony": 1, "portraits": 0}
+COVER_WORDS = {"full_day": "full day", "part_day": "part of the day", "ceremony": "ceremony / short",
+               "portraits": "portraits only", None: "coverage not stated"}
+
+
+def package_coverage(title: str, hours: Any = None) -> tuple[str | None, float | None]:
+    """(group, hours) of an event package from its own line: 'full_day' (>= 7 h or 'koko päivä'), 'part_day'
+    (3-6.5 h, 'lyhyt hääpäivä'), 'ceremony' (<= 2.5 h, 'vihkiminen', 'elopement'), 'portraits' (a portrait session
+    with no ceremony or hours), None when the line does not say. hours: the line's own stated hours (min_hours)."""
+    t = title or ""
+    h: float | None = None
+    if m := COVER_HOURS.search(t):
+        h = float(m.group(1).replace(",", "."))
+    elif isinstance(hours, (int, float)) and 0.5 <= hours <= 16:
+        h = float(hours)
+    if h is not None and not 0.5 <= h <= 16:
+        h = None
+    if COVER_FULL.search(t) or (h is not None and h >= 7):
+        return "full_day", h
+    if COVER_PART.search(t) or (h is not None and h >= 3):
+        return "part_day", h
+    if COVER_CEREMONY.search(t) or (h is not None and h < 3):
+        return "ceremony", h
+    if PORTRAIT_ONLY.search(t):
+        return "portraits", h
+    return None, h
+
+
+def wedding_need(need: Need) -> bool:
+    return bool(JOB_HOURS[0][0].search(f"{need.thing} {(need.category or {}).get('label') or ''}"))
+
+
+def mark_coverage(need: Need, offers: list[Offer]) -> None:
+    """raw['coverage'] / raw['coverage_hours'] on each package of a wedding need (before any median is taken)."""
+    wedding = wedding_need(need)
+    for o in offers:
+        o.raw.pop("coverage", None)
+        o.raw.pop("coverage_hours", None)
+        if not wedding or (o.unit or "") != "job":
+            continue
+        group, h = package_coverage(o.title or "", o.raw.get("min_hours"))
+        o.raw["coverage"] = group
+        if h is not None:
+            o.raw["coverage_hours"] = h
 
 
 def portrait_only(o: Offer, need: Need) -> bool:
@@ -1829,7 +1952,15 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         return None
     kind = o.raw.get("line_kind") or resolve.service_line_kind(need, o.title or "", o.unit)
     trade = resolve.is_open_trade(need)
-    if kind in ("fee", "off_topic", "premium", "extra") or (trade and kind in ("task", "callout")):
+    workshop = resolve.is_workshop_trade(need)
+    if workshop and unit in ("job", "visit") and kind in ("main", "task"):
+        # the firm's own name is no job ('Aseseppä Timo Taskinen' €60 is a general price, not a task)
+        kind = "main" if resolve.generic_trade_line(need, o.title or "", o.source or "", o.seller or "") else "task"
+        o.raw["line_kind"] = kind
+    if workshop and kind == "task":
+        o.raw["not_comparable"] = NOT_COMPARABLE["workshop_task"]
+        return None
+    if kind in ("fee", "off_topic", "premium", "extra") or ((trade or workshop) and kind in ("task", "callout")):
         # not a price for the asked job: shown as 'other prices', never compared
         o.raw["not_comparable"] = NOT_COMPARABLE.get(kind, kind)
         return None
@@ -1870,7 +2001,15 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         if first:
             nxt = next((float(x["price_eur"]) for x in o.raw.get("other_prices") or []
                         if x.get("price_eur") and FOLLOWING_HOUR.search(x.get("title") or "")), None)
-        if trade:
+        if workshop:
+            # you bring the item in: a standard workshop job is the stated rate x WORKSHOP_HOURS (a stated
+            # minimum counts), never a call-out
+            hours = max(resolve.WORKSHOP_HOURS, float(mh) if isinstance(mh, (int, float)) and 0.5 <= mh <= 12
+                        else 0.0)
+            conf = "low"
+            o.raw["area_rate_source"] = "assumed"
+            label = f"{fmt(rate)}/h{tier} x {hours:g} h (standard workshop job, est.)"
+        elif trade:
             hours = floor
             conf = "low"
             o.raw["area_rate_source"] = "assumed"
@@ -1913,19 +2052,41 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
                 if "first hour only" not in " ".join(o.flags):
                     o.flags.append("first hour only: the whole job costs more (rate for further hours not stated)")
         o.raw["job_hours"] = hours
-        if typical and not size and not trade:
+        if typical and not size and not trade and not workshop:
             o.raw["job_what"] = typical[1]
     elif unit == "m2" and size:
         label, sticker = f"{fmt(rate)}/m²{tier} x {size:g} m²", rate * size
         calc = f"{fmt_rate(rate)}/m² × {size:g} m²"
     elif unit == "m2":
         return None
+    elif workshop and not BUNDLE_HOURS.search(o.title or ""):
+        # 'Aseseppä palvelut' €60 with nothing on what it buys: a starting price ('services from'), shown with a
+        # note and ranked after the hourly rates x a standard job (eval r5: it was the pick over €75-108/h shops)
+        label, sticker = f"from {fmt(rate)} (starting price; what the job includes is not stated)", rate
+        calc = f"from {fmt_rate(rate)}"
+        conf = "low"
+        o.raw["starting_price"] = True
+        o.raw["partial_job"] = True
+        basis.append("a starting price ('services from'): the real job may cost more; ask what it covers")
+        if not any(f.startswith("starting price") for f in o.flags):
+            o.flags.append(f"starting price ('from {fmt(rate)}'): what it covers is not stated; ranked after "
+                           "hourly rates x a standard job")
     else:
         label, sticker = f"{fmt(rate)} per {unit}{tier}", rate
         bundle = BUNDLE_HOURS.search(o.title or "")
         calc = (f"{bundle.group(1).replace(',', '.')} h for {fmt(rate)}" if bundle else f"fixed price per {unit}")
+        if "coverage" in o.raw:
+            # a package: what it covers, and per covered hour when the hours are stated (like with like)
+            cov, ch = o.raw.get("coverage"), o.raw.get("coverage_hours")
+            what = COVER_WORDS.get(cov, "coverage not stated") + (f", {ch:g} h" if isinstance(ch, (int, float)) else "")
+            label = f"{fmt(rate)} per package{tier} ({what})"
+            if isinstance(ch, (int, float)) and ch > 0:
+                o.raw["per_covered_hour"] = round(rate / ch, 2)
+                basis.append(f"covers {ch:g} h: {fmt(rate / ch)} per covered hour")
+            elif cov is None:
+                basis.append("the package does not say how many hours it covers: ask before comparing")
     receipt.append((label, round(sticker, 2)))
-    callout = stated_callout(o, need)
+    callout = None if workshop else stated_callout(o, need)
     extras = float(callout) if isinstance(callout, (int, float)) and callout >= MIN_CALLOUT_EUR else 0.0
     est_callout = o.raw.get("est_callout_fee") if trade and callout is None else None
     o.raw.pop("assumed_terms", None)
@@ -1949,6 +2110,9 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
     if resolve.is_deal(o):
         o.raw["deal"] = True
         basis.append("deal / voucher price: check its conditions (often first booking only)")
+    if workshop and unit == "hour":
+        basis.append(f"estimate: a standard workshop job of {hours:g} h at the stated hourly rate; you bring the "
+                     "item in, so no call-out fee")
     if trade:
         used_h = hours if unit == "hour" else resolve.TRADE_HOURS
         basis.append(f"estimate: a standard call of {used_h:g} h labour at the stated hourly rate"
@@ -2420,6 +2584,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         for o in t.offers:
             _gross_up(o, need, o.raw.get("page_deduction_rate"))
         _estimate_missing_minimums(need, t.offers)
+        mark_coverage(need, t.offers)
     else:
         t.offers[:] = _merge_same_page(t.offers)
     mixed = _mixed(need, t)
@@ -2449,6 +2614,8 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                                           own_shop=own)
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
+            o.flags.append(note)
+        if note := also_at_note(o):
             o.flags.append(note)
         if o.raw.get("with_lens"):
             o.flags.append("with a lens (you asked for the body only): ranked after body-only offers")
@@ -2515,6 +2682,49 @@ def _apart(o: Offer, why: str) -> None:
 ONE_OFF_JOB_OK = re.compile(r"m2|m²|neliö\w*|sqm|\d\s*(?:-|–)?\s*(?:huone|room|zimmer|kamer)", re.I)
 
 
+def _rank_by_coverage(packages: list[Offer]) -> None:
+    """Like with like for event packages: the most complete coverage any package states (a full day, else part of
+    the day) is what is compared; shorter stated packages (ceremony only, 2 h) are shown and ranked after it, as is
+    a package of unstated length priced like a short one (under 60% of the full-coverage packages' median)."""
+    stated = [o for o in packages if o.raw.get("coverage") in ("full_day", "part_day")]
+    if not stated:
+        return
+    top = max(COVER_RANK[o.raw.get("coverage")] for o in stated)
+    top_group = [o for o in stated if COVER_RANK[o.raw.get("coverage")] == top]
+    med = statistics.median(price_of(o) or 0 for o in top_group)
+    top_words = COVER_WORDS["full_day" if top == COVER_RANK["full_day"] else "part_day"]
+    for o in packages:
+        cov = o.raw.get("coverage")
+        if COVER_RANK.get(cov, 2) >= top:
+            continue
+        short = cov is not None or (len(top_group) >= 2 and (price_of(o) or 0) < 0.6 * med)
+        if not short:
+            continue
+        o.raw["partial_job"] = True
+        what = COVER_WORDS.get(cov, "coverage not stated")
+        h = o.raw.get("coverage_hours")
+        o.flags.append(f"{what}{f' ({h:g} h)' if isinstance(h, (int, float)) else ''}"
+                       + (", priced like a short package" if cov is None else "")
+                       + f": ranked after {top_words} packages")
+
+
+def coverage_lines(offers: list[Offer]) -> list[str]:
+    """'typical by coverage: full day €1,800-€2,400 (4 packages); ceremony / short €700-€900 (3)'."""
+    groups: dict[str | None, list[float]] = {}
+    for o in offers:
+        if "coverage" in o.raw and o.true_cost is not None and (p := price_of(o)):
+            groups.setdefault(o.raw.get("coverage"), []).append(p)
+    if len(groups) < 2 and None in groups:
+        return []
+    bits = []
+    for cov in sorted(groups, key=lambda c: -COVER_RANK.get(c, 2)):
+        xs = sorted(groups[cov])
+        rng = (f"{fmt(_quantile(xs, 0.25))}-{fmt(_quantile(xs, 0.75))}" if len(xs) >= 3
+               else f"{fmt(xs[0])}" + (f"-{fmt(xs[-1])}" if len(xs) > 1 else ""))
+        bits.append(f"{COVER_WORDS.get(cov, 'coverage not stated')} {rng} ({len(xs)} package{'s' * (len(xs) != 1)})")
+    return [f"typical by coverage: {'; '.join(bits)}"]
+
+
 def _separate_unlike(need: Need, offers: list[Offer]) -> None:
     """Like with like in a service comparison:
     - a wedding (a day's work): packages are compared with packages; hourly rates x an assumed 8 h are listed
@@ -2532,6 +2742,7 @@ def _separate_unlike(need: Need, offers: list[Offer]) -> None:
             for o in owned:
                 if (o.unit or "") == "hour":
                     _apart(o, "hourly_vs_package")
+        _rank_by_coverage(packages)
         return
     if resolve.service_group(need) is not resolve.CLEANING_GROUP or resolve.is_open_trade(need):
         return
@@ -2894,6 +3105,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
                 r = min(regular, key=lambda o: o.true_cost.per_month_eur)  # type: ignore[union-attr]
                 lines.insert(0, f"without a deal: {fmt(r.true_cost.total_eur)} at {r.source}"  # type: ignore[union-attr]
                              + (f", {r.raw['calc']}" if r.raw.get("calc") else ""))
+        if dup := also_at_note(best_tc):
+            lines.append(f"{_who(best_tc)}: {dup}")
         others = [x for x in best_tc.raw.get("other_prices") or [] if x.get("price_eur")]
         if others:
             lines.append(f"other prices at {best_tc.source}: " + ", ".join(
@@ -2905,15 +3118,31 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
                          f"{fmt(best_tc.raw.get('deduction_alone_eur') or 0)} back")
         apart = [o for o in priced if o.true_cost is None and o.raw.get("not_comparable")
                  and not (quote and o.raw.get("estimate"))]
+        jobs = [o for o in apart if o.raw.get("not_comparable") == NOT_COMPARABLE["workshop_task"]]
+        if jobs:
+            # a workshop's prices for specific jobs (gunsmith: threading, deactivation): their own list, never ranked
+            lines.append("other prices (specific jobs, not ranked against hourly rates): " + ", ".join(
+                f"{(o.title or '')[:40]} {fmt(o.price_eur or 0)} ({o.source})"
+                for o in sorted(jobs, key=lambda x: x.price_eur or 0)[:5]))
+            apart = [o for o in apart if all(o is not j for j in jobs)]
         if apart:
             why = sorted({o.raw["not_comparable"] for o in apart})
             shown = ", ".join(f"{o.source} {fmt(o.price_eur or 0)} ({(o.title or '')[:30]})" for o in apart[:3])
             lines.append(f"{len(apart)} more not compared ({'; '.join(why)}): {shown}")
+        apart += jobs
         partial = [o for o in priced if o.raw.get("partial_job") and all(o is not x for x in apart)]
+        starting = [o for o in partial if o.raw.get("starting_price")]
+        if starting:
+            lines.append(f"{len(starting)} starting price{'s' * (len(starting) != 1)} with no job named ("
+                         + ", ".join(f"from {fmt(o.price_eur or 0)} at {o.source}" for o in starting[:3])
+                         + "): ranked after hourly rates x a standard job; ask what they cover")
+            partial = [o for o in partial if not o.raw.get("starting_price")]
         if partial:
             # live, wedding photographer: twelve portrait-only packages were '12 more offers without a clear unit'
             lines.append(f"{len(partial)} portrait-only or partial package{'s' * (len(partial) != 1)}, ranked after "
                          f"full packages")
+        if wedding_need(need):
+            lines += coverage_lines(priced)
         no_unit = len([o for o in priced if o.true_cost is None and all(o is not x for x in apart)
                        and all(o is not x for x in partial)])
         if no_unit:
@@ -2962,6 +3191,9 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         lines[0:0] = skipped_lines(priced)
         if colour_line:
             lines.insert(0, colour_line)
+        if _vehicle(need) and best_all.raw.get("subtitle"):
+            # which car the price buys: year, km, fuel, gearbox, colour (eval r5: a bare 'Subaru Outback')
+            lines.insert(0, f"the car: {best_all.title} · {best_all.raw['subtitle']}")
         if colour_unknown:
             headline = headline.rstrip(".") + "; colour not confirmed."
         if ref is not None:
