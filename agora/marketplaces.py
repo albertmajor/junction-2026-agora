@@ -759,7 +759,7 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
                 cp = None
             if cp is not None and (cp.exact or tree):
                 url, cat_node, exact = cp.url, cp.node, cp.exact
-                q = cp.query or q
+                q = cp.query
                 _remember(CATEGORY_PAGES, url, {"node": cp.node, "need_node": node, "exact": cp.exact,
                                                 "site": s.key})
         if generic and not paid:

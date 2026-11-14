@@ -23,6 +23,7 @@ import json
 import pathlib
 import re
 from functools import lru_cache
+from typing import Any
 from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlunsplit
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -232,10 +233,22 @@ def seed_records() -> list[dict]:
 
 # --------------------------------------------------------------------------- runtime API
 
+# hand fixes for listing-link patterns the onboarding guessed wrong (coverage audit, 14 Nov): kleinanzeigen's
+# '^/[^/]+/[^/]*\d{3,}' matched the category menu (/s-immobilien/c195) and missed most listings
+# (/s-anzeige/ps5-slim/3568005049-279-3214: no 3 digits in the slug), so a page of 27 listings gave ~2 rows
+LISTING_FIX = {
+    "kleinanzeigen.de": r"^/s-anzeige/[^/?#]+/\d{6,}",
+}
+
+
 @lru_cache(maxsize=1)
 def _load_cached(path: str, mtime: float) -> tuple[dict, ...]:
     data = json.loads(pathlib.Path(path).read_text())
-    return tuple(data.get("sources", data) if isinstance(data, dict) else data)
+    rows = data.get("sources", data) if isinstance(data, dict) else data
+    for r in rows:
+        if r.get("domain") in LISTING_FIX:
+            r["listing"] = LISTING_FIX[r["domain"]]
+    return tuple(rows)
 
 
 def load(path: str | pathlib.Path | None = None) -> list[dict]:
@@ -346,6 +359,12 @@ def for_url(url: str, path: str | pathlib.Path | None = None) -> dict | None:
     return best
 
 
+# screen-reader / button text inside a listing link, not part of the title ('Bewaren in Mijn Favorieten Sony PS5')
+TITLE_JUNK = re.compile(r"\b(?:Bewaren in Mijn Favorieten|Opslaan als favoriet|Zu Favoriten hinzufügen|"
+                        r"Merkliste|Lisää suosikkeihin|Spara som favorit|Add to favou?rites|"
+                        r"Product images?,? \d+ (?:of|/) \d+|Tuotekuva\w*,? \d+ / \d+)", re.I)
+
+
 def rows_from_html(page: str, page_url: str, src: dict, max_rows: int = 25) -> list[dict]:
     """Cut a plainly fetched results page into listings with code (no model, no Context.dev):
     [{title, url, price, currency, text}], one per distinct listing URL matching the source's `listing` regex.
@@ -373,11 +392,12 @@ def rows_from_html(page: str, page_url: str, src: dict, max_rows: int = 25) -> l
     for i, (start, end, u, attrs, inner) in enumerate(anchors):
         nxt = next((a[0] for a in anchors[i + 1:] if a[2] != u), len(page))
         text = D.visible_text(page[start:min(nxt, start + 6000)])
-        title = D.visible_text(inner).strip()
+        title = TITLE_JUNK.sub(" ", D.visible_text(inner)).strip()
         if not title:
             t = re.search(r"""\b(?:title|aria-label)\s*=\s*["']([^"']+)""", attrs) or \
                 re.search(r"""<img\b[^>]*\balt\s*=\s*["']([^"']+)""", inner, re.I)
-            title = _html.unescape(t.group(1)).strip() if t else ""
+            title = TITLE_JUNK.sub(" ", _html.unescape(t.group(1))).strip() if t else ""
+            title = "" if re.fullmatch(r"[\W\d]*", title) else title     # 'Product images, 1 of 2' leftovers
         pm = D.PRICE.search(text)
         price = _amount(pm.group(0)) if pm else None
         cur = CURRENCY.get(next((c for c in src.get("countries", []) if c != "eu"), ""), "EUR")
@@ -409,3 +429,59 @@ def _amount(s: str) -> float | None:
         return float(re.sub(r"[.,]", "", n))
     except ValueError:
         return None
+
+
+# --------------------------------------------------------------------------- embedded results (Next.js)
+
+_NEXT = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.S)
+NO_PRICE_TYPES = {"SEE_DESCRIPTION", "EXCHANGE", "FREE", "RESERVED", "NOTK", "ON_REQUEST"}
+
+
+def rows_from_next_data(page: str, page_url: str, src: dict) -> list[dict]:
+    """marktplaats / 2dehands embed the result list as JSON (__NEXT_DATA__ ... searchRequestAndResponse.listings):
+    clean titles, prices in cents, the seller's town. The HTML anchors carry the whole card as their text
+    ('Lego Set - 7237 € 25,00 Details Nieuw ... onderdelen'), which made good sets look like 'sold as parts'.
+    -> [{title, url, price, currency, text, location, image}]; [] when the page has no such data."""
+    import json as _json
+    from urllib.parse import urljoin
+    m = _NEXT.search(page or "")
+    if not m:
+        return []
+    try:
+        data = _json.loads(m.group(1))
+    except ValueError:
+        return []
+    found: list[dict] = []
+
+    def walk(x: Any, depth: int = 0) -> None:
+        if found or depth > 8:
+            return
+        if isinstance(x, dict):
+            lst = x.get("listings")
+            if isinstance(lst, list) and lst and isinstance(lst[0], dict) and "title" in lst[0]:
+                found.extend(lst)
+                return
+            for v in x.values():
+                walk(v, depth + 1)
+        elif isinstance(x, list):
+            for v in x[:50]:
+                walk(v, depth + 1)
+    walk(data)
+    cur = CURRENCY.get(next((c for c in src.get("countries", []) if c != "eu"), ""), "EUR")
+    rows = []
+    for it in found:
+        url = it.get("vipUrl") or it.get("url")
+        title = str(it.get("title") or "").strip()
+        if not url or not title:
+            continue
+        pi = it.get("priceInfo") or {}
+        cents = pi.get("priceCents")
+        price = (cents / 100.0) if isinstance(cents, (int, float)) and cents > 0 \
+            and str(pi.get("priceType") or "").upper() not in NO_PRICE_TYPES else None
+        imgs = it.get("imageUrls") or []
+        img = urljoin("https:", imgs[0]) if imgs and isinstance(imgs[0], str) else None
+        loc = (it.get("location") or {}).get("cityName")
+        rows.append({"title": title[:200], "url": urljoin(page_url, url).split("#")[0], "price": price,
+                     "currency": cur, "text": str(it.get("description") or "")[:400], "location": loc,
+                     "image": img, "price_type": pi.get("priceType")})
+    return rows

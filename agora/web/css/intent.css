@@ -1,0 +1,51 @@
+/* What we think you mean (intent.js): one quiet line under the search box with the meaning being hunted in plain
+   words, and, when the top meaning is not clearly it, the others as calm chips. Same indent as the need chips.
+   Category page: an empty category lists what we can search for it instead (.it-cp). Tokens from base.css. */
+
+#intents { margin-left: calc(28px + 8px + 62px + 24px); padding: 10px 0 0; display: grid; gap: 8px; }
+#intents[hidden], [data-phase="start"] #intents, [data-phase="category"] #intents { display: none !important; }
+.it-now { margin: 0; font: 400 14px/1.4 var(--sans); color: var(--ink-2); animation: fade var(--t-ui) var(--ease) both; }
+.it-now .it-k { color: var(--ink-3); }
+.it-now b { font-weight: 600; color: var(--ink); }
+.it-where { color: var(--ink-3); font: 400 12px/1.4 var(--mono); }
+.it-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 6px; animation: fade var(--t-ui) var(--ease) both; }
+.it-h { font: 500 13px/1.2 var(--sans); color: var(--ink-3); margin-right: 4px; }
+.it-chip {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer;
+  background: var(--receipt); color: var(--ink-2); border-radius: var(--r-pill); padding: 5px 12px;
+  font: 400 13px/18px var(--sans); box-shadow: inset 0 0 0 1px var(--hair);
+  transition: box-shadow var(--t-ui) var(--ease), background var(--t-ui) var(--ease), color var(--t-ui) var(--ease);
+}
+.it-chip:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.it-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.it-chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); box-shadow: none; cursor: default; }
+.it-chip[aria-pressed="true"] .ct-kind { color: color-mix(in srgb, var(--paper) 70%, transparent); border-color: color-mix(in srgb, var(--paper) 30%, transparent); }
+.it-chip .ct-kind { font-size: 11px; }
+.it-chip.ghost { background: none; box-shadow: none; color: var(--ink-blue); text-decoration: underline;
+  text-decoration-color: var(--hair); text-underline-offset: 3px; padding-left: 6px; padding-right: 6px; }
+.it-next .it-h { color: var(--ink-2); flex-basis: 100%; margin-bottom: 2px; }
+
+@media (max-width: 1000px) { #intents { margin-left: 0; } }
+@media (max-width: 640px) {
+  #intents { padding-top: 8px; }
+  .it-row:not(.it-next) { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); }
+  .it-row:not(.it-next)::-webkit-scrollbar { display: none; }
+  .it-row:not(.it-next) .it-chip, .it-row .it-h { flex: none; }
+  .it-where { display: block; }
+}
+
+/* category page: what we can search for an empty category */
+.it-cp { margin: 4px 0 28px; }
+.it-cards { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.it-card { width: 100%; height: 100%; text-align: left; border: 0; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px; align-items: start; padding: 16px; border-radius: 16px; background: var(--receipt); color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--t-ui) var(--ease), transform var(--t-ui) var(--ease); }
+.it-card:hover { box-shadow: inset 0 0 0 1px var(--ink-3), 0 6px 18px rgba(28,27,24,.06); transform: translateY(-1px); }
+.it-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.it-cards li:first-child .it-card { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.it-cn { grid-column: 1; font: 500 16px/1.3 var(--sans); }
+.it-cn .ct-kind { margin-left: 6px; font-size: 11px; vertical-align: 1px; }
+.it-cw { grid-column: 1; font: 400 13px/1.4 var(--sans); color: var(--ink-2); }
+.it-cd { grid-column: 1; font: 400 12px/1.4 var(--mono); color: var(--ink-3); }
+.it-card .cp-arrow { grid-column: 2; grid-row: 1; color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .it-card { transition: none; } .it-card:hover { transform: none; } }

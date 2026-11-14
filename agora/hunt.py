@@ -315,6 +315,27 @@ def _picks(v: dict[str, Any] | None) -> tuple[Any, Any]:
     return (v or {}).get("best_true_cost_url"), (v or {}).get("best_offer_url")
 
 
+LIVE_SAMPLE = 600           # live re-ranking judges at most this many offers (the final judge sees them all)
+
+
+def sample_offers(offers: list[Offer], n: int = LIVE_SAMPLE) -> list[Offer]:
+    """A generic hunt reads up to ~2,000 marketplace listings; the live leaderboard re-judges a sample: every
+    offer that is not a marketplace row, the cheapest third of the rows (the leaders come from there) and an
+    even spread of the rest (so market medians and the 'settled' check still see the whole price range)."""
+    if len(offers) <= n:
+        return offers
+    rows = [o for o in offers if o.raw.get("from_list_page")]
+    keep = [o for o in offers if not o.raw.get("from_list_page")]
+    room = max(0, n - len(keep))
+    priced = sorted(rows, key=lambda o: (o.price_eur is None, o.price_eur or 0))
+    cheap = priced[: room // 3]
+    rest = priced[room // 3:]
+    k = max(1, room - len(cheap))
+    step = max(1.0, len(rest) / k)
+    spread = [rest[int(i * step)] for i in range(min(k, len(rest)))]
+    return keep + cheap + spread
+
+
 class Leaderboard:
     """Cheap live re-ranking while offers stream in: copies the offers, resolves and judges them,
     and reports when the top 3 by true cost per month change. Pure, no I/O."""
@@ -335,7 +356,7 @@ class Leaderboard:
         if len(offers) > 40 and now - self._last < max(1.0, 3 * self._cost):
             return None
         self._last = now
-        twins = copy.deepcopy(offers)
+        twins = copy.deepcopy(sample_offers(offers))
         try:
             things = self.resolve(self.need, twins)
             judge_mod.judge(self.need, things, history=False)
@@ -551,6 +572,9 @@ async def hunt(
     rd_mod = _module("reader")
     if rd_mod is not None and hasattr(rd_mod, "READ_DEPTH"):
         rd_mod.READ_DEPTH.set(depth)    # read tasks created below inherit it: more free tori pages
+    if rd_mod is not None and hasattr(rd_mod, "HUNT_LISTINGS"):
+        # free marketplace listings for the whole hunt (a generic need reads category pages deep): one shared cap
+        rd_mod.HUNT_LISTINGS.set([0, int(rd_mod.HUNT_LISTING_CAP * (1 + 0.5 * (depth - 1)))])
     tokens0 = _tokens_now()            # the shared 10/min bucket as this hunt starts
     trust_mod = _module("trust") if judge is getattr(_module("judge"), "judge", None) else None
     trust_tasks: list[asyncio.Task[Any]] = []

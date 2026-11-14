@@ -195,6 +195,10 @@ function handle(ev, my) {
     case 'scope': S.scope = d; emit('scope', d); break;
     case 'market': S.market = d; if (!S.scope && d.scope) S.scope = d.scope; emit('market', d); break;
     case 'depreciation': S.depreciation = d; emit('depreciation', d); break;
+    // the hunt's category context {id, path, kind, ...}. NOT the bus's 'category' (= "open this category page"):
+    // re-emitting it under that name stopped every classified or tree hunt and jumped to the category page
+    // (owner, 14 Nov: "Hunt for School catering" landed on "Nothing here yet.")
+    case 'category': S.huntCategory = d; emit('huntcategory', d); break;
     case 'thing': S.things = (S.things || []).concat(d); emit('thing', d); break;
     case 'offer': {
       const o = d.offer; if (!o || !o.url) break;
@@ -275,6 +279,9 @@ function handle(ev, my) {
   }
 }
 
+// the hunt actually asked for: a meaning of the typed words (agora/intent: 'lunch' -> 'lunch restaurant' in
+// Restaurants, &intent=c:lunch.places), or null = the typed words as they are
+let plan = null;
 function open(q, slug, { keepError = false, depth = 1 } = {}) {
   stop();
   const my = gen;
@@ -286,10 +293,16 @@ function open(q, slug, { keepError = false, depth = 1 } = {}) {
   S.done = false; S.things = []; S.hunt_id = null; S.rateLimited = 0;
   turnFirstAt = 0;
   emit('reset', { q, slug: S.slug, replay: !!slug, keepError, depth });
-  const p = new URLSearchParams({ q });
+  const p = new URLSearchParams({ q: (plan && !slug && plan.send) || q });
   if (depth > 1 && !slug) p.set('depth', String(depth));
-  // a hunt started from the category tree: main.js put ?cat=<id> in the page URL; the server hunts inside it
-  if (!slug) { try { const c = new URLSearchParams(location.search).get('cat'); if (c) p.set('cat', c); } catch {} }
+  if (plan && !slug) {
+    // a meaning of the words (agora/intent): its own category and plan, whatever the page URL says
+    if (plan.cat) p.set('cat', plan.cat);
+    if (plan.intent) p.set('intent', plan.intent);
+  } else if (!slug) {
+    // a hunt started from the category tree: main.js put ?cat=<id> in the page URL; the server hunts inside it
+    try { const c = new URLSearchParams(location.search).get('cat'); if (c) p.set('cat', c); } catch {}
+  }
   if (slug) { p.set('replay', slug); p.set('speed', String(cfg.speed)); p.set('max_gap', String(cfg.max_gap)); }
   let src;
   try { src = new EventSource('/hunt?' + p.toString()); }
@@ -357,13 +370,15 @@ export async function compareMore() {
   return { live: true, depth };
 }
 
-/** Start a hunt for q. Resolves to {slug, live} or {error}. */
-export async function startHunt(q) {
+/** Start a hunt for q. Resolves to {slug, live} or {error}.
+ *  opts {send, cat, intent}: hunt a meaning of q instead of its words (the box and the page still show q). */
+export async function startHunt(q, opts = {}) {
   q = String(q || '').trim().replace(/\s+/g, ' ');
   if (q.length < 2) return { error: 'short' };
+  plan = opts && opts.send ? { send: String(opts.send), cat: opts.cat || null, intent: opts.intent || null } : null;
   await liveReady;
   const list = await recordings();
-  const slug = slugify(q);
+  const slug = slugify(plan ? plan.send : q);
   const has = list.includes(slug);
   if (cfg.mode === 'live' && live) { open(q, null); return { live: true }; }
   if (cfg.mode === 'replay') {

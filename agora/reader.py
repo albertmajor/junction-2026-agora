@@ -1266,11 +1266,14 @@ def _keep_best(offers: list[Offer], need: Need, limit: int | None = None) -> lis
     (MAX_LIST_OFFERS; MAX_SPLIT_OFFERS for a known marketplace's search page)."""
     seen: set[str] = set()
     uniq = [o for o in offers if not (o.url in seen or seen.add(o.url))]
-    try:            # a case or another generation on the page would take a slot and be rejected later anyway
-        from agora.discover import title_gate
-        uniq = [o for o in uniq if not title_gate(need, o.title)]
-    except ImportError:
-        pass
+    if (limit or MAX_LIST_OFFERS) <= MAX_LIST_OFFERS:
+        try:        # a case or another generation would take one of the few slots and be rejected later anyway
+            from agora.discover import title_gate
+            uniq = [o for o in uniq if not title_gate(need, o.title)]
+        except ImportError:
+            pass
+    # a marketplace's full list keeps every row: resolve rejects the case / other model WITH a reason the hunt
+    # shows, and the read count stays honest (the coverage audit found rows silently dropped here)
     order = {id(o): i for i, o in enumerate(uniq)}
     uniq.sort(key=lambda o: (-round(_score(o, need), 3), order[id(o)]))
     return uniq[:limit or MAX_LIST_OFFERS]
@@ -1348,14 +1351,124 @@ def offers_from_itemlist(data: dict[str, Any], page_url: str, need: Need, hint: 
 # ported in agora/marketplaces.py. ~20 offers for 1 credit / 1 rate-limit token, where the JSON list read gave
 # 8 for ~5 credits. Unknown list pages keep the JSON list read.
 
-MAX_SPLIT_OFFERS = 400       # listings kept per known marketplace search read (all rows; resolve/judge filter)
+MAX_SPLIT_OFFERS = 1500      # listings kept per known marketplace page read, all its pages (resolve/judge filter; was 400)
 FREE_PAGES = 8               # free ItemList pages read per search (tori: 53 listings each), 3 at a time
 # 'Compare more' (hunt depth 1-3): the hunt sets it; free ItemList pages = FREE_PAGES x depth
 READ_DEPTH: contextvars.ContextVar[int] = contextvars.ContextVar("agora_read_depth", default=1)
-FREE_PAGE_CONCURRENCY = 3
-FREE_PAGE_MIN_MATCH = 0.2    # stop paginating when fewer than this share of a batch's titles match the need
+FREE_PAGE_CONCURRENCY = 3    # pages of one site in flight at once (per host, across the hunt's reads)
+FREE_PAGE_MIN_MATCH = 0.2    # stop paginating when fewer than this share of a batch's titles match the search
+FREE_PAGE_TIME_S = 6.0       # no new batch of pages after this many seconds of one read (hunt read timeout: 12 s)
+FREE_PAGE_HARD_S = 9.5       # a batch still out at this point is dropped: the pages read so far are kept (a read
+                             # cut by the hunt's 12 s timeout would lose them all; < 10 s keeps tori off 'slow')
+HUNT_LISTING_CAP = 2000      # listings read from free marketplace pages per hunt (generic needs; resolve stays fast)
+# per hunt: [listings read so far, cap]; the hunt sets it (reads inherit the context), None = no cap
+HUNT_LISTINGS: contextvars.ContextVar[list[int] | None] = contextvars.ContextVar("agora_hunt_listings", default=None)
+_HOST_SEMS: dict[tuple[int, str], asyncio.Semaphore] = {}
+
+
+def _host_sem(url: str) -> asyncio.Semaphore:
+    """One semaphore per (event loop, host): the free pages of one site never exceed FREE_PAGE_CONCURRENCY at
+    once, however many search / category pages of it the hunt reads (polite to tori & co)."""
+    key = (id(asyncio.get_running_loop()), urlsplit(url).netloc.lower())
+    sem = _HOST_SEMS.get(key)
+    if sem is None:
+        if len(_HOST_SEMS) > 500:
+            _HOST_SEMS.clear()
+        sem = _HOST_SEMS[key] = asyncio.Semaphore(FREE_PAGE_CONCURRENCY)
+    return sem
+
+
+def free_page_cap(url: str) -> int:
+    """How many result pages of this search / category page to read for free: the plan's (generic needs read
+    deeper, agora.marketplaces.PAGE_PLAN) else FREE_PAGES; x the hunt's depth ('Compare more')."""
+    try:
+        from agora import marketplaces
+        planned = marketplaces.PAGE_PLAN.get(url)
+    except ImportError:
+        planned = None
+    return (planned or FREE_PAGES) * max(1, min(3, READ_DEPTH.get()))
+
+
+async def _gather_until(coros: list[Any], t_end: float) -> list[Any]:
+    """gather() that gives up at t_end: unfinished pages come back as TimeoutError (the caller stops there)."""
+    tasks = [asyncio.ensure_future(c) for c in coros]
+    if not tasks:
+        return []
+    done, pending = await asyncio.wait(tasks, timeout=max(0.5, t_end - time.monotonic()))
+    for t in pending:
+        t.cancel()
+    out: list[Any] = []
+    for t in tasks:
+        if t in pending or t.cancelled():
+            out.append(TimeoutError())
+        elif t.exception() is not None:
+            out.append(t.exception())
+        else:
+            out.append(t.result())
+    return out
+
+
+def _budget_left() -> int | None:
+    b = HUNT_LISTINGS.get()
+    return None if b is None else max(0, b[1] - b[0])
+
+
+def _spend(n: int) -> None:
+    b = HUNT_LISTINGS.get()
+    if b is not None:
+        b[0] += n
+
+
+def category_page(url: str) -> dict[str, Any] | None:
+    """The plan's record when this URL is a marketplace category page (agora.marketplaces.CATEGORY_PAGES)."""
+    try:
+        from agora import marketplaces
+        return marketplaces.CATEGORY_PAGES.get(url)
+    except ImportError:
+        return None
+
+
+_QUERY_KEYS = ("q", "query", "search_text", "keywords", "text", "keyword", "k", "_nkw", "hledat", "s")
+
+
+def page_terms(url: str) -> set[str]:
+    """Folded words of the query a search page was asked for (?q=, /s-<q>/k0, /q/<q>/, /oferty/q-<q>/)."""
+    from urllib.parse import parse_qsl, unquote_plus
+    parts = urlsplit(url)
+    raw = " ".join(v for k, v in parse_qsl(parts.query) if k.lower() in _QUERY_KEYS)
+    m = re.search(r"/s-(?:seite:\d+/)?([^/]+)/k0|/q/([^/]+)/|/q-([^/]+)/", parts.path)
+    if m:
+        raw += " " + (m.group(1) or m.group(2) or m.group(3) or "").replace("-", " ")
+    try:
+        from agora.resolve import tokenize
+        return {t for t in tokenize(unquote_plus(raw)) if len(t) >= 3}
+    except ImportError:
+        return _tokens(unquote_plus(raw))
+
+
+def _page_match(items: list[Offer], need: Need, page_url: str) -> float:
+    """Share of a batch's listings that still match what the page was asked for: the need's words, or the
+    words typed into the site (the Finnish 'sohva' for 'sofa'; was: the English need alone, so pagination of
+    every translated search stopped after the first batch). A category page always matches (the site files)."""
+    if not items:
+        return 0.0
+    if category_page(page_url):
+        return 1.0
+    terms = page_terms(page_url) | {t for t in _tokens(need.thing) if len(t) >= 3}
+    if not terms:
+        return 1.0
+    try:
+        from agora.resolve import tokenize, word_hit
+    except ImportError:
+        return sum(1 for o in items if _score(o, need) >= 0.5) / len(items)
+
+    def hit(o: Offer) -> bool:
+        toks = set(tokenize(o.title or ""))
+        return any(word_hit(t, toks) or any(t in x for x in toks) for t in terms)
+    return sum(1 for o in items if hit(o)) / len(items)
 # page url -> {domain, country, site, total, at_least, read, pages, extra}: how big the market is (hunt `market`)
 MARKET: dict[str, dict[str, Any]] = {}
+FREE_TOTALS: dict[str, Any] = {}     # page url -> market_total of its first page (plain-fetch registry sources)
 
 
 def note_market(page_url: str, site: Any, text: str, read: int, pages: int = 1) -> dict[str, Any]:
@@ -1445,6 +1558,8 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
         if row.get("text"):
             o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
         o.raw["market"] = market
+        if cat_page := category_page(page_url):
+            o.raw["category_page"] = dict(cat_page)
         out.append(o)
     return _keep_best(out, need, MAX_SPLIT_OFFERS)
 
@@ -1499,8 +1614,9 @@ def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | Non
         amount, cur = parse_price(row.get("price"), row.get("currency"), domain_of(page_url))
         if u is None or not title or amount is None:
             continue
+        loc = fence.clean_field(str(row.get("location") or ""))[:80] or None
         o = _list_offer(u, page_url, title, amount, cur, need, hint, schema_cond=None, said_cond=said, image=_abs_image(row.get("image"), page_url),
-                        location=None, via="plain_split", step="plain_split")
+                        location=loc, via="plain_split", step="plain_split")
         o.raw["page"] = page
         if row.get("text"):
             o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
@@ -1511,35 +1627,59 @@ def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | Non
 async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str | None) -> tuple[list[Offer], int]:
     """Plain fetch + agora.sources.rows_from_html, then pages 2..(FREE_PAGES x depth) the same way (3 at a time),
     stopping when a page has no rows or its titles stop matching the need. No token spent. -> (offers, pages)."""
+    from agora import marketplaces
     from agora import sources as _src
-    status, html = await fetch_html(url)
+    t0 = time.monotonic()
+
+    async def rows_of(h: str, u: str, k: int) -> list[Offer]:
+        """One results page -> offers: the site's own structured list first (Schibsted ItemList JSON-LD; the
+        Next.js result JSON of marktplaats / 2dehands), else the HTML anchors. The anchors gave junk titles there
+        ('Gå till annonsen', 'Product images, 1 of 2', whole cards with 'onderdelen' in the description)."""
+        if rec.get("itemlist"):
+            data = await asyncio.to_thread(_extruct, h, u)
+            items = offers_from_itemlist(data, url, need, hint, MAX_SPLIT_OFFERS)
+            if len(items) >= 3:
+                for o in items:
+                    o.raw["page"] = k
+                return items
+        if rec.get("next_data"):
+            rows = _src.rows_from_next_data(h, u, rec)
+            if len(rows) >= 3:
+                return _rows_to_offers(rows, url, need, hint, site, k)
+        return _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, k,
+                               html=h)
+
+    async with _host_sem(url):
+        status, html = await fetch_html(url)
     if status != 200 or not html or looks_blocked(status, html):
         return [], 0
-    first = _rows_to_offers(_src.rows_from_html(html, url, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, 1,
-                           html=html)
+    first = await rows_of(html, url, 1)
     if not first:
         return [], 0
+    tot = marketplaces.market_total(html[:400000])
+    FREE_TOTALS[url] = tot
+    _spend(len(first))
     out, pages = list(first), 1
-    last = FREE_PAGES * max(1, min(3, READ_DEPTH.get()))
-    sem = asyncio.Semaphore(FREE_PAGE_CONCURRENCY)
+    last = free_page_cap(url)
+    if tot is not None and not tot[1]:
+        last = min(last, -(-tot[0] // max(1, len(first))))     # the site's own count says where the end is
     seen = {o.url for o in first}
 
     async def one(k: int) -> list[Offer]:
         u = registry_page_url(rec, site, url, k)
         if not u or u == url:
             return []
-        async with sem:
+        async with _host_sem(u):
             st, h = await fetch_html(u)
         if st != 200 or not h or looks_blocked(st, h):
             return []
-        got = _rows_to_offers(_src.rows_from_html(h, u, rec, max_rows=MAX_SPLIT_OFFERS), url, need, hint, site, k,
-                              html=h)
+        got = await rows_of(h, u, k)
         return [o for o in got if o.url not in seen]
 
     n = 2
-    while n <= last:
+    while n <= last and time.monotonic() - t0 < FREE_PAGE_TIME_S and (_budget_left() is None or _budget_left() > 0):
         batch = list(range(n, min(last, n + FREE_PAGE_CONCURRENCY - 1) + 1))
-        got = await asyncio.gather(*(one(k) for k in batch), return_exceptions=True)
+        got = await _gather_until([one(k) for k in batch], t0 + FREE_PAGE_HARD_S)
         stop = False
         for items in got:
             if isinstance(items, BaseException) or not items:
@@ -1548,7 +1688,8 @@ async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str
             pages += 1
             seen |= {o.url for o in items}
             out += items
-            if sum(1 for o in items if _score(o, need) >= 0.5) / len(items) < FREE_PAGE_MIN_MATCH:
+            _spend(len(items))
+            if _page_match(items, need, url) < FREE_PAGE_MIN_MATCH:
                 stop = True
         if stop:
             break
@@ -1557,25 +1698,26 @@ async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str
 
 
 async def more_itemlist_pages(page_url: str, site: Any, need: Need, hint: str | None, first: list[Offer],
-                              html: str) -> tuple[list[Offer], int]:
+                              html: str, started: float | None = None) -> tuple[list[Offer], int]:
     """A free ItemList site (tori): read pages 2..FREE_PAGES politely (3 at a time, plain fetch, no tokens).
     Stops when the site's stated total is covered, a page has no listings, or a batch stops matching the need.
     Returns (offers of the extra pages, pages read in all)."""
     from agora import marketplaces
+    t0 = started if started is not None else time.monotonic()     # the read's start: page 1 counts too
     tot = marketplaces.market_total(html[:400000])
     per = max(1, len(first))
-    cap = FREE_PAGES * max(1, min(3, READ_DEPTH.get()))
+    cap = free_page_cap(page_url)
     last = cap if tot is None else min(cap, -(-tot[0] // per))
     out: list[Offer] = []
     pages = 1
     n = 2
-    sem = asyncio.Semaphore(FREE_PAGE_CONCURRENCY)
+    _spend(len(first))
 
     async def one(k: int) -> list[Offer]:
         u = marketplaces.page_url(site, page_url, k)
         if not u:
             return []
-        async with sem:
+        async with _host_sem(u):
             status, h = await fetch_html(u)
         if status != 200 or not h or looks_blocked(status, h):
             return []
@@ -1585,9 +1727,9 @@ async def more_itemlist_pages(page_url: str, site: Any, need: Need, hint: str | 
             o.raw["page"] = k
         return items
 
-    while n <= last:
+    while n <= last and time.monotonic() - t0 < FREE_PAGE_TIME_S and (_budget_left() is None or _budget_left() > 0):
         batch = list(range(n, min(last, n + FREE_PAGE_CONCURRENCY - 1) + 1))
-        got = await asyncio.gather(*(one(k) for k in batch), return_exceptions=True)
+        got = await _gather_until([one(k) for k in batch], t0 + FREE_PAGE_HARD_S)
         stop = False
         for items in got:
             if isinstance(items, BaseException) or not items:
@@ -1595,8 +1737,8 @@ async def more_itemlist_pages(page_url: str, site: Any, need: Need, hint: str | 
                 continue
             pages += 1
             out += items
-            match = sum(1 for o in items if _score(o, need) >= 0.5) / len(items)
-            if match < FREE_PAGE_MIN_MATCH:
+            _spend(len(items))
+            if _page_match(items, need, page_url) < FREE_PAGE_MIN_MATCH:
                 stop = True
         if stop:
             break
@@ -1649,6 +1791,7 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
     expand_lists=True returns them as a list[Offer] (each with its own listing URL); False returns the best one."""
     if fresh and max_age_ms is None:
         max_age_ms = 0          # watcher re-checks: past Context.dev's scrape cache and ours
+    t_start = time.monotonic()
     hint = _HINTS.get(url, {})
     lane = lane or hint.get("lane") or None
     snippet = snippet or hint.get("snippet", "")
@@ -1672,9 +1815,15 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
         if items:
             contextdev.note_free_read()
             market = note_market(url, site, "", len(items), pages)
+            tot = FREE_TOTALS.pop(url, None)
+            if tot is not None:            # the site's own count (was: never read for plain-fetch sources)
+                market["total"], market["at_least"] = max(tot[0], len(items)) if not tot[1] else tot[0], tot[1]
+            cat_page = category_page(url)
             for o in items:
                 o.raw["site"] = site.key
                 o.raw["market"] = market
+                if cat_page:
+                    o.raw["category_page"] = dict(cat_page)
                 if getattr(site, "vehicle", False):
                     o.raw["category"] = "vehicle"
             return listed(items, "plain_split")
@@ -1699,12 +1848,15 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
                 if site is not None:
                     pages = 1
                     if expand_lists and marketplaces_page(site):
-                        more, pages = await more_itemlist_pages(url, site, need, lane, items, html)
+                        more, pages = await more_itemlist_pages(url, site, need, lane, items, html, t_start)
                         items = _keep_best(items + more, need, MAX_SPLIT_OFFERS)
                     market = note_market(url, site, html[:400000], len(items), pages)
+                    cat_page = category_page(url)
                     for o in items:
                         o.raw["site"] = site.key
                         o.raw["market"] = market
+                        if cat_page:
+                            o.raw["category_page"] = dict(cat_page)
                 return listed(items, "jsonld")
         # a list page we can cut with a paid read: its first Product is just some item on it
         offer = None if (list_read and paid) else offer_from_structured(data, url, need, lane)

@@ -15,6 +15,7 @@ import re
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
+from typing import Any
 
 from agora.models import Need, Offer, Thing
 
@@ -85,7 +86,16 @@ ACCESSORY_WORDS = {
     "okladka", "nakładki", "końcówki", "koncowki", "gumki", "vaihtopäät", "silikonepropper", "propper",
     "örontoppar", "tulpat", "muistivaahtotulpat", "laddningsfodral", "laddningsetui", "kotelosuoja", "beskytter",
     "oplaadcase", "ladeetui", "dėžutė", "dėžutę", "dezute", "dežute", "pudełko", "pudelko", "opakowanie",
+    # game controllers sold alone (coverage audit: 'PlayStation 5 ohjain DualSense' kept as a PS5)
+    "ohjain", "ohjaimet", "dualsense", "dualshock", "controller", "handkontroll", "kontroller",
 }
+BATTERY_WORDS = {"akku", "battery", "batteri", "akku-"}
+_BATTERY_STATE = re.compile(r"\b(?:akku|battery|batteri|akkukunto|battery health|akun kunto)\w*\W{0,12}\d{2,3}\s*%|"
+                            r"\d{2,3}\s*%\W{0,6}(?:akku|battery|batteri)|"
+                            r"\b(?:aito|uusi|alkuperäinen|vaihdettu|new|original|neuer?|neu)\s+(?:akku|battery|batteri)\b")
+# compound tails that make a word a cover / charger in Finnish and German titles (whole words are matched below)
+_ACC_TAIL = re.compile(r"\b\w{3,}?(kuoret|kuori|suojakuori|suojalasi|panssarilasi|laturi|hülle|ladekabel|"
+                       r"ladegerät|ladeschale)\b")
 # words that name a part of the item: an accessory when they come *before* the item's name
 # ("OLED Display for Nintendo Switch OLED"), not after ("MacBook Air with 15.3" display")
 PART_WORDS = ("display", "screen", "panel", "housing", "shell", "back cover", "battery",
@@ -115,6 +125,8 @@ CODE_ALIASES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bilce[- ]?(\d{4})[a-z]*\b"), r"a\1"),                 # ILCE-6400 -> a6400
     (re.compile(r"\bdsc[- ]?rx100m(\d)[a-z]*\b"), r"rx100 \1"),
     (re.compile(r"\bzv[- ]?e(\d+)\b"), r"zv-e\1"),
+    # 'PlayStation 5' is the 'PS5' (coverage audit: 87 PS5 listings were 'a different model (playstation5 vs ps5)')
+    (re.compile(r"\bplay\s?station\s?([1-6])\b"), r"ps\1"),
 ]
 
 
@@ -327,9 +339,17 @@ def is_accessory(title: str, need: Need | None = None) -> bool:
     # Finnish compound tails on marketplace titles: "AirPods Pro 2 (USB-C) -latauskotelo" = the charging case
     low = re.sub(r"(?<=\s)-(?=\w)", " ", title.lower())
     asked = (need.thing.lower() + " " + " ".join(need.must_have)).lower() if need else ""
-    if any(re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", asked) for w in (*ACCESSORY_WORDS, *PART_WORDS)):
+    # substring prefilters first (one C-level 'in' per word): the regex per word ran ~900k times for 2,000 rows
+    if any(w in asked and re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", asked)
+           for w in (*ACCESSORY_WORDS, *PART_WORDS)):
         return False   # they asked for the accessory itself ("battery for sony a7 iii")
-    for w in ACCESSORY_WORDS:
+    for m in _ACC_TAIL.finditer(low):
+        if m.group(1) not in asked and not re.search(r"(?:\bwith\b|\bmit\b|\bja\b|\binkl\w*|\+)[^|]*$",
+                                                      low[:m.start()]):
+            return True        # 'iPhone 13 -Puhelimenkuoret', 'Galaxy S21 Schutzhülle': a cover for the phone
+    for w in (x for x in ACCESSORY_WORDS if x in low):
+        if w in BATTERY_WORDS and _BATTERY_STATE.search(low):
+            continue           # 'akku 93 %', 'aito akku', 'Akku 89%': the phone's battery health, not a battery
         if re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", low) and w not in asked:
             # "camera with battery and charger" is a bundle, not an accessory: the accessory word
             # must come before "for X" or lead the title, or appear without a main-item word
@@ -668,7 +688,9 @@ def not_an_offer(o: Offer) -> str | None:
         return f"same listing as {o.raw['mirror_of']} (sister shop feed)"
     try:
         from agora import discover
-        junk = discover.is_non_shop(url, o.title or "")
+        # a marketplace row's title is a seller's words ('LEGO Batman vs Riddler' is a set, not a review)
+        row = bool(o.raw.get("site") and o.raw.get("from_list_page"))
+        junk = discover.is_non_shop(url, "" if row else (o.title or ""))
         if junk:
             return junk
         listy = discover.is_list_page(url)
@@ -743,6 +765,196 @@ def _model_match(need_sig: Signature, off_sig: Signature) -> float:
     return score
 
 
+# ---------------------------------------------------------------- generic needs ('puhelin', 'sofa', a tree hunt)
+# A need for a KIND of thing has no brand or model to match: 'Samsung A52 128GB' is a phone without saying 'phone',
+# and a Finnish title never says 'sofa'. Such a need accepts: a title naming the kind in any language (the
+# marketplaces' WORDS, the category node's labels and synonyms), every listing of a category page that lists
+# exactly that kind, and a listing of the need's own marketplace search that names no OTHER kind of thing
+# ('sohvapöytä' on a 'sohva' search is a coffee table, not a sofa). Cases, parts and wanted ads still go.
+
+_CAT_SKIP = re.compile(r"tarvik|tillbeh|zubeh|accessor|osat\b|delar\b|teile\b|onderdel|parts?\b|varaos|reserv",
+                       re.I)
+
+
+@functools.lru_cache(maxsize=512)
+def _is_generic_text(thing: str, tree: bool) -> bool:
+    sig = signature(thing)
+    if sig.brand or sig.models or sig.family:
+        return False
+    try:
+        from agora import marketplaces as M
+    except ImportError:
+        return False
+    noun = M.english_noun(thing)
+    if noun is None:
+        return tree
+    rest = M.FILLER.sub(" ", thing)
+    rest = M._GENERIC_RE.sub(" ", rest)
+    rest = M._REVERSE_RE.sub(" ", rest)
+    rest = re.sub(r"[^\w\s'-]", " ", rest)
+    return tree or not M._carrier(rest)
+
+
+def is_generic(need: Need) -> bool:
+    """A product need for a kind of thing ('puhelin', 'phone', 'baby stroller', 'kitchen table', a hunt from the
+    category tree) rather than a product ('iphone 13', 'lego', 'herman miller chair')."""
+    if need.kind != "product":
+        return False
+    tree = (need.category or {}).get("source") == "tree"
+    return _is_generic_text(need.thing or "", tree)
+
+
+def _fold_words(words: Any) -> frozenset[str]:
+    out: set[str] = set()
+    for w in words:
+        f = " ".join(t for t in tokenize(str(w)) if t)
+        if len(f) >= 3:
+            out.add(f)
+    return frozenset(out)
+
+
+@functools.lru_cache(maxsize=256)
+def _noun_words(noun: str) -> frozenset[str]:
+    from agora import marketplaces as M
+    words = set(M.translations(noun))
+    for w in noun.split():
+        words |= SYNONYMS.get(w, set())
+    # a narrower kind is still the kind: 'road bike' words count for 'bike' ('maantiepyörä' is a bike)
+    for other in M.WORDS:
+        if other != noun and other.endswith(" " + noun):
+            words |= M.translations(other)
+    return _fold_words(words)
+
+
+def _need_words(need: Need) -> frozenset[str]:
+    """Folded words that name the need's kind: its noun in every language + the category node's own words."""
+    cat = need.category or {}
+    return _need_words_cached(need.thing or "", str(cat.get("id") or ""), str(cat.get("label") or ""),
+                              tuple(sorted((cat.get("labels") or {}).values())), tuple(cat.get("synonyms") or ()))
+
+
+@functools.lru_cache(maxsize=256)
+def _need_words_cached(thing: str, cat_id: str, cat_label: str, labels: tuple[str, ...],
+                       synonyms: tuple[str, ...]) -> frozenset[str]:
+    from agora.models import Need as _Need
+    need = _Need(raw=thing, thing=thing, category={"id": cat_id, "label": cat_label,
+                                                   "labels": dict(enumerate(labels)), "synonyms": list(synonyms)})
+    return _need_words_build(need)
+
+
+def _need_words_build(need: Need) -> frozenset[str]:
+    from agora import marketplaces as M
+    noun = M.english_noun(need.thing or "")
+    words = set(_noun_words(noun)) if noun else set()
+    cat = need.category or {}
+    extra: list[str] = []
+    for lab in (cat.get("labels") or {}).values():
+        extra += [t for t in tokenize(str(lab)) if len(t) >= 5 and not M.MODIFIERS.search(t)]
+    for syn in cat.get("synonyms") or []:
+        if not _CAT_SKIP.search(str(syn)) and len(str(syn).split()) <= 2:
+            extra.append(str(syn))
+    if cat.get("label") and not noun:
+        extra += [t for t in tokenize(str(cat["label"])) if len(t) >= 4 and not M.MODIFIERS.search(t)]
+    return frozenset(words | _fold_words(extra))
+
+
+@functools.lru_cache(maxsize=1)
+def _concepts() -> tuple[tuple[str, frozenset[str]], ...]:
+    """Every WORDS noun with the words that name it, for the 'another kind of thing' check. Short foreign words
+    collide across languages (Czech 'stan' = tent is Polish 'condition', 'kolo', 'kast', 'ski'), so only the
+    English word and translations of 5+ letters count here."""
+    from agora import marketplaces as M
+    out = []
+    for noun in M.WORDS:
+        words = {w for w in M.translations(noun) if w == noun or len(w) >= 5}
+        words |= {w for x in noun.split() for w in SYNONYMS.get(x, set()) if len(w) >= 5}
+        out.append((noun, _fold_words(words)))
+    return tuple(out)
+
+
+def _compatible(a: str, b: str) -> bool:
+    """Two WORDS nouns name the same kind of thing: one is a narrower kind of the other ('road bike' / 'bike',
+    'winter jacket' / 'jacket'), or both lead to the same category node ('jacket' / 'coat', 'sofa' / 'couch')."""
+    if a == b or a.endswith(" " + b) or b.endswith(" " + a):
+        return True
+    try:
+        from agora.sources.categories import GENERIC_NODES
+    except ImportError:
+        return False
+    def node(x: str) -> str | None:
+        return GENERIC_NODES.get(x) or GENERIC_NODES.get(x.split()[-1])
+    return node(a) is not None and node(a) == node(b)
+
+
+def _hits(words: frozenset[str], toks: set[str]) -> bool:
+    return _hits_cached(words, frozenset(toks))
+
+
+@functools.lru_cache(maxsize=512)
+def _word_re(words: frozenset[str]) -> tuple[re.Pattern[str] | None, tuple[str, ...]]:
+    """word_hit for many single words at once, as one regex over one token: exact, word + ending, or compound
+    head (3+ letters before a 4+ letter word). Phrases are returned apart (word_hit checks them)."""
+    single = sorted((w for w in words if " " not in w and w), key=len, reverse=True)
+    phrases = tuple(w for w in words if " " in w)
+    if not single:
+        return None, phrases
+    short = [re.escape(w) for w in single if len(w) < 4]
+    long_ = [re.escape(w) for w in single if len(w) >= 4]
+    alts = []
+    if short:
+        alts.append(r"(?:" + "|".join(short) + r")(?:es|s)?")
+    if long_:
+        ends = "|".join(re.escape(e) for e in sorted(_ENDINGS, key=len, reverse=True))
+        alts.append(r"(?:" + "|".join(long_) + r")(?:" + ends + r")?")
+        alts.append(r"\w{3,}(?:" + "|".join(long_) + r")")
+    return re.compile(r"^(?:" + "|".join(alts) + r")$"), phrases
+
+
+@functools.lru_cache(maxsize=50000)
+def _hits_cached(words: frozenset[str], toks: frozenset[str]) -> bool:
+    """Any of the words in the title tokens (whole word, ending or compound head). Cached: one hunt asks it for
+    the same 2,000 titles from relevance, explain and the kind check."""
+    if words & toks:
+        return True
+    rx, phrases = _word_re(words)
+    if rx is not None and any(rx.match(t) for t in toks):
+        return True
+    return any(word_hit(w, toks) for w in phrases)
+
+
+def other_kind(need: Need, offer: Offer) -> str | None:
+    """The WORDS noun of ANOTHER kind of thing this listing names ('coffee table' for 'sofa': 'sohvapöytä'),
+    when it names nothing of the need's own kind. Generic needs only."""
+    from agora import marketplaces as M
+    noun = M.english_noun(need.thing or "")
+    if not noun:
+        return None
+    toks = set(tokenize(offer.title or ""))
+    if _hits(_need_words(need), toks):
+        return None
+    for other, words in sorted(_concepts(), key=lambda c: -len(c[0])):     # 'coffee table' before 'table'
+        if not _compatible(other, noun) and _hits(words, toks):
+            return other
+    return None
+
+
+def _generic_coverage(need: Need, offer: Offer, toks: set[str]) -> float | None:
+    """Coverage of a generic need (None = not generic: the word rule decides)."""
+    if not is_generic(need):
+        return None
+    if _hits(_need_words(need), toks):
+        return 1.0
+    cp = offer.raw.get("category_page") if isinstance(offer.raw, dict) else None
+    if cp and cp.get("exact"):
+        return 1.0                      # the seller filed it under exactly this kind (tori 'Matkapuhelimet')
+    if other_kind(need, offer):
+        return 0.0
+    raw = offer.raw if isinstance(offer.raw, dict) else {}
+    if raw.get("site") and raw.get("from_list_page"):
+        return 0.7                      # the marketplace's own search (or broader category) for this kind
+    return None
+
+
 def relevance(need: Need, offer: Offer) -> float:
     """0..1: how well this offer answers the need."""
     if not_an_offer(offer):
@@ -760,7 +972,13 @@ def relevance(need: Need, offer: Offer) -> float:
     coverage = covered / len(need_words) if need_words else 1.0
     if need.kind == "service":
         return _service_relevance(need, offer)
+    gen = _generic_coverage(need, offer, toks | set(tokenize(offer.title or "")))
+    if gen is not None:
+        coverage = gen
     model = _model_match(ns, os_)
+    if ns.models and not os_.models and any(re.fullmatch(r"iphone\d+", x) for x in ns.models) \
+            and re.search(r"\biphone\s*(?:x[rs]?|se)\b", offer.title or "", re.I):
+        model = 0.1            # 'iPhone XR' / 'iPhone SE' carry no number but are other models
     brand_ok = 1.0
     if ns.brand and os_.brand and ns.brand != os_.brand:
         brand_ok = 0.2
@@ -1116,6 +1334,8 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return r, why
     if is_accessory(offer.title or "", need):
         return r, "accessory, not the item"
+    if is_generic(need) and (other := other_kind(need, offer)):
+        return r, f"another kind of thing ({other}), not a {_need_noun(need)}"
     if bad := [f for f in title_red_flags(offer, need) if f[0] in RED_REJECT]:
         k, what, phrase = bad[0]
         return r, (f"not an offer: {red_flag_text(k, what, phrase)}" if k == "wanted"
@@ -1123,7 +1343,17 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
     ns, os_ = signature(need.thing), signature(offer.title or "", offer.brand)
     if ns.models and os_.models and _model_match(ns, os_) <= 0.2:
         return r, f"different model ({' '.join(os_.models)} vs {' '.join(ns.models)})"
+    if ns.models and set(ns.models) <= set(os_.models) and set(ns.variants) != set(os_.variants):
+        return r, f"another version ({_pretty(os_)} vs {_pretty(ns)})"     # iphone 13 pro / mini for iphone 13
     return r, "does not match what you asked for"
+
+
+def _need_noun(need: Need) -> str:
+    try:
+        from agora import marketplaces as M
+        return M.english_noun(need.thing or "") or need.thing
+    except ImportError:
+        return need.thing
 
 
 def _pretty(sig: Signature) -> str:

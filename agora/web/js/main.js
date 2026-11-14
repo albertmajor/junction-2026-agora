@@ -42,6 +42,8 @@ async function mountAll() {
   const sg = await load('suggest');
   if (sg && sg.mountSuggest) { try { sg.mountSuggest(ask, qIn); } catch (e) { console.warn('[agora] mountSuggest failed', e); } }
   load('imagefill').then(m => { try { m && m.mountImagefill && m.mountImagefill(); } catch (e) { console.warn('[agora] mountImagefill failed', e); } });
+  const im = await load('intent');
+  if (im && im.mountIntents) { try { im.mountIntents($('intents')); } catch (e) { console.warn('[agora] mountIntents failed', e); } }
   const cp = await load('catpage');
   if (cp && cp.mountCatpage) { try { cp.mountCatpage($('catpage')); } catch (e) { console.warn('[agora] mountCatpage failed', e); } }
   const lm = await load('landing');
@@ -106,7 +108,7 @@ function openCategory(id, { push = true, typed = '' } = {}) {
   qIn.value = typed || '';
   if (push) {
     const u = new URL(location.href);
-    for (const k of ['q', 'cat', 'share', 'by', 'browse', 'typed']) u.searchParams.delete(k);
+    for (const k of ['q', 'cat', 'intent', 'share', 'by', 'browse', 'typed']) u.searchParams.delete(k);
     u.searchParams.set('c', id);
     if (typed) u.searchParams.set('typed', typed);
     u.hash = '';
@@ -130,25 +132,39 @@ on('catpage:shown', d => {        // an old id (merged away) shows its new home:
   if (u.searchParams.get('c') === d.asked) { u.searchParams.set('c', d.id); history.replaceState(history.state, '', u); }
 });
 
-async function run(q, { push = true, cat = null, free = false } = {}) {
+// What the words most likely mean (owner, 14 Nov: "lunch" priced €4 lunch boxes, "not even services"): a typed
+// hunt asks /api/intent first and hunts the likeliest meaning ("Lunch places near you", in Restaurants, with the
+// lunch-menu sites), keeping the typed words in the box. intent.js shows which, and the other meanings as chips
+// when the top one is not clearly it. plan = a meaning picked by a chip / the category page; intent = its id (URL).
+async function run(q, { push = true, cat = null, free = false, intent = null, plan = null, interp = null } = {}) {
   q = String(q || '').trim().replace(/\s+/g, ' ');
   if (q.length < 2) { qIn.focus(); return; }
-  if (!free) {
+  const I = mods.intent || null;
+  if (I && !plan && !cat && !free) {
+    interp = interp || await within(I.interpret(q), 900);
+    const list = (interp && interp.intents) || [];
+    plan = (intent && list.find(x => x.id === intent)) || list[0] || null;
+  }
+  const rw = !!(I && plan && I.rewrites(plan));
+  if (!free && !rw && !(interp && interp.concept)) {
     const dest = await browseInstead(q, cat);
     if (dest) { openCategory(dest.id, { push, typed: dest.typed || '' }); return; }
   }
+  const huntCat = rw ? (plan.hunt.cat ? { id: plan.hunt.cat, huntable: true } : null) : cat;
   qIn.value = q;
   if (push) {
     const u = new URL(location.href);
     u.searchParams.set('q', q);
-    if (cat && cat.id) u.searchParams.set('cat', cat.id); else u.searchParams.delete('cat');
+    if (rw) { u.searchParams.set('intent', plan.id); u.searchParams.delete('cat'); }
+    else { u.searchParams.delete('intent'); if (cat && cat.id) u.searchParams.set('cat', cat.id); else u.searchParams.delete('cat'); }
     for (const k of ['share', 'by', 'browse', 'c', 'typed']) u.searchParams.delete(k);
     if (u.href !== location.href) history.pushState({ q }, '', u);
   }
-  showCrumbs(q, cat);
+  showCrumbs(rw ? plan.hunt.q : q, huntCat);
+  if (I) { if (interp && plan) I.show(q, interp, plan); else I.clear(); }
   setStatus('hunt', 'reading the question…');
   setPhase('hunting');
-  await stream.startHunt(q);
+  await stream.startHunt(q, rw ? { send: plan.hunt.q, cat: plan.hunt.cat, intent: plan.hunt.intent || plan.id } : {});
 }
 function goHome({ push = true } = {}) {
   stream.stop();
@@ -156,17 +172,18 @@ function goHome({ push = true } = {}) {
   qIn.value = '';
   if (push) {
     const u = new URL(location.href);
-    for (const k of ['q', 'cat', 'c', 'typed']) u.searchParams.delete(k);
+    for (const k of ['q', 'cat', 'intent', 'c', 'typed']) u.searchParams.delete(k);
     if (u.href !== location.href) history.pushState({}, '', u);
   }
   clearChips(); tickerOff(); setStatus(null); showCrumbs(null);
+  if (mods.intent) mods.intent.clear();
   setPhase('start');
   emit('reset', { q: '' });
   document.title = BRAND;
 }
 ask.addEventListener('submit', e => { e.preventDefault(); run(qIn.value); });
 // a landing card (or 'what an agent sees') asks for a search: back to the top, then run it
-on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null, free: !!d.free }); });
+on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null, free: !!d.free, plan: d.plan || null, interp: d.interp || null }); });
 bar.querySelector('.logo').addEventListener('click', e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault(); goHome();
@@ -174,7 +191,7 @@ bar.querySelector('.logo').addEventListener('click', e => {
 addEventListener('popstate', () => {
   const sp = new URLSearchParams(location.search), q = sp.get('q');
   if (sp.get('c')) openCategory(sp.get('c'), { push: false, typed: sp.get('typed') || '' });
-  else if (q) run(q, { push: false, cat: sp.get('cat') ? { id: sp.get('cat') } : null }); else goHome({ push: false });
+  else if (q) run(q, { push: false, cat: sp.get('cat') ? { id: sp.get('cat') } : null, intent: sp.get('intent') }); else goHome({ push: false });
 });
 
 // ---------- category breadcrumb (from the tree of everything you can buy) ----------
@@ -236,7 +253,9 @@ function chipList(need) {
   // the query is already in the box: only say what we understood when it differs from what was typed
   const thing = titleCase(need.thing || need.raw || S.q);
   const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  if (norm(thing) && !norm(S.q).includes(norm(thing))) out.push({ kind: 'thing', text: thing });
+  // (not when the row of meanings already says what we hunt: 'Searching for Lunch places near you')
+  const said = $('intents') && !$('intents').hidden;
+  if (!said && norm(thing) && !norm(S.q).includes(norm(thing))) out.push({ kind: 'thing', text: thing });
   // a condition chip only when the user typed that condition (an implied one is not a filter to remove)
   const conds = (need.conditions || []).filter(c => c !== 'service' && typedCond(c));
   conds.forEach(c => out.push({ kind: 'cond', text: c, cond: c }));
@@ -710,7 +729,7 @@ async function boot() {
   const q = params.get('q');
   if (params.get('stage') === '1') stage();
   else if (params.get('c')) openCategory(params.get('c'), { push: false, typed: params.get('typed') || '' });
-  else if (q) run(q, { push: false, cat: params.get('cat') ? { id: params.get('cat') } : null });
+  else if (q) run(q, { push: false, cat: params.get('cat') ? { id: params.get('cat') } : null, intent: params.get('intent') });
   else if (matchMedia('(min-width: 641px)').matches) qIn.focus({ preventScroll: true });
 }
 boot();

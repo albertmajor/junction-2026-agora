@@ -241,7 +241,10 @@ def test_known_marketplace_page_is_one_markdown_read_cut_into_listings(cd_md):
         assert o.source == "kleinanzeigen.de" and o.read_via == "contextdev_markdown_split"
         assert o.raw["from_list_page"] == url and o.raw["step"] == "markdown_split"
         assert o.url.startswith("https://www.kleinanzeigen.de/s-anzeige/") and o.price_eur
-    assert not any("iPhone 16" in o.title for o in got)             # another product: title gate
+    # every row is kept (the read count stays honest); another product is rejected by resolve, with its reason
+    from agora import resolve
+    other = [o for o in got if "iPhone 16" in o.title]
+    assert other and all(resolve.explain(AIRPODS, o)[1] for o in other)
     assert sum(o.condition == "used" for o in got) >= len(got) - 3
 
 

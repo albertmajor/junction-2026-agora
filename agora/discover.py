@@ -631,6 +631,7 @@ async def _run_query(lane: str, query: str, country: str | None, highlights: boo
 LIST_PAGE = re.compile(
     r"/(s|sch|search|haku|suche|b|kp|category|categories|collections|browse|list|l|cat|clp)(/|$|\?)"
     r"|/c/(?!product/)|searchpage\.jsp|/s-[^/?]+(?:/[^/?]+)*/k0"       # bestbuy, kleinanzeigen /s-<q>/k0
+    r"|^/s-[^/?]+(?:/[^/?]+)*/(?:k0)?c\d+/?$"                         # kleinanzeigen category /s-handy-telekom/c173
     r"|[?&](k|q|_nkw|query|search)=",
     re.I)
 SETTLE_S = 6.0      # wait this long for all searches, then rank globally; later results stream as they land
@@ -710,10 +711,21 @@ def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int, pa
     home = home_country() if cc is None else None
     left = tokens - n_searches
     out: dict[str, list[Any]] = {}
+    # a generic need ('puhelin', 'sofa', a hunt from the tree) reads the marketplaces' own category pages, deeper
+    node, generic, tree = None, False, False
+    try:
+        from agora import resolve
+        from agora.sources import categories
+        generic = resolve.is_generic(need)
+        node = categories.need_node(need) if generic else None
+        tree = (need.category or {}).get("source") == "tree"
+    except Exception:
+        node, generic = None, False
     for lane in ("used", "refurbished", "new"):
         if lane not in lanes:
             continue
-        got = marketplaces.direct_pages(_thing_q(need), lane, cc, home, left, pages=pages)
+        got = marketplaces.direct_pages(_thing_q(need), lane, cc, home, left, pages=pages, node=node,
+                                        generic=generic, tree=tree)
         left -= sum(1 for d in got if d.paid)
         if got:
             out[lane] = got
@@ -793,7 +805,9 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
             extra["sites"] = [d for x in qp if len(x) > 2 for d in x[2]]
         if directs.get(lane):
             extra["direct"] = [{"site": d.site.key, "domain": d.site.domain, "url": d.url, "query": d.query,
-                                "paid": d.paid, "page": d.page, "extra": d.extra} for d in directs[lane]]
+                                "paid": d.paid, "page": d.page, "extra": d.extra,
+                                **({"category": d.category, "exact": d.exact} if d.category else {})}
+                               for d in directs[lane]]
         yield ev("lane", lane=lane, queries=[x[0] for x in qp], country=cc, **extra)
         for q, c, *rest in qp:
             # the first variant is filtered to the asked-for country, local used to home, the rest open;
@@ -826,10 +840,16 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
             per_lane[lane] += 1
             emitted += 1
             title = f"{dom} search: {d.query}" + (f" (page {d.page})" if d.page > 1 else "")
+            cat_extra: dict[str, Any] = {}
+            if d.category:
+                from agora.sources import categories as _cats
+                label = _cats.node_label(d.category)
+                title = f"{dom} category: {label}" + (f" + '{d.query}'" if d.query else "")
+                cat_extra = {"category": d.category, "category_label": label, "exact": d.exact}
             remember_source(d.url, lane, title, "")
             yield ev("source", url=d.url, domain=dom, lane=lane, title=title, query=d.query, snippet="",
                      eu=True, score=9.0, list_page=True, direct=True, site=d.site.key, paid=d.paid,
-                     page=d.page, extra=d.extra, country=d.site.country.upper())
+                     page=d.page, extra=d.extra, country=d.site.country.upper(), **cat_extra)
     tasks = {asyncio.ensure_future(_run_query(lane, q, c, lane == "service", inc)) for lane, q, c, inc in plan}
 
     def _yield_of(r: dict[str, Any]) -> float:

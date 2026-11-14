@@ -6,10 +6,11 @@
 // main.js shows it in phase 'category' (URL ?c=<id>) and emits 'catpage' {id, typed?}.
 import * as core from './core.js';
 import * as C from './cats.js';
+import * as intent from './intent.js';
 
 const { esc, t } = C;
 let el = null;
-const st = { id: null, data: null, typed: '', q: '', hits: null, hi: -1, seq: 0 };
+const st = { id: null, data: null, typed: '', q: '', hits: null, hi: -1, seq: 0, next: null };
 
 const catOf = (id, ids, path) => ({ id, ids, path });
 const crumbIds = d => (d.path || []).map(p => p.id);
@@ -103,10 +104,25 @@ function render() {
     <div class="cp-bar">${search(d)}${popular(d)}</div>
     ${groups.length ? `<ul class="cp-cards" role="list">${groups.map((g, i) => card(g, i, root)).join('')}</ul>` : ''}
     ${items(d)}
-    ${!groups.length && !(d.items || []).length ? `<p class="cp-empty">${esc(t('none2'))}</p>` : ''}
+    ${!groups.length && !(d.items || []).length ? `<div class="it-slot"><p class="cp-loading">${esc(t('loading'))}</p></div>` : ''}
     ${official(d)}
     <p class="cp-note">${esc(t('browseNote'))}</p>
   </div>`;
+}
+
+// A category with nothing inside it (owner, 14 Nov: "School catering" said "Nothing here yet."): what we can
+// search for it instead: its providers near you, the broader and sibling services, never a dead end.
+async function fillNext(d) {
+  const slot = el.querySelector('.it-slot');
+  if (!slot) return;
+  const my = st.seq;
+  let blk = null;
+  try { blk = await intent.nextSteps(d.id, d.label); } catch { blk = null; }
+  if (my !== st.seq || st.id !== d.id) return;
+  const now = el.querySelector('.it-slot');
+  if (!now) return;
+  st.next = blk;
+  now.innerHTML = blk ? blk.html : `<p class="cp-empty">${esc(t('none2'))}</p>`;
 }
 
 function hitsHtml() {
@@ -149,6 +165,7 @@ function hunt(label, id) {
 function onClick(e) {
   const d = st.data;
   if (!d) return;
+  if (st.next && e.target.closest('.it-cp') && st.next.click(e)) return;
   const a = e.target.closest('[data-cat]');
   if (a) { if (e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); C.openCategory(a.dataset.cat); return; }
   if (e.target.closest('[data-home]')) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); core.emit('category:home', {}); return; }
@@ -192,7 +209,9 @@ export async function show(id, { typed = '' } = {}) {
   if (!d) { st.data = { id, label: id, path: [], groups: [], items: [], popular: [] }; render(); return; }
   st.data = d;
   st.id = d.id;
+  st.next = null;
   render();
+  if (!(d.groups || []).length && !(d.items || []).length) fillNext(d);
   document.title = `${d.label} · ${core.BRAND}`;
   core.emit('catpage:shown', { id: d.id, asked: id, label: d.label });
 }

@@ -213,6 +213,7 @@ def api_index() -> dict[str, Any]:
             "GET /api/categories/search?q=&lang=&within=": "categories matching a few words (type-ahead), each with its full path (within=<id>: only inside that category)",
             "GET /api/categories/classify?q=&lang=": "a need in plain words -> best category, path, confidence",
             "GET /api/categories/nodes?ids=a,b&lang=": "a few categories by id, each with its full path",
+            "GET /api/intent?q=&country=&lang=&cat=&near=": "what a vague request most likely means: 2-5 ranked meanings (label, kind, category, hunt {q, cat, intent}, local queries, lanes, where-to-look domains, why, confidence), dominant, next steps",
             "GET /api/categories/page?id=&lang=": "a category page: plain title, about, subcategory cards with examples, concrete things, popular chips; huntable=false nodes open this instead of a hunt",
             "GET /reviews?hunt_id=&domains=": "SSE: seller reviews after a hunt (review events, then done)",
             "GET|POST /demo/story/refusal?pause=1.5": "SSE: watcher skips, buys, refuses a hidden fee, catches a tampered log",
@@ -744,6 +745,13 @@ except Exception:
 
 try:  # listing photo backfill + verify (GET /api/image, POST /api/images); optional like the cutouts
     app.include_router(getattr(_module("images"), "router"))
+except Exception:
+    pass
+
+try:  # what a vague request most likely means (GET /api/intent); optional like the others
+    _intent_router = getattr(_module("intent"), "router", None)
+    if _intent_router is not None:
+        app.include_router(_intent_router)
 except Exception:
     pass
 

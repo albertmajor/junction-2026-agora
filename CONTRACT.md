@@ -278,3 +278,29 @@ Additive (category pages, owner 14 Nov: "Lifestyle Services" hunted its own word
   `/nodes` resolves old ids (`asked`).
 - Viewer: phase `category` (`?c=<id>[&typed=]`, catpage.js). A browse-only node, or typed words that exactly name
   one, opens its page; only huntable nodes hunt. Bus: `category` {id, typed?}, `catpage`, `ask` {free: true}.
+
+Additive (coverage round: "theres way more we can find"; marketplace category pages, deeper free reads):
+- `agora/sources/categories.py`: taxonomy node -> the marketplaces' own category pages. `HAND` (90 nodes: Schibsted ids
+  shared by tori/blocket/finn/dba, kleinanzeigen c-ids, marktplaats /l/ paths, all copied from the cached menus),
+  `category_map.json` (`build_auto()`: menu entries the classifier agrees on; never "exact"), `GENERIC_NODES` (English
+  generic noun -> node). `need_node(need)`, `page_for(site_key, node, query) -> CategoryPage {url, node, exact, query}`.
+- Generic needs (`resolve.is_generic`: no brand/model, only a kind of thing + modifiers, or a hunt from the tree):
+  the used lane's marketplaces read their category page instead of the search (`Direct.category`, `Direct.exact`;
+  `source` event gains `category`, `category_label`, `exact`; title "tori.fi category: Mobile & Smart Phones"), and
+  free pages go deeper (`marketplaces.PAGE_PLAN`: home 20, others 6; `reader.HUNT_LISTING_CAP` 2,000 listings per
+  hunt, x depth). Listings carry `raw.category_page` {node, need_node, exact, site}.
+- Relevance for generic needs: a title naming the kind in any language (WORDS translations + the node's labels and
+  synonyms) or a listing of an exact category page counts; a listing naming ANOTHER kind is rejected with
+  "another kind of thing (coffee table), not a sofa"; the need's own marketplace search otherwise counts (0.7).
+  Variants: "another version (iPhone 13 Pro vs iPhone 13)". Battery health ("akku 93 %") is not a battery for sale.
+- `marketplaces.site_query`: generic words in any language are translated ('puhelin' -> 'handy' on kleinanzeigen),
+  modifiers never carry a search alone ('baby stroller' -> 'lastenvaunut', was 'baby'); `english_noun()`,
+  `translations()`, `MODIFIERS`. `market_total` unescapes entities (tori '19&nbsp;370' was read as 370).
+- Reader: marketplace lists keep every row (no title gate for lists > 8; resolve says why it drops one); free pages:
+  Schibsted ItemList JSON-LD and marktplaats/2dehands `__NEXT_DATA__` (`sources.rows_from_next_data`) before HTML
+  anchors; per-host concurrency 3 (`reader._host_sem`); stop rule matches the page's own query words
+  (`reader.page_terms`); category pages never stop on words; a read stops starting pages at 6 s and drops batches
+  still out at 9.5 s, keeping what it read; totals of plain-fetch sources come from their first page.
+  `MAX_SPLIT_OFFERS` 1,500. `sources.LISTING_FIX` (kleinanzeigen listing links).
+- Hunt: live leaderboard judges a sample of <= 600 offers (`hunt.sample_offers`); judge memo keys and resale comps
+  no longer O(n^2) (2,000 offers: resolve ~0.6 s, judge ~0.5-1.3 s; was ~16 s).

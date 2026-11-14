@@ -200,7 +200,19 @@ def _list_url(url: str) -> bool:
 
 
 def _memo_key(tag: str, offers: list[Offer]) -> tuple[Any, ...] | None:
-    return (tag, tuple(map(id, offers))) if _MEMO.get() is not None else None
+    """(tag, content token): lists with the same offers share a token. The token is worked out once per list
+    object (kept alive in the memo, so its id cannot be reused): hashing a 2,000-id tuple on every market_prices
+    call cost 2.5 s per judge of a generic hunt."""
+    memo = _MEMO.get()
+    if memo is None:
+        return None
+    by_obj = memo.setdefault("__lists__", {})
+    ent = by_obj.get(id(offers))
+    if ent is None or ent[0] is not offers or ent[1] != len(offers):
+        tokens = memo.setdefault("__tokens__", {})
+        ent = (offers, len(offers), tokens.setdefault(tuple(map(id, offers)), len(tokens)))
+        by_obj[id(offers)] = ent
+    return (tag, ent[2])
 
 
 def _junk(x: Offer) -> bool:
@@ -301,15 +313,29 @@ def resale_comps(thing_offers: list[Offer], exclude: Offer | None = None) -> lis
     costed (`exclude`), else none and the category rate is the honest guess. The set itself is the one
     market median everyone quotes, so it keeps the costed offer's own price when there are others."""
     comps = used_comps(thing_offers)
-    if len(comps) < MIN_COMPS or (exclude is not None and not used_comps(thing_offers, exclude)):
+    if len(comps) < MIN_COMPS:
         return []
+    if exclude is not None and len(comps) < 3:
+        # few comps: check exactly that one is not the costed offer itself (with 3+ comps another one always
+        # stays; recomputing the set without each offer made judge O(n^2): 15 s for 2,000 marketplace rows)
+        if not used_comps(thing_offers, exclude):
+            return []
     return comps
 
 
 def _comp_urls(thing_offers: list[Offer], exclude: Offer | None = None) -> list[str]:
     comps = set(resale_comps(thing_offers, exclude))
-    return [x.url for x in thing_offers if x.condition == "used"
-            and not _list_offer(x) and price_of(x) in comps][:8]
+    if not comps:
+        return []
+    key = _memo_key("comp_urls", thing_offers)      # the same 8 URLs for every offer of the Thing
+    memo = _MEMO.get()
+    if key is not None and memo is not None and key in memo:
+        return list(memo[key])
+    out = [x.url for x in thing_offers if x.condition == "used"
+           and not _list_offer(x) and price_of(x) in comps][:8]
+    if key is not None and memo is not None:
+        memo[key] = tuple(out)
+    return out
 
 
 # ---------------------------------------------------------------- REFERENCE PRICE (robust, per hunt)
