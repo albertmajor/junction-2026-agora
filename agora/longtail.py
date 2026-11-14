@@ -193,7 +193,11 @@ def _lang_for(need: Need) -> tuple[str | None, str | None]:
     """(country code, ISO language) of the asked-for place; (None, None) when none."""
     try:
         from agora import discover, places
+        from agora.need import national_service
         cc = discover.country_of(need)
+        if not cc and national_service(need):
+            cc = discover.home_country()      # insurance / loans / energy: bought at home (eval r2)
+            return (cc, places.LANGUAGE.get(cc or "")) if cc else (None, None)
         if not cc:
             return None, None
         return cc, places.language_for(need.where, cc)
@@ -210,6 +214,20 @@ def intent_queries(need: Need, cat: dict[str, Any] | None = None) -> list[tuple[
     sub = "subscription" in raw or "unlimited" in raw or cat.get("kind") == "digital"
     cc, lang = _lang_for(need)
     out: list[tuple[str, str | None, str]] = []
+    try:
+        from agora.need import national_service
+        national = national_service(need)
+    except ImportError:
+        national = False
+    if national and cc:
+        # insurance, loans, energy: no agencies or retainers (eval r2: 'car insurance agency monthly retainer
+        # price'); the country's own providers in its language, and a comparison article to mine
+        label = (cat.get("labels") or {}).get(lang or "") or ""
+        out = [(f"{label} {LOCAL_PRICE.get(lang or '', 'price')}".strip(), cc, "local")] if label else []
+        out.append((f"{core} price {need.where or cc.upper()}", cc, "provider"))
+        if label:
+            out.append((f"{label} vertailu" if lang == "fi" else f"{label} compare", cc, "listicle"))
+        return [(re.sub(r"\s+", " ", q).strip(), c, p) for q, c, p in out]
     if sub:
         out.append((f"unlimited {core} subscription pricing per month", None, "provider"))
     else:

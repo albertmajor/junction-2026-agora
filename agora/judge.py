@@ -2149,7 +2149,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             beat = round(_landed(best_all) - extras, 2)
             o.raw["beat_eur"] = beat
             o.raw["gap_eur"] = round((o.price_eur or 0) - beat, 2)
-        headline = all_in_headline(good, best_all, lines)
+        # a vague need ('puhelin', a tree hunt): say which one the price buys ('used iPhone 13 128GB at tori.fi')
+        headline = all_in_headline(good, best_all, lines, named=_generic_need(need))
         lines[0:0] = skipped_lines(priced)
         if ref is not None:
             n_low = sum(1 for o in all_offers if o.raw.get("ref_suspect"))
@@ -2256,7 +2257,16 @@ def _photo_groups(offers: list[Offer], warm: bool) -> dict[int, list[Offer]] | N
         return None
 
 
-def all_in_headline(good: list[Offer], best: Offer, lines: list[str]) -> str:
+def short_title(o: Offer, n: int = 40) -> str:
+    """The listing's own name, short: 'iPhone 13 128GB' from 'iPhone 13 128GB, Tuotemerkki: Apple, Kunto: Hyvä'."""
+    t = re.split(r",\s*(?:tuotemerkki|malli|kunto|koko|brand|condition|marke|zustand|merk|staat|stan)\s*:|\s[|–—]\s",
+                 (o.title or "").strip(), maxsplit=1, flags=re.I)[0].strip(" ,.-")
+    if len(t) > n:
+        t = t[:n].rsplit(" ", 1)[0].rstrip(" ,.-/") + "…"
+    return t
+
+
+def all_in_headline(good: list[Offer], best: Offer, lines: list[str], named: bool = False) -> str:
     """'€825 all in: used at tori.fi. New from €1,029, refurbished from €899.' Every number is the full
     price you pay once (tag + shipping + import VAT + fees)."""
     per_cond: dict[str, Offer] = {}
@@ -2271,7 +2281,8 @@ def all_in_headline(good: list[Offer], best: Offer, lines: list[str]) -> str:
         how = f" ({fmt(o.price_eur or 0)} + {fmt(extra)} shipping/import/fees)" if extra >= 1 else ""
         label = f" ({PRIVATE_NEW})" if private_new(o) else ""
         lines.append(f"{c}: {fmt(_landed(o))} all in at {o.source}{label}{how}")
-    head = f"{fmt(_landed(best))} all in: {_cond(best)} at {best.source}."
+    what = f" {short_title(best)}" if named and short_title(best) else ""
+    head = f"{fmt(_landed(best))} all in: {_cond(best)}{what} at {best.source}."
     others = [f"{c} from {fmt(_landed(o))}" + ("" if surely_buyable(o) else " (may not ship to Finland)")
               for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])) if c != market_condition(best)]
     if others:
