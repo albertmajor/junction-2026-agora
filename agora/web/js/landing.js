@@ -271,7 +271,7 @@ function sourcesHtml() {
   ];
   return band('ld-sources', 'peach', `<div class="ld-in">
       <header class="ld-head ld-rv">
-        ${head('05', 'Anywhere it’s sold', `There’s ${mk('<em>no list.</em>', 'oval')}`, 'ld-sources-h', 'ld-h-big')}
+        ${head('05', 'Anywhere it’s sold', `There’s ${mk('<em>no list.</em>')}`, 'ld-sources-h', 'ld-h-big')}
         <p class="ld-sub">If a shop sells it, we can find it. Every question starts with a live search of the web, so an offer can come from a shop we’d never heard of a minute earlier.</p>
       </header>
       <ol class="ld-lanes" role="list">
