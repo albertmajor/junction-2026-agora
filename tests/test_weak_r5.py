@@ -43,6 +43,7 @@ def test_size_class_knows_cars_but_not_car_accessories():
 def _car(i: int, title: str, price: float, colour: bool | None = None) -> Offer:
     o = Offer(url=f"https://www.nettiauto.com/x/y/1610{i:04d}", source="nettiauto.com", title=title, price=price,
               currency="EUR", price_eur=price, condition="used")
+    o.raw["category"] = "vehicle"          # nettiauto's list: a cars category (reader)
     if colour is not None:
         o.raw["colour"] = "red" if colour else "blue"
         o.raw["colour_match"] = colour
@@ -75,3 +76,17 @@ def test_no_car_states_its_colour_says_so_plainly():
     v = judge(need, resolve(need, offers), history=False)
     assert any("colour" in line and "not" in line for line in v.lines)
     assert "colour not confirmed" in v.headline
+
+
+# ------------------------------------------------------------------ 'haircut helsinki': a clipper-only cut
+
+def test_a_clipper_only_cut_is_not_the_standard_haircut():
+    # live: the pick was 'Koneajo' €20 (timma.fi), a clipper-only buzz cut, over €23-26 'Parturileikkaus'
+    from agora.need import parse_need
+    from agora.resolve import service_line_kind
+    need = parse_need("haircut helsinki")
+    for t in ("Koneajo", "Buzzcut – Wildan Studio", "Clipper cut", "Koneajo, yksi pituus"):
+        assert service_line_kind(need, t, "job") == "extra", t
+    for t in ("Parturileikkaus", "Miesten hiusten leikkaus", "Haircut – Thieves Barber", "Parturileikkaus, fade"):
+        assert service_line_kind(need, t, "job") == "main", t
+    assert service_line_kind(parse_need("buzzcut helsinki"), "Buzzcut – Wildan Studio", "job") == "main"

@@ -2291,7 +2291,9 @@ MOVING_ADDON = re.compile(r"halteverbot\w*|parkverbot\w*|parkeerverbod\w*|umzugs
                           r"no[- ]parking\s+(?:zone|sign|permit)\w*|furniture\s+lift", re.I)
 HAIR_NEED = re.compile(r"haircut|hair\s+cut|hius\w*|parturi\w*|kampaamo\w*|friseur|haarschnitt|kapper|knippen|"
                        r"frisor|klippning|barber", re.I)
-HAIR_EXTRA = re.compile(r"otsatuk\w*|otsahiu\w*|\bfringe\b|\bbangs\b|\bpony\w*|\b(?:5|10|15|20)\s*min\w*|"
+# a clipper-only cut (koneajo, buzzcut) is not the standard haircut (live r5: 'Koneajo' €20 was the pick)
+HAIR_EXTRA = re.compile(r"koneajo\w*|\bbuzz\s*-?\s*cut\w*|\bclipper\s+cut\w*|maschinenschnitt|tondeuse|"
+                        r"otsatuk\w*|otsahiu\w*|\bfringe\b|\bbangs\b|\bpony\w*|\b(?:5|10|15|20)\s*min\w*|"
                         r"cornrows?|\bbraids?\b|\bletit\b|lettie?\w*|rastat?\b|dreadlock\w*|kulma\w*|eyebrow\w*|"
                         r"\bbeard\b|\bparta\w*|bartschnitt|baard|skagg|\bvarjays\w*|\bcolou?r\b|raidat|foliot|"
                         r"kampaus\w*|\bstyling\b|hiustenpesu|\bwash\b|lisa\w*|konetasoitus|niskan\s+siistiminen|"

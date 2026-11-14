@@ -108,3 +108,33 @@ The four defects outside this fixer's files went to the other fixers as cross-fi
   - Design subscriptions: Designjoy, Penji and others, compared per month.
   - Plumber Berlin: a clear rate × hours estimate.
   - Wedding photographer category: 14 local photographers, each with a photo.
+
+## Round 5: weak areas
+
+On 2026-11-14 the weak-area queries were rerun live on a fresh server (port 9150, 25 s hunt budget, after the round 5 car, service-pricing and service-discovery fixes). Saved streams are in the session scratchpad `weak/`. Each result was judged as a skeptical shopper would judge it.
+
+| Query | Time | Offers / kept | Pick | Verdict |
+|---|---|---|---|---|
+| volvo v70 | 24 s | 219 / 201 | €2,750 used V70, nettiauto | Good pick. €500–€700 cars are flagged and skipped. Still wrong: the "also in the EU" line added €20–45 parcel shipping to a car (fixed). Titles carry no year or km. |
+| bright red car | 23 s | 131 / 96 | €6,900 Subaru Outback, nettiauto | Still wrong: nothing showed the car was red, and colour was never used in the pick (fixed). The nettiauto list read has no colour field, so most cars state no colour. autoline.info (trucks) feeds the pool. |
+| car insurance finland | 27 s | 6 / 2 | quote verdict, €150/yr example | Good. Says quote-priced and links If, OP, LähiTapiola, Fennia. |
+| school catering helsinki | 1 s (cache) | 0 / 0 | quote verdict | Good. Explains that Finnish school meals are municipal and links Amica, Fazer, Sodexo. |
+| plumber berlin | 20 s | 9 / 3 | €85 at gerahome.com (€60/h + €25 call-out est.) | Good. The call-out estimate comes from werkstueck's stated €25. gerahome is a platform "from" rate. |
+| wedding photographer helsinki | 6 s | 19 / 12 | €550 "Hääkuvaus", studiohappymoment.fi | Weak. Portrait-only packages rank after. Packages are not compared by hours, so the full-day €1,500 package is flagged "2.7x median" and the typical band (€550–875) is too low. |
+| winter jacket women | 35 s | 2,164 / 2,028 | €19 used Luhta naisten talvitakki, tori.fi | Good. The women's audience held: one unisex jacket was kept and no men's jackets. 10 s over the budget. |
+| haircut helsinki | 18 s | 28 / 17 | €20 "Koneajo", timma.fi | Still wrong: a clipper-only buzz cut was crowned over €23–26 standard cuts (fixed). |
+| gunsmith | 7 s | 10 / 9 | €60 "Aseseppä palvelut", aseteam.fi | Weak. Specific tasks (suppressor threading €100, deactivation €450) and an unexplained €60 job are compared with hourly rates × 2 h. |
+| lunch | 11 s | 91 / 49 priced | €8.70/person UniCafe Kaivopiha | Good. Lahti pages were skipped and the median is €14. The same restaurant shows €8.70 on luncher.fi and €9.80 on lunchmenu.fi, and the two are not reconciled. |
+
+**Fixed in this round (`tests/test_weak_r5.py`, 5 tests):**
+- **Cars abroad ship by car transporter:** a car need now gets the `vehicle` size class in `agora/shipping.py`, €500–1,100 central EU → Nordic, with "import tax not included". It no longer gets a medium parcel. Car seats, chargers and parts keep their own class.
+- **Colour asked:** in `agora/judge.py`, a car that states the asked colour (`raw.colour_match`, set by the reader) is the pick over cheaper cars of unknown colour. The verdict says how many state it. When none do, the headline ends "colour not confirmed" and a line says to check the photos.
+- **Haircut:** koneajo, buzzcut and clipper cut count as extras, not the standard haircut, unless asked (`resolve.HAIR_EXTRA`).
+
+**Still open:**
+- Car list reads (nettiauto markdown split) give only "Make Model" titles, with no year, km or colour. Colour mostly stays unknown, and the shopper cannot compare cars.
+- autoline.info (commercial vehicles) is used as a car source for "bright red car".
+- Gunsmith should compare like with like: hourly rate × standard hours, with task prices listed apart. The open-trade logic does this, but it adds a call-out fee, and a gunsmith does not make house calls.
+- Wedding packages need hours or coverage (full day, ceremony only) to normalise. Otherwise the cheapest short package wins and full-day packages are flagged as high.
+- The same restaurant or provider on two aggregators at different prices is not merged.
+- Hunts with large list pages (winter jacket women) run about 10 s over the 25 s budget.
