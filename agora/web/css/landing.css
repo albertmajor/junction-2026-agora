@@ -560,3 +560,10 @@
   .ld-fan .ld-rc:nth-child(1) { rotate: -1.2deg; }
   .ld-fan .ld-rc:nth-child(2) { rotate: 1deg; translate: none; }
 }
+/* the closing phrase of the value line ("A pick in seconds."): the display serif in italic, like the headline accents,
+   instead of a bold sans highlight */
+.ld-value b { font: italic 400 1.18em/1.3 var(--serif); font-variation-settings: var(--display-vs); letter-spacing: -0.005em; color: var(--tan, #D9B98C); background: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-value b { color: var(--tan, #D9B98C); } }
+:root[data-theme="dark"] .ld-value b { color: var(--tan, #D9B98C); }
+:root[data-theme="light"] .ld-value b, :root:not([data-theme]) .ld-value b { color: var(--brown, #6B4A1E); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .ld-value b { color: var(--tan, #D9B98C); } }
