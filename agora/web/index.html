@@ -24,6 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/web/css/base.css">
+<link rel="stylesheet" href="/web/css/footer.css">
 <link rel="stylesheet" href="/web/css/line.css">
 <link rel="stylesheet" href="/web/css/sheet.css">
 <link rel="stylesheet" href="/web/css/watch.css">
@@ -100,9 +101,37 @@
 
   <div id="lab" hidden aria-label="Lab panel"></div>
 
-  <footer id="rule">
+  <footer id="rule" class="pf">
+    <div class="pf-cols">
+      <div class="pf-say">
+        <h4>Ask the monkey</h4>
+        <a class="pf-big" href="/" data-pf="ask">What do you want to buy?</a>
+      </div>
+      <nav aria-label="PriceMonkey">
+        <h4>Product</h4>
+        <a href="/#ld-how">How it works</a>
+        <a href="/#ld-price">The all-in price</a>
+        <a href="/#ld-sources">Where we look</a>
+      </nav>
+      <nav aria-label="For agents">
+        <h4>For agents</h4>
+        <a href="/#ld-agents">MCP server</a>
+        <a href="/api">JSON API</a>
+      </nav>
+      <nav aria-label="Built with">
+        <h4>Built with</h4>
+        <a href="https://context.dev" target="_blank" rel="noopener">Context.dev</a>
+        <a href="https://www.hackjunction.com" target="_blank" rel="noopener">Junction 2026</a>
+      </nav>
+    </div>
+    <div class="pf-word" aria-hidden="true">
+      <span class="pf-name">Price<em>Monkey</em></span>
+      <img class="pf-mascot" src="/web/assets/brand/mascot.svg" alt="" width="120" height="200" loading="lazy" decoding="async">
+    </div>
+    <div class="pf-bar">
     <p class="say"><img class="rule-mark" src="/web/assets/brand/logo.svg" width="19" height="16" alt="">Ranked by what you pay, all in. No paid placements. <span class="nb soft">We may earn a fee, never a better spot.</span></p>
     <p class="foot-links"><a class="cd-mark" href="https://context.dev" target="_blank" rel="noopener">Powered by <img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="14" height="14" onerror="this.replaceWith(Object.assign(document.createElement('i'),{className:'cd-sq'}))"> <b>Context.dev</b></a><a href="/lab" id="lab-link" hidden>lab</a></p>
+    </div>
   </footer>
 </div>
 <script type="module" src="/web/js/main.js"></script>

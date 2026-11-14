@@ -363,7 +363,7 @@ body:has(#catnav.open) .start-banana { z-index: 1; }
 /* verdict.js: the lowest-tag contrast gets a line of its own, balanced, a shade darker */
 
 /* ---------- footer rule ---------- */
-#rule {
+#rule:not(.pf) {
   border-top: 1px solid var(--hair); margin-top: 40px; padding: 16px 0 24px;
   display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap;
   font-size: 13px; color: var(--ink-2);
@@ -387,7 +387,7 @@ body:has(#catnav.open) .start-banana { z-index: 1; }
 .cd-mark img { width: 14px; height: 14px; border-radius: 3px; }
 .cd-mark .cd-sq { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--ink-blue); }
 .cd-mark:hover b { text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 3px; }
-[data-phase="start"] #rule { border-top: 0; justify-content: center; text-align: center; padding-top: 28px; column-gap: 28px; }
+[data-phase="start"] #rule:not(.pf) { border-top: 0; justify-content: center; text-align: center; padding-top: 28px; column-gap: 28px; }
 @media (max-width: 640px) {
   #rule .soft { display: block; margin-top: 2px; }
   .rule-mark { display: none; }
