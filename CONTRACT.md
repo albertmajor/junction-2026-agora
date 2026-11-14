@@ -265,3 +265,16 @@ Additive (category context):
   (...)": books/manga/merch that only share the name, guns and parts, goods-only marketplaces, product pages without
   service wording); a product need rejects service ads ("a service, not a bike"). `resolve.far_provider`: a local
   trade priced in USD/CAD/AUD on a non-EU domain is "a provider abroad". Both run before the list-page reason.
+
+Additive (category pages, owner 14 Nov: "Lifestyle Services" hunted its own words):
+- tree.json rows: `"h": 0` + `"b": reason` (root | vague | other | group | department | official) = browse-only; absent
+  = huntable. Roots carry `"a"` (one-line about) and `"pop"` [[words, id]]. Rules in `agora/taxonomy/browse.py`
+  (`assess`, `should_fold`); hand overrides/renames/moves in curated.py (`RENAMES`, `MOVES`, `FOLD_UP`, `HUNTABLE`,
+  `ABOUT`, `POPULAR`). Empty umbrellas fold into their parent (old ids stay aliases: `sp:se-6-4` -> `beauty-wellness`).
+- Taxonomy: `huntable(id)`, `browse_reason(id)`, `concrete_under(id, n)`; `node()` gains `huntable`, `browse_reason`.
+- API: every category item gains `huntable`, `browse_reason`; `GET /api/categories/page?id=` {label, path, about,
+  why, groups [{..., examples}], items, official, popular [{q, id, label}], asked?}; `/search?within=<id>`;
+  `/classify` match gains `exact`, `browse` {id,label,path} (words name a browse-only node), `choices` (browse-only);
+  `/nodes` resolves old ids (`asked`).
+- Viewer: phase `category` (`?c=<id>[&typed=]`, catpage.js). A browse-only node, or typed words that exactly name
+  one, opens its page; only huntable nodes hunt. Bus: `category` {id, typed?}, `catpage`, `ask` {free: true}.

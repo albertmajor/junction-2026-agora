@@ -1,0 +1,2396 @@
+{
+"appliances": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/airco-s/"
+},
+"baby-kids": {
+"auto": true,
+"kleinanzeigen": "/s-familie-kind-baby/c17",
+"marktplaats": "/l/kinderen-en-baby-s/autostoeltjes/"
+},
+"business": {
+"auto": true,
+"marktplaats": "/l/zakelijke-goederen/machines-en-bouw-overig/"
+},
+"cpv:03417": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/afvalhout/"
+},
+"cpv:142122": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/aggregaten/"
+},
+"cpv:18235": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/truien-en-vesten/"
+},
+"cpv:185121": {
+"auto": true,
+"marktplaats": "/l/postzegels-en-munten/munten-belgie/"
+},
+"cpv:1913": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/schapen-geiten-en-varkens/"
+},
+"cpv:1926": {
+"auto": true,
+"schibsted": [
+"2.86.7734.125"
+]
+},
+"cpv:22111": {
+"auto": true,
+"marktplaats": "/l/boeken/schoolboeken/"
+},
+"cpv:221141": {
+"auto": true,
+"marktplaats": "/l/boeken/woordenboeken/"
+},
+"cpv:221145": {
+"auto": true,
+"marktplaats": "/l/boeken/encyclopedieen/"
+},
+"cpv:224": {
+"auto": true,
+"marktplaats": "/l/postzegels-en-munten/aandelen-en-waardepapieren/"
+},
+"cpv:2243": {
+"auto": true,
+"marktplaats": "/l/postzegels-en-munten/bankbiljetten-belgie/"
+},
+"cpv:30199792": {
+"auto": true,
+"marktplaats": "/l/diversen/kalenders/"
+},
+"cpv:3112131": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/windwijzers-en-windmolens/"
+},
+"cpv:315242": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/lampen-wandlampen/"
+},
+"cpv:3168222": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/mengpanelen/"
+},
+"cpv:3225": {
+"auto": true,
+"schibsted": [
+"2.93.3217.39"
+]
+},
+"cpv:325512": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/telefooncentrales/"
+},
+"cpv:33134": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/klein-materiaal/"
+},
+"cpv:341131": {
+"auto": true,
+"marktplaats": "/l/auto-s/jeep/"
+},
+"cpv:3452215": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/catamarans/"
+},
+"cpv:345225": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/rubberboten/"
+},
+"cpv:351217": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/alarmsystemen/"
+},
+"cpv:373131": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/snaarinstrumenten-klavecimbels/"
+},
+"cpv:37823": {
+"auto": true,
+"marktplaats": "/l/diversen/papierwaren/"
+},
+"cpv:39122": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/kasten-boekenkasten/"
+},
+"cpv:3914312": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/slaapkamer-bedden/"
+},
+"cpv:39144": {
+"auto": true,
+"schibsted": [
+"2.67.7749.164"
+]
+},
+"cpv:3916211": {
+"auto": true,
+"marktplaats": "/l/diversen/schoolbenodigdheden/"
+},
+"cpv:392933": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/gras-en-kunstgras/"
+},
+"cpv:392981": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/fotografie-fotolijsten/"
+},
+"cpv:3951": {
+"auto": true,
+"kleinanzeigen": "/s-heimtextilien/c90"
+},
+"cpv:4212246": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/luchtpompen/"
+},
+"cpv:441111": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/tegels/"
+},
+"cpv:441119": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/vloerdelen-en-plavuizen/"
+},
+"health-beauty": {
+"auto": true,
+"kleinanzeigen": "/s-beauty-gesundheit/c224"
+},
+"hobbies": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/knutselen/"
+},
+"home-garden": {
+"auto": true,
+"kleinanzeigen": "/s-haus-garten/c291",
+"marktplaats": "/l/huis-en-inrichting/badkamer-badkamermeubels/"
+},
+"m:blocket:damklader-3749e4": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/jumpsuits/"
+},
+"m:blocket:golv-5d0ca5": {
+"auto": true,
+"schibsted": [
+"2.67.3899.167"
+]
+},
+"m:blocket:musik-och-film-471e50": {
+"auto": true,
+"schibsted": [
+"2.86.3922.101"
+]
+},
+"m:blocket:skrivare-72848b": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/printers/"
+},
+"m:ikea:loft-beds-bunk-beds-6c46d3": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/slaapkamer-stapelbedden-en-hoogslapers/"
+},
+"m:ikea:tables-chairs-1a93f2": {
+"auto": true,
+"schibsted": [
+"2.78.5196.216"
+]
+},
+"m:ikea:winter-table-decoration-c41d45": {
+"auto": true,
+"marktplaats": "/l/diversen/kerst/"
+},
+"m:kleinanzeigen:film-dvd-257b22": {
+"auto": true,
+"kleinanzeigen": "/s-film-dvd/c79"
+},
+"m:kleinanzeigen:multimedia-elektronik-84502e": {
+"auto": true,
+"kleinanzeigen": "/s-multimedia-elektronik/c293"
+},
+"m:kleinanzeigen:schuhe-damen-c4e42d": {
+"auto": true,
+"kleinanzeigen": "/s-schuhe-damen/c159"
+},
+"m:kleinanzeigen:schuhe-herren-a8f8e8": {
+"auto": true,
+"kleinanzeigen": "/s-schuhe-herren/c158"
+},
+"m:marktplaats:activity-trackers-6d885e": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/activity-trackers/"
+},
+"m:marktplaats:apple-desktops-bc5a9e": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/apple-desktops/"
+},
+"m:marktplaats:audio-software-d31fdc": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/audio-software/"
+},
+"m:marktplaats:auto-s-boeken-3e9b5e": {
+"auto": true,
+"marktplaats": "/l/boeken/auto-s-boeken/"
+},
+"m:marktplaats:banken-sofa-s-en-chaises-8b380d": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/banken-sofa-s-en-chaises-longues/"
+},
+"m:marktplaats:buggy-s-a88cb3": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/buggy-s/"
+},
+"m:marktplaats:cd-s-country-en-western-c1b327": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-country-en-western/"
+},
+"m:marktplaats:cd-s-dance-en-house-5e150a": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-dance-en-house/"
+},
+"m:marktplaats:cd-s-jazz-en-blues-7169f5": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-jazz-en-blues/"
+},
+"m:marktplaats:cd-s-latin-en-salsa-6f64ba": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-latin-en-salsa/"
+},
+"m:marktplaats:cd-s-pop-252890": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-pop/"
+},
+"m:marktplaats:cd-s-rock-3798e6": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-rock/"
+},
+"m:marktplaats:cd-singles-742811": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-singles/"
+},
+"m:marktplaats:dashboard-en-schakelaars-2fed7c": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/dashboard-en-schakelaars/"
+},
+"m:marktplaats:desktop-pc-s-090467": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/desktop-pc-s/"
+},
+"m:marktplaats:dvd-s-drama-c452de": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/dvd-s-drama/"
+},
+"m:marktplaats:dvd-s-sport-en-fitness-b0693d": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/dvd-s-sport-en-fitness/"
+},
+"m:marktplaats:elektronica-componenten-f100d9": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/elektronica-componenten/"
+},
+"m:marktplaats:film-tv-en-media-e958d1": {
+"auto": true,
+"marktplaats": "/l/boeken/film-tv-en-media/"
+},
+"m:marktplaats:fotografie-filters-7fb152": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/fotografie-filters/"
+},
+"m:marktplaats:games-pc-a849d5": {
+"auto": true,
+"marktplaats": "/l/spelcomputers-en-games/games-pc/"
+},
+"m:marktplaats:glas-en-ramen-8753c5": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/glas-en-ramen/"
+},
+"m:marktplaats:home-cinema-sets-13e8fc": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/home-cinema-sets/"
+},
+"m:marktplaats:keuken-complete-keukens-75c6ee": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/keuken-complete-keukens/"
+},
+"m:marktplaats:krikken-80ef4c": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/krikken/"
+},
+"m:marktplaats:labelprinters-38a347": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/labelprinters/"
+},
+"m:marktplaats:lampen-tafellampen-48869d": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/lampen-tafellampen/"
+},
+"m:marktplaats:muziek-356ca2": {
+"auto": true,
+"marktplaats": "/l/boeken/muziek/"
+},
+"m:marktplaats:office-software-912ca3": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/office-software/"
+},
+"m:marktplaats:routers-en-modems-7f202c": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/routers-en-modems/"
+},
+"m:marktplaats:schilderen-a41e0c": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/schilderen/"
+},
+"m:marktplaats:smart-232417": {
+"auto": true,
+"marktplaats": "/l/auto-s/smart/"
+},
+"m:marktplaats:sportboeken-318835": {
+"auto": true,
+"marktplaats": "/l/boeken/sportboeken/"
+},
+"m:marktplaats:stickers-en-plaatjes-db3b2d": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/stickers-en-plaatjes/"
+},
+"m:marktplaats:tablet-hoezen-bfabae": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/tablet-hoezen/"
+},
+"m:marktplaats:tafelonderdelen-19fd54": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/tafelonderdelen/"
+},
+"m:marktplaats:televisiebeugels-cb0b03": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/televisiebeugels/"
+},
+"m:marktplaats:tuinstoelen-effd3a": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/tuinstoelen/"
+},
+"m:marktplaats:tuning-en-styling-52c0ec": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/tuning-en-styling/"
+},
+"m:marktplaats:vhs-film-c63aef": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vhs-film/"
+},
+"m:marktplaats:vintage-computers-10fe3e": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/vintage-computers/"
+},
+"m:marktplaats:vintage-televisies-58d301": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/vintage-televisies/"
+},
+"m:marktplaats:vinyl-country-en-western-fe8a97": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-country-en-western/"
+},
+"m:marktplaats:vinyl-dance-en-house-c9b18e": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-dance-en-house/"
+},
+"m:marktplaats:vinyl-elektronisch-214b46": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-elektronisch/"
+},
+"m:marktplaats:vinyl-jazz-en-blues-cc83f2": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-jazz-en-blues/"
+},
+"m:marktplaats:vinyl-latin-en-salsa-a4d519": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-latin-en-salsa/"
+},
+"m:marktplaats:vinyl-pop-004011": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-pop/"
+},
+"m:marktplaats:vinyl-rock-c6a37e": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-rock/"
+},
+"m:marktplaats:vinyl-singles-06f7e4": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-singles/"
+},
+"m:marktplaats:werkkleding-b65fc7": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/werkkleding/"
+},
+"m:marktplaats:wetenschap-7595ea": {
+"auto": true,
+"marktplaats": "/l/boeken/wetenschap/"
+},
+"m:marktplaats:windows-tablets-196f28": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/windows-tablets/"
+},
+"m:otto:aufbewahrung-944cad": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/boxen/"
+},
+"m:otto:container-68fc53": {
+"auto": true,
+"kleinanzeigen": "/s-container/c402",
+"marktplaats": "/l/doe-het-zelf-en-verbouw/containers/"
+},
+"m:otto:essgruppen-8cc28c": {
+"auto": true,
+"schibsted": [
+"2.78.5196.211"
+]
+},
+"m:otto:kindermoebel-13ce3c": {
+"auto": true,
+"schibsted": [
+"1.68.3916"
+]
+},
+"media": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cd-s-schlagers/"
+},
+"office": {
+"auto": true,
+"marktplaats": "/l/zakelijke-goederen/kantoor-en-winkelinrichting-kantoorartikelen/"
+},
+"pets": {
+"auto": true,
+"marktplaats": "/l/boeken/dieren-en-huisdieren/"
+},
+"sp:aa-1": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/badmode-en-zwemkleding/"
+},
+"sp:aa-1-1": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/sportkleding/"
+},
+"sp:aa-1-10": {
+"auto": true,
+"schibsted": [
+"2.71.3950.183",
+"2.71.3941.173",
+"2.68.3913.8356"
+]
+},
+"sp:aa-1-10-7": {
+"auto": true,
+"marktplaats": "/l/motoren/kleding-motorkleding/"
+},
+"sp:aa-1-12-4": {
+"auto": true,
+"schibsted": [
+"2.71.3950.8373",
+"2.71.3941.8370"
+]
+},
+"sp:aa-1-13-5": {
+"auto": true,
+"marktplaats": "/l/kleding-heren/overhemden/"
+},
+"sp:aa-1-13-6": {
+"auto": true,
+"marktplaats": "/l/kleding-heren/polo-s/"
+},
+"sp:aa-1-14-5": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/spijkerbroeken-en-jeans/"
+},
+"sp:aa-1-15": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/rokken/",
+"schibsted": [
+"2.71.3941.175"
+]
+},
+"sp:aa-1-17-4": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/pyjama-s/"
+},
+"sp:aa-1-4": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/jurken/",
+"schibsted": [
+"2.71.3941.172"
+]
+},
+"sp:aa-1-6": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/ondergoed-en-lingerie/",
+"schibsted": [
+"2.71.3941.181"
+]
+},
+"sp:aa-2-10": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/manchetknopen/",
+"schibsted": [
+"2.71.7748.9467"
+]
+},
+"sp:aa-2-23": {
+"auto": true,
+"marktplaats": "/l/kleding-heren/stropdassen/"
+},
+"sp:aa-2-27": {
+"auto": true,
+"schibsted": [
+"2.71.8344.199"
+]
+},
+"sp:aa-2-30": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/armbanden/",
+"schibsted": [
+"2.71.7748.198"
+]
+},
+"sp:aa-4-1": {
+"auto": true,
+"marktplaats": "/l/verzamelen/sleutelhangers/"
+},
+"sp:aa-5-4": {
+"auto": true,
+"schibsted": [
+"2.71.3946.9473"
+]
+},
+"sp:aa-5-4-7": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/tassen-schoudertassen/",
+"schibsted": [
+"2.71.3946.9474"
+]
+},
+"sp:aa-5-5-3": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/portemonnees/"
+},
+"sp:aa-6-1": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/enkelbandjes-en-enkelkettinkjes/"
+},
+"sp:aa-6-12": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/smartwatches/"
+},
+"sp:aa-6-5-2": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/bedels/"
+},
+"sp:aa-6-6": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/oorbellen/",
+"schibsted": [
+"2.71.7748.197"
+]
+},
+"sp:aa-6-7": {
+"auto": true,
+"schibsted": [
+"2.71.7748.9470"
+]
+},
+"sp:aa-6-8": {
+"auto": true,
+"schibsted": [
+"2.71.7748.195"
+]
+},
+"sp:aa-6-9": {
+"auto": true,
+"schibsted": [
+"2.71.7748.196"
+]
+},
+"sp:aa-8": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/schoenen/",
+"schibsted": [
+"1.71.3949"
+]
+},
+"sp:ae-1": {
+"auto": true,
+"kleinanzeigen": "/s-eintrittskarten-tickets/c231"
+},
+"sp:ae-2-1-1-8": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/stempelen/"
+},
+"sp:ae-2-1-2-1-1-2": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/scrapbooking/"
+},
+"sp:ae-2-1-2-12": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/pottenbakken/"
+},
+"sp:ae-2-1-2-14": {
+"auto": true,
+"schibsted": [
+"2.78.9760.9763"
+]
+},
+"sp:ae-2-1-2-8-4": {
+"auto": true,
+"marktplaats": "/l/verzamelen/stickers/"
+},
+"sp:ae-2-1-2-8-9-2": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/kledingapplicaties-en-hotfix/"
+},
+"sp:ae-2-1-4-16-4": {
+"auto": true,
+"schibsted": [
+"2.86.7734.123"
+]
+},
+"sp:ae-2-1-4-17-2": {
+"auto": true,
+"marktplaats": "/l/verzamelen/vingerhoedjes/"
+},
+"sp:ae-2-2-12": {
+"auto": true,
+"marktplaats": "/l/boeken/stripboeken/"
+},
+"sp:ae-2-2-3": {
+"auto": true,
+"schibsted": [
+"2.86.285.396"
+]
+},
+"sp:ae-2-2-5": {
+"auto": true,
+"marktplaats": "/l/postzegels-en-munten/postzegels-nederland/",
+"schibsted": [
+"2.86.285.137"
+]
+},
+"sp:ae-2-2-5-3": {
+"auto": true,
+"marktplaats": "/l/postzegels-en-munten/postzegels-eerstedagenveloppen/"
+},
+"sp:ae-2-2-6-2": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/edelstenen/"
+},
+"sp:ae-2-2-6-3": {
+"auto": true,
+"marktplaats": "/l/verzamelen/mineralen-en-fossielen/"
+},
+"sp:ae-2-2-8-7": {
+"auto": true,
+"kleinanzeigen": "/s-pferde/c139",
+"marktplaats": "/l/dieren-en-toebehoren/paarden/",
+"schibsted": [
+"2.77.5190.36",
+"2.77.5190.38",
+"2.77.5190.37"
+]
+},
+"sp:ae-2-6": {
+"auto": true,
+"kleinanzeigen": "/s-modellbau/c249"
+},
+"sp:ae-2-6-3": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/modeltreinen-h0/"
+},
+"sp:ae-2-7-11-2": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/standaards/"
+},
+"sp:ae-2-7-12-8-2": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/soundmodules/"
+},
+"sp:ae-2-8": {
+"auto": true,
+"kleinanzeigen": "/s-musikinstrumente/c74",
+"schibsted": [
+"2.86.92.110",
+"2.86.92.109",
+"2.86.92.107"
+]
+},
+"sp:ae-2-8-1-1": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/accordeons/",
+"schibsted": [
+"2.86.92.328"
+]
+},
+"sp:ae-2-8-3": {
+"auto": true,
+"schibsted": [
+"2.86.92.104"
+]
+},
+"sp:ae-2-8-3-3": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/blaasinstrumenten-hoorns/"
+},
+"sp:ae-2-8-3-6": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/blaasinstrumenten-tuba-s/"
+},
+"sp:ae-2-8-4-1": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/samplers/"
+},
+"sp:ae-2-8-4-4": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/synthesizers/"
+},
+"sp:ae-2-8-5": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/percussie/"
+},
+"sp:ae-2-8-6": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/piano-s/"
+},
+"sp:ae-2-8-7-2": {
+"auto": true,
+"schibsted": [
+"2.86.92.295"
+]
+},
+"sp:ae-2-8-8": {
+"auto": true,
+"schibsted": [
+"2.86.92.103"
+]
+},
+"sp:ae-2-8-8-15": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/blaasinstrumenten-didgeridoos/"
+},
+"sp:ae-2-8-8-3-4": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/blaasinstrumenten-dwarsfluiten-en-piccolo-s/"
+},
+"sp:ae-2-8-8-9": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/blaasinstrumenten-hobo-s/"
+},
+"sp:ae-3-1": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/presenters/"
+},
+"sp:ae-3-1-6": {
+"auto": true,
+"marktplaats": "/l/diversen/wenskaarten/"
+},
+"sp:ae-3-2": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/feestartikelen/"
+},
+"sp:ae-3-3": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/effecten/"
+},
+"sp:ap-2-14": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/hondenvoerbakken-en-drinkbakken/"
+},
+"sp:ap-2-16": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/transportboxen/"
+},
+"sp:ap-2-3-4": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/hondenhokken/"
+},
+"sp:ap-2-31": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/hondenriemen/"
+},
+"sp:ap-2-4-7-7": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/zand/"
+},
+"sp:ap-2-45-2": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/kattenbakken/"
+},
+"sp:ap-2-46": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/reptielen-en-amfibieen/"
+},
+"sp:bi-11-20": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/betonmolens/"
+},
+"sp:bi-11-7-3": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/hakselaars/"
+},
+"sp:bi-16-2": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/metaaldetectors/"
+},
+"sp:bi-18-2-5": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/lieren-en-takels/"
+},
+"sp:bi-2": {
+"auto": true,
+"schibsted": [
+"1.91.3114"
+]
+},
+"sp:bi-22-1": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/kledingrekken/"
+},
+"sp:bi-23-4-11-2": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/optische-apparatuur-microscopen/"
+},
+"sp:bi-25-3": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/veiligheidshelmen/"
+},
+"sp:bi-25-6": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/veiligheidsbrillen/"
+},
+"sp:bt-1-1-4": {
+"auto": true,
+"schibsted": [
+"2.67.7749.157"
+]
+},
+"sp:bt-2": {
+"auto": true,
+"marktplaats": "/l/boeken/kinderboeken-baby-s-en-peuters/"
+},
+"sp:bt-4-3": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/babyfoons/"
+},
+"sp:bt-5": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-babyspeelgoed/"
+},
+"sp:bt-5-9": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-speelkleden/"
+},
+"sp:bt-6-3": {
+"auto": true,
+"kleinanzeigen": "/s-kinderwagen-buggys/c25",
+"schibsted": [
+"2.68.3914.9460",
+"2.68.3914.9463"
+]
+},
+"sp:co-2-2-2": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/actiecamera-s/"
+},
+"sp:co-2-7": {
+"auto": true,
+"schibsted": [
+"2.93.3904.504"
+]
+},
+"sp:co-2-7-6": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/dashcams/"
+},
+"sp:co-2-8": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/webcams/"
+},
+"sp:co-4-1-4": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/fotografie-fotopapier/"
+},
+"sp:el-1-5-3": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/joysticks/"
+},
+"sp:el-12": {
+"auto": true,
+"schibsted": [
+"2.93.3215.9434"
+]
+},
+"sp:el-12-6-3": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/powerlines/"
+},
+"sp:el-13": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/faxen/"
+},
+"sp:el-13-2": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/3d-printers/"
+},
+"sp:el-13-6": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/scanners/"
+},
+"sp:el-17-2-3": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/diaprojectors/"
+},
+"sp:el-17-4": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/televisies/",
+"schibsted": [
+"2.93.3906.62"
+]
+},
+"sp:el-17-5-3-3": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/projectieschermen/"
+},
+"sp:el-17-8-2": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/blu-ray-spelers/"
+},
+"sp:el-17-8-2-1": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/dvd-spelers/"
+},
+"sp:el-17-8-5": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/videospelers/"
+},
+"sp:el-18-5": {
+"auto": true,
+"marktplaats": "/l/spelcomputers-en-games/games-xbox-one/"
+},
+"sp:el-18-9": {
+"auto": true,
+"marktplaats": "/l/spelcomputers-en-games/virtual-reality/"
+},
+"sp:el-19": {
+"auto": true,
+"kleinanzeigen": "/s-konsolen/c279",
+"marktplaats": "/l/spelcomputers-en-games/spelcomputers-nintendo-switch/",
+"schibsted": [
+"2.93.3905.63"
+]
+},
+"sp:el-2": {
+"auto": true,
+"kleinanzeigen": "/s-audio-hifi/c172",
+"marktplaats": "/l/auto-diversen/autoradio-s/"
+},
+"sp:el-2-1-9-6": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/reinigingsmachines/"
+},
+"sp:el-2-2-10": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/luidsprekers/",
+"schibsted": [
+"2.93.3906.53"
+]
+},
+"sp:el-2-2-10-6": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/soundbars/"
+},
+"sp:el-2-2-7-2": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/headsets/"
+},
+"sp:el-2-2-8": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/microfoons/"
+},
+"sp:el-2-2-9": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/processors/"
+},
+"sp:el-2-3-10": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/platenspelers/"
+},
+"sp:el-2-3-2-2": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/cd-spelers/"
+},
+"sp:el-2-3-7": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/radio-s/"
+},
+"sp:el-2-3-8": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/bandrecorders/"
+},
+"sp:el-2-3-9": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/stereo-sets/"
+},
+"sp:el-3-6-2-3": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/moederborden/"
+},
+"sp:el-4-1": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/antwoordapparaten/"
+},
+"sp:el-4-3-1": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/koptelefoons/",
+"schibsted": [
+"2.93.3906.51"
+]
+},
+"sp:el-4-4-4-2": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/portofoons-en-walkie-talkies/"
+},
+"sp:el-4-8": {
+"auto": true,
+"kleinanzeigen": "/s-telefone-fax/c407"
+},
+"sp:el-4-8-4-4-1": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/prepaidkaarten-en-simkaarten/"
+},
+"sp:el-4-8-4-6": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/carkits/"
+},
+"sp:el-4-8-5": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/mobiele-telefoons-apple-iphone/"
+},
+"sp:el-4-8-7-1": {
+"auto": true,
+"marktplaats": "/l/verzamelen/telefoonkaarten/"
+},
+"sp:el-5-2": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/converters/"
+},
+"sp:el-6-1": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/barebones/"
+},
+"sp:el-6-4-2": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/e-readers/"
+},
+"sp:el-6-4-3": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/pda-s/"
+},
+"sp:el-6-6": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/chromebooks/",
+"schibsted": [
+"2.93.3215.43"
+]
+},
+"sp:el-7-11-5-3": {
+"auto": true,
+"kleinanzeigen": "/s-tablets-reader/c285"
+},
+"sp:el-7-13-1-1": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/usb-sticks/"
+},
+"sp:el-7-15-1-6": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/mobiele-telefoons-batterijen-en-accu-s/"
+},
+"sp:el-7-15-5-1": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/powerbanks/"
+},
+"sp:el-7-15-5-5": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/laptop-opladers/"
+},
+"sp:el-7-16": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/afstandsbedieningen/"
+},
+"sp:el-7-16-4": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/mediaspelers/"
+},
+"sp:el-7-8-8": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/muismatten/"
+},
+"sp:el-7-9": {
+"auto": true,
+"schibsted": [
+"2.93.3215.8368"
+]
+},
+"sp:el-7-9-10-5": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/videokaarten/"
+},
+"sp:el-7-9-10-5-1": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/capture-cards/"
+},
+"sp:el-7-9-11-4-2": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/muizen/"
+},
+"sp:el-7-9-12-10": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/geheugenkaartlezers/"
+},
+"sp:el-7-9-14-2": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/harde-schijven/"
+},
+"sp:el-7-9-14-6-1": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/optische-drives/"
+},
+"sp:el-7-9-8": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/computerbehuizingen/"
+},
+"sp:fr-12": {
+"auto": true,
+"schibsted": [
+"2.91.3105.294"
+]
+},
+"sp:fr-12-1": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/bureaus/",
+"schibsted": [
+"2.78.5196.214"
+]
+},
+"sp:fr-12-2": {
+"auto": true,
+"schibsted": [
+"2.78.5196.215"
+]
+},
+"sp:fr-12-4-1": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/tekentafels/"
+},
+"sp:fr-15-1-2": {
+"auto": true,
+"schibsted": [
+"2.78.5197.202"
+]
+},
+"sp:fr-15-3-3": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/krukjes/"
+},
+"sp:fr-15-4-1": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/tuinbanken/"
+},
+"sp:fr-15-6": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/tuintafels/"
+},
+"sp:fr-15-6-13": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/picknicktafels/"
+},
+"sp:fr-15-6-5": {
+"auto": true,
+"schibsted": [
+"2.78.5196.213"
+]
+},
+"sp:fr-15-6-7": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/vuurkorven/"
+},
+"sp:fr-15-6-7-2": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/vuurtafels/"
+},
+"sp:fr-15-6-7-3": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/vuurschalen/"
+},
+"sp:fr-2-6": {
+"auto": true,
+"schibsted": [
+"2.78.5197.203"
+]
+},
+"sp:fr-22": {
+"auto": true,
+"schibsted": [
+"2.78.7756.8374"
+]
+},
+"sp:fr-22-3": {
+"auto": true,
+"schibsted": [
+"2.78.7756.207"
+]
+},
+"sp:fr-24-1": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/tafels-bijzettafels/"
+},
+"sp:fr-4-1": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/kasten-kledingkasten/",
+"schibsted": [
+"2.78.5198.218"
+]
+},
+"sp:fr-4-12-3": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/kasten-schoenenkasten/"
+},
+"sp:fr-4-2": {
+"auto": true,
+"schibsted": [
+"2.78.8345.220"
+]
+},
+"sp:fr-4-5": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/kasten-ladekasten/",
+"schibsted": [
+"2.78.8345.221"
+]
+},
+"sp:fr-4-6": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/kasten-roldeurkasten-en-archiefkasten/"
+},
+"sp:fr-7": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/stoelen/"
+},
+"sp:fr-7-1-1": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/fauteuils/"
+},
+"sp:fr-7-12": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/barkrukken/"
+},
+"sp:fr-7-13": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/kinderstoelen/",
+"schibsted": [
+"2.68.3916.313"
+]
+},
+"sp:fr-7-2": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/zitzakken/"
+},
+"sp:fr-8": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/ligbedden/",
+"schibsted": [
+"2.78.7756.206"
+]
+},
+"sp:ha-10-3": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/sanitair/"
+},
+"sp:ha-10-7-6": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/waterontharders/"
+},
+"sp:ha-14-17": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/opladers/"
+},
+"sp:ha-15-16-1": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/zaklampen/"
+},
+"sp:ha-15-27-5": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/steigers/"
+},
+"sp:ha-15-28": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/draaibanken/"
+},
+"sp:ha-15-30-3": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/metalen/"
+},
+"sp:ha-15-36-18": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/weegschalen/"
+},
+"sp:ha-15-62-3": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/handzagen/"
+},
+"sp:ha-15-9": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/compressors/",
+"schibsted": [
+"2.91.3102.373"
+]
+},
+"sp:ha-2-14-2": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/rolluiken/"
+},
+"sp:ha-2-17": {
+"auto": true,
+"schibsted": [
+"2.67.3899.346"
+]
+},
+"sp:ha-2-2-1": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/deurbellen/"
+},
+"sp:ha-2-22": {
+"auto": true,
+"schibsted": [
+"2.67.3899.168"
+]
+},
+"sp:ha-2-3": {
+"auto": true,
+"schibsted": [
+"2.67.3899.169"
+]
+},
+"sp:ha-3-6-2": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/tuinpoorten/"
+},
+"sp:ha-6-24-4": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/gereedschapskisten/"
+},
+"sp:ha-6-24-8": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/werkbanken/"
+},
+"sp:ha-6-3": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/zwenkwielen/"
+},
+"sp:ha-6-4-2": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/kettingen/"
+},
+"sp:ha-7-5": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/waterpompen/"
+},
+"sp:ha-8-3-3": {
+"auto": true,
+"marktplaats": "/l/doe-het-zelf-en-verbouw/thermostaten/"
+},
+"sp:hb-1-17-1-1": {
+"auto": true,
+"marktplaats": "/l/diversen/brommobielen-en-scootmobielen/"
+},
+"sp:hb-1-17-1-2": {
+"auto": true,
+"marktplaats": "/l/diversen/trapliften/"
+},
+"sp:hb-1-17-1-4": {
+"auto": true,
+"marktplaats": "/l/diversen/rolstoelen/"
+},
+"sp:hb-1-17-5-3": {
+"auto": true,
+"marktplaats": "/l/diversen/looprekken/"
+},
+"sp:hb-3-19-4": {
+"auto": true,
+"schibsted": [
+"2.71.8344.200"
+]
+},
+"sp:hb-3-2": {
+"auto": true,
+"schibsted": [
+"1.71.8282"
+]
+},
+"sp:hg-10-11-3-7": {
+"auto": true,
+"marktplaats": "/l/dieren-en-toebehoren/knaagdieren/"
+},
+"sp:hg-11-10-6": {
+"auto": true,
+"schibsted": [
+"2.78.5223.8362"
+]
+},
+"sp:hg-11-10-7": {
+"auto": true,
+"schibsted": [
+"2.78.5223.8363"
+]
+},
+"sp:hg-11-11": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/buitenkeukens/"
+},
+"sp:hg-11-2-3-8": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/contactgrills/"
+},
+"sp:hg-11-3-8": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/picknickmanden/"
+},
+"sp:hg-11-7-10": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/elektrische-barbecues/"
+},
+"sp:hg-11-7-11": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/waterkokers/",
+"schibsted": [
+"2.93.3216.85"
+]
+},
+"sp:hg-11-7-13": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/fonduesets/"
+},
+"sp:hg-11-7-14-1": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/eierkokers/"
+},
+"sp:hg-11-7-14-3": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/rijstkokers/"
+},
+"sp:hg-11-7-17-1": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/blenders/"
+},
+"sp:hg-11-7-17-1-2": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/keukenmixers/"
+},
+"sp:hg-11-7-20": {
+"auto": true,
+"schibsted": [
+"2.93.3907.72"
+]
+},
+"sp:hg-11-7-23": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/grillplaten/"
+},
+"sp:hg-11-7-29": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/juicers/"
+},
+"sp:hg-11-7-31": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/magnetrons/",
+"schibsted": [
+"2.93.3907.508"
+]
+},
+"sp:hg-11-7-35": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/ovens/"
+},
+"sp:hg-11-7-39": {
+"auto": true,
+"schibsted": [
+"2.93.3907.511"
+]
+},
+"sp:hg-11-7-4-1": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/koffiezetapparaten/"
+},
+"sp:hg-11-7-40": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/fornuizen/"
+},
+"sp:hg-11-7-41": {
+"auto": true,
+"schibsted": [
+"2.93.3907.292"
+]
+},
+"sp:hg-11-7-46-10": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/wafelijzers/"
+},
+"sp:hg-11-7-46-8": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/broodroosters/",
+"schibsted": [
+"2.93.3216.87"
+]
+},
+"sp:hg-11-7-49": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/waterkoelers/"
+},
+"sp:hg-11-7-5": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/kookplaten/"
+},
+"sp:hg-11-7-53": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/airfryers/"
+},
+"sp:hg-11-7-7": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/frituurpannen/"
+},
+"sp:hg-11-7-9": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/vaatwasmachines/",
+"schibsted": [
+"2.93.3907.509"
+]
+},
+"sp:hg-12-1": {
+"auto": true,
+"marktplaats": "/l/boeken/wonen-en-tuinieren/"
+},
+"sp:hg-12-1-17": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/regentonnen/"
+},
+"sp:hg-12-1-7-13": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/kruiwagens/"
+},
+"sp:hg-12-1-7-9": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/snoeischaren/"
+},
+"sp:hg-12-1-8": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/kassen/"
+},
+"sp:hg-12-3-10": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/veegmachines/"
+},
+"sp:hg-12-3-12": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/hogedrukreinigers/"
+},
+"sp:hg-12-3-5": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/grasmaaiers/",
+"schibsted": [
+"2.67.3901.149"
+]
+},
+"sp:hg-12-3-5-1": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/zitmaaiers/"
+},
+"sp:hg-12-3-5-2": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/robotmaaiers/"
+},
+"sp:hg-12-3-7": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/bladblazers/"
+},
+"sp:hg-12-4-3": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/heggenscharen/"
+},
+"sp:hg-12-4-9-8": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/sneeuwkettingen/"
+},
+"sp:hg-12-6-3": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/tuinslangen/"
+},
+"sp:hg-12-6-7": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/gieters/"
+},
+"sp:hg-12-6-9-1": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/druppelsystemen/"
+},
+"sp:hg-13": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/verlichting/",
+"schibsted": [
+"2.91.3102.371"
+]
+},
+"sp:hg-13-12-2": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/fakkels/"
+},
+"sp:hg-13-5": {
+"auto": true,
+"kleinanzeigen": "/s-lampen-licht/c82"
+},
+"sp:hg-13-5-3": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/lampen-vloerlampen/",
+"schibsted": [
+"2.78.5181.228"
+]
+},
+"sp:hg-13-5-5": {
+"auto": true,
+"schibsted": [
+"2.78.5181.229"
+]
+},
+"sp:hg-13-9-3": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/lampen-kroonluchters/"
+},
+"sp:hg-15-1-7": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/slaapmatten/"
+},
+"sp:hg-15-1-9": {
+"auto": true,
+"schibsted": [
+"2.78.5180.232"
+]
+},
+"sp:hg-15-3-6": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/tafelkleden/"
+},
+"sp:hg-15-4": {
+"auto": true,
+"schibsted": [
+"2.78.5180.2469"
+]
+},
+"sp:hg-16-1": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/parasols/"
+},
+"sp:hg-17": {
+"auto": true,
+"kleinanzeigen": "/s-garten-pflanzen/c89"
+},
+"sp:hg-17-3-1": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/planten-struiken-en-hagen/"
+},
+"sp:hg-17-6": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/planten-bomen/"
+},
+"sp:hg-17-6-2": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/planten-fruitbomen/"
+},
+"sp:hg-18-2-2": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/kachels/"
+},
+"sp:hg-18-5": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/zwembaden/"
+},
+"sp:hg-3": {
+"auto": true,
+"kleinanzeigen": "/s-dekoration/c246",
+"marktplaats": "/l/huis-en-inrichting/woonaccessoires-boeddhabeelden/"
+},
+"sp:hg-3-17": {
+"auto": true,
+"kleinanzeigen": "/s-uhren-schmuck/c157"
+},
+"sp:hg-3-17-1": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/wekkers/"
+},
+"sp:hg-3-2-2": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/woonaccessoires-kunstplanten-en-kunstbloemen/"
+},
+"sp:hg-3-26": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/deurmatten/"
+},
+"sp:hg-3-28": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/woonaccessoires-droogbloemen/"
+},
+"sp:hg-3-35-3": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/vijvers/"
+},
+"sp:hg-3-39-2": {
+"auto": true,
+"schibsted": [
+"2.78.5222.240"
+]
+},
+"sp:hg-3-4": {
+"auto": true,
+"kleinanzeigen": "/s-kunst/c240"
+},
+"sp:hg-3-4-2-1": {
+"auto": true,
+"marktplaats": "/l/verzamelen/posters/"
+},
+"sp:hg-3-4-2-5": {
+"auto": true,
+"marktplaats": "/l/verzamelen/foto-s-en-prenten/"
+},
+"sp:hg-3-43-1": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/tuinbeelden/"
+},
+"sp:hg-3-46": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/brievenbussen/"
+},
+"sp:hg-3-47": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/spiegels/",
+"schibsted": [
+"2.78.5222.299"
+]
+},
+"sp:hg-3-53": {
+"auto": true,
+"marktplaats": "/l/verzamelen/spaarpotten/"
+},
+"sp:hg-3-57": {
+"auto": true,
+"schibsted": [
+"2.78.5180.231"
+]
+},
+"sp:hg-3-63": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/zonnewijzers/"
+},
+"sp:hg-3-75": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/woonaccessoires-wereldbollen/"
+},
+"sp:hg-3-9-6": {
+"auto": true,
+"marktplaats": "/l/kleding-dames/kledinghangers/"
+},
+"sp:hg-6": {
+"auto": true,
+"marktplaats": "/l/huis-en-inrichting/haarden/"
+},
+"sp:hg-9-1-11": {
+"auto": true,
+"marktplaats": "/l/tuin-en-terras/terrasverwarmers/"
+},
+"sp:hg-9-1-6": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/ventilatoren/"
+},
+"sp:hg-9-10": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/stofzuigers/",
+"schibsted": [
+"2.93.3216.81"
+]
+},
+"sp:hg-9-8": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/wasmachines/"
+},
+"sp:hg-9-8-1": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/wasdrogers/"
+},
+"sp:hg-9-8-4": {
+"auto": true,
+"marktplaats": "/l/witgoed-en-apparatuur/was-droogcombinaties/"
+},
+"sp:hg-9-8-6": {
+"auto": true,
+"schibsted": [
+"2.93.3907.79"
+]
+},
+"sp:lb-1": {
+"auto": true,
+"schibsted": [
+"2.71.3946.9472",
+"2.69.3964.278"
+]
+},
+"sp:lb-1-12": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/tassen-schooltassen/"
+},
+"sp:lb-10": {
+"auto": true,
+"schibsted": [
+"2.71.3946.9478"
+]
+},
+"sp:lb-12": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/koffers/",
+"schibsted": [
+"2.71.3946.9476"
+]
+},
+"sp:lb-15": {
+"auto": true,
+"marktplaats": "/l/computers-en-software/laptoptafels/"
+},
+"sp:lb-3": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/toilettassen/"
+},
+"sp:lb-4": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/luiertassen/"
+},
+"sp:lb-6": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/tassen-sporttassen/"
+},
+"sp:lb-9-8": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/tassen-reistassen-en-weekendtassen/"
+},
+"sp:me-1": {
+"auto": true,
+"marktplaats": "/l/boeken/advies-hulp-en-training/"
+},
+"sp:me-2": {
+"auto": true,
+"marktplaats": "/l/boeken/tijdschriften-en-kranten/"
+},
+"sp:me-3-2": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/cassettebandjes/"
+},
+"sp:me-3-3": {
+"auto": true,
+"kleinanzeigen": "/s-musik-cds/c78"
+},
+"sp:me-3-6": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/vinyl-filmmuziek-en-soundtracks/"
+},
+"sp:me-6": {
+"auto": true,
+"marktplaats": "/l/muziek-en-instrumenten/bladmuziek/"
+},
+"sp:me-7-1": {
+"auto": true,
+"marktplaats": "/l/cd-s-en-dvd-s/blu-ray/",
+"schibsted": [
+"2.86.3922.102"
+]
+},
+"sp:os-10-10": {
+"auto": true,
+"marktplaats": "/l/diversen/typemachines/"
+},
+"sp:os-10-2": {
+"auto": true,
+"marktplaats": "/l/diversen/rekenmachines/"
+},
+"sp:os-11-11-5": {
+"auto": true,
+"marktplaats": "/l/diversen/schrijfwaren/"
+},
+"sp:os-11-4": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/vergrootglazen-loepen-en-loeplampen/"
+},
+"sp:os-13-1": {
+"auto": true,
+"marktplaats": "/l/diversen/schoolborden/"
+},
+"sp:os-4-9-10": {
+"auto": true,
+"schibsted": [
+"2.86.285.140"
+]
+},
+"sp:rc-2": {
+"auto": true,
+"marktplaats": "/l/verzamelen/religie/"
+},
+"sp:rc-2-2": {
+"auto": true,
+"marktplaats": "/l/verzamelen/bidprentjes-en-rouwkaarten/"
+},
+"sp:sg-1": {
+"auto": true,
+"kleinanzeigen": "/s-sport/c257"
+},
+"sp:sg-1-12-10": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/schaatsen/"
+},
+"sp:sg-1-12-4": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/ijshockey/"
+},
+"sp:sg-1-17": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/rugby/"
+},
+"sp:sg-1-18": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/voetbal/",
+"schibsted": [
+"2.69.3961.245"
+]
+},
+"sp:sg-1-19": {
+"auto": true,
+"schibsted": [
+"2.69.3961.246"
+]
+},
+"sp:sg-1-19-3": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/handbal/"
+},
+"sp:sg-1-2": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/honkbal-en-softbal/"
+},
+"sp:sg-1-22": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/volleybal/",
+"schibsted": [
+"2.69.3961.248"
+]
+},
+"sp:sg-1-24": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/waterpolo/"
+},
+"sp:sg-1-3": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/basketbal/"
+},
+"sp:sg-1-4-1": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/boksen/"
+},
+"sp:sg-1-9": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/dansen/"
+},
+"sp:sg-1-9-1": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/ballet/"
+},
+"sp:sg-2-26-1-5": {
+"auto": true,
+"marktplaats": "/l/auto-s/cadillac/"
+},
+"sp:sg-2-4-1-2-5": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/hartslagmeters/"
+},
+"sp:sg-2-4-2-1": {
+"auto": true,
+"schibsted": [
+"2.69.5166.291"
+]
+},
+"sp:sg-2-4-2-3": {
+"auto": true,
+"schibsted": [
+"2.69.5166.287"
+]
+},
+"sp:sg-2-4-2-5": {
+"auto": true,
+"schibsted": [
+"2.69.5166.516"
+]
+},
+"sp:sg-2-4-3": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/springtouwen/"
+},
+"sp:sg-2-8": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/fitnessapparatuur/"
+},
+"sp:sg-3-1": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/hockey/"
+},
+"sp:sg-3-6": {
+"auto": true,
+"schibsted": [
+"2.69.3961.9487"
+]
+},
+"sp:sg-3-8": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/darts/"
+},
+"sp:sg-4-1": {
+"auto": true,
+"marktplaats": "/l/diensten-en-vakmensen/reparatie-en-onderhoud-watersport-en-boten/"
+},
+"sp:sg-4-1-1-3": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/kano-s/"
+},
+"sp:sg-4-1-1-5": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/kajaks/"
+},
+"sp:sg-4-1-1-9": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/roeiboten/"
+},
+"sp:sg-4-1-10": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/wingsurfen/",
+"schibsted": [
+"2.69.7738.2467"
+]
+},
+"sp:sg-4-1-3-8": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/duiken/"
+},
+"sp:sg-4-1-4": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/kitesurfen/",
+"schibsted": [
+"2.69.3938.264"
+]
+},
+"sp:sg-4-1-7-1-4": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/trekhaken/"
+},
+"sp:sg-4-1-7-4": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/wakeboarden/"
+},
+"sp:sg-4-1-7-5-4": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/waterski-s/"
+},
+"sp:sg-4-1-9": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/windsurfen/",
+"schibsted": [
+"2.69.7738.338"
+]
+},
+"sp:sg-4-13-3": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/vliegeren/"
+},
+"sp:sg-4-14-3": {
+"auto": true,
+"schibsted": [
+"2.69.5164.9771",
+"2.69.5164.9769",
+"2.69.5164.9766"
+]
+},
+"sp:sg-4-14-7": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/padel/",
+"schibsted": [
+"2.69.3961.9486"
+]
+},
+"sp:sg-4-16": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/skateboarden/"
+},
+"sp:sg-4-17-2-10-1": {
+"auto": true,
+"marktplaats": "/l/auto-s/alpina/"
+},
+"sp:sg-4-17-2-10-4": {
+"auto": true,
+"schibsted": [
+"2.69.3962.254"
+]
+},
+"sp:sg-4-2-1-2": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/luchtbedden/"
+},
+"sp:sg-4-2-1-7": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/bolderkarren/"
+},
+"sp:sg-4-2-14": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/slaapzakken/",
+"schibsted": [
+"2.69.3964.276"
+]
+},
+"sp:sg-4-2-16": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/tentaccessoires/"
+},
+"sp:sg-4-2-17": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/tenten/",
+"schibsted": [
+"2.69.3964.277"
+]
+},
+"sp:sg-4-2-18": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/windschermen/"
+},
+"sp:sg-4-2-4-15": {
+"auto": true,
+"marktplaats": "/l/caravans-en-kamperen/kampeeraccessoires/"
+},
+"sp:sg-4-2-8": {
+"auto": true,
+"marktplaats": "/l/diversen/wandelstokken/"
+},
+"sp:sg-4-3": {
+"auto": true,
+"schibsted": [
+"2.69.3938.265"
+]
+},
+"sp:sg-4-3-6": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/klimsport/"
+},
+"sp:sg-4-4": {
+"auto": true,
+"schibsted": [
+"2.69.3963.257"
+]
+},
+"sp:sg-4-4-1": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsaccessoires-buggydragers/"
+},
+"sp:sg-4-4-1-13": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsaccessoires-fietssloten/"
+},
+"sp:sg-4-4-1-22": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsaccessoires-fietsgereedschap/"
+},
+"sp:sg-4-4-1-30": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsaccessoires-fietsverlichting/"
+},
+"sp:sg-4-4-1-31": {
+"auto": true,
+"marktplaats": "/l/telecommunicatie/telefoonhouders/"
+},
+"sp:sg-4-4-1-7-1": {
+"auto": true,
+"marktplaats": "/l/audio-tv-en-foto/fotografie-accu-s-en-batterijen/"
+},
+"sp:sg-4-4-2": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsonderdelen/"
+},
+"sp:sg-4-4-3-11": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsen-racefietsen/"
+},
+"sp:sg-4-4-3-12": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsen-tandems/"
+},
+"sp:sg-4-4-3-15": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/fietsen-ligfietsen/"
+},
+"sp:sg-4-4-3-5": {
+"auto": true,
+"marktplaats": "/l/fietsen-en-brommers/elektrische-fietsen/"
+},
+"sp:sg-4-4-4-8": {
+"auto": true,
+"schibsted": [
+"2.69.3963.9774"
+]
+},
+"sp:sg-4-5-2-8": {
+"auto": true,
+"schibsted": [
+"2.77.5195.9435"
+]
+},
+"sp:sg-4-6-1-3": {
+"auto": true,
+"marktplaats": "/l/sieraden-tassen-en-uiterlijk/kettinghangers/"
+},
+"sp:sg-4-6-12-4": {
+"auto": true,
+"marktplaats": "/l/auto-s/honda/"
+},
+"sp:sg-4-6-20": {
+"auto": true,
+"marktplaats": "/l/verzamelen/klm-huisjes/"
+},
+"sp:sg-4-7-15": {
+"auto": true,
+"schibsted": [
+"2.69.5164.9767"
+]
+},
+"sp:sg-4-7-6": {
+"auto": true,
+"schibsted": [
+"2.69.5164.9768"
+]
+},
+"sp:sg-4-7-9": {
+"auto": true,
+"schibsted": [
+"2.69.5164.9770"
+]
+},
+"sp:tg-2": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-duplo-en-lego/",
+"schibsted": [
+"2.93.3905.64",
+"2.68.3912.9775"
+]
+},
+"sp:tg-2-5": {
+"auto": true,
+"schibsted": [
+"2.86.5203.119"
+]
+},
+"sp:tg-2-7": {
+"auto": true,
+"marktplaats": "/l/verzamelen/speelkaarten-jokers-en-kwartetten/"
+},
+"sp:tg-3-2": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-buiten-springkussens/"
+},
+"sp:tg-3-4": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-speeltenten/"
+},
+"sp:tg-3-7": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-buiten-zandbakken/"
+},
+"sp:tg-5": {
+"auto": true,
+"marktplaats": "/l/verzamelen/speelgoed/",
+"schibsted": [
+"1.68.3912"
+]
+},
+"sp:tg-5-12-2": {
+"auto": true,
+"schibsted": [
+"2.86.7733.401"
+]
+},
+"sp:tg-5-15": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-speelgoedvoertuigen/"
+},
+"sp:tg-5-18-3": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/modelbouw-radiografisch-auto-s/"
+},
+"sp:tg-5-2-1": {
+"auto": true,
+"marktplaats": "/l/hobby-en-vrije-tijd/kralen-en-sieraden-maken/"
+},
+"sp:tg-5-23-8-2": {
+"auto": true,
+"marktplaats": "/l/sport-en-fitness/hoelahoeps/"
+},
+"sp:tg-5-8-1": {
+"auto": true,
+"marktplaats": "/l/kinderen-en-baby-s/speelgoed-actiefiguren/"
+},
+"sp:tg-5-8-6": {
+"auto": true,
+"marktplaats": "/l/verzamelen/poppen/"
+},
+"sp:vp-1-4-10": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/brandstofsystemen/"
+},
+"sp:vp-1-4-10-7": {
+"auto": true,
+"marktplaats": "/l/auto-onderdelen/brandstofpompen/"
+},
+"sp:vp-1-5-4-11": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/kentekenplaathouders/"
+},
+"sp:vp-1-5-7-7": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/jumpstarters/"
+},
+"sp:vp-1-7-2-4": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/bagagerekken/"
+},
+"sp:vp-1-7-3-2": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/fietsendragers/"
+},
+"sp:vp-1-7-5": {
+"auto": true,
+"schibsted": [
+"2.90.80.13"
+]
+},
+"sp:vp-1-7-5-1": {
+"auto": true,
+"marktplaats": "/l/watersport-en-boten/boottrailers/"
+},
+"sp:vp-1-7-5-3": {
+"auto": true,
+"kleinanzeigen": "/s-wohnwagen-mobile/c220"
+},
+"sp:vp-2-2-9-1": {
+"auto": true,
+"marktplaats": "/l/auto-diversen/raceauto-s/"
+}
+}

@@ -446,7 +446,71 @@ WORDS: dict[str, dict[str, str]] = {
     "printer": {"fi": "tulostin", "sv": "skrivare", "no": "skriver", "da": "printer", "de": "drucker",
                 "nl": "printer", "pl": "drukarka", "fr": "imprimante", "es": "impresora", "it": "stampante",
                 "cs": "tiskárna"},
+    # coverage round (owner: 'way more we can find'): the generic nouns people type, in each site's language
+    "mobile phone": {"fi": "puhelin", "sv": "mobiltelefon", "no": "mobiltelefon", "da": "mobiltelefon",
+                     "de": "handy", "nl": "telefoon", "pl": "telefon", "fr": "téléphone", "es": "móvil",
+                     "it": "cellulare", "cs": "mobil"},
+    "smartphone": {"fi": "älypuhelin", "sv": "smartphone", "no": "smarttelefon", "da": "smartphone",
+                   "de": "smartphone", "nl": "smartphone", "pl": "smartfon", "fr": "smartphone", "es": "smartphone",
+                   "it": "smartphone", "cs": "smartphone"},
+    "winter jacket": {"fi": "talvitakki", "sv": "vinterjacka", "no": "vinterjakke", "da": "vinterjakke",
+                      "de": "winterjacke", "nl": "winterjas", "pl": "kurtka zimowa", "fr": "veste d'hiver",
+                      "es": "chaqueta de invierno", "it": "giacca invernale", "cs": "zimní bunda"},
+    "coat": {"fi": "takki", "sv": "rock", "no": "frakk", "da": "frakke", "de": "mantel", "nl": "jas", "pl": "płaszcz",
+             "fr": "manteau", "es": "abrigo", "it": "cappotto", "cs": "kabát"},
+    "baby stroller": {"fi": "lastenvaunut", "sv": "barnvagn", "no": "barnevogn", "da": "barnevogn",
+                      "de": "kinderwagen", "nl": "kinderwagen", "pl": "wózek dziecięcy", "fr": "poussette",
+                      "es": "cochecito", "it": "passeggino", "cs": "kočárek"},
+    "pram": {"fi": "lastenvaunut", "sv": "barnvagn", "no": "barnevogn", "da": "barnevogn", "de": "kinderwagen",
+             "nl": "kinderwagen", "pl": "wózek", "fr": "landau", "es": "cochecito", "it": "carrozzina",
+             "cs": "kočárek"},
+    "car seat": {"fi": "turvaistuin", "sv": "bilbarnstol", "no": "bilstol", "da": "autostol", "de": "kindersitz",
+                 "nl": "autostoel", "pl": "fotelik", "fr": "siège auto", "es": "silla de coche",
+                 "it": "seggiolino auto", "cs": "autosedačka"},
+    "kitchen table": {"fi": "ruokapöytä", "sv": "köksbord", "no": "kjøkkenbord", "da": "køkkenbord",
+                      "de": "esstisch", "nl": "eettafel", "pl": "stół kuchenny", "fr": "table de cuisine",
+                      "es": "mesa de cocina", "it": "tavolo da cucina", "cs": "kuchyňský stůl"},
+    "dining table": {"fi": "ruokapöytä", "sv": "matbord", "no": "spisebord", "da": "spisebord", "de": "esstisch",
+                     "nl": "eettafel", "pl": "stół", "fr": "table à manger", "es": "mesa de comedor",
+                     "it": "tavolo da pranzo", "cs": "jídelní stůl"},
+    "coffee table": {"fi": "sohvapöytä", "sv": "soffbord", "no": "salongbord", "da": "sofabord",
+                     "de": "couchtisch", "nl": "salontafel", "pl": "stolik kawowy", "fr": "table basse",
+                     "es": "mesa de centro", "it": "tavolino", "cs": "konferenční stolek"},
+    "armchair": {"fi": "nojatuoli", "sv": "fåtölj", "no": "lenestol", "da": "lænestol", "de": "sessel",
+                 "nl": "fauteuil", "pl": "fotel", "fr": "fauteuil", "es": "sillón", "it": "poltrona", "cs": "křeslo"},
+    "mattress": {"fi": "patja", "sv": "madrass", "no": "madrass", "da": "madras", "de": "matratze", "nl": "matras",
+                 "pl": "materac", "fr": "matelas", "es": "colchón", "it": "materasso", "cs": "matrace"},
+    "dresser": {"fi": "lipasto", "sv": "byrå", "no": "kommode", "da": "kommode", "de": "kommode", "nl": "ladekast",
+                "pl": "komoda", "fr": "commode", "es": "cómoda", "it": "cassettiera", "cs": "komoda"},
+    "rug": {"fi": "matto", "sv": "matta", "no": "teppe", "da": "tæppe", "de": "teppich", "nl": "vloerkleed",
+            "pl": "dywan", "fr": "tapis", "es": "alfombra", "it": "tappeto", "cs": "koberec"},
+    "mirror": {"fi": "peili", "sv": "spegel", "no": "speil", "da": "spejl", "de": "spiegel", "nl": "spiegel",
+               "pl": "lustro", "fr": "miroir", "es": "espejo", "it": "specchio", "cs": "zrcadlo"},
+    "freezer": {"fi": "pakastin", "sv": "frys", "no": "fryser", "da": "fryser", "de": "gefrierschrank",
+                "nl": "vriezer", "pl": "zamrażarka", "fr": "congélateur", "es": "congelador", "it": "congelatore",
+                "cs": "mraznička"},
+    "dishwasher": {"fi": "astianpesukone", "sv": "diskmaskin", "no": "oppvaskmaskin", "da": "opvaskemaskine",
+                   "de": "geschirrspüler", "nl": "vaatwasser", "pl": "zmywarka", "fr": "lave-vaisselle",
+                   "es": "lavavajillas", "it": "lavastoviglie", "cs": "myčka"},
+    "treadmill": {"fi": "juoksumatto", "sv": "löpband", "no": "tredemølle", "da": "løbebånd", "de": "laufband",
+                  "nl": "loopband", "pl": "bieżnia", "fr": "tapis de course", "es": "cinta de correr",
+                  "it": "tapis roulant", "cs": "běžecký pás"},
+    "smartwatch": {"fi": "älykello", "sv": "smartklocka", "no": "smartklokke", "da": "smartwatch",
+                   "de": "smartwatch", "nl": "smartwatch", "pl": "smartwatch", "fr": "montre connectée",
+                   "es": "smartwatch", "it": "smartwatch", "cs": "chytré hodinky"},
+    "backpack": {"fi": "reppu", "sv": "ryggsäck", "no": "ryggsekk", "da": "rygsæk", "de": "rucksack",
+                 "nl": "rugzak", "pl": "plecak", "fr": "sac à dos", "es": "mochila", "it": "zaino", "cs": "batoh"},
+    "snowboard": {"fi": "lumilauta", "sv": "snowboard", "no": "snowboard", "da": "snowboard", "de": "snowboard",
+                  "nl": "snowboard", "pl": "deska snowboardowa", "fr": "snowboard", "es": "snowboard",
+                  "it": "snowboard", "cs": "snowboard"},
 }
+# words that only say which kind of the noun ('winter jacket', 'kitchen table', 'baby stroller'): with nothing else
+# besides the noun the query is the noun, translated (they are not a brand or model that carries the search)
+MODIFIERS = re.compile(r"\b(?:winter|summer|spring|autumn|rain|warm|down|waterproof|kitchen|dining|living|room|"
+                       r"bedroom|bathroom|garden|outdoor|indoor|patio|baby|toddler|infant|child|kids'?|mobile|"
+                       r"cell|smart|cordless|wireless|portable|leather|fabric|folding|double|single|corner|"
+                       r"modern|classic|new|used|cheap|nice|good|large|small|big|little|light|heavy|soft|hard|"
+                       r"running|hiking|walking|ski|sports?|casual|formal|men|women|unisex|girl|boy|teen)\b", re.I)
 # words that say how, not what: never part of a marketplace search
 FILLER = re.compile(r"\b(?:used|second[- ]hand|secondhand|pre[- ]owned|refurbished|refurb|new|brand new|cheap|"
                     r"cheapest|buy|for sale|deal|best price|käytetty|gebraucht|neu|begagnad|brukt|brugt|"
@@ -460,18 +524,60 @@ _PHRASES = sorted(WORDS, key=len, reverse=True)
 _GENERIC_RE = re.compile(r"\b(" + "|".join(re.escape(p) for p in _PHRASES) + r")s?\b", re.I)
 
 
+# every translation -> its English key ('puhelin' -> 'phone' / 'mobile phone', 'kinderwagen' -> 'stroller'), so a
+# Finnish word typed by the user reaches a German site in German ('puhelin' on kleinanzeigen -> 'handy')
+_REVERSE: dict[str, str] = {}
+for _en, _tr in WORDS.items():          # first key wins: 'sohva' -> 'sofa' (not 'couch'), 'takki' -> 'jacket'
+    for _w in _tr.values():
+        _REVERSE.setdefault(_w.lower(), _en)
+    _REVERSE.setdefault(_en, _en)
+_REVERSE_RE = re.compile(r"(?<![\w-])(" + "|".join(re.escape(w) for w in sorted(_REVERSE, key=len, reverse=True))
+                         + r")(?:s|es|t|en|er|ar|or|e|n)?(?![\w-])", re.I)
+
+
+def english_noun(thing: str) -> str | None:
+    """The WORDS key a generic need names, in any language ('puhelin' -> 'mobile phone', 'used road bike' ->
+    'road bike', 'Kinderwagen' -> 'stroller'), else None."""
+    m = _GENERIC_RE.search(thing or "")
+    if m:
+        return m.group(1).lower()
+    m = _REVERSE_RE.search(FILLER.sub(" ", thing or ""))
+    return _REVERSE.get(m.group(1).lower()) if m else None
+
+
+def translations(noun: str) -> set[str]:
+    """Every word for this WORDS key, English included (lower case)."""
+    return {noun.lower()} | {w.lower() for w in (WORDS.get(noun) or {}).values()}
+
+
+def _carrier(rest: str) -> bool:
+    """Words left besides the generic noun that carry the search on their own: a brand, a model, a product line
+    ('ikea kallax', 'dyson v15', 'herman miller'), i.e. anything that is not a descriptor or a kind-of modifier."""
+    return bool(re.search(r"[a-zà-ÿ0-9]{2,}", MODIFIERS.sub(" ", DESCRIPTORS.sub(" ", rest)), re.I))
+
+
 def site_query(thing: str, site: Site) -> str:
     """The query to type into this site's own search box. Filler ('used', 'cheap') goes; generic nouns go when
     a brand/model word carries the search ('ikea kallax shelf' -> 'ikea kallax', 'dyson v15 vacuum' ->
-    'dyson v15'), else they are translated to the site's language ('road bike' -> 'rennrad' on kleinanzeigen)."""
+    'dyson v15'), else they are translated to the site's language ('road bike' -> 'rennrad' on kleinanzeigen,
+    'winter jacket' -> 'talvitakki' on tori, 'puhelin' -> 'handy' on kleinanzeigen). Modifiers that only say which
+    kind ('baby stroller', 'kitchen table') never carry the search alone (was: tori searched 'baby')."""
     q = FILLER.sub(" ", thing or "")
     q = re.sub(r"[^\w\s.+&'-]", " ", q)
     rest = _GENERIC_RE.sub(" ", q)
-    if re.search(r"[a-zà-ÿ0-9]{2,}", DESCRIPTORS.sub(" ", rest), re.I):
+    m = _GENERIC_RE.search(q)
+    if m is None and (mr := _REVERSE_RE.search(q)):
+        # a generic noun typed in another language ('puhelin', 'sohva', 'kinderwagen')
+        rest_r = (q[:mr.start()] + " " + q[mr.end():])
+        if not _carrier(rest_r):
+            en = _REVERSE[mr.group(1).lower()]
+            q = WORDS.get(en, {}).get(site.lang, en) if site.lang != "en" else en
+            return re.sub(r"\s+", " ", q).strip().lower()
+        return re.sub(r"\s+", " ", q).strip().lower()
+    if _carrier(rest):
         q = rest
-    elif _GENERIC_RE.search(q):
+    elif m is not None:
         # only descriptors besides the noun ('city bike with basket'): the noun phrase, translated
-        m = _GENERIC_RE.search(q)
         q = WORDS[m.group(1).lower()].get(site.lang, m.group(1)) if site.lang != "en" else m.group(0)
     return re.sub(r"\s+", " ", q).strip().lower() or (thing or "").strip().lower()
 
@@ -487,6 +593,8 @@ class Direct:
     paid: bool          # needs a Context.dev read (one rate-limit token)
     page: int = 1       # results page (2, 3: a paid site's next page when the bucket has tokens to spare)
     extra: bool = False  # bulky thing, marketplace abroad: shown as "also in the EU (+ shipping est.)", not the pick
+    category: str | None = None   # taxonomy node of the site's own category page read instead of its search
+    exact: bool = False  # that category page lists exactly the need's kind of thing (agora.sources.categories)
 
 
 BULKY = re.compile(
@@ -510,6 +618,18 @@ NAMES = {"fi": "Finland", "se": "Sweden", "no": "Norway", "dk": "Denmark", "de":
 
 
 EXTRA_PAGES: set[str] = set()   # planned page URLs that are the bulky 'also in the EU' set (reader.note_market)
+# planned category page URL -> {node, need_node, exact, site} (the reader tags its listings: raw['category_page'])
+CATEGORY_PAGES: dict[str, dict] = {}
+# planned page URL -> how many free result pages to read (generic needs read deeper; reader.free_page_cap)
+PAGE_PLAN: dict[str, int] = {}
+GENERIC_HOME_PAGES = 20      # a generic need's home marketplace: ~1,000 listings (tori 53 a page), still free
+GENERIC_PAGES = 6            # a generic need's other free marketplaces (each ~25-50 listings a page)
+
+
+def _remember(store: dict, url: str, value) -> None:
+    if len(store) > 5000:
+        store.clear()
+    store[url] = value
 
 
 def is_bulky(thing: str) -> bool:
@@ -564,14 +684,18 @@ def scope_for(thing: str, cc: str | None, home: str | None, eu_included: bool | 
 
 def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens: float,
                  max_paid: int = MAX_PAID_DIRECT, pages: int = 1, vehicle: bool | None = None,
-                 categories: list[str] | None = None) -> list[Direct]:
+                 categories: list[str] | None = None, node: str | None = None, generic: bool = False,
+                 tree: bool = False) -> list[Direct]:
     """Marketplace search pages to read directly for one lane.
     Small things: the asked-for (else home) country's marketplaces, then the big EU ones (vinted, kleinanzeigen,
     marktplaats, blocket, olx, dba, finn, leboncoin) while the shared bucket allows; then page 2 of the first
     paid ones. Bulky things (bikes, furniture, white goods): the home country gets the depth (tori paginates
     for free); marketplaces abroad only with tokens to spare, marked `extra` (shown apart, never the pick when
     pickup only). tori's ItemList read is free (it paginates inside the read).
-    pages ('Compare more', 1-3): 2 = page 2 of the paid sites at a lower token floor, 3 = pages 2 and 3."""
+    pages ('Compare more', 1-3): 2 = page 2 of the paid sites at a lower token floor, 3 = pages 2 and 3.
+    node + generic (a generic need, or a hunt from the category tree: `tree`): the used marketplaces' own
+    category page for that taxonomy node (agora.sources.categories) replaces their search when it lists exactly
+    that kind of thing (or always for a tree hunt), and the free pages are read deeper (PAGE_PLAN)."""
     pages = max(1, min(3, int(pages or 1)))
     if pages > 1:
         max_paid += 2 * (pages - 1)
@@ -626,7 +750,21 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
             left -= 1
         q = vehicle_query(thing) if s.vehicle else site_query(thing, s)
         url = build_url(s, q) if q or not s.browse else s.browse
-        out.append(Direct(s, lane, q, url, paid, 1, extra))
+        cat_node, exact = None, False
+        if node and generic and lane == "used" and not s.vehicle:
+            try:
+                from agora.sources import categories as _cats
+                cp = _cats.page_for(s.key, node, q)
+            except Exception:
+                cp = None
+            if cp is not None and (cp.exact or tree):
+                url, cat_node, exact = cp.url, cp.node, cp.exact
+                q = cp.query or q
+                _remember(CATEGORY_PAGES, url, {"node": cp.node, "need_node": node, "exact": cp.exact,
+                                                "site": s.key})
+        if generic and not paid:
+            _remember(PAGE_PLAN, url, GENERIC_HOME_PAGES if s.country == where else GENERIC_PAGES)
+        out.append(Direct(s, lane, q, url, paid, 1, extra, cat_node, exact))
 
     def next_pages() -> None:
         nonlocal left, n_paid
@@ -691,7 +829,11 @@ def page_url(site: Site, url: str, n: int) -> str | None:
     if site.key == "kleinanzeigen":               # /s-<q>/k0 -> /s-seite:2/<q>/k0
         if not path.startswith("/s-"):
             return None
-        path = re.sub(r"^/s-(?:seite:\d+/)?", f"/s-seite:{n}/", path)
+        cat = re.match(r"^(/s-[^/]+)(?:/seite:\d+)?((?:/[^/]+)?/(?:k0)?c\d+/?)$", path)
+        if cat:                                    # category page /s-handy-telekom/c173 -> .../seite:2/c173
+            path = f"{cat.group(1)}/seite:{n}{cat.group(2)}"
+        else:
+            path = re.sub(r"^/s-(?:seite:\d+/)?", f"/s-seite:{n}/", path)
     elif site.key in ("marktplaats", "2dehands"):  # /q/<q>/ -> /q/<q>/p/2/
         path = re.sub(r"/p/\d+/?$", "/", path.rstrip("/") + "/") + f"p/{n}/"
     elif site.key in ("amazon_de", "verkkokauppa", "power_fi", "cdiscount", "idealo", "pricerunner"):
@@ -720,6 +862,8 @@ COUNT_PATTERNS = [
 def market_total(text: str) -> tuple[int, bool] | None:
     """How many listings the site says the search has: (count, at_least). '500+ tulosta' -> (500, True).
     Facet counts ('Versand möglich1.224') are not totals: patterns need the word after the number."""
+    if "&" in (text or ""):
+        text = _html.unescape(text)     # tori's meta says '19&nbsp;370 ilmoitusta' (was read as 370)
     for pat in COUNT_PATTERNS:
         for m in pat.finditer(text or ""):
             raw = m.group(1)

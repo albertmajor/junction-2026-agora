@@ -42,6 +42,8 @@ async function mountAll() {
   const sg = await load('suggest');
   if (sg && sg.mountSuggest) { try { sg.mountSuggest(ask, qIn); } catch (e) { console.warn('[agora] mountSuggest failed', e); } }
   load('imagefill').then(m => { try { m && m.mountImagefill && m.mountImagefill(); } catch (e) { console.warn('[agora] mountImagefill failed', e); } });
+  const cp = await load('catpage');
+  if (cp && cp.mountCatpage) { try { cp.mountCatpage($('catpage')); } catch (e) { console.warn('[agora] mountCatpage failed', e); } }
   const lm = await load('landing');
   if (lm && lm.mountLanding) { try { lm.mountLanding($('landing')); } catch (e) { console.warn('[agora] mountLanding failed', e); } }
   const plan = [
@@ -75,15 +77,72 @@ async function renderExamples() {
 }
 
 // ---------- run / URL state ----------
-async function run(q, { push = true, cat = null } = {}) {
+// A broad category never hunts its own label (owner, 14 Nov: "Lifestyle Services" ran a hunt for those words and
+// showed junk). A category with huntable === false, or typed words that are exactly the name of one ("home
+// services", "electronics"), open its CATEGORY PAGE instead; typed words that only classify into a broad node
+// ("massage in tampere") still hunt the person's own words. free = never redirect (the page's "search everything").
+const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
+async function browseInstead(q, cat) {
+  let C = null;
+  try { C = await import('./cats.js'); } catch { return null; }
+  if (cat && cat.id) {
+    if (cat.huntable === false) return { id: cat.id };
+    if (cat.huntable === true) return null;
+    const r = await within(C.nodes([cat.id]), 900);
+    const n = r && r.items && r.items[0];
+    return n && n.huntable === false ? { id: n.id } : null;
+  }
+  const r = await within(C.classify(q), 900);
+  const m = r && r.match;
+  if (!m) return null;
+  if (m.browse) return { id: m.browse.id, typed: q };
+  if (m.huntable === false && m.exact) return { id: m.id, typed: q };
+  return null;
+}
+function openCategory(id, { push = true, typed = '' } = {}) {
+  if (!id) return;
+  stream.stop();
+  resetStore('');
+  qIn.value = typed || '';
+  if (push) {
+    const u = new URL(location.href);
+    for (const k of ['q', 'cat', 'share', 'by', 'browse', 'typed']) u.searchParams.delete(k);
+    u.searchParams.set('c', id);
+    if (typed) u.searchParams.set('typed', typed);
+    u.hash = '';
+    if (u.href !== location.href) history.pushState({ c: id }, '', u);
+  }
+  clearChips(); tickerOff(); setStatus(null); showCrumbs(null);
+  setPhase('category');
+  emit('reset', { q: '' });
+  emit('catpage', { id, typed });
+  scrollTo({ top: 0, behavior: 'auto' });
+}
+on('category', d => { if (d && d.id) openCategory(d.id, { typed: d.typed || '' }); });
+on('category:home', () => {
+  goHome();
+  const b = document.getElementById('ld-browse');
+  if (b) setTimeout(() => b.scrollIntoView({ block: 'start' }), 60);
+});
+on('catpage:shown', d => {        // an old id (merged away) shows its new home: keep the URL honest
+  if (!d || !d.asked || d.asked === d.id) return;
+  const u = new URL(location.href);
+  if (u.searchParams.get('c') === d.asked) { u.searchParams.set('c', d.id); history.replaceState(history.state, '', u); }
+});
+
+async function run(q, { push = true, cat = null, free = false } = {}) {
   q = String(q || '').trim().replace(/\s+/g, ' ');
   if (q.length < 2) { qIn.focus(); return; }
+  if (!free) {
+    const dest = await browseInstead(q, cat);
+    if (dest) { openCategory(dest.id, { push, typed: dest.typed || '' }); return; }
+  }
   qIn.value = q;
   if (push) {
     const u = new URL(location.href);
     u.searchParams.set('q', q);
     if (cat && cat.id) u.searchParams.set('cat', cat.id); else u.searchParams.delete('cat');
-    for (const k of ['share', 'by', 'browse']) u.searchParams.delete(k);
+    for (const k of ['share', 'by', 'browse', 'c', 'typed']) u.searchParams.delete(k);
     if (u.href !== location.href) history.pushState({ q }, '', u);
   }
   showCrumbs(q, cat);
@@ -96,7 +155,8 @@ function goHome({ push = true } = {}) {
   resetStore('');
   qIn.value = '';
   if (push) {
-    const u = new URL(location.href); u.searchParams.delete('q');
+    const u = new URL(location.href);
+    for (const k of ['q', 'cat', 'c', 'typed']) u.searchParams.delete(k);
     if (u.href !== location.href) history.pushState({}, '', u);
   }
   clearChips(); tickerOff(); setStatus(null); showCrumbs(null);
@@ -106,14 +166,15 @@ function goHome({ push = true } = {}) {
 }
 ask.addEventListener('submit', e => { e.preventDefault(); run(qIn.value); });
 // a landing card (or 'what an agent sees') asks for a search: back to the top, then run it
-on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null }); });
+on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null, free: !!d.free }); });
 bar.querySelector('.logo').addEventListener('click', e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault(); goHome();
 });
 addEventListener('popstate', () => {
   const sp = new URLSearchParams(location.search), q = sp.get('q');
-  if (q) run(q, { push: false, cat: sp.get('cat') ? { id: sp.get('cat') } : null }); else goHome({ push: false });
+  if (sp.get('c')) openCategory(sp.get('c'), { push: false, typed: sp.get('typed') || '' });
+  else if (q) run(q, { push: false, cat: sp.get('cat') ? { id: sp.get('cat') } : null }); else goHome({ push: false });
 });
 
 // ---------- category breadcrumb (from the tree of everything you can buy) ----------
@@ -648,6 +709,7 @@ async function boot() {
   if (params.get('lab') === '1') toggleLab(true);
   const q = params.get('q');
   if (params.get('stage') === '1') stage();
+  else if (params.get('c')) openCategory(params.get('c'), { push: false, typed: params.get('typed') || '' });
   else if (q) run(q, { push: false, cat: params.get('cat') ? { id: params.get('cat') } : null });
   else if (matchMedia('(min-width: 641px)').matches) qIn.focus({ preventScroll: true });
 }

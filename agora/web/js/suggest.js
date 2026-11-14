@@ -30,7 +30,7 @@ export function mountSuggest(form, input) {
         <span>${esc(t('free', q))}</span></div>
       <p class="sg-h">${esc(t('catsH'))}</p>` +
       items.map((h, i) => `<div class="sg-o${i === hi ? ' hi' : ''}" role="option" id="sg-o-${i}" aria-selected="${i === hi}" data-i="${i}">
-        ${C.icon(h.icon)}<span class="sg-t"><b>${esc(h.label)}</b>${C.kindTag(h.kind)}<span class="sg-p">${esc(h.path.slice(0, -1).join(' › '))}</span></span>
+        ${C.icon(h.icon)}<span class="sg-t"><b>${esc(h.label)}</b>${C.kindTag(h.kind)}<span class="sg-p">${esc(h.path.slice(0, -1).join(' › '))}</span></span>${h.huntable === false ? `<span class="sg-browse">${esc(t('open'))} ›</span>` : ''}
       </div>`).join('');
     box.hidden = false;
     input.setAttribute('aria-expanded', 'true');
@@ -51,8 +51,9 @@ export function mountSuggest(form, input) {
     if (!h) return;
     close();
     const q = h.label.replace(/­/g, '');
+    if (h.huntable === false) { input.value = ''; C.openCategory(h.id); return; }    // a broad category: its page
     input.value = q;
-    core.emit('ask', { q, cat: { id: h.id, ids: h.path_ids, path: h.path } });
+    core.emit('ask', { q, cat: { id: h.id, ids: h.path_ids, path: h.path, huntable: h.huntable } });
   };
 
   input.addEventListener('input', () => {

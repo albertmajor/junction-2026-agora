@@ -1,8 +1,10 @@
 // "Browse everything": the tree of everything you can buy (products AND services) as a big shop's mega menu.
 // Desktop: all roots on the left (things | services), Miller columns to the right (children, grandchildren …,
 // the last three levels), a breadcrumb with "Hunt for X". Phone: a drill-down list with breadcrumbs.
-// A search box inside finds any of the ~35k categories instantly. Clicking a leaf (or "Hunt for X") asks for
-// a hunt with the label in the viewer's language and the category path (main.js shows it as a breadcrumb).
+// A search box inside finds any of the ~35k categories instantly. Clicking a concrete leaf (or "Hunt for X") asks
+// for a hunt with the label in the viewer's language and the category path (main.js shows it as a breadcrumb).
+// A broad category (huntable === false: "Lifestyle Services", a whole department) never hunts its own label:
+// "See all of X" opens its category page (catpage.js) with concrete subcategories to pick from.
 import * as core from './core.js';
 import * as C from './cats.js';
 import { recordings, queryFor } from './stream.js';
@@ -37,6 +39,11 @@ async function kids(id) {
 }
 const label = id => (info.get(id) || {}).label || '';
 const catOf = ids => ({ id: ids[ids.length - 1], ids: [...ids], path: ids.map(label) });
+const canHunt = id => (info.get(id) || {}).huntable !== false;
+// the action button for a node: hunt a concrete one, open the page of a broad one
+const actHtml = (id, cls = 'ct-hunt') => canHunt(id)
+  ? `<button type="button" class="${cls}" data-hunt-path="1">${esc(t('huntFor', label(id)))} <span aria-hidden="true">→</span></button>`
+  : `<button type="button" class="${cls} page" data-page="${esc(id)}">${esc(t('seeAll', label(id)))} <span aria-hidden="true">→</span></button>`;
 
 // ---------- markup ----------
 function shell() {
@@ -86,7 +93,7 @@ function rowHtml(it, { level, sel, showIcon, parentKind, bare }) {
   return `<li><button type="button" class="ct-row${sel ? ' sel' : ''}${it.leaf ? ' leaf' : ''}" data-id="${esc(it.id)}" data-level="${level}"
     ${it.leaf ? '' : `aria-expanded="${sel}"`} title="${esc(it.label)}${it.leaf ? '' : ` · ${C.num(it.count)} ${esc(t('cats'))}`}">
     ${showIcon ? C.icon(it.icon) : ''}<span class="ct-l">${esc(it.label)}</span>${tag}
-    ${it.leaf ? `<span class="ct-go" aria-hidden="true">${esc(t('hunt'))} →</span>` : bare ? '' : `<span class="ct-n">${C.num(it.count)}</span><span class="ct-chev" aria-hidden="true">›</span>`}
+    ${it.leaf ? `<span class="ct-go" aria-hidden="true">${it.huntable === false ? '›' : `${esc(t('hunt'))} →`}</span>` : bare ? '' : `<span class="ct-n">${C.num(it.count)}</span><span class="ct-chev" aria-hidden="true">›</span>`}
   </button></li>`;
 }
 
@@ -106,7 +113,7 @@ function crumbsHtml() {
       : `<button type="button" class="ct-cr" data-depth="${k + 1}">${esc(label(id))}</button>`);
   });
   const sep = '<span class="ct-sep" aria-hidden="true">›</span>';
-  const hunt = ids.length ? `<button type="button" class="ct-hunt" data-hunt-path="1">${esc(t('huntFor', label(ids[ids.length - 1])))} <span aria-hidden="true">→</span></button>` : '';
+  const hunt = ids.length ? actHtml(ids[ids.length - 1]) : '';
   return `<span class="ct-trail">${parts.join(sep)}</span>${hunt}`;
 }
 
@@ -126,7 +133,7 @@ function leafHtml(id) {
     <div class="ct-leafcard">${C.icon(it.icon || st.path[0], 'ct-ic big')}
       <h3>${esc(it.label)}</h3>${C.kindTag(it.kind)}
       <p class="ct-where">${esc(where)}</p>
-      <button type="button" class="ct-hunt solid" data-hunt-path="1">${esc(t('huntFor', it.label || ''))} <span aria-hidden="true">→</span></button>
+      ${actHtml(id, 'ct-hunt solid')}
     </div></div>`;
 }
 
@@ -142,7 +149,7 @@ function infoHtml(id) {
   return `<div class="ct-col ct-leaf ct-info fresh"><div class="ct-leafcard">${C.icon(it.icon || st.path[0], 'ct-ic big')}
     <h3>${esc(it.label || '')}</h3>${C.kindTag(it.kind)}
     <p class="ct-where">${C.num(it.count)} ${esc(t('cats'))}</p>
-    <button type="button" class="ct-hunt solid" data-hunt-path="1">${esc(t('huntFor', it.label || ''))} <span aria-hidden="true">→</span></button>
+    ${actHtml(id, 'ct-hunt solid')}
   </div></div>`;
 }
 
@@ -173,7 +180,9 @@ function resultsHtml() {
     return `<li role="option" id="ct-opt-${i}" aria-selected="${i === st.hi}"><div class="ct-hit${i === st.hi ? ' hi' : ''}">
       <button type="button" class="ct-reveal" data-reveal="${i}">${C.icon(h.icon)}<span class="ct-hl"><b>${esc(h.label)}</b>${C.kindTag(h.kind)}<span class="ct-trailtxt">${esc(trail)}</span></span>
       ${h.leaf ? '' : `<span class="ct-n">${C.num(h.count)}</span>`}</button>
-      <button type="button" class="ct-mini" data-hunt-hit="${i}" aria-label="${esc(t('huntFor', h.label))}">${esc(t('hunt'))} →</button>
+      ${h.huntable === false
+        ? `<button type="button" class="ct-mini page" data-page="${esc(h.id)}" aria-label="${esc(t('seeAll', h.label))}">${esc(t('open'))} ›</button>`
+        : `<button type="button" class="ct-mini" data-hunt-hit="${i}" aria-label="${esc(t('huntFor', h.label))}">${esc(t('hunt'))} →</button>`}
     </div></li>`;
   }).join('');
   const none = !hits.length ? `<p class="ct-none">${esc(t('none', q))}</p>` : '';
@@ -217,7 +226,7 @@ async function render() {
       <button type="button" class="ct-back" data-depth="${st.path.length - 1}"><span aria-hidden="true">‹</span> ${esc(back)}</button>
       <h3 class="ct-lh">${C.icon(p.icon || st.path[0])}<span>${esc(p.label || '')}</span>${C.kindTag(p.kind)}</h3>
       ${p.leaf ? '' : `<ul role="list">${items.map(it => rowHtml(it, { level: st.path.length, sel: false, parentKind: p.kind })).join('')}</ul>`}
-      ${p.leaf ? `<button type="button" class="ct-hunt solid" data-hunt-path="1">${esc(t('huntFor', p.label || ''))} →</button>` : ''}
+      ${p.leaf ? actHtml(last, 'ct-hunt solid') : `<p class="ct-lact">${actHtml(last, 'ct-hunt')}</p>`}
     </div>`;
     return;
   }
@@ -263,7 +272,9 @@ function focusRow(id) {
 // ---------- actions ----------
 function hunt(ids) {
   if (!ids || !ids.length) return;
-  C.huntCategory(label(ids[ids.length - 1]), catOf(ids));
+  const id = ids[ids.length - 1];
+  if (!canHunt(id)) { C.openCategory(id); return; }
+  C.huntCategory(label(id), catOf(ids));
 }
 async function open(level, id, { focusChild = false } = {}) {
   st.path = [...st.path.slice(0, level), id];
@@ -322,6 +333,8 @@ function onClick(e) {
     st.path = ids; render().then(() => focusRow(ids[ids.length - 1]));
     return;
   }
+  const pg = e.target.closest('[data-page]');
+  if (pg) { C.openCategory(pg.dataset.page); return; }
   const rv = e.target.closest('[data-reveal]');
   if (rv) { const h = st.hits[Number(rv.dataset.reveal)]; if (h) reveal(h.id); return; }
   const hh = e.target.closest('[data-hunt-hit]');

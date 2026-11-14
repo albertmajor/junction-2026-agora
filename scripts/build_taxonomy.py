@@ -1921,6 +1921,31 @@ def tidy_categories(t: Tree) -> dict:
         if nid.startswith("sp:") and not nid.startswith("sp:se") and not n["kind"] and n["root"] in SERVICE_ROOTS:
             n["kind"] = "product"
             out["kind_fixed"] = out.get("kind_fixed", 0) + 1
+    # ... and go back to a shop's shelf: the product node with the service parent's name ('Yoga & Pilates' in
+    # Sports & Outdoors), else their own Shopify grandparent ('Household Supplies' for pest traps)
+    def product_home(svc_parent: str, nid: str) -> str | None:
+        en = t.nodes[svc_parent]["labels"].get("en", "")
+        same = sorted((c for c in t.keys.get(("en", key(en)), ()) if c in t.nodes and c != svc_parent
+                       and t.nodes[c]["root"] not in SERVICE_ROOTS), key=lambda c: (t.depth(c), c))
+        if same:
+            return same[0]
+        x = nid.rsplit("-", 1)[0]
+        while "-" in x:
+            x = x.rsplit("-", 1)[0]
+            if x in t.nodes and t.nodes[x]["root"] not in SERVICE_ROOTS:
+                return x
+        return None
+    for nid in sorted(t.nodes, key=lambda x: t.depth(x)):
+        n = t.nodes.get(nid)
+        if not n or not (nid.startswith("sp:") and not nid.startswith("sp:se")) or n["root"] not in SERVICE_ROOTS:
+            continue
+        par = n["parent"]
+        if par.startswith("sp:") and not par.startswith("sp:se"):
+            continue                                  # moves along with its product parent
+        home = product_home(par, nid)
+        if home and not t.in_subtree(home, nid) and t.depth(home) + t.height(nid) <= MAX_DEPTH:
+            t.move(nid, home)
+            out["products_rehomed"] = out.get("products_rehomed", 0) + 1
     fold = set(curated.FOLD_UP)
     for nid in sorted(t.nodes, key=lambda x: -t.depth(x)):
         n = t.nodes.get(nid)

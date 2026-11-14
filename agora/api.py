@@ -817,8 +817,16 @@ def _cat_page(nid: str, lang: str) -> dict[str, Any]:
             groups.append(g)
         else:
             items.append(_cat_item(T, desc, c, lang))
-    # a shop menu: hand-made groups first, then by size; concrete things A-Z
-    groups.sort(key=lambda g: (not g["curated"], -g["count"], g["label"].casefold()))
+    # a shop menu: the groups that hold what people buy most ('Popular' chips) first, then hand-made groups,
+    # then by size; concrete things A-Z
+    hot: dict[str, int] = {}
+    for rank, (_w, pid) in enumerate(T.pop.get(i, [])):
+        if pid:
+            for j in T.path_idx(T._i(pid)):
+                hot.setdefault(T.ids[j], rank)
+    groups.sort(key=lambda g: (hot.get(g["id"], 99), not g["curated"], -g["count"], g["label"].casefold()))
+    named = {g["label"].casefold() for g in groups}
+    items = [x for x in items if x["label"].casefold() not in named]      # one 'Physical well-being', not two
     items.sort(key=lambda x: x["label"].casefold())
     official.sort(key=lambda x: (-x["count"], x["label"].casefold()))
     popular = []

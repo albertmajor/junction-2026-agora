@@ -29,35 +29,60 @@ const T = {
     popular: 'Popular right now', service: 'service', digital: 'digital', property: 'housing', vehicle: 'vehicle', food: 'food',
     things: 'kinds of things', services: 'kinds of services', none: q => `No category for “${q}”.`, free: q => `Search everything for “${q}”`,
     back: 'Back', cats: 'categories', inCat: 'in', replay: 'instant replay', liveOnly: 'live only', lang: 'Language',
-    pick: 'Pick a category on the left, or one of these.' },
+    pick: 'Pick a category on the left, or one of these.',
+    open: 'Open', seeAll: x => `See all of ${x}`, huntAny: x => `Hunt for ${x}`, popularIn: 'Popular',
+    inside: (a, n) => n ? `${a} and ${n} more.` : `${a}.`, eg: 'e.g.', alsoHere: 'Also in here', officialH: 'Official classification headings',
+    findIn: x => `Search in ${x}…`, shelf: q => `“${q}” is a whole shelf, not one thing we can price. Pick what you mean:`,
+    browseNote: 'Pick something specific and we compare every shop and provider for it, all in.', things: 'things', subcats: 'subcategories',
+    everything: q => `Search everything for “${q}”`, home: 'All categories', loading: 'Loading…', none2: 'Nothing here yet.' },
   fi: { catsH: 'Luokat', thingsH: 'Tavarat', servicesH: 'Palvelut', kicker: 'Selaa', head: 'Kaikki mitä voi ostaa, yhdessä puussa.',
     sub: n => `${n} tuote- ja palveluluokkaa, paristoista putkimiehiin. Valitse yksi, niin etsimme sen kaikista kaupoista, hinta kaikkineen.`,
     find: 'Etsi luokka: sohva, putkimies, renkaat…', all: 'Kaikki luokat', hunt: 'Etsi', huntFor: x => `Etsi: ${x}`,
     popular: 'Suosittua nyt', service: 'palvelu', digital: 'digitaalinen', property: 'asuminen', vehicle: 'ajoneuvo', food: 'ruoka',
     things: 'tuoteryhmää', services: 'palveluryhmää', none: q => `Ei luokkaa haulle ”${q}”.`, free: q => `Hae kaikkialta: ”${q}”`,
     back: 'Takaisin', cats: 'luokkaa', inCat: 'luokassa', replay: 'nauhoitettu haku', liveOnly: 'vain live', lang: 'Kieli',
-    pick: 'Valitse luokka vasemmalta tai jokin näistä.' },
+    pick: 'Valitse luokka vasemmalta tai jokin näistä.',
+    open: 'Avaa', seeAll: x => `Näytä kaikki: ${x}`, huntAny: x => `Etsi: ${x}`, popularIn: 'Suosittuja',
+    inside: (a, n) => n ? `${a} ja ${n} muuta.` : `${a}.`, eg: 'esim.', alsoHere: 'Myös täällä', officialH: 'Viralliset luokitusotsikot',
+    findIn: x => `Hae luokasta ${x}…`, shelf: q => `”${q}” on kokonainen hylly, ei yksi asia, jonka voi hinnoitella. Valitse mitä tarkoitat:`,
+    browseNote: 'Valitse jotain tarkempaa, niin vertaamme kaikki kaupat ja tekijät, hinta kaikkineen.', things: 'asiaa', subcats: 'alaluokkaa',
+    everything: q => `Hae kaikkialta: ”${q}”`, home: 'Kaikki luokat', loading: 'Ladataan…', none2: 'Täällä ei ole vielä mitään.' },
   de: { catsH: 'Kategorien', thingsH: 'Dinge', servicesH: 'Dienstleistungen', kicker: 'Stöbern', head: 'Alles, was man kaufen kann, in einem Baum.',
     sub: n => `${n} Kategorien für Dinge und Dienstleistungen, von Batterien bis Klempner. Wähle eine, und wir suchen sie in allen Shops, alles inklusive.`,
     find: 'Kategorie finden: Sofa, Klempner, Reifen…', all: 'Alle Kategorien', hunt: 'Suchen', huntFor: x => `${x} suchen`,
     popular: 'Gerade beliebt', service: 'Dienstleistung', digital: 'digital', property: 'Wohnen', vehicle: 'Fahrzeug', food: 'Essen',
     things: 'Warengruppen', services: 'Dienstleistungsgruppen', none: q => `Keine Kategorie für „${q}“.`, free: q => `Überall nach „${q}“ suchen`,
     back: 'Zurück', cats: 'Kategorien', inCat: 'in', replay: 'Aufzeichnung', liveOnly: 'nur live', lang: 'Sprache',
-    pick: 'Wähle links eine Kategorie oder eine davon.' },
+    pick: 'Wähle links eine Kategorie oder eine davon.',
+    open: 'Öffnen', seeAll: x => `Alles in ${x}`, huntAny: x => `${x} suchen`, popularIn: 'Beliebt',
+    inside: (a, n) => n ? `${a} und ${n} weitere.` : `${a}.`, eg: 'z. B.', alsoHere: 'Außerdem hier', officialH: 'Offizielle Klassifikationen',
+    findIn: x => `In ${x} suchen…`, shelf: q => `„${q}“ ist ein ganzes Regal, nicht eine Sache mit einem Preis. Was meinst du?`,
+    browseNote: 'Wähle etwas Konkretes, und wir vergleichen alle Shops und Anbieter dafür, alles inklusive.', things: 'Dinge', subcats: 'Unterkategorien',
+    everything: q => `Überall nach „${q}“ suchen`, home: 'Alle Kategorien', loading: 'Lädt…', none2: 'Hier ist noch nichts.' },
   nl: { catsH: 'Categorieën', thingsH: 'Spullen', servicesH: 'Diensten', kicker: 'Bladeren', head: 'Alles wat je kunt kopen, in één boom.',
     sub: n => `${n} categorieën producten en diensten, van batterijen tot loodgieters. Kies er een en we zoeken in elke winkel, alles inbegrepen.`,
     find: 'Zoek een categorie: bank, loodgieter, banden…', all: 'Alle categorieën', hunt: 'Zoeken', huntFor: x => `Zoek ${x}`,
     popular: 'Nu populair', service: 'dienst', digital: 'digitaal', property: 'wonen', vehicle: 'voertuig', food: 'eten',
     things: 'soorten producten', services: 'soorten diensten', none: q => `Geen categorie voor “${q}”.`, free: q => `Overal zoeken naar “${q}”`,
     back: 'Terug', cats: 'categorieën', inCat: 'in', replay: 'opname', liveOnly: 'alleen live', lang: 'Taal',
-    pick: 'Kies links een categorie, of een van deze.' },
+    pick: 'Kies links een categorie, of een van deze.',
+    open: 'Open', seeAll: x => `Alles in ${x}`, huntAny: x => `Zoek ${x}`, popularIn: 'Populair',
+    inside: (a, n) => n ? `${a} en nog ${n}.` : `${a}.`, eg: 'bv.', alsoHere: 'Ook hier', officialH: 'Officiële classificaties',
+    findIn: x => `Zoeken in ${x}…`, shelf: q => `“${q}” is een hele schap, niet één ding met een prijs. Wat bedoel je?`,
+    browseNote: 'Kies iets concreets en we vergelijken elke winkel en aanbieder, alles inbegrepen.', things: 'dingen', subcats: 'subcategorieën',
+    everything: q => `Overal zoeken naar “${q}”`, home: 'Alle categorieën', loading: 'Laden…', none2: 'Hier staat nog niets.' },
   sv: { catsH: 'Kategorier', thingsH: 'Saker', servicesH: 'Tjänster', kicker: 'Bläddra', head: 'Allt du kan köpa, i ett träd.',
     sub: n => `${n} kategorier av varor och tjänster, från batterier till rörmokare. Välj en så letar vi i alla butiker, allt inräknat.`,
     find: 'Hitta en kategori: soffa, rörmokare, däck…', all: 'Alla kategorier', hunt: 'Sök', huntFor: x => `Sök ${x}`,
     popular: 'Populärt just nu', service: 'tjänst', digital: 'digitalt', property: 'boende', vehicle: 'fordon', food: 'mat',
     things: 'varugrupper', services: 'tjänstegrupper', none: q => `Ingen kategori för ”${q}”.`, free: q => `Sök överallt efter ”${q}”`,
     back: 'Tillbaka', cats: 'kategorier', inCat: 'i', replay: 'inspelad sökning', liveOnly: 'bara live', lang: 'Språk',
-    pick: 'Välj en kategori till vänster, eller någon av dessa.' },
+    pick: 'Välj en kategori till vänster, eller någon av dessa.',
+    open: 'Öppna', seeAll: x => `Allt i ${x}`, huntAny: x => `Sök ${x}`, popularIn: 'Populärt',
+    inside: (a, n) => n ? `${a} och ${n} till.` : `${a}.`, eg: 't.ex.', alsoHere: 'Även här', officialH: 'Officiella klassificeringar',
+    findIn: x => `Sök i ${x}…`, shelf: q => `”${q}” är en hel hylla, inte en sak med ett pris. Vad menar du?`,
+    browseNote: 'Välj något konkret så jämför vi alla butiker och leverantörer, allt inräknat.', things: 'saker', subcats: 'underkategorier',
+    everything: q => `Sök överallt efter ”${q}”`, home: 'Alla kategorier', loading: 'Laddar…', none2: 'Här finns inget än.' },
 };
 export const t = (k, ...a) => { const v = (T[lang] && T[lang][k]) ?? T.en[k]; return typeof v === 'function' ? v(...a) : v; };
 export const num = n => (Number(n) || 0).toLocaleString(lang === 'en' ? 'en-GB' : lang);
@@ -84,11 +109,58 @@ export function api(path, params = {}) {
 export const children = parent => api('/api/categories', { parent: parent || '' });
 export const search = (q, limit = 8) => api('/api/categories/search', { q, limit });
 export const nodes = ids => api('/api/categories/nodes', { ids: ids.join(',') });
+export const page = id => api('/api/categories/page', { id });
+export const searchIn = (q, within, limit = 12) => api('/api/categories/search', { q, within, limit });
+export const classify = q => api('/api/categories/classify', { q });
 
 // ---------- ask for a hunt in this category (main.js listens for 'ask' {q, cat}) ----------
 export function huntCategory(label, cat) {
   const q = String(label || '').replace(/­/g, '').trim();
   if (q) core.emit('ask', { q, cat: cat || null });
+}
+// a broad category (huntable === false) never hunts its own label: it opens its category page (main.js
+// listens for 'category' {id, typed?}); only concrete things and services start a hunt
+export const openCategory = (id, extra = {}) => { if (id) core.emit('category', { id, ...extra }); };
+export function go(item, cat) {
+  if (!item) return;
+  if (item.huntable === false) openCategory(item.id);
+  else huntCategory(item.label, cat || { id: item.id, ids: item.path_ids, path: item.path });
+}
+
+// a picture word for a category card: one of the line drawings below, picked by what the label is about
+const PICTURE = [
+  [/hair|barber|salon|nail|beauty|makeup|lash|brow|wax|tattoo|tanning|facial|skin/i, 'beauty-wellness'],
+  [/massage|spa|sauna|wellness|yoga|pilates|fitness|gym|train/i, 'sports-outdoors'],
+  [/clean|laundry|wash|janitor|chimney|pest/i, 'home-services'],
+  [/mov|removal|storage|transport|deliver|courier|parcel|taxi|freight|van/i, 'transport'],
+  [/garden|lawn|tree|plant|landscap|snow/i, 'home-garden'],
+  [/repair|handyman|assembl|lock|fix|mount/i, 'diy'],
+  [/plumb|electric|heat|roof|paint|floor|til|carpent|build|renovat|construct|window|door|brick|mason|glaz|weld/i, 'trades'],
+  [/car\b|cars|vehicle|tyre|tire|auto|motor|garage|parking|driving/i, 'vehicles'],
+  [/child|baby|babysit|nanny|kid|toddler|nursery/i, 'baby-kids'],
+  [/elder|care|nurs|funeral|religio|dating|famil|personal|assistant|stylist|genealog/i, 'personal-services'],
+  [/pet|dog|cat\b|cats|vet|animal|groom/i, 'pets'],
+  [/doctor|dent|medic|health|clinic|hospital|therap|physio|optic|pharma|lab test/i, 'health-services'],
+  [/lesson|course|tutor|school|class|teach|educat|training/i, 'education'],
+  [/ticket|concert|event|party|wedding|venue|dj|entertain|club|bar|nightlife|activit/i, 'events-leisure'],
+  [/photo|video|camera|film/i, 'electronics'],
+  [/hotel|flight|travel|holiday|cruise|tour|hostel|camping|rental/i, 'travel'],
+  [/legal|law|account|tax|consult|business|marketing|recruit|print|translat|security/i, 'professional'],
+  [/web|app|design|logo|seo|writ|data|it\b|software|digital|online/i, 'digital-services'],
+  [/insur|loan|bank|credit|invest|pension|pay|crypto|mortgage|financ/i, 'finance-insurance'],
+  [/energy|electricity|gas|water|internet|broadband|mobile|phone plan|waste|solar/i, 'utilities'],
+  [/food|drink|restaurant|cater|grocer|coffee|wine|beer|bak/i, 'food-drink'],
+  [/music|art|craft|hobby|instrument/i, 'hobbies'],
+  [/book|magazine|news|media/i, 'media'],
+  [/sofa|bed|chair|table|furniture|wardrobe|shel/i, 'furniture'],
+  [/cloth|shoe|fashion|jewel|watch|bag/i, 'fashion'],
+  [/toy|game|puzzle/i, 'toys-games'],
+  [/sport|bike|cycl|ski|outdoor|fishing|hunting|golf|tennis|swim/i, 'sports-outdoors'],
+  [/house|home|flat|apartment|property|real estate/i, 'property'],
+];
+export function pictureFor(label, root) {
+  for (const [rx, key] of PICTURE) if (rx.test(label || '')) return key;
+  return root;
 }
 
 // ---------- icons: one calm line drawing per root (24 px grid, 1.5 px stroke; .f = filled dot) ----------
