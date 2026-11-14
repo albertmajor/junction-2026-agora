@@ -64,6 +64,7 @@ const EDGE = 22;           // px past either end of the axis an object may still
 let view = null;           // {mode, d0, d1} | {mode, all: true}; null = the default fit
 let fitDom = null, allDom = null;           // [lo, hi] of the default fit and of "fit all" (last layout)
 let clusHi = null;                           // where the cluster alone ends (no pick, no tag): the zoom's floor scales with it
+let floorV = null;                           // the 5th-percentile price (at least the 4th cheapest): a zoom keeps it in view
 let tagDrag = null;        // the price tag is being dragged: {lo, h0, b0, v0, minHi, cap}
 let lastList = [];         // what the last layout placed, by x: a zoom frame moves exactly these
 let chase = null, chaseRaf = 0, frameRaf = 0, settleT = 0, animUntil = 0;
@@ -86,7 +87,17 @@ function div(cls, parent, tag = 'div') {
   return e;
 }
 const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
-const unitJob = () => S.unit === 'job' || [...objs.values()].some(o => o.item && o.item.tc && o.item.tc.true_cost && o.item.tc.true_cost.per === 'job');
+// asked once per task, not once per object (label() asks it for every offer: with 2,000 that was O(n²))
+let ujMemo = null;
+const unitJob = () => {
+  if (S.unit === 'job') return true;
+  if (ujMemo !== null) return ujMemo;
+  ujMemo = [...objs.values()].some(o => o.item && o.item.tc && o.item.tc.true_cost && o.item.tc.true_cost.per === 'job');
+  queueMicrotask(() => { ujMemo = null; });
+  return ujMemo;
+};
+// an object's own parts, looked up once (its markup never changes after makeObj)
+const part = (o, sel) => (o.parts || (o.parts = {}))[sel] || (o.parts[sel] = o.el.querySelector(sel));
 function tagOf(o) {
   if (o.extra) return o.extra.eur;
   if (o.shelf) return num(o.shelf.price_eur ?? o.shelf.price);
@@ -448,6 +459,7 @@ function huntScale(list, extra) {
   allDom = [all.d0, all.d1];
   fitDom = [fit.d0, fit.d1];
   clusHi = rv.length ? linScale(rv, minSpan).d1 : fit.d1;
+  floorV = rv.length ? rv[Math.min(rv.length - 1, Math.max(3, Math.ceil(0.05 * rv.length)))] : null;
   const v = activeView();
   if (!v) return fit;
   const d = v.all ? allDom : [v.d0, v.d1];
@@ -579,7 +591,8 @@ function syncStacks(nL, nR, minL, maxR) {
     const r = btn.classList.contains('r');
     const t = r ? `+${n} dearer →` : `← ${n} cheaper`;
     const s = btn.querySelector('span');
-    if (s.textContent !== t) s.textContent = t;
+    // its width from the font, not offsetWidth: a zoom frame must not force a layout of 2,000 objects
+    if (s.textContent !== t || !btn._w) { s.textContent = t; btn._w = textW(t, '400 12px "Instrument Sans", system-ui, sans-serif') + 31; }
     btn.style.top = (AX + 5) + 'px';
     btn.setAttribute('aria-label', `${n} ${r ? 'dearer' : 'cheaper'} offer${n === 1 ? '' : 's'} past the ${r ? 'end' : 'start'} of the line` +
       `${isFinite(ext) ? `, ${r ? 'up to' : 'from'} ${eur(ext, { dp: 0 })}` : ''}: show every offer`);
@@ -686,7 +699,7 @@ function tagTarget(v) {
 // the narrowest the tag may zoom the axis: a sensible span over the cluster (never a €1-wide ruler)
 function floorHi(lo, fallback) {
   const c = clusHi != null ? clusHi : fallback;
-  return lo + Math.max(10, 0.06 * (c - lo));
+  return Math.max(lo + Math.max(10, 0.06 * (c - lo)), floorV != null ? floorV * 1.06 : -Infinity);
 }
 
 function isVertical() { return (root ? root.clientWidth : innerWidth) < 640 || innerWidth < 640; }
@@ -713,7 +726,7 @@ function clearAll() {
   if (moreBtn) moreBtn.hidden = true;
   whyCur = null; whyBox = null; syncWhy(null);
   lit = null; notchEur = null; selected = null; ghostDomain = null; focusDom = null;
-  view = null; tagDrag = null; pan = null; chase = null; lastList = []; fitDom = allDom = clusHi = null; whyAt = null;
+  view = null; tagDrag = null; pan = null; chase = null; lastList = []; fitDom = allDom = clusHi = floorV = null; whyAt = null;
   cancelAnimationFrame(chaseRaf); chaseRaf = 0; cancelAnimationFrame(frameRaf); frameRaf = 0; clearTimeout(settleT);
   for (const o of objs.values()) o.out = false;
   if (stackR) { stackR.hidden = stackL.hidden = true; } syncZoomBar();
@@ -958,7 +971,7 @@ function textW(text, font) {
   return measureCtx.measureText(text).width;
 }
 function capWidth(o) {
-  const txt = o.el.querySelector('.ln-cap .p').textContent;
+  const txt = part(o, '.ln-cap .p').textContent;
   const isWin = turned && o.key === winner;
   const withSite = (turned ? o.key === winner : o.key === S.leader) || o.el.classList.contains('mono') || o.key === cheapKey;
   let w = textW(txt, `${isWin ? 500 : 400} ${isWin ? 13 : 12}px "JetBrains Mono", ui-monospace, monospace`);
@@ -969,9 +982,9 @@ function label(o) {
   const v = valOf(o);
   const isCheap = turned && vmode === 'true' && o.key === cheapKey && !vertical;
   o.el.classList.toggle('cheapest', isCheap);
-  o.el.querySelector('.ln-cap .p').textContent = isCheap ? `${eur(tagOf(o), { dp: 0 })} tag → ${fmtVal(v, vmode, o)}` : fmtVal(v, vmode, o);
-  o.el.querySelector('.ln-val').textContent = v == null ? '' : eur(v, { dp: v < 100 && Math.abs(v % 1) > 0.004 ? 2 : 0 });
-  const x = o.el.querySelector('.ln-cap .x');
+  part(o, '.ln-cap .p').textContent = isCheap ? `${eur(tagOf(o), { dp: 0 })} tag → ${fmtVal(v, vmode, o)}` : fmtVal(v, vmode, o);
+  part(o, '.ln-val').textContent = v == null ? '' : eur(v, { dp: v < 100 && Math.abs(v % 1) > 0.004 ? 2 : 0 });
+  const x = part(o, '.ln-cap .x');
   if (o.shelf) x.textContent = vertical ? (COND_WORD[condLetter(condOf(o))] || '') : '';
   else if (vertical && !o.extra) {
     // phones: no badge, the condition is a word in the caption ("tori.fi · used · tag €825")
@@ -997,8 +1010,8 @@ function label(o) {
   const fh = o.item && !o.extra ? flagHtml(o.item) : '';
   if (o.flagK !== fh) {
     o.flagK = fh;
-    o.el.querySelector('.ln-flag').innerHTML = fh;
-    o.el.querySelector('.ln-cap .f').innerHTML = fh;
+    part(o, '.ln-flag').innerHTML = fh;
+    part(o, '.ln-cap .f').innerHTML = fh;
   }
   const org = o.item && !o.extra ? originFor(o.item) : null;
   const from = org && org.country_code ? `from ${org.country_name || countryName(org.country_code)}${org.confident === false ? ' (a guess)' : ''}` : '';
@@ -1177,7 +1190,8 @@ function assignLevels(list) {
     // a dense line: the cheapest few stay photo beads, the rest are pips stacked per 7 px column
     // photo beads spread along the line: the cheapest dot in each 90 px stretch, clear of the plates
     const beads = new Set(), seg = new Map();
-    const nearPlate = o => list.some(p => p.kind === 'full' && Math.abs(p.x - o.x) < 24);
+    const plateX = list.filter(p => p.kind === 'full').map(p => p.x);
+    const nearPlate = o => plateX.some(px => Math.abs(px - o.x) < 24);
     for (const o of dots.slice().sort((a, b) => valOf(a) - valOf(b))) {
       if (beads.size >= BEADS_DENSE || nearPlate(o)) continue;
       const k = Math.floor(o.x / 90);
@@ -1666,8 +1680,11 @@ function drawAxis(vh) {
     const x = sx(scale, t);
     if (x < x0 + 4 || x > x1 - 4) return;
     svgEl('line', { x1: x, x2: x, y1: AX, y2: AX + 6, class: 'ln-tk' }, gTicks);
+    // a label never runs under an edge stack ("← 3 cheaper", "+12 dearer →")
+    const lab = tickLabel(t, i), hw = labW(lab) / 2 + 4;
+    if ((stackL && !stackL.hidden && x - hw < 6 + (stackL._w || 0)) || (stackR && !stackR.hidden && x + hw > W - 6 - (stackR._w || 0))) return;
     const tx = svgEl('text', { x, y: AX + 30, class: 'ln-tl', 'text-anchor': 'middle' }, gTicks);
-    tx.textContent = tickLabel(t, i);
+    tx.textContent = lab;
   });
 }
 function axisText() {
