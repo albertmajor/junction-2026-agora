@@ -452,13 +452,34 @@ def _offer_from_opengraph(data: dict[str, Any], url: str, need: Need, hint: str 
     return None
 
 
+_LDJSON = re.compile(r"<script\b[^>]*application/ld\+json[^>]*>(.*?)</script>", re.S | re.I)
+
+
+def _loose_jsonld(html: str) -> list[Any]:
+    """JSON-LD blocks extruct drops: a trailing ';' (wexphotovideo.com ends its Product block with '};')."""
+    import json
+    out: list[Any] = []
+    for m in _LDJSON.finditer(html):
+        body = m.group(1).strip().rstrip(";").strip()
+        try:
+            out.append(json.loads(body))
+        except ValueError:
+            continue
+    return out
+
+
 def _extruct(html: str, url: str) -> dict[str, Any]:
     import extruct  # heavy import, only when needed
     try:
-        return extruct.extract(html, base_url=url, syntaxes=["json-ld", "microdata", "opengraph"],
+        data = extruct.extract(html, base_url=url, syntaxes=["json-ld", "microdata", "opengraph"],
                                uniform=False, errors="ignore")
     except Exception:  # extruct raises many lxml/json types on broken pages
-        return {}
+        data = {}
+    if "ld+json" in html[:MAX_HTML].lower() and not data.get("json-ld"):
+        loose = _loose_jsonld(html)
+        if loose:
+            data = {**data, "json-ld": loose}
+    return data
 
 
 def _html_cache(url: str) -> pathlib.Path:
@@ -868,6 +889,8 @@ def html_units(base: Offer, html: str, page_url: str, need: Need, hint: str | No
              (want and len(want & _tokens(c.get("title") or "")) / len(want) >= 0.9)]
     if not cards:
         return []
+    if not base.raw.get("grade"):
+        units.apply_grade(base.raw, units.grade_info(fence.visible_text(html)), "page")
     found = [base]
     for c in cards:
         cond = reconcile_condition(None, c["url"], c["title"], hint=hint or base.condition, kind=need.kind)
@@ -1493,6 +1516,8 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
                 offer.raw["m2_per_hour"] = speed
             add_witnesses(offer, "jsonld", html=html, search_title=title, snippet=snippet, need=need)
             _annotate(offer, html, snippet, title)
+            if offer.condition in ("used", "refurbished") and units.is_used_dealer(url):
+                units.apply_grade(offer.raw, units.grade_info(offer.title, fence.visible_text(html)), "page")
             offer = _finish(offer, need, title)
             if expand_lists:
                 more = html_units(offer, html, url, need, lane)

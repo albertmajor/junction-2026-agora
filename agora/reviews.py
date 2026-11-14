@@ -65,7 +65,9 @@ BASELINE = {"trustpilot": 3.6, "smartcustomer": 2.6, "sitejabber": 2.6, "own sit
             "werkspot": 4.4, "trustami": 4.3, "ekomi": 4.4, "web": 3.6}
 # only these sites' star ratings are taken from a search snippet (a blogger's own "3.8 / 5" is not a review count)
 RATING_SITES = set(BASELINE) - {"web", "own site"}
-WEIGHT = {"own site": 0.3, "web": 0.6}       # everything else 1.0; snippet-read ratings x SNIPPET_W
+WEIGHT = {"own site": 0.3, "web": 0.6, "badge": 0.3}   # everything else 1.0; snippet-read ratings x SNIPPET_W
+BADGE_MAX_N = 100               # a rating badge on the shop's own page never counts for more than this many reviews
+MAX_BIG_TP = 2                  # extra Trustpilot searches for big shops the batch missed
 SNIPPET_W = 0.8
 SCAM_WORD_W = 0.5               # the bare word "scam" counts half a concrete red flag
 SENTIMENT_W = 0.6               # a review site's summary sentence, without stars
@@ -76,7 +78,9 @@ SOURCE_NAMES = {"trustpilot": "Trustpilot", "smartcustomer": "SmartCustomer", "s
                 "own site": "the shop's own site", "kiyoh": "Kiyoh", "trustedshops": "Trusted Shops",
                 "feedbackcompany": "Feedback Company", "google": "Google", "reviews.io": "Reviews.io",
                 "klantenvertellen": "Klantenvertellen", "werkspot": "Werkspot", "trustami": "Trustami", "ekomi": "eKomi",
-                "reddit": "Reddit", "web": "the web"}
+                "reddit": "Reddit", "web": "the web", "feefo": "Feefo", "reevoo": "Reevoo"}
+BASELINE.setdefault("feefo", 4.5)
+BASELINE.setdefault("reevoo", 4.3)
 
 BIAS_NOTE = ("Review sites over-represent unhappy buyers, so we compare a shop with what is normal on each "
              "site, pull small review counts toward neutral, and only let serious complaints (scams, "
@@ -290,6 +294,103 @@ def parse_rating_page(html: str, url: str) -> dict[str, Any] | None:
     return best
 
 
+# ---------------------------------------------------------------- rating badges on the shop's own page
+# Wex's header says "4.8 Trustpilot Rating"; others embed a TrustBox, a Feefo / Reevoo / Google badge. The shop
+# chose to show it, so it is a weak, labelled signal ("shown on the shop's own page"), never enough on its own,
+# but it is not "no reviews found". The TrustBox's own link names the shop's real Trustpilot page
+# (uk.trustpilot.com/review/www.wexphotovideo.com), which the paid steps then read.
+
+_BADGE_SITE = r"trust\s?pilot|google(?:\s+reviews)?|feefo|reevoo|trusted\s?shops|kiyoh|ekomi|reviews\.io"
+_BADGE_KEY = {"trustpilot": "trustpilot", "google": "google", "feefo": "feefo", "reevoo": "reevoo",
+              "trustedshops": "trustedshops", "kiyoh": "kiyoh", "ekomi": "ekomi", "reviews.io": "reviews.io"}
+_BADGE_PATS = [
+    # "4.8 Trustpilot Rating", "4.7/5 on Feefo", "Rated 4.8 out of 5 on Trustpilot", "4.6 ★ Google reviews"
+    re.compile(r"(?<![\d.,])(\d[.,]\d{1,2})\s*(?:/\s*(5|10)|out of (5|10)|★|stars?)?\s*(?:on|from|at)?\s*"
+               r"(" + _BADGE_SITE + r")\s*(?:rating|score|reviews?|trustscore|average)", re.I),
+    re.compile(r"(?<![\d.,])(\d[.,]\d{1,2})\s*(?:/\s*(5|10)|out of (5|10)|★|stars?)\s*(?:on|from|at)?\s*"
+               r"(" + _BADGE_SITE + r")\b", re.I),
+    # "Trustpilot rating 4.8", "TrustScore 4.6 out of 5", "Feefo: 4.7/5"
+    re.compile(r"(" + _BADGE_SITE + r")\s*(?:rating|score|trustscore|average)?\s*[:\-]?\s*(?:of\s*)?"
+               r"(\d[.,]\d{1,2})\s*(?:/\s*(5|10)|out of (5|10)|★|stars?)", re.I),
+    re.compile(r"(" + _BADGE_SITE + r")\s*(?:rating|score|trustscore|average)\s*[:\-]?\s*(\d[.,]\d{1,2})(?![\d.,])", re.I),
+]
+_BADGE_COUNT = re.compile(r"(?:based on|from|of|over)\s+(\d{1,3}(?:[ ,.\u00a0]\d{3})+|\d+(?:[.,]\d)?\s*k|\d+)\+?\s*"
+                          r"(?:verified\s+)?(?:customer\s+)?reviews", re.I)
+_TP_LINK = re.compile(r"https?://(?:([a-z]{2})\.|www\.)?trustpilot\.com/review/([a-z0-9][a-z0-9.\-]+\.[a-z]{2,})", re.I)
+_TRUSTBOX = re.compile(r"<div\b[^>]*class=[\"']?[^\"'>]*trustpilot-widget[^>]*>", re.I)
+# a TrustBox / custom widget that states its score in attributes (rare; most load it with JavaScript)
+_TB_SCORE = re.compile(r"data-(?:score|trustscore|rating)\s*=\s*[\"']?(\d(?:[.,]\d{1,2})?)", re.I)
+_TB_COUNT = re.compile(r"data-(?:number-of-reviews|review-count|reviews)\s*=\s*[\"']?(\d+)", re.I)
+
+
+def _site_key(name: str) -> str:
+    n = re.sub(r"\s+", "", name.lower()).replace("googlereviews", "google")
+    return _BADGE_KEY.get(n, n)
+
+
+def parse_badges(html: str, url: str = "") -> dict[str, Any]:
+    """The shop's own page -> {badges: [{site, rating (of 5), count|None, quote}], tp_urls: [trustpilot review
+    URLs it links to]}. Only explicit '<number> <review site> rating'-style claims; no claim, no badge."""
+    if not html:
+        return {"badges": [], "tp_urls": []}
+    text = re.sub(r"<(script|style)\b.*?</\1>", " ", html[:1_500_000], flags=re.S | re.I)
+    text = re.sub(r"<[^>]+>", " ", text)
+    import html as htmllib
+    text = htmllib.unescape(text).replace("\u00a0", " ")
+    text = re.sub(r"\s+", " ", text)
+    badges: dict[str, dict[str, Any]] = {}
+    for i, pat in enumerate(_BADGE_PATS):
+        for m in pat.finditer(text):
+            if i < 2:
+                v, scale, site = _num(m.group(1)), m.group(2) or m.group(3), m.group(4)
+            else:
+                site, v, scale = m.group(1), _num(m.group(2)), (m.group(3) or m.group(4)) if i == 2 else None
+            if v is None:
+                continue
+            key = _site_key(site)
+            if scale == "10" or (v > 5 and (scale is None and key == "reevoo")):
+                v = v / 2
+            if not 1.0 <= v <= 5.0 or key in badges:
+                continue
+            tail = text[m.end():m.end() + 140]
+            cm = _BADGE_COUNT.search(text[max(0, m.start() - 80):m.start()] + " " + tail)
+            count = None
+            if cm:
+                c = cm.group(1).strip().lower()
+                count = int((_num(c[:-1].strip()) or 0) * 1000) if c.endswith("k") else \
+                    int(_num(re.sub(r"[ ,.\u00a0](?=\d{3}\b)", "", c)) or 0) or None
+            badges[key] = {"site": key, "rating": round(v, 2), "count": count,
+                           "quote": text[max(0, m.start() - 10):m.end() + 10].strip()[:120]}
+    for tb in _TRUSTBOX.finditer(html):
+        sm, cm = _TB_SCORE.search(tb.group(0)), _TB_COUNT.search(tb.group(0))
+        v = _num(sm.group(1)) if sm else None
+        if v is not None and 1.0 <= v <= 5.0 and "trustpilot" not in badges:
+            badges["trustpilot"] = {"site": "trustpilot", "rating": round(v, 2),
+                                    "count": int(cm.group(1)) if cm else None, "quote": "TrustBox widget"}
+    tp_urls: list[str] = []
+    for m in _TP_LINK.finditer(html):
+        sub = (m.group(1) or "www").lower()
+        u = f"https://{sub}.trustpilot.com/review/{m.group(2).lower().rstrip('.')}"
+        if u not in tp_urls:
+            tp_urls.append(u)
+    return {"badges": list(badges.values()), "tp_urls": tp_urls[:3]}
+
+
+def badge_sources(html: str, url: str) -> list[dict[str, Any]]:
+    """Badge claims as weak sources (key 'badge', weight 0.3, at most BADGE_MAX_N reviews, never counted as
+    independent reviews) plus a non-rating 'tp_link' entry per linked Trustpilot page."""
+    got = parse_badges(html, url)
+    out: list[dict[str, Any]] = []
+    for b in got["badges"]:
+        out.append({"key": "badge", "claims": b["site"], "badge": True,
+                    "name": f"{SOURCE_NAMES.get(b['site'], b['site'].title())} (shown on the shop's own page)",
+                    "url": url, "rating": b["rating"], "count": b["count"], "quote": b["quote"],
+                    "tp_url": got["tp_urls"][0] if b["site"] == "trustpilot" and got["tp_urls"] else None})
+    for u in got["tp_urls"]:
+        out.append({"key": "tp_link", "url": u, "rating": None, "count": None})
+    return out
+
+
 # ratings stated in a search snippet / highlight
 _RATE_PATS = [
     re.compile(r"trust\s*score\s*(?:of\s*)?(\d(?:[.,]\d)?)", re.I),
@@ -385,11 +486,13 @@ def score(sources: list[dict[str, Any]], texts: list[dict[str, Any]], *, platfor
         recent_all += recent
         r_eff = 0.7 * r + 0.3 * (sum(recent) / len(recent)) if len(recent) >= 5 else r
         n_eff = max(n, len(rated), 1)
-        base = max(1.5, BASELINE.get(key, BASELINE["web"]) + shift)
+        if key == "badge":
+            n_eff = min(n_eff, BADGE_MAX_N)     # the shop's own claim: weak, however many reviews it names
+        base = max(1.5, BASELINE.get(s.get("claims") or key, BASELINE["web"]) + shift)
         num += w * n_eff * (r_eff - base)
         den += w * n_eff
         raw_num += r * n_eff
-        total += n_eff if key != "own site" else 0
+        total += n_eff if key not in ("own site", "badge") else 0
         if main is None or main[1].get("rating") is None or w * n_eff > main[0]:
             main = (w * n_eff, s)
     delta = num / (PRIOR_N + den) if den else 0.0
@@ -465,16 +568,21 @@ def summarize(domain: str, sc: dict[str, Any], *, platform: bool = False, seller
         if "same brand" in str(main.get("name") or ""):
             name = main["name"]
         n = int(main.get("count") or 0)
-        lead = (f"{main['rating']:.1f}★ from {fmt_count(n)} {name} review{'s' if n != 1 else ''}"
-                if main.get("key") != "own site" else
-                f"{main['rating']:.1f}★ from {fmt_count(n)} reviews shown on its own site (self-reported, not checked)")
+        if main.get("key") == "badge":
+            site = SOURCE_NAMES.get(main.get("claims") or "", str(main.get("claims") or "a review site").title())
+            lead = (f"{main['rating']:.1f}★ on {site}" + (f" from {fmt_count(n)} reviews" if n else "")
+                    + ", as shown on the shop's own page (not checked independently)")
+        elif main.get("key") != "own site":
+            lead = f"{main['rating']:.1f}★ from {fmt_count(n)} {name} review{'s' if n != 1 else ''}"
+        else:
+            lead = f"{main['rating']:.1f}★ from {fmt_count(n)} reviews shown on its own site (self-reported, not checked)"
     label = sc["label"]
     grumbles = sc.get("grumbles") or []
     if label == "watch out":
         kinds = [f.split(" (")[0] for f in sc.get("red_flags") or []][:2]
         body = (f"{lead}; " if lead else "") + f"recent reviews repeat {' and '.join(kinds)}: pay with buyer protection or pick another shop"
     elif label == "unknown":
-        if lead and main and main.get("key") == "own site":
+        if lead and main and main.get("key") in ("own site", "badge"):
             body = f"{lead}; no independent reviews found"
         elif lead and sc.get("count", 0) < MIN_COUNT:
             body = f"{lead}: too few reviews to say"
@@ -682,6 +790,8 @@ async def free_sources(domain: str, *, platform: bool, fetch: Fetch | None = Non
     if not platform:
         pages.append(("own site", f"https://{domain}/"))
 
+    badges: list[dict[str, Any]] = []
+
     async def one(key: str, url: str) -> tuple[str, str, dict[str, Any] | None]:
         global _tp_blocked_until
         try:
@@ -694,11 +804,23 @@ async def free_sources(domain: str, *, platform: bool, fetch: Fetch | None = Non
         if status != 200 or not html:
             return key, url, None
         try:
+            if key == "own site":
+                badges.extend(await asyncio.to_thread(badge_sources, html, url))
             return key, url, await asyncio.to_thread(parse_rating_page, html, url)
         except Exception:
             return key, url, None
 
     got = await asyncio.gather(*(one(k, u) for k, u in pages))
+    n_pages = len(pages)
+    # the shop links its real Trustpilot page (www.<domain>, a uk. / de. subdomain): read that one too, free
+    tried_tp = {u for k, u in pages if k == "trustpilot"}
+    linked = next((b["url"] for b in badges if b["key"] == "tp_link"
+                   and domain_of(_TP_PATH.search(b["url"]).group(1)) == domain), None) if badges else None
+    if linked and time.monotonic() >= _tp_blocked_until and not any(k == "trustpilot" and r for k, _, r in got):
+        www = "https://www.trustpilot.com/review/" + _TP_PATH.search(linked).group(1)
+        if www not in tried_tp:
+            got = list(got) + [await one("trustpilot", www)]
+            n_pages += 1
     sources, texts = [], []
     for key, url, res in got:
         if not res:
@@ -708,7 +830,8 @@ async def free_sources(domain: str, *, platform: bool, fetch: Fetch | None = Non
         if key != "own site":
             texts += [{"text": r["text"], "rating": r.get("rating"), "date": r.get("date"), "weight": 1.0}
                       for r in res.get("reviews") or []]
-    return sources, texts, len(pages)
+    sources += badges
+    return sources, texts, n_pages
 
 
 _TP_PATH = re.compile(r"trustpilot\.com/review/([^/?#]+)", re.I)
@@ -865,8 +988,69 @@ def _useful(s: dict[str, Any]) -> bool:
 def _pub(s: dict[str, Any]) -> dict[str, Any]:
     mood = {1: "mostly happy", 0: "mixed", -1: "mostly unhappy"}.get(s.get("sentiment")) if s.get("rating") is None else None
     return {"name": s.get("name"), "url": s.get("url"), "rating": s.get("rating"), "count": s.get("count"),
-            "via": "search snippet" if s.get("snippet") else ("self-reported" if s.get("key") == "own site" else "page"),
+            "via": "search snippet" if s.get("snippet") else ("self-reported" if s.get("key") == "own site" else
+                                                              "shown on the shop's own page" if s.get("key") == "badge"
+                                                              else "page"),
             **({"mood": mood} if mood else {})}
+
+
+# Trustpilot's local sites by the shop's country (uk.trustpilot.com for a British shop)
+TP_LOCAL = {"gb": "uk", "uk": "uk", "de": "de", "at": "at", "ch": "ch", "fr": "fr", "nl": "nl", "be": "be",
+            "dk": "dk", "se": "se", "no": "no", "it": "it", "es": "es", "pl": "pl", "ie": "ie", "pt": "pt",
+            "au": "au", "ca": "ca", "nz": "nz"}
+
+
+def shop_country(domain: str) -> str | None:
+    try:
+        from agora.origin import KNOWN_SHOPS
+        if domain in KNOWN_SHOPS:
+            return KNOWN_SHOPS[domain]
+    except ImportError:
+        pass
+    tld = _country(domain)
+    return tld if tld in TP_LOCAL else None
+
+
+def big_shop(domain: str, sources: list[dict[str, Any]]) -> bool:
+    """A shop that surely has reviews somewhere: a well-known retailer, or one showing a rating badge /
+    linking its Trustpilot page on its own site."""
+    if any(s.get("key") in ("badge", "tp_link") for s in sources):
+        return True
+    try:
+        from agora.judge import KNOWN_SHOPS as J
+        from agora.origin import KNOWN_SHOPS as O
+    except ImportError:
+        return False
+    return domain in O or any(domain.startswith(k) for k in J)
+
+
+def tp_name(domain: str, sources: list[dict[str, Any]]) -> str:
+    """The name Trustpilot files the shop under: from the link on its page (often www.<domain>), else the domain."""
+    for s in sources:
+        if s.get("key") in ("tp_link", "badge") and s.get("url" if s.get("key") == "tp_link" else "tp_url"):
+            m = _TP_PATH.search(s.get("url") if s.get("key") == "tp_link" else s["tp_url"])
+            if m and domain_of(m.group(1)) == domain:
+                return m.group(1)
+    return domain
+
+
+def tp_domains(domain: str) -> list[str]:
+    cc = shop_country(domain)
+    loc = TP_LOCAL.get(cc or "")
+    return ["trustpilot.com"] + ([f"{loc}.trustpilot.com"] if loc else [])
+
+
+def tp_page(domain: str, sources: list[dict[str, Any]]) -> str | None:
+    """A Trustpilot page worth one paid read: the one the shop links, else (big shops) the local site's page."""
+    for s in sources:
+        u = s.get("url") if s.get("key") == "tp_link" else s.get("tp_url")
+        m = _TP_PATH.search(u or "")
+        if m and domain_of(m.group(1)) == domain:
+            return u
+    if big_shop(domain, sources):
+        loc = TP_LOCAL.get(shop_country(domain) or "")
+        return f"https://{loc or 'www'}.trustpilot.com/review/{domain}"
+    return None
 
 
 def _tokens() -> float:
@@ -931,7 +1115,8 @@ async def run(targets: list[dict[str, Any]], *, paid: bool = True, budget_s: flo
             t, src, txt, n = await fut
             stats["free_pages"] += n
             found[t["domain"]] = (src, txt)
-            solid_free = any((s.get("count") or 0) >= PRIOR_N and s.get("key") != "own site" for s in src)
+            solid_free = any((s.get("count") or 0) >= PRIOR_N and s.get("key") not in ("own site", "badge", "tp_link")
+                             for s in src)
             if solid_free or not paid:
                 rec = finalize(t, src, txt, today=today)
                 _keep(rec, complete=solid_free)
@@ -978,8 +1163,8 @@ async def run(targets: list[dict[str, Any]], *, paid: bool = True, budget_s: flo
             return None
 
     def settled(dom: str) -> bool:
-        return any(s.get("rating") is not None and (s.get("count") or 0) >= PRIOR_N and s.get("key") != "own site"
-                   for s in found.get(dom, ([], []))[0])
+        return any(s.get("rating") is not None and (s.get("count") or 0) >= PRIOR_N
+                   and s.get("key") not in ("own site", "badge", "tp_link") for s in found.get(dom, ([], []))[0])
 
     def finish(t: dict[str, Any]) -> dict[str, Any]:
         src, txt = found.get(t["domain"], ([], []))
@@ -1008,6 +1193,26 @@ async def run(targets: list[dict[str, Any]], *, paid: bool = True, budget_s: flo
             if any(x.get("key") == "trustpilot" for x in s2):
                 covered.add(dom)
         tried.update(chunk)
+    # A2: a big shop (a known retailer, or one showing a rating badge) the batch missed: its own Trustpilot
+    # search, under the name its page links ("www.wexphotovideo.com"), the local Trustpilot site included
+    big_tries = 0
+    for t in pending_paid:
+        dom = t["domain"]
+        if big_tries >= MAX_BIG_TP or t.get("platform") or not big_shop(dom, found.get(dom, ([], []))[0]):
+            continue
+        if any(x.get("key") == "trustpilot" for x in found.get(dom, ([], []))[0]):
+            continue
+        name = tp_name(dom, found.get(dom, ([], []))[0])
+        big_tries += 1
+        res = await spend(lambda n=name, d=dom: search(f"{n} reviews", n=8, highlights=True,
+                                                       include_domains=tp_domains(d), highlight_chars=900))
+        if res is None:
+            break
+        tried.add(dom)
+        s2, t2 = sources_from_search(dom, res)
+        src, txt = found.get(dom, ([], []))
+        found[dom] = (_merge(src, s2), txt + t2)
+
     async def local(t: dict[str, Any]) -> None:
         dom = t["domain"]
         res = await spend(lambda d=dom: search(review_query(d), n=10, highlights=True, highlight_chars=1500))
@@ -1027,11 +1232,16 @@ async def run(targets: list[dict[str, Any]], *, paid: bool = True, budget_s: flo
     # B: the most important site that has a Trustpilot page but no stars yet
     cand = next((t for t in sorted(left_over, key=lambda t: t.get("why") != "pick") if not settled(t["domain"]) and any(
         s.get("key") == "trustpilot" for s in found.get(t["domain"], ([], []))[0])), None)
+    if cand is None:
+        # no Trustpilot result, but the shop links its Trustpilot page (or is a big shop): read that page
+        cand = next((t for t in sorted(left_over, key=lambda t: t.get("why") != "pick") if not settled(t["domain"])
+                     and not t.get("platform") and tp_page(t["domain"], found.get(t["domain"], ([], []))[0])), None)
     for t in [x for x in left_over if x is not cand and (settled(x["domain"]) or found.get(x["domain"], ([], []))[0])]:
         left_over.remove(t)
         yield finish(t)
     if cand is not None:
-        url = next(s["url"] for s in found[cand["domain"]][0] if s.get("key") == "trustpilot")
+        url = next((s["url"] for s in found[cand["domain"]][0] if s.get("key") == "trustpilot"), None) \
+            or tp_page(cand["domain"], found.get(cand["domain"], ([], []))[0])
         data = await spend(lambda: extract(url, TP_SCHEMA, "The company's TrustScore (stars out of 5), its total "
                                            "number of reviews and up to 15 most recent reviews."),
                            min_left=8.0)
@@ -1073,9 +1283,9 @@ async def _wait_tokens(tokens: Callable[[], float], need: float, until: float) -
 
 def _merge(a: list[dict], b: list[dict]) -> list[dict]:
     """One entry per source: the one with the most reviews (a page read beats a snippet at equal count)."""
-    out: dict[str, dict] = {}
+    out: dict[Any, dict] = {}
     for s in a + b:
-        k = s.get("key") or s.get("name")
+        k = (s.get("key") or s.get("name"), s.get("claims"), s.get("url") if s.get("key") == "tp_link" else None)
         cur = out.get(k)
         if cur is None or (s.get("rating") is not None and (cur.get("rating") is None or
                                                              (s.get("count") or 0) > (cur.get("count") or 0))):

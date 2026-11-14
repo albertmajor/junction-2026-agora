@@ -45,6 +45,10 @@ const rdRecent = new Map();        // domain -> {rect, t}: a dot that just becam
 let gSplit = null, split = null, holdT = 0, hold = null, eatClick = false, srLive = null;
 let shelf = null;                  // shelf.json rows (cached)
 let marksReady = null;
+// Hundreds of offers: past DENSE on the line, the beads become small pips stacked into a dot plot (a density
+// silhouette of the market), and only the story's plates and a few beads carry photos.
+const DENSE = 40, PIP = 7, PIP_MAX = 16, BEADS_DENSE = 10;
+let dense = false;
 
 // Obj = {key, item|null, extra|null, shelf|null, el, face, img, kind:'full'|'dot', x, lvl, y,
 //        placed:bool, tray:bool, cur:'transform string', ghost: tagEur|null}
@@ -198,7 +202,10 @@ export function mountLine(el) {
   figs.setAttribute('role', 'list');
   moreBtn = div('ln-more', root, 'button');
   moreBtn.type = 'button'; moreBtn.hidden = true;
-  moreBtn.addEventListener('click', () => { expanded = true; layout({ dur: 0 }); });
+  moreBtn.addEventListener('click', () => {
+    if (moreBtn.dataset.to === 'ledger') { emit('ledger:show', {}); return; }
+    expanded = true; layout({ dur: 0 });
+  });
   axisLab = div('ln-axislab', root);
   // the pivot, under your control: flip the line between the tag and what you actually pay, all in
   sw = div('ln-switch', axisLab, 'span');
@@ -246,6 +253,9 @@ export function mountLine(el) {
   figs.addEventListener('keyup', onKeyUp);
   figs.addEventListener('click', onClick, true);
   figs.addEventListener('pointerdown', onDown);
+  const wake = e => { const f = e.target.closest && e.target.closest('.ln-o'); const o = f && objs.get(f.dataset.key); if (o && !o.img && o.src) ensureImg(o); };
+  figs.addEventListener('pointerover', wake, { passive: true });
+  figs.addEventListener('focusin', wake);
   figs.addEventListener('pointermove', onMove);
   for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) figs.addEventListener(t, onUp);
   figs.addEventListener('contextmenu', e => { if (hold || split) e.preventDefault(); });
@@ -440,6 +450,20 @@ function makeObj(key, from) {
   if (o.extra) el.classList.add('ln-extra');
   const src = imgSrcFor(o);
   if (src) {
+    // photos load when the object shows one (a plate, a bead); a pip in a dense line loads on hover
+    o.src = src;
+    o.pic = pic;
+    if (!o.item) ensureImg(o);        // offers: applyKind() loads it once the object is shown
+  } else monogram(o, pic);
+  label(o);
+  figs.appendChild(el);
+  objs.set(key, o);
+  return o;
+}
+function ensureImg(o) {
+  if (o.img || !o.src) return;
+  const el = o.el, pic = o.pic || el.querySelector('.ln-pic'), src = o.src;
+  {
     const img = o.img = new Image();
     img.alt = '';
     img.decoding = 'async';
@@ -460,11 +484,7 @@ function makeObj(key, from) {
     };
     img.src = src;
     pic.appendChild(img);
-  } else monogram(o, pic);
-  label(o);
-  figs.appendChild(el);
-  objs.set(key, o);
-  return o;
+  }
 }
 function monogram(o, pic) {
   pic = pic || o.el.querySelector('.ln-pic');
@@ -720,7 +740,24 @@ function assignLevels(list) {
     o.capdrop = fh - v.h;
   }
   // dots are beads on the line and stack upward in their own column, never over a caption
-  const dots = list.filter(o => o.kind === 'dot').sort((a, b) => a.x - b.x);
+  let dots = list.filter(o => o.kind === 'dot').sort((a, b) => a.x - b.x);
+  if (dense) {
+    // a dense line: the cheapest few stay photo beads, the rest are pips stacked per 7 px column
+    const beads = new Set(dots.slice().sort((a, b) => valOf(a) - valOf(b)).slice(0, BEADS_DENSE));
+    const bins = new Map();
+    for (const o of dots) {
+      const pip = !beads.has(o);
+      o.el.classList.toggle('pip', pip);
+      if (!pip) continue;
+      o.el.classList.toggle('unsure-pip', !!(o.item && o.item.tc && isUnsure(o.item)));
+      const b = Math.round(o.x / PIP);
+      const k = bins.get(b) || 0;
+      bins.set(b, k + 1);
+      o.el.classList.remove('tuck');
+      o.lvl = Math.min(k, PIP_MAX - 1) * PIP; o.top = o.lvl + 6; o.capdrop = 0; o.capx = 0;
+    }
+    dots = dots.filter(o => beads.has(o));
+  } else for (const o of dots) o.el.classList.remove('pip');
   const cols = [];
   for (const o of dots) {
     let k = 0;
@@ -761,6 +798,8 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   scale = phase === 'start' ? (vals.length ? logScale(vals) : logScale([10, 10000]))
         : focusing ? linScale(focusDom) : linScale(vals.concat(extraVals), vmode === 'true');
   list.forEach(o => { o.x = sx(scale, valOf(o)); o.lvl = 0; });
+  dense = phase === 'hunt' && list.length > DENSE;
+  root.classList.toggle('ln-dense', dense);
   if (phase === 'start') spreadShelf(list);
   chooseFull(list);
   list.forEach(label);
@@ -834,6 +873,8 @@ function placeCaps(list) {
 function applyKind(o) {
   o.el.classList.toggle('full', o.kind === 'full');
   o.el.classList.toggle('dot', o.kind !== 'full');
+  if (o.kind === 'full') o.el.classList.remove('pip');
+  if (!o.img && o.src && !o.el.classList.contains('pip')) ensureImg(o);
   if (o.el.tabIndex !== 0) o.el.tabIndex = -1;
 }
 // Each object keeps its own animations: element.getAnimations() forces a style pass per call, and with
@@ -907,12 +948,14 @@ function layoutVertical({ dur, stagger, list, rm }) {
   // then the cheaper-maybe ones whose shipping to Finland is not confirmed
   const un = o => (turned && vmode === 'true' && o.item && o.item.tc && isUnsure(o.item)) ? 1 : 0;
   list.sort((a, b) => un(a) - un(b) || valOf(a) - valOf(b));
-  // a phone shows the cheapest 8; the rest wait behind "+N dearer"
-  const cut = phase === 'hunt' && !expanded && list.length > 10 ? 8 : list.length;
+  // a phone shows the cheapest 8; the rest wait behind "+N dearer" (hundreds: the full list below has them)
+  dense = false; root.classList.remove('ln-dense');
+  const cut = phase === 'hunt' && (!expanded || list.length > DENSE) && list.length > 10 ? 8 : list.length;
   const hidden = list.splice(cut);
   hidden.forEach(o => o.el.classList.add('ln-gone'));
   moreBtn.hidden = !hidden.length;
-  if (hidden.length) moreBtn.textContent = `+${hidden.length} dearer`;
+  moreBtn.dataset.to = hidden.length + cut > DENSE ? 'ledger' : '';
+  if (hidden.length) moreBtn.textContent = moreBtn.dataset.to ? `all ${S.offers.size} listings ↓` : `+${hidden.length} dearer`;
   chooseFull(list);
   let y = 8;
   list.forEach((o, i) => {

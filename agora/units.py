@@ -220,20 +220,26 @@ def cards_from_html(html: str, page_url: str, title_hint: str = "") -> list[dict
 # ---------------------------------------------------------------- picking units
 
 def pick_units(units: list[Any], price: Any = lambda u: u.price_eur or u.price or 0,
-               grade: Any = lambda u: (u.raw or {}).get("grade"), limit: int = MAX_UNITS) -> list[Any]:
-    """The units worth showing: the cheapest of each grade first, then the next cheapest, up to `limit`,
-    returned cheapest first. Two units at the same price and grade count once."""
+               grade: Any = lambda u: (u.raw or {}).get("grade"), limit: int = MAX_UNITS,
+               keep_first: bool = True) -> list[Any]:
+    """The units worth showing: the page's own (first) unit, the cheapest of each grade, then the next
+    cheapest, up to `limit`, returned cheapest first. Two units at the same price and grade count once."""
+    if not units:
+        return []
     seen: set[tuple[Any, Any]] = set()
     uniq = []
-    for u in sorted(units, key=price):
+    first = units[0]
+    for u in ([first] if keep_first else []) + sorted(units, key=price):
         k = (round(price(u), 2), (grade(u) or "").lower())
         if k in seen:
             continue
         seen.add(k)
         uniq.append(u)
-    keep: list[Any] = []
+    keep: list[Any] = [first] if keep_first else []
     grades: set[str] = set()
     for u in uniq:
+        if u in keep:
+            continue
         g = (grade(u) or "").lower()
         if g not in grades:
             grades.add(g)

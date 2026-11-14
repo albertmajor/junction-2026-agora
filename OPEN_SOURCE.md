@@ -74,3 +74,18 @@ The new viewer in `agora/web/` is vanilla ES modules and CSS written at the even
 front-end code. Fonts are Instrument Serif, Inter Tight and JetBrains Mono (SIL Open Font License,
 loaded from Google Fonts). Ideas only: Google Flights' low / typical / high price band, the FLIP animation
 technique (Paul Lewis), and editorial "spec sheet" layouts.
+
+## Taxonomy data (agora/taxonomy/, built by scripts/build_taxonomy.py, 2026-11-14)
+One merged tree of everything you can buy online (products + services). Data only, no code copied; the merge
+code was written at the event. Raw downloads stay in `.cache/taxonomy/` (gitignored); only the merged
+`agora/taxonomy/tree.json` is committed. Licences are also stored in `tree.json["sources"]`.
+
+| source | licence | used for |
+|---|---|---|
+| Shopify Product Taxonomy (github.com/Shopify/product-taxonomy) | MIT | product backbone (~14.6k categories), labels in 13 languages, Google id mapping |
+| Google Product Taxonomy 2021-09-21 (taxonomy-with-ids.*.txt) | published free for merchants, no explicit licence | Google ids + fi/de/nl/sv/fr/da/nb/es/it/pl labels as synonyms |
+| EU CPV 2008 (ted.europa.eu) | EU open data, reuse authorised (Decision 2011/833/EU, CC BY 4.0) | products + services, 13 of 23 languages |
+| NACE Rev. 2 via Statistics Finland TOL 2008 API | CC BY 4.0 | service activities, en/fi/sv, NACE codes |
+| ISIC Rev. 4 (UN Statistics Division) | public classification | reference only |
+| Yelp category list (developer docs) | no open licence: names + hierarchy used as facts only | local service categories |
+| Category sitemaps / menus of ipon.hu, power.fi, verkkokauppa.com, jimms.fi, prisma.fi, tori.fi, blocket.se, marktplaats.nl, kleinanzeigen.de, otto.de, mediamarkt.de, coolblue.nl, emag.hu, ikea.com, fiverr.com, checkatrade.com, my-hammer.de, helpling.de | public pages, plain HTTP, category names/URLs only | extra categories, local-language labels, per-node "where to look" domains |

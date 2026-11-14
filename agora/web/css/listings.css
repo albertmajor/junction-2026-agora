@@ -1,0 +1,160 @@
+/* UI round B: the market line under the headline (market.js) and ALL the listings (ledger.js).
+   Calm software UI on warm paper: hairlines, no shadows except the sheet's, mono numbers, the yellow highlighter
+   only on the pick. Dark mode rides on the tokens in base.css. */
+
+/* ---------- market: "≈19,405 listings on 4 marketplaces · we compared 318" ---------- */
+#market { margin: 4px 0 18px; display: grid; gap: 10px; }
+#market[hidden] { display: none; }
+.mk-line { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+.mk-size { margin: 0; font: 400 15px/1.45 var(--sans); color: var(--ink-2); }
+.mk-size b { font-weight: 500; color: var(--ink); }
+.mk-plus { color: var(--ink-3); }
+.mk-deep { margin-left: 10px; padding: 1px 8px; border-radius: var(--r-pill); background: var(--paper-2); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.mk-more:disabled { opacity: .6; cursor: default; }
+.mk-scope { margin: 0; display: flex; gap: 8px; align-items: flex-start; max-width: 76ch; font: 400 13.5px/1.5 var(--sans); color: var(--ink-2); }
+.mk-scope svg { flex: none; margin-top: 3px; fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.mk-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.mk-chip {
+  position: relative; display: inline-grid; grid-template-columns: auto auto auto auto; align-items: center; column-gap: 7px;
+  padding: 6px 10px 9px 6px; border-radius: 10px; background: var(--receipt); box-shadow: inset 0 0 0 1px var(--hair);
+  font: 400 13px/1.2 var(--sans); color: var(--ink); overflow: hidden;
+}
+.mk-chip.is-extra { background: transparent; }
+.mk-logo {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair); overflow: hidden;
+}
+.mk-logo img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
+.mk-logo:not(:has(img))::after { content: attr(data-l); font: 400 12px/1 var(--serif); color: var(--ink-2); }
+.mk-flag { width: 14px; height: 10px; border-radius: 2px; box-shadow: 0 0 0 1px var(--hair); }
+.mk-d { font-weight: 500; }
+.mk-n { font: 400 12px/1.2 var(--mono); color: var(--ink-3); white-space: nowrap; }
+.mk-n b { font-weight: 500; color: var(--ink-2); }
+.mk-eu { grid-column: 1 / -1; margin: 3px 0 0 29px; font-size: 11px; color: var(--ink-3); }
+.mk-bar { position: absolute; left: 6px; right: 10px; bottom: 4px; height: 2px; border-radius: 2px; background: var(--hair); }
+.mk-bar i { display: block; height: 100%; border-radius: 2px; background: var(--ink-blue); opacity: .7; }
+.mk-note { margin: 0; font: 400 13px/1.45 var(--sans); color: var(--ink-2); }
+.mk-note[data-kind="wait"] { color: var(--ink); }
+.mk-note[data-kind="wait"]::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; vertical-align: 1px;
+  background: var(--live); animation: mk-breathe 1.6s ease-in-out infinite;
+}
+@keyframes mk-breathe { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .mk-note[data-kind="wait"]::before { animation: none; } }
+html.agent-on #market { opacity: 0; pointer-events: none; }
+
+/* ---------- all listings ---------- */
+#ledger { margin: 36px 0 8px; }
+.lg-top { align-items: baseline; }
+.lg-h { font: 400 22px/1.2 var(--serif); font-variation-settings: var(--display-vs); color: var(--ink); }
+.lg-h span { font: 400 14px/1.4 var(--sans); color: var(--ink-3); }
+.lg-cnt { font: 400 12px/1.4 var(--mono); color: var(--ink-3); white-space: nowrap; }
+
+/* the better ones: up to five cards, the pick first with the highlighter */
+.lg-hl { list-style: none; margin: 4px 0 18px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(214px, 1fr)); gap: 10px; }
+.lg-hl[hidden] { display: none; }
+.lg-hc {
+  width: 100%; height: 100%; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start;
+  padding: 10px; border: 0; border-radius: 12px; background: var(--receipt); box-shadow: inset 0 0 0 1px var(--hair);
+  text-align: left; color: var(--ink); cursor: pointer; transition: background var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+.lg-hc:hover { background: var(--paper-2); }
+.lg-hc:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.lg-hc.is-pick { box-shadow: inset 0 0 0 1px var(--hair), inset 3px 0 0 var(--accent); }
+.hc-pic { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: var(--stage); display: grid; place-items: center; }
+.hc-pic img { width: 100%; height: 100%; object-fit: cover; }
+.hc-pic i { font: normal 400 22px/1 var(--serif); color: var(--ink-2); }
+.hc-body { min-width: 0; display: grid; gap: 3px; }
+.hc-why { font: 400 12px/1.35 var(--sans); color: var(--ink-3); }
+.hc-why b { font-weight: 500; color: var(--ink); }
+.lg-hc.is-pick .hc-why b { background: linear-gradient(transparent 55%, var(--accent) 55%); }
+.hc-p { font: 500 20px/1.1 var(--serif); font-variant-numeric: lining-nums tabular-nums; color: var(--ink); }
+.hc-p small { font: 400 12px var(--sans); color: var(--ink-3); }
+.hc-s { display: flex; align-items: center; gap: 6px; min-width: 0; font: 400 12.5px/1.3 var(--sans); color: var(--ink-2); white-space: nowrap; }
+.hc-s > span:not(.flag) { overflow: hidden; text-overflow: ellipsis; }
+.hc-s em { font-style: normal; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; }
+.hc-s em::before { content: "· "; }
+.hc-t { font: 400 12px/1.35 var(--sans); color: var(--ink-3); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+
+/* filters: condition · country (flags) · ships to you / pickup only · price */
+.lg-fb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 14px; }
+.lg-fb[hidden] { display: none; }
+.lg-fg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.lg-chip, .lg-f button {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: var(--r-pill);
+  background: var(--stage); box-shadow: inset 0 0 0 1px var(--hair); font: 500 12.5px/28px var(--sans); color: var(--ink-2);
+  cursor: pointer; transition: background var(--t-ui) var(--ease), color var(--t-ui) var(--ease);
+}
+.lg-f { padding: 0; background: none; box-shadow: none; gap: 4px; }
+.lg-f button { height: 28px; }
+.lg-chip span, .lg-f button span { font: 400 11.5px var(--mono); color: var(--ink-3); }
+.lg-chip:hover, .lg-f button:hover { color: var(--ink); }
+.lg-chip[aria-pressed="true"], .lg-f button[aria-pressed="true"] { background: var(--ink); color: var(--paper); box-shadow: none; }
+.lg-chip[aria-pressed="true"] span, .lg-f button[aria-pressed="true"] span { color: color-mix(in srgb, var(--paper) 70%, transparent); }
+.lg-chip.cc { padding: 0 9px 0 8px; }
+.lg-chip.cc img { width: 14px; height: 10px; border-radius: 2px; box-shadow: 0 0 0 1px var(--hair); }
+.lg-price { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font: 400 12px var(--mono); }
+.lg-price input {
+  width: 78px; height: 28px; padding: 0 8px; border: 0; border-radius: 8px; background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--hair); font: 400 12.5px var(--mono); color: var(--ink);
+}
+.lg-price input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.lg-clear { border: 0; background: none; padding: 0; font: 400 12.5px var(--sans); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--hair); cursor: pointer; }
+
+/* rows: same columns as round A, the note column a little wider for reasons */
+.lg-r { grid-template-columns: 28px 44px minmax(160px, 220px) minmax(0, 1fr) 84px 68px 92px minmax(120px, 200px); }
+.lg-head[hidden] { display: none; }
+.lg-l:empty { border-top: 0; }
+.lg-l li { content-visibility: auto; contain-intrinsic-size: auto 53px; }
+.lg-x .lg-why { color: var(--ink-2); }
+.lg-nc { font: 400 11.5px var(--sans); color: var(--ink-3); }
+.lg-more-w { padding: 10px 0 4px; }
+.lg-more-w[hidden] { display: none; }
+.lg-more { margin: 0; }
+
+/* groups: "Also in the EU (+ shipping est.)" (folded) and "Set aside" (dimmed, at the bottom) */
+.lg-g { margin: 26px 0 0; }
+.lg-g[hidden] { display: none; }
+.lg-gh {
+  width: 100%; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 10px 4px; margin: 0;
+  border: 0; border-top: 1px solid var(--hair); background: none; text-align: left; color: var(--ink); cursor: pointer;
+}
+.lg-gh:hover .lg-gt { text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 4px; }
+.lg-gt { font: 500 15px/1.3 var(--sans); }
+.lg-gs { font: 400 12.5px/1.4 var(--mono); color: var(--ink-3); }
+.lg-gh i { margin-left: auto; font-style: normal; color: var(--ink-3); transition: transform var(--t-ui) var(--ease); }
+.lg-gh[aria-expanded="false"] i { transform: rotate(-90deg); }
+.lg-gn { margin: 0 0 10px 4px; max-width: 80ch; font: 400 13px/1.5 var(--sans); color: var(--ink-3); }
+.lg-risk .lg-l li { opacity: .55; transition: opacity var(--t-ui) var(--ease); }
+.lg-risk .lg-l li:hover, .lg-risk .lg-l li:focus-within { opacity: .9; }
+.lg-risk .lg-pic img { filter: grayscale(.8); }
+.lg-r.risky .lg-tc { color: var(--ink-2); font-weight: 400; }
+
+@media (max-width: 1023px) {
+  .lg-r { grid-template-columns: 24px 40px minmax(140px, 1fr) 76px 60px 84px 140px; }
+}
+
+/* phones: every listing is here too (the line shows the cheapest few). Photo · shop + title · all in. */
+@media (max-width: 639px) {
+  #ledger { margin-top: 28px; }
+  .lg-top { flex-wrap: wrap; gap: 4px 12px; }
+  .lg-h { font-size: 20px; }
+  .lg-hl { grid-template-columns: 1fr; gap: 8px; }
+  .lg-fb { gap: 8px; flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(var(--gutter) * -1); padding: 2px var(--gutter) 6px; scrollbar-width: none; }
+  .lg-fb::-webkit-scrollbar { display: none; }
+  .lg-fg { flex-wrap: nowrap; }
+  .lg-chip, .lg-f button { white-space: nowrap; flex: none; }
+  .lg-head { display: none !important; }
+  .lg-r {
+    grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 12px; row-gap: 1px;
+    min-height: 60px; padding: 8px 2px;
+  }
+  .lg-n, .lg-c, .lg-tag { display: none; }
+  .lg-pic { grid-row: 1 / span 2; }
+  .lg-t { grid-column: 2; grid-row: 1; }
+  .lg-t .tmark { display: none; }
+  .lg-ti { display: block !important; grid-column: 2; grid-row: 2; font-size: 12px; }
+  .lg-tc { grid-column: 3; grid-row: 1; }
+  .lg-x { grid-column: 3; grid-row: 2; text-align: right; max-width: 34vw; font-size: 11.5px; }
+  .lg-gs { width: 100%; }
+}

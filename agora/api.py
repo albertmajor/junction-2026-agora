@@ -179,7 +179,26 @@ def status() -> dict[str, Any]:
         has_key = bool(contextdev._key())
     except Exception:
         has_key = False
-    return {"live": has_key and not contextdev.offline()}
+    return {"live": has_key and not contextdev.offline(), "bucket": _bucket_peek()}
+
+
+def _bucket_peek() -> dict[str, Any] | None:
+    """The shared Context.dev bucket right now, read-only (no token taken): {tokens, size, per_min}.
+    The viewer's "Compare more" waits for it and says so ("reading more in 40 s")."""
+    from agora import contextdev
+    try:
+        path = contextdev.cache_root() / "contextdev_bucket.json"
+        size = float(getattr(contextdev, "BUCKET_SIZE", contextdev.RATE_PER_MIN))
+        rate = contextdev.RATE_PER_MIN / 60.0
+        try:
+            st = json.loads(path.read_text())
+        except (OSError, ValueError):
+            st = {}
+        now = time.time()
+        tokens = min(size, float(st.get("tokens", size)) + (now - float(st.get("ts", now))) * rate)
+        return {"tokens": round(tokens, 2), "size": size, "per_min": contextdev.RATE_PER_MIN}
+    except Exception:
+        return None
 
 
 @app.get("/api")
@@ -192,7 +211,7 @@ def api_index() -> dict[str, Any]:
             "GET /reviews?hunt_id=&domains=": "SSE: seller reviews after a hunt (review events, then done)",
             "GET|POST /demo/story/refusal?pause=1.5": "SSE: watcher skips, buys, refuses a hidden fee, catches a tampered log",
             "GET|POST /demo/buy?pause=1.2": "SSE: lie detector, haggle counter-offer, auto-buy under open->closed mandates, proof",
-            "GET /hunt?q=": "SSE stream of hunt Events (optional &max_sources=N caps pages read) (need, lane, source, offer, skip, thing, truecost, verdict, budget, done, error)",
+            "GET /hunt?q=": "SSE stream of hunt Events (optional &max_sources=N caps pages read, &depth=2 reads deeper) (need, lane, source, offer, skip, thing, truecost, verdict, budget, done, error)",
             "POST /watches": "create a watch {query|need, max_eur|max_price_eur, rule, action, mandate, pinned_urls, use_hunt}",
             "GET /watches": "list watches",
             "POST /watches/{id}/check": "run a watch check now",
@@ -232,6 +251,8 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
                       speed: float = Query(1.0, ge=0.25, le=16, description="replay speed (1, 2, 4)"),
                       max_gap: float = Query(0, ge=0, le=60, description="replay: cut idle waits longer than "
                                              "this many seconds (0 = real pace, the honest default)"),
+                      depth: int | None = Query(None, ge=1, le=3, description="'Compare more': read deeper "
+                                                "(2-3; more pages, more time)"),
                       ) -> StreamingResponse:
     if replay is not None:
         slug = hunt_mod.slugify(q) if replay in ("", "1", "auto", "true") else replay
@@ -241,8 +262,11 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
     async def gen() -> AsyncIterator[str]:
         yield ": agora hunt\n\n"  # comment line: flushes headers right away
         res = hunt_mod.HuntResult()
+        kw: dict[str, Any] = {"max_sources": max_sources} if max_sources else {}
+        if depth and depth > 1 and replay is None:
+            kw = _depth_kwargs(depth, kw)
         stream = (hunt_mod.replay(slug, speed, max_gap_ms=max_gap * 1000 if max_gap else None) if replay is not None
-                  else hunt_mod.hunt(q, result=res, **({"max_sources": max_sources} if max_sources else {})))
+                  else hunt_mod.hunt(q, result=res, **kw))
         try:
             async for e in stream:
                 if await request.is_disconnected():
@@ -258,6 +282,27 @@ async def hunt_stream(request: Request, q: str = Query(..., min_length=2, descri
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+def _depth_kwargs(depth: int, kw: dict[str, Any]) -> dict[str, Any]:
+    """'Compare more' (depth 2-3). hunt() takes `depth` itself once it supports it (deeper marketplace pages);
+    until then a deeper hunt reads more pages (max_sources x depth, <= 60) for longer (budget x 1.5 / x 2)."""
+    out = dict(kw)
+    params = inspect.signature(hunt_mod.hunt).parameters
+    if "depth" in params:
+        out["depth"] = depth
+        return out
+    base = int(out.get("max_sources") or getattr(hunt_mod, "DEFAULT_MAX_SOURCES", 32))
+    out["max_sources"] = min(60, base * depth)
+    if "budget_s" in params:
+        env = os.environ.get("AGORA_HUNT_BUDGET_S")
+        try:
+            b = float(env) if env not in (None, "") else float(getattr(hunt_mod, "DEFAULT_BUDGET_S", 24.0))
+        except ValueError:
+            b = float(getattr(hunt_mod, "DEFAULT_BUDGET_S", 24.0))
+        if b > 0:
+            out["budget_s"] = b * (1 + 0.5 * (depth - 1))
+    return out
 
 
 # ---------- seller reviews (after a hunt) ----------

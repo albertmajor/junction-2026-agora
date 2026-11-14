@@ -239,8 +239,12 @@ def _one_vote_per_listing(offers: list[Offer]) -> list[Offer]:
     out: list[Offer] = []
     for x in offers:
         p = price_of(x)
-        # listings cut from a marketplace search page are separate sellers: one vote each
-        key = (x.url if x.raw.get("from_list_page") else _host(x.url), x.condition, round(p) if p is not None else -1)
+        # listings cut from a marketplace search page are separate sellers: one vote each; several units of one
+        # dealer page (Wex: 8 graded A7 III bodies) are one shop: one vote per grade
+        if x.raw.get("unit_of"):
+            key = (f"{x.raw['unit_of']}|{str(x.raw.get('grade') or '').lower()}", x.condition, -2)
+        else:
+            key = (x.url if x.raw.get("from_list_page") else _host(x.url), x.condition, round(p) if p is not None else -1)
         if p is not None and key in seen:
             continue
         seen.add(key)
@@ -732,7 +736,10 @@ def _merge_same_page(offers: list[Offer]) -> list[Offer]:
     for o in offers:
         if price_of(o) is None:
             continue
-        key = (_page_key(str(o.raw.get("final_url") or o.url)), o.condition, o.unit)
+        # units of a dealer page (#unit-2, or each its own link) are different items, never a VAT pair:
+        # £818 vs £678 is a grade apart, not 20% VAT
+        page = o.url if o.raw.get("unit_of") else _page_key(str(o.raw.get("final_url") or o.url))
+        key = (page, o.condition, o.unit)
         by_url.setdefault(key, []).append(o)
     drop: set[int] = set()
     for group in by_url.values():
@@ -779,8 +786,35 @@ NO_EXPORT_VAT = {"USD", "CAD", "CNY", "HKD", "KRW", "TWD", "AED", "MXN", "BRL"}
 NON_EU_CURRENCIES = set(EXPORT_VAT) | NO_EXPORT_VAT
 
 
+# Customs clearance: UPS / DHL / FedEx charge the buyer a clearance ("disbursement") fee on top of the import
+# VAT, typically €10-20; the post's handling fee is lower. Estimates, labelled "est." on the receipt.
+COURIER_CLEARANCE = 15.0        # middle of the typical €10-20
+POSTAL_CLEARANCE = 5.0          # private sellers usually post it; postal handling is a few euros
+DUTY_FREE_FROM = 150.0          # goods over €150 can owe customs duty on top of VAT
+# ITA (WTO Information Technology Agreement): no EU customs duty on these, whatever the price
+ITA_ZERO_DUTY = {"camera": "cameras", "phone": "phones", "tablet": "tablets", "laptop": "laptops"}
+
+
+def clearance_fee(o: Offer) -> tuple[str, float]:
+    """(receipt label, est. EUR) for clearing an import through customs."""
+    if _domain_in(o.source, MARKETPLACES) or o.raw.get("page_type") == "listing":
+        return ("postal customs handling fee (est., usually under €10)", POSTAL_CLEARANCE)
+    return ("courier customs clearance fee (est., UPS/DHL/FedEx typically €10–20)", COURIER_CLEARANCE)
+
+
+def duty_line(o: Offer, p: float) -> tuple[str, float] | None:
+    """Customs duty, honestly and simply: 0% for ITA electronics; above €150 other goods may owe some."""
+    if p <= DUTY_FREE_FROM:
+        return None
+    cat = category_for(o.title)
+    if cat.name in ITA_ZERO_DUTY:
+        return (f"customs duty: 0% for {ITA_ZERO_DUTY[cat.name]} (ITA agreement)", 0.0)
+    return ("customs duty: possible over €150, depends on the category (not priced)", 0.0)
+
+
 def import_lines(o: Offer) -> list[tuple[str, float]]:
-    """Receipt lines for buying from a shop outside the EU (judged by the price currency)."""
+    """Receipt lines for buying from a shop outside the EU (judged by the price currency): VAT (theirs off,
+    Finland's on), the courier's clearance fee (est.) and a customs-duty note above €150."""
     p = price_of(o)
     cur = (o.currency or "EUR").upper()
     if p is None or o.condition == "service" or cur not in NON_EU_CURRENCIES:
@@ -788,9 +822,16 @@ def import_lines(o: Offer) -> list[tuple[str, float]]:
     if cur in EXPORT_VAT:
         country, vat = EXPORT_VAT[cur]
         net = p / (1 + vat)
-        return [(f"{country} VAT {vat:.0%} off on export (est.)", -round(p - net, 2)),
-                (f"FI import VAT {IMPORT_VAT:.1%} on the export price (est.)", round(net * IMPORT_VAT, 2))]
-    return [(f"import VAT {IMPORT_VAT:.1%} (shop outside the EU, est.)", round(p * IMPORT_VAT, 2))]
+        lines = [(f"{country} VAT {vat:.0%} off on export (est.)", -round(p - net, 2)),
+                 (f"FI import VAT {IMPORT_VAT:.1%} on the export price (est.)", round(net * IMPORT_VAT, 2))]
+    else:
+        net = p
+        lines = [(f"import VAT {IMPORT_VAT:.1%} (shop outside the EU, est.)", round(p * IMPORT_VAT, 2))]
+    lines.append(clearance_fee(o))
+    duty = duty_line(o, net)
+    if duty:
+        lines.append(duty)
+    return lines
 
 
 def import_fee(o: Offer) -> float:
@@ -929,11 +970,50 @@ def estimate_true_cost(
         basis += f"; {fxn[0]}"
         if fxn[1]:
             conf = _STEP_DOWN[conf]
+    gnote = grade_note(o, thing_offers)
+    if gnote:
+        receipt.append((gnote, 0.0))
+        basis += f"; {gnote}"
     receipt.append((f"resale in {months} mo", -round(resale, 2)))
     if any(f.startswith("possible grey import") for f in o.flags):
         receipt.append(("warranty risk: possible grey import, no EU manufacturer warranty (not priced)", 0.0))
     return TrueCost(months, round(p, 2), round(extras, 2), round(resale, 2), round(total, 2),
                     round(total / months, 2), conf, receipt, basis)  # type: ignore[arg-type]
+
+
+GRADE_STEP = 0.05      # grade scores this far apart are a different grade (Excellent 0.9 vs Good 0.8)
+
+
+def grade_note(o: Offer, thing_offers: list[Offer]) -> str | None:
+    """Like for like: the seller's grade of a used / refurbished unit next to the other graded units of the
+    same Thing. 'condition: Good (8), shutter count 14,641 (seller's grade); lower than the usual Excellent (9)
+    here, so a lower price is expected; same grade elsewhere: €814'. None without a grade."""
+    from agora import units
+    if o.condition not in ("used", "refurbished") or not isinstance(o.raw.get("grade_score"), (int, float)):
+        return None
+    desc = units.describe(o.raw)
+    note = f"condition: {desc} (seller's grade)"
+    mine = float(o.raw["grade_score"])
+    peers = [x for x in thing_offers if x is not o and x.condition == o.condition
+             and isinstance(x.raw.get("grade_score"), (int, float)) and price_of(x) is not None]
+    if len(peers) < 2:
+        o.raw["grade_note"] = note
+        return note
+    scores = sorted(float(x.raw["grade_score"]) for x in peers)
+    typical = statistics.median(scores)
+    typical_name = next((str(x.raw.get("grade")) for x in sorted(
+        peers, key=lambda x: abs(float(x.raw["grade_score"]) - typical))), "")
+    same = sorted(p for x in peers if abs(float(x.raw["grade_score"]) - mine) < GRADE_STEP / 2
+                  and (p := price_of(x)) is not None)
+    if mine <= typical - GRADE_STEP:
+        note += f"; lower than the usual {typical_name} here, so a lower price is expected"
+    elif mine >= typical + GRADE_STEP:
+        note += f"; better than the usual {typical_name} here, so a higher price can be fair"
+    if same:
+        note += (f"; same grade elsewhere: {fmt(same[0])}" if len(same) == 1 else
+                 f"; same grade elsewhere: {fmt(same[0])}–{fmt(same[-1])}")
+    o.raw["grade_note"] = note
+    return note
 
 
 def beat_price(o: Offer, thing_offers: list[Offer], target_per_month: float, months: int = DEFAULT_MONTHS,
@@ -1140,6 +1220,9 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
 
 def _haggleable(o: Offer) -> bool:
     """Only private sellers / classified listings get a haggle script; dealers have fixed prices."""
+    from agora.units import is_used_dealer
+    if is_used_dealer(o.url) or o.raw.get("unit_of"):
+        return False            # a used dealer (Wex, MPB, KEH ...) prices each graded unit; no haggling
     return _domain_in(o.source, MARKETPLACES) or o.raw.get("page_type") == "listing"
 
 
@@ -1197,7 +1280,7 @@ def evidence_for(o: Offer, thing_offers: list[Offer]) -> list[dict[str, Any]]:
             urls = _comp_urls(thing_offers, exclude=o)
             out.append({"line_index": i, "url": urls[0] if urls else None, "urls": urls, "via": "used comps",
                         "quote": tc.basis.split(";")[0], "fetched_at": None})
-        elif "VAT" in label:
+        elif "VAT" in label or "customs" in label:
             out.append({"line_index": i, "url": None, "via": "rule", "quote": label, "fetched_at": None})
         elif label.startswith("shipping"):
             out.append({"line_index": i, "url": o.url, "via": o.read_via, "quote": "shipping on the page",

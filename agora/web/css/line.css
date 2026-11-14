@@ -511,7 +511,7 @@
   .lg-ti { display: none; }
   .lg-head > span:nth-child(4) { display: none; }
 }
-@media (max-width: 639px) { #ledger { display: none !important; } }
+/* phones: the ledger is the full list of listings too (listings.css lays the rows out) */
 html.agent-on #ledger { opacity: 0; pointer-events: none; }
 /* dark: a thin yellow underline under "the pick", so the light ink stays readable */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lg-x b { background: linear-gradient(transparent 82%, var(--accent) 82%); } }
@@ -590,3 +590,14 @@ html.agent-on #ledger { opacity: 0; pointer-events: none; }
 .ln-v .ln-o.dot .ln-cap { -webkit-line-clamp: 2; }
 /* while hunting, the verdict headline already says who leads (in the answer's place): no second, faint copy */
 #app[data-phase="hunting"] #line .ln-caption { visibility: hidden; }
+
+/* ---------- round B: a dense line (hundreds of offers) ----------
+   The story's plates and the cheapest few beads keep their photos; every other offer is a 7 px pip, stacked
+   per column into a dot plot, so the shape of the market shows. Hover or focus grows a pip into its photo. */
+.ln-o.dot.pip { z-index: 1; }
+.ln-o.dot.pip:not(:hover):not(:focus-visible) { --s: .25; }
+.ln-o.dot.pip:not(:hover):not(:focus-visible) .ln-pic { background: var(--ink-3); box-shadow: 0 0 0 1.5px var(--paper); padding: 0; }
+.ln-o.dot.pip:not(:hover):not(:focus-visible) .ln-pic > *,
+.ln-o.dot.pip:not(:hover):not(:focus-visible) .ln-pic::after { opacity: 0; }
+.ln-o.dot.pip.unsure-pip:not(:hover) .ln-pic { background: color-mix(in srgb, var(--ink-3) 55%, var(--paper)); }
+.ln-dense .ln-o.dot.pip .ln-face { transition: transform 200ms var(--ease); }

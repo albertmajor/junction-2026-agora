@@ -27,6 +27,9 @@ export const S = {
   reviewTargets: new Set(),  // hosts asked about
   reviewsState: null,        // null | 'checking' | 'done'
   recheck: null,             // {from, to, domain} when reviews moved the pick
+  scope: null,               // `scope` event: {scope: 'home'|'eu', country, reason, eu_included, bulky, size}
+  market: null,              // `market` event: {sources:[{domain,country,total,at_least,read,pages,extra}], total, read, at_least, scope}
+  depth: 1,                  // 1 = a normal hunt; 2+ = "Compare more" asked for deeper pages
 };
 // Item = {url, offer, tc, setAside, full, ghostX, arrived, late}
 
@@ -36,6 +39,7 @@ export function resetStore(q = '') {
     leader: null, verdict: null, rank: null, depreciation: null,
     sources: [], skips: [], lanes: [], budget: null, late: [],
     turned: false, you: null, watch: null, reviewsState: null, recheck: null,
+    scope: null, market: null, depth: 1,
   });
   S.offers = new Map();
   S.reviews = new Map();
@@ -214,6 +218,60 @@ export function beatAllIn(item, pick = S.offers.get(pickUrl())) {
   if (a < p) return { beat: tag, gap: 0 };
   const beat = Math.floor((p - 1) * tag / a);
   return beat > 0 ? { beat, gap: tag - beat } : null;
+}
+
+// ---------- all listings: groups, reasons, filters (ledger.js, market.js) ----------
+/** Domains whose pages are the bulky "also in the EU" set (source/market `extra: true`, never also read as home). */
+export function extraDomains() {
+  const ex = new Set(), home = new Set();
+  const bare = d => String(d || '').toLowerCase().replace(/^www\./, '');
+  for (const s of S.sources || []) {
+    const d = bare(s.domain || domainOf(s.url));
+    if (!d) continue;
+    if (s.extra) ex.add(d); else if (s.direct || s.list_page) home.add(d);
+  }
+  for (const m of (S.market && S.market.sources) || []) if (m && m.extra) ex.add(bare(m.domain));
+  for (const d of home) ex.delete(d);
+  return ex;
+}
+/** In the separate "Also in the EU (+ shipping est.)" group: read from an extra marketplace page. */
+export function isExtra(item, ex = extraDomains()) {
+  if (!ex.size || !item) return false;
+  return ex.has(hostOf(item)) || ex.has(domainOf(item.url));
+}
+/** Pickup only: the seller does not ship to you (flag, or the engine's origin says no). */
+export function isPickupOnly(item) {
+  const fl = flagsOf(item);
+  if (fl.some(f => /pickup only|does not ship/i.test(f))) return true;
+  const o = (item && item.tc && item.tc.origin) || (item && item.offer && item.offer.origin);
+  return !!(o && o.ships_to_fi === false);
+}
+/** Risky / not comparable: set aside (too good to be true, price unconfirmed, price disagrees), reviews with
+ *  red flags, or very low trust. These go to the bottom of the list, dimmed, with their reason. */
+export function isRisky(item) {
+  if (!item || !item.tc) return false;
+  if (isSetAside(item) || reviewWatchOut(item)) return true;
+  const t = item.tc.trust;
+  return typeof t === 'number' && t < 0.3;
+}
+/** Why it is set aside or risky, in a few plain words (the first flag that explains it). */
+export function riskWhy(item) {
+  const fl = flagsOf(item);
+  const pick = re => fl.find(f => re.test(f));
+  let f;
+  if ((f = pick(/^not costed/i))) return 'price unconfirmed: far off the market';
+  if ((f = pick(/too good to be true/i))) {
+    const m = /(\d+)% under/.exec(f);
+    return m ? `too cheap to trust: ${m[1]}% under the usual price` : 'too cheap to trust';
+  }
+  if (pick(/price disagrees/i)) return 'the page shows two different prices';
+  if (reviewWatchOut(item)) return 'reviews: red flags';
+  if (pick(/scam pattern/i)) return 'looks like a scam pattern';
+  if (pick(/photo copied/i)) return 'photo copied from another listing';
+  if (pick(/shop name looks like/i)) return 'shop name imitates another';
+  if (pick(/only \d+ days old/i)) return 'very new shop domain';
+  if (item && item.tc && item.tc.true_cost == null) return 'could not cost it honestly';
+  return 'low trust';
 }
 
 const SET_ASIDE_RE = /too good to be true|price disagrees/i;

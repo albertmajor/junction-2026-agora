@@ -1,0 +1,906 @@
+{
+ "meta": {
+  "requests": 170,
+  "seconds_last_run": 26,
+  "counts": {
+   "verified_free": 6,
+   "search_found_unverified": 8,
+   "blocked": 2,
+   "no_search": 3
+  },
+  "total": 19,
+  "updated": "2026-11-14T12:07:15+00:00"
+ },
+ "sources": [
+  {
+   "key": "amazon_de",
+   "name": "Amazon.de",
+   "domain": "amazon.de",
+   "home": "https://www.amazon.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "new",
+    "used"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "home",
+    "books",
+    "toys"
+   ],
+   "kind": "marketplace",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.amazon.de/s?k={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/\\-/en/s/?\\?(?:.*&)?qid=",
+   "sample": [
+    "/-/en/s?k=samsung&page=2&xpid=gF4hLG0UtqQiL&qid=1794658013&ref=sr_pg_1",
+    "/-/en/s?k=samsung&page=2&xpid=gF4hLG0UtqQiL&qid=1794658013&ref=sr_pg_2",
+    "/-/en/s?k=samsung&page=3&xpid=gF4hLG0UtqQiL&qid=1794658013&ref=sr_pg_3"
+   ],
+   "links": 227,
+   "prices": 134,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:51+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "backmarket_de",
+   "name": "Back Market",
+   "domain": "backmarket.de",
+   "home": "https://www.backmarket.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.backmarket.de/de-de/search?q={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.backmarket.de/de-de/search?q={q}",
+    "http://www.backmarket.de/de-de/search?q={q}"
+   ],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:57+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "bol_com_nl_nl",
+   "name": "bol",
+   "domain": "bol.com",
+   "home": "https://www.bol.com/nl/nl/",
+   "countries": [
+    "nl",
+    "be"
+   ],
+   "languages": [
+    "nl",
+    "fr"
+   ],
+   "lanes": [
+    "new",
+    "used"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "books",
+    "home",
+    "toys"
+   ],
+   "kind": "marketplace",
+   "status": "blocked",
+   "reason": "bot wall on the home page",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 6,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:09+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "coolblue_nl",
+   "name": "Coolblue",
+   "domain": "coolblue.nl",
+   "home": "https://www.coolblue.nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers",
+    "phones",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.coolblue.nl/zoeken?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.coolblue.nl/zoeken?query={q}"
+   ],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:07:01+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "gigantti_fi",
+   "name": "Gigantti",
+   "domain": "gigantti.fi",
+   "home": "https://www.gigantti.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers",
+    "phones",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.gigantti.fi/search?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.gigantti.fi/search?q={q}"
+   ],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:49+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "helpling_de",
+   "name": "Helpling",
+   "domain": "helpling.de",
+   "home": "https://www.helpling.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "cleaning"
+   ],
+   "kind": "service",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.helpling.de/?s={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.helpling.de/?s={q}"
+   ],
+   "test_query": "reinigung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:58+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "huuto_net",
+   "name": "Huuto.net",
+   "domain": "huuto.net",
+   "home": "https://www.huuto.net/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "general"
+   ],
+   "kind": "marketplace",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.huuto.net/haku?query={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": true,
+   "listing": "^/kohteet/[^/?#]+/\\d+/?(?:$|\\?)",
+   "sample": [
+    "/kohteet/asevelimerkki-ja-matkailumerkki/654806277",
+    "/kohteet/auk-5-tykiston-aliupseerikurssi-risti/654855758",
+    "/kohteet/baromaster-seinasaaasema/654643074"
+   ],
+   "links": 13,
+   "prices": 25,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": true,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.708,
+   "robots_disallowed": [
+    "https://www.huuto.net/haku?q={q}",
+    "https://www.huuto.net/?q={q}",
+    "https://www.huuto.net/haku/?q={q}",
+    "https://www.huuto.net/search?q={q}"
+   ],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:00+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Finland",
+   "group": "Nordics"
+  },
+  {
+   "key": "idealo_de",
+   "name": "idealo",
+   "domain": "idealo.de",
+   "home": "https://www.idealo.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "appliances",
+    "home"
+   ],
+   "kind": "comparison",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q}"
+   ],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:56+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_com_fi_fi",
+   "name": "IKEA",
+   "domain": "ikea.com",
+   "home": "https://www.ikea.com/fi/fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.ikea.com/fi/fi/search/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.ikea.com/fi/fi/search/?q={q}"
+   ],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:49+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "kleinanzeigen_de",
+   "name": "Kleinanzeigen",
+   "domain": "kleinanzeigen.de",
+   "home": "https://www.kleinanzeigen.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "general"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.kleinanzeigen.de/s-{dash}/k0",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/s\\-anzeige/[^/?#]*\\d{3,}[^/?#]*/[^/?#]+/?(?:$|\\?)",
+   "sample": [
+    "/s-anzeige/duplo-zahlenzug-10558/3571045985-23-16814",
+    "/s-anzeige/lego-10220-volkswagen-t1-campingbus/3571043986-23-7963",
+    "/s-anzeige/lego-city-60249-strassenkehrmaschine-mit-anleitung/3571045976-23-6117"
+   ],
+   "links": 15,
+   "prices": 27,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.763,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:00+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Germany",
+   "group": "Central Europe"
+  },
+  {
+   "key": "marktplaats_nl",
+   "name": "Marktplaats",
+   "domain": "marktplaats.nl",
+   "home": "https://www.marktplaats.nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "general"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.marktplaats.nl/q/{q}/",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/v/[^/?#]+/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*/?(?:$|\\?)",
+   "sample": [
+    "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/a1533865567-lego-minifiguur-star-wars-vari-set",
+    "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/a1533866496-lego-grondplaten-city-straatplaten",
+    "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/a1533877724-lego-ideas-dungeons-amp-dragons"
+   ],
+   "links": 23,
+   "prices": 89,
+   "itemlist": false,
+   "jsonld_products": 1,
+   "embedded_prices": 0,
+   "next_data": true,
+   "pagination": {
+    "path_suffix": "/p/{page}/"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:00+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Netherlands",
+   "group": "Western Europe"
+  },
+  {
+   "key": "olx_pl",
+   "name": "OLX Poland",
+   "domain": "olx.pl",
+   "home": "https://www.olx.pl/",
+   "countries": [
+    "pl"
+   ],
+   "languages": [
+    "pl"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "general"
+   ],
+   "kind": "classifieds",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.olx.pl/oferty/q-{dash}/",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:49+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Poland",
+   "group": "Central Europe"
+  },
+  {
+   "key": "otto_de",
+   "name": "OTTO",
+   "domain": "otto.de",
+   "home": "https://www.otto.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "home",
+    "furniture",
+    "electronics",
+    "fashion"
+   ],
+   "kind": "marketplace",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "philips",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:54+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "power_fi",
+   "name": "Power",
+   "domain": "power.fi",
+   "home": "https://www.power.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers",
+    "phones",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.power.fi/haku/?q={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.power.fi/haku/?q={q}",
+    "https://www.power.fi/search/?q={q}"
+   ],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:49+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "tori_fi",
+   "name": "Tori",
+   "domain": "tori.fi",
+   "home": "https://www.tori.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "general"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.tori.fi/recommerce/forsale/search?q={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/recommerce/forsale/item/\\d+/?(?:$|\\?)",
+   "sample": [
+    "/recommerce/forsale/item/47558720",
+    "/recommerce/forsale/item/49871609",
+    "/recommerce/forsale/item/49872184"
+   ],
+   "links": 54,
+   "prices": 54,
+   "itemlist": true,
+   "jsonld_products": 53,
+   "embedded_prices": 53,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 1.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:00+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Finland",
+   "group": "Nordics"
+  },
+  {
+   "key": "treatwell_nl",
+   "name": "Treatwell",
+   "domain": "treatwell.nl",
+   "home": "https://www.treatwell.nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "beauty_services"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "amsterdam",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:07:03+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "verkkokauppa_com_fi",
+   "name": "Verkkokauppa.com",
+   "domain": "verkkokauppa.com",
+   "home": "https://www.verkkokauppa.com/fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers",
+    "phones",
+    "appliances",
+    "home",
+    "toys",
+    "general"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.verkkokauppa.com/fi/search?query={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.05,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 6,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:03+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_fi",
+   "name": "Vinted",
+   "domain": "vinted.fi",
+   "home": "https://www.vinted.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.fi/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*/?(?:$|\\?)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10264868197-adidas-performance-handball-spezial",
+    "/items/10305073897-bluza-adidas-originals-reveal-essentials-logo-hoodie-chalky-brown"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:07:06+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "werkspot_nl",
+   "name": "Werkspot",
+   "domain": "werkspot.nl",
+   "home": "https://www.werkspot.nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "trades",
+    "renovation",
+    "handyman"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "loodgieter",
+   "tried": 6,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:06:11+00:00",
+   "seed": "extra"
+  }
+ ]
+}

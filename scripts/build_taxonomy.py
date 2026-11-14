@@ -19,6 +19,7 @@ nodes fold into their parent's synonyms).
 from __future__ import annotations
 
 import argparse
+import bisect
 import collections
 import gzip
 import hashlib
@@ -41,6 +42,7 @@ RAW, HTTP, MENUS = CACHE / "raw", CACHE / "http", CACHE / "menus"
 OUT_DIR = ROOT / "agora" / "taxonomy"
 LANGS = ("en", "fi", "de", "nl", "sv", "fr", "da", "nb", "hu", "pl", "es", "it", "cs")
 MAX_DEPTH = 7
+VERBOSE = False
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
 
 # ------------------------------------------------------------------ fetching (plain HTTP, cached)
@@ -317,7 +319,8 @@ def _city_page(path: tuple) -> bool:
 
 # where a service platform's unmatched top-level categories go, and which entries are SEO junk
 MENU_ANCHOR = {"mediamarkt_services": "home-services.appliance-electronics-repair", "helpling": "home-services.cleaning",
-               "checkatrade": "trades", "myhammer": "trades", "fiverr": "digital-services"}
+               "checkatrade": "trades.other-trades-specialists", "myhammer": "trades.other-trades-specialists",
+               "fiverr": "digital-services"}
 MENU_DROP = {
     "mediamarkt_services": lambda p: _city_page(p) or bool(re.search(r"reparatur\s+\S", p[-1], re.I)) or p[0].lower() in ("ankauf", "filialen", "partner", "kontakt"),
     "helpling": lambda p: len(p) > 1 or _city_page(p),
@@ -370,7 +373,11 @@ def tokens(s: str, lang: str = "en") -> list[str]:
     for t in re.findall(r"[a-z0-9]+", fold(s, lang)):
         if t in STOP:
             continue
-        if len(t) > 3 and t.endswith("s") and not t.endswith("ss"):
+        if len(t) > 4 and t.endswith("ies"):
+            t = t[:-3] + "y"
+        elif len(t) > 5 and t.endswith("ves") and t[-4] in "lr":
+            t = t[:-3] + "f"
+        elif len(t) > 3 and t.endswith("s") and not t.endswith(("ss", "us", "is")):
             t = t[:-1]
         out.append(t)
     return out
@@ -498,6 +505,23 @@ class Tree:
             return min(strong, key=lambda c: (-hits[c], self.depth(c), c))
         return None
 
+    def height(self, nid: str) -> int:
+        kids = self.nodes[nid]["children"]
+        return 1 + max((self.height(c) for c in kids), default=0)
+
+    def move(self, nid: str, new_parent: str) -> None:
+        n = self.nodes[nid]
+        self.nodes[n["parent"]]["children"].remove(nid)
+        self.nodes[new_parent]["children"].append(nid)
+        n["parent"] = new_parent
+        stack = [nid]
+        while stack:
+            x = stack.pop()
+            px = self.nodes[self.nodes[x]["parent"]]
+            self.nodes[x]["depth"] = px["depth"] + 1
+            self.nodes[x]["root"] = px["root"]
+            stack.extend(self.nodes[x]["children"])
+
     def index_synonyms(self, nid: str, syns: list[str]) -> None:
         """Make hand-written synonyms merge targets too ('Electricians' -> 'Electrical work')."""
         for s_ in syns:
@@ -564,6 +588,12 @@ def build_curated(t: Tree) -> None:
 
     for rid, tree in curated.SERVICES.items():
         walk(rid, tree)
+    for nid, doms in curated.WHERE.items():
+        if nid in t.nodes and t.depth(nid) > 1:
+            for dom, lane in doms:
+                t.add_where(nid, dom, lane)
+        elif nid not in t.nodes:
+            print("  WHERE target missing:", nid)
     # pets services subtree: kind service
     for nid, n in t.nodes.items():
         if nid.startswith("pets.pet-services"):
@@ -945,12 +975,26 @@ class TokenIndex:
                 for tok in tokens(s, "de" if re.search("[äöü]", s) else "en"):
                     self.idx[tok].add(nid)
         self.n = max(1, len(t.nodes))
+        self.vocab = sorted(self.idx)
+
+    def _near(self, tok: str) -> set[str]:
+        """Nodes with a token that is the same word inflected ('astianpesukone' ~ 'astianpesukoneet')."""
+        if len(tok) < 5:
+            return set()
+        stem = tok[:max(5, int(0.8 * len(tok)))]
+        out: set[str] = set()
+        i = bisect.bisect_left(self.vocab, stem)
+        while i < len(self.vocab) and self.vocab[i].startswith(stem):
+            if _tok_eq(tok, self.vocab[i]):
+                out |= self.idx[self.vocab[i]]
+            i += 1
+        return out
 
     def ranked(self, label: str, lang: str, within: str | None = None, n: int = 12) -> list[str]:
         toks = [x for x in tokens(label, lang) if x not in GENERIC]
         score: dict[str, float] = collections.Counter()
         for tok in toks:
-            post = self.idx.get(tok, ())
+            post = self.idx.get(tok) or self._near(tok)
             if not post or len(post) > 4000:
                 continue
             w = 1.0 / (1 + len(post)) ** 0.5
@@ -1046,6 +1090,13 @@ def build_menus(t: Tree) -> dict[str, dict]:
         matched = added = unplaced = 0
         anchor = MENU_ANCHOR.get(key_)
         drop = MENU_DROP.get(key_)
+        have = {tuple(it["path"]) for it in items}
+        for it in list(items):          # parents that have no page of their own (my-hammer: /bad/badsanierung)
+            for n_ in range(1, len(it["path"])):
+                pre = tuple(it["path"][:n_])
+                if pre not in have:
+                    have.add(pre)
+                    items.append({"path": list(pre), "url": ""})
         for it in sorted(items, key=lambda x: len(x["path"])):
             path = tuple(it["path"])
             labels = it.get("labels") or {lang: path[-1]}
@@ -1100,6 +1151,72 @@ def build_menus(t: Tree) -> dict[str, dict]:
         stats[key_] = {"items": len(items), "matched": matched, "added": added, "unplaced": unplaced}
         print(f"menu {key_}: {len(items)} items, {matched} matched, {added} added, {unplaced} unplaced")
     return stats
+
+
+# ------------------------------------------------------------------ 6b. regroup flat service lists
+
+_RSTOP = {"service", "repair", "installation", "supply", "supplie", "hire", "emergency", "specialist", "general",
+          "24", "hour", "mobile", "contractor", "company", "local", "professional", "shop", "store", "auto"}
+
+
+def _rtok(s: str, lang: str = "en") -> set[str]:
+    return {x[:7] for x in tokens(s, lang) if x not in GENERIC and x not in _RSTOP}
+
+
+REGROUP_MIN = 0.55
+
+
+def regroup_services(t: Tree) -> int:
+    """Yelp / Checkatrade / CPV entries that landed directly under a service root move under the curated
+    node they belong to ('Keys & Locksmiths' -> Handyman > Lock & key services, 'Air Conditioning Repair'
+    -> HVAC), by weighted token overlap with the curated labels and synonyms."""
+    idx: dict[str, set[str]] = collections.defaultdict(set)
+    for nid, n in t.nodes.items():
+        if "curated" in n["src"] and n["root"] in SERVICE_ROOTS and n["depth"] >= 2:
+            for lang, lab in n["labels"].items():
+                if lang not in ("en", "fi", "de", "nl", "sv"):
+                    continue
+                for x in _rtok(lab, lang):
+                    idx[x].add(nid)
+            for syn_ in n["syn"]:
+                for x in _rtok(syn_):
+                    idx[x].add(nid)
+    moved = 0
+    holders = SERVICE_ROOTS + [n for n in t.nodes if n.endswith(".other-trades-specialists")]
+    for r in holders:
+        for c in list(t.nodes[r]["children"]):
+            n = t.nodes[c]
+            if "curated" in n["src"]:
+                continue
+            best, best_r = None, 0.0
+            for lang, lab in n["labels"].items():       # best single language (CPV adds 12 more)
+                toks = _rtok(lab, lang)
+                if not toks:
+                    continue
+                score: collections.Counter = collections.Counter()
+                for x in toks:
+                    post = idx.get(x, ())
+                    for tgt in post:
+                        score[tgt] += 1.0 / (1 + len(post)) ** 0.5
+                tot = sum(1.0 / (1 + len(idx.get(x, ()))) ** 0.5 for x in toks)
+                if not score or not tot:
+                    continue
+                cand = max(score, key=lambda k: (score[k], -t.depth(k), k))
+                covered = sum(1 for x in toks if cand in idx.get(x, ()))
+                if len(toks) >= 2 and covered / len(toks) < 0.66:
+                    continue
+                if score[cand] / tot > best_r:
+                    best, best_r = cand, score[cand] / tot
+            if not best or best_r < REGROUP_MIN or t.in_subtree(best, c) or best == r:
+                continue
+            if t.depth(best) + t.height(c) > MAX_DEPTH:
+                continue
+            t.move(c, best)
+            moved += 1
+            if VERBOSE:
+                print("   move", n["labels"].get("en") or next(iter(n["labels"].values())), "->", t.nodes[best]["labels"]["en"])
+    print(f"regroup: {moved} service entries moved under curated nodes")
+    return moved
 
 
 # ------------------------------------------------------------------ 7. synonyms, kinds, sizes
@@ -1241,6 +1358,7 @@ def build() -> pathlib.Path:
     build_nace(t)
     build_cpv(t)
     menu_stats = build_menus(t)
+    regroup_services(t)
     assign_kinds_sizes(t)
     return export(t, menu_stats)
 

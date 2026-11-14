@@ -201,3 +201,7 @@
   #reading .ll-dot { animation: none; }
   #reading .ll-bar::after { animation: ll-breathe 1.6s linear infinite; width: 100%; transform: none; }
 }
+
+/* round B: the searches counter (Context.dev ran them too) and the summary that credits search + reads */
+#reading .ll-cdw b.ll-cd-n { color: var(--ll-blue, var(--ink-blue)); }
+@media (max-width: 640px) { #reading .ll-cq { display: none; } }

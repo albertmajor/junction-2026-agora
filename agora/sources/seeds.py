@@ -285,6 +285,7 @@ https://www.fnac.com/                     fr  new        electronics,books,media
 https://www.darty.com/                    fr  new        electronics,appliances,computers                           retailer Darty
 https://www.boulanger.com/                fr  new        electronics,appliances,computers                           retailer Boulanger
 https://www.amazon.fr/                    fr  new,used   general,electronics,home,books                             marketplace Amazon.fr
+https://www.cdiscount.com/                fr  new,used   general,electronics,home,appliances        marketplace Cdiscount
 https://www.ldlc.com/                     fr  new        computers,electronics                                      retailer LDLC
 https://www.rueducommerce.fr/             fr  new        computers,electronics,home                                 marketplace Rue du Commerce
 https://www.materiel.net/                 fr  new        computers,electronics                                      retailer Materiel.net

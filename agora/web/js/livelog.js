@@ -123,7 +123,7 @@ function build(el) {
       <div class="ll-head">
         <span class="ll-dot" aria-hidden="true"></span>
         <span class="ll-title"><span class="ll-t-long">Reading the web live</span><span class="ll-t-short">Reading live</span></span>
-        <span class="ll-count"><b data-c="pages">0</b> <span data-w="pages">pages</span> · <b data-c="offers">0</b> <span data-w="offers">offers</span> · <b data-c="secs">0.0</b> s</span>
+        <span class="ll-count"><span class="ll-cq"><b data-c="searches">0</b> <span data-w="searches">searches</span> · </span><b data-c="pages">0</b> <span data-w="pages">pages</span> · <b data-c="offers">0</b> <span data-w="offers">offers</span> · <b data-c="secs">0.0</b> s</span>
         <span class="ll-cd">${cdMark()}</span>
       </div>
       <ol class="ll-rows" aria-label="Pages being read"></ol>
@@ -139,8 +139,8 @@ function build(el) {
     panel: el.querySelector('.ll-panel'), head: el.querySelector('.ll-head'), title: el.querySelector('.ll-title'),
     list: el.querySelector('.ll-rows'), sum: el.querySelector('.ll-sum'), sumText: el.querySelector('.ll-sum-text'),
     toggle: el.querySelector('.ll-toggle'), log: el.querySelector('.ll-log'), reel: el.querySelector('.ll-reel'),
-    c: { pages: el.querySelector('[data-c=pages]'), offers: el.querySelector('[data-c=offers]'), secs: el.querySelector('[data-c=secs]') },
-    w: { pages: el.querySelector('[data-w=pages]'), offers: el.querySelector('[data-w=offers]') },
+    c: { pages: el.querySelector('[data-c=pages]'), offers: el.querySelector('[data-c=offers]'), secs: el.querySelector('[data-c=secs]'), searches: el.querySelector('[data-c=searches]') },
+    w: { pages: el.querySelector('[data-w=pages]'), offers: el.querySelector('[data-w=offers]'), searches: el.querySelector('[data-w=searches]') },
   };
   els.toggle.addEventListener('click', () => setLog(!logOpen));
   return el;
@@ -195,7 +195,12 @@ function counts() {
   els.c.offers.textContent = String(offers);
   els.w.offers.textContent = offers === 1 ? 'offer' : 'offers';
   els.c.secs.textContent = secsNow().toFixed(1);
+  const q = searchRows().length;
+  els.c.searches.textContent = String(q);
+  els.w.searches.textContent = q === 1 ? 'search' : 'searches';
 }
+// every web search the hunt ran (one row each), Context.dev's unless the lane says Exa
+function searchRows() { return [...rows.values()].filter(r => r.lane); }
 function clockStart() { clockStop(); t0 = performance.now(); endS = null; clockTimer = setInterval(counts, 100); counts(); }
 function clockStop() { clearInterval(clockTimer); clockTimer = 0; }
 function seeT(d) { if (d && typeof d._t === 'number' && isFinite(d._t) && (lastT == null || d._t >= lastT)) { lastT = d._t; lastTWall = performance.now(); } }
@@ -327,6 +332,7 @@ function fly(src, d) {
 
 // ---------- events ----------
 function laneRow(name) { return rows.get('lane:' + name) || null; }
+function queryRow(q) { return q ? rows.get('q:' + String(q).toLowerCase()) || null : null; }
 function pageRow(d) {
   d = bare(d);
   if (!d) return null;
@@ -354,15 +360,20 @@ function onReset(d) {
 function onLane(l) {
   seeT(l);
   if (!active) return;
-  const q = (l && l.queries || [])[0];
-  if (!q || finished) return;
+  const qs = (l && l.queries) || [];
+  if (!qs.length || finished) return;
   const name = String(l.lane || 'search');
-  const key = 'lane:' + name;
-  let row = rows.get(key);
-  if (!row) row = newRow(key, { lane: true, laneName: name, via: ['search', true] });
-  row.what = `“${q}” · ${name}`;
-  row.state = row.n ? 'done' : 'reading';
-  if (row.el) paint(row); else promote(row);
+  const exa = l.via === 'exa';
+  // one row per search: the log shows every query Context.dev ran, and how many pages each one found
+  for (const q of qs.slice().reverse()) {
+    const key = 'q:' + String(q).toLowerCase();
+    let row = rows.get(key);
+    if (!row) row = newRow(key, { lane: true, laneName: name, query: q, via: exa ? ['Exa', false] : ['search', true] });
+    row.what = `“${q}” · ${name}`;
+    row.state = row.n ? 'done' : 'reading';
+    if (row.el) paint(row); else promote(row);
+  }
+  counts();
 }
 function onSource(s) {
   seeT(s);
@@ -376,7 +387,8 @@ function onSource(s) {
     if (row.state === 'skip' || row.state === 'empty') row.state = finished ? (row.n ? 'done' : 'empty') : 'reading';
     paint(row);
   }
-  const lr = s.lane && laneRow(s.lane);
+  // a page found by a search counts on that search's row (direct marketplace pages had no search)
+  const lr = !s.direct ? (queryRow(s.query) || searchRows().find(r => r.laneName === s.lane) || null) : null;
   if (lr) { lr.n++; lr.state = 'done'; paint(lr); }
   counts();
 }
@@ -462,33 +474,51 @@ function collapse() {
   }
   els.sum.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' });
 }
-function viaCounts() {
-  let ctx = 0, free = 0;
-  for (const it of (S.offers ? S.offers.values() : [])) {
-    const m = methodOf(it.offer && it.offer.read_via);
+/** What Context.dev did, and what we read for free: {searches, found, reads, listings, free:[[domain, n]], freeN}.
+ *  Searches are the hunt's web searches (lane queries); found = pages those searches turned up; reads = pages
+ *  read through Context.dev (paid marketplace scrapes, product/extract reads); listings = offers from those reads.
+ *  Free = listings from the page's own JSON-LD (tori's search pages), per site. Exported via _test. */
+export function cdStats() {
+  const sq = searchRows().filter(r => r.via && r.via[1]);
+  const found = sq.reduce((n, r) => n + (r.n || 0), 0);
+  const all = S.offers ? [...S.offers.values()] : [];
+  const viaOf = it => methodOf(it.offer && it.offer.read_via);
+  const dom = it => bare((it.offer && it.offer.source) || domainOf(it.url));
+  const cdDomains = new Set(), freeBy = new Map();
+  let listings = 0;
+  for (const it of all) {
+    const m = viaOf(it);
     if (!m) continue;
-    if (m[1]) ctx++; else free++;
+    if (m[1]) { listings++; cdDomains.add(dom(it)); }
+    else freeBy.set(dom(it), (freeBy.get(dom(it)) || 0) + 1);
   }
-  if (!ctx && !free && budget) {
-    free = Array.isArray(budget.free_reads) ? budget.free_reads.length : (+budget.free_reads || 0);
-    ctx = +budget.requests || 0;
+  let reads = 0;
+  for (const s of S.sources || []) {
+    const d = bare(s.domain || domainOf(s.url));
+    if (s.direct) { if (s.paid !== false) reads++; }
+    else if (cdDomains.has(d) && !freeBy.has(d)) reads++;
   }
-  return { ctx, free };
+  // the engine's own count of Context.dev requests is the floor (cached reads included): searches + reads
+  if (budget && +budget.requests > sq.length) reads = Math.max(reads, +budget.requests - sq.length);
+  const free = [...freeBy.entries()].sort((a, b) => b[1] - a[1]);
+  return { searches: sq.length, found, reads, listings, free, freeN: free.reduce((n, [, k]) => n + k, 0) };
 }
 function summary() {
-  const sites = [...rows.values()].filter(r => !r.lane && r.pages).length;
   const all = S.offers ? [...S.offers.values()] : [];
   const offers = all.length;
-  const aside = all.filter(it => it.tc && core.isSetAside(it)).length;
-  const { ctx, free } = viaCounts();
   const secs = endS != null ? endS.toFixed(1) : secsNow().toFixed(1);
-  const lead = stopped ? 'Stopped after reading' : '✓ Read';
-  // the same numbers as the list under the line: found, ranked, and the ones set aside as "not counted"
-  const found = aside ? `<b>${plural(offers, 'offer')}</b> found, ${offers - aside} ranked` : `<b>${plural(offers, 'offer')}</b>`;
-  const via = (ctx || free) ? `<span class="ll-s-long"> · <b class="ll-cd-n">${ctx} read by Context.dev</b>, ${free} free from JSON-LD</span>` : '';
+  const st = cdStats();
+  const lead = stopped ? 'Stopped' : '✓';
+  const cd = [];
+  if (st.searches) cd.push(`<b class="ll-cd-n">${plural(st.searches, 'search', 'searches')}</b> found <b>${plural(st.found, 'page')}</b>`);
+  if (st.reads) cd.push(`read <b class="ll-cd-n">${plural(st.reads, 'page')}</b>${st.listings ? ` → <b>${plural(st.listings, 'listing')}</b>` : ''}`);
+  const free = st.free.slice(0, 2).map(([d, n]) => `${esc(d)} <b>${n}</b> free`);
+  if (st.free.length > 2) free.push(`${st.free.length - 2} more site${st.free.length - 2 === 1 ? '' : 's'} free`);
+  const cdText = cd.length ? `<span class="ll-cdw">Context.dev: ${cd.join(' · ')}</span>` : `<span class="ll-cdw">Read <b>${plural(pages, 'page')}</b></span>`;
   els.sumText.innerHTML =
     (replay ? '<span class="ll-s-rec">Recorded live hunt · </span>' : '') +
-    `<span class="ll-ok">${lead}</span> <b>${plural(pages, 'page')}</b><span class="ll-s-long"> on ${plural(sites, 'site')}</span> in <b>${secs} s</b> · ${found}${via}`;
+    `<span class="ll-ok">${lead}</span> ${cdText}${free.length ? `<span class="ll-s-long"> · ${free.join(' · ')}</span>` : ''}` +
+    ` · <b>${plural(offers, 'listing')}</b> in <b>${secs} s</b>`;
   reel();
   const reads = pages + skips.length;
   els.toggle.firstChild.textContent = logOpen ? 'hide log ' : `show all ${reads} reads `;
@@ -554,7 +584,7 @@ function drawLog() {
   };
   const parts = [
     group('Sites that gave offers', all.filter(r => !r.lane && r.n), full),
-    group('Searches', all.filter(r => r.lane), full),
+    group('Searches (Context.dev)', all.filter(r => r.lane), full),
     group('Read, no offer', all.filter(r => !r.lane && !r.n && r.state !== 'skip'), full),
   ];
   const by = new Map();
@@ -608,5 +638,5 @@ export const _test = {
       log: app ? app.dataset.log || null : null,
     };
   },
-  shortReason, methodOf, kindText,
+  shortReason, methodOf, kindText, cdStats,
 };

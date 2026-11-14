@@ -400,7 +400,11 @@ export function mountVerdict(el) {
     setFacts([]); setPick(null);
     els.img.dataset.url = ''; els.fig.hidden = true; setStatus('wait', ''); el.dataset.state = 'idle';
   });
-  for (const t of ['need', 'rank', 'verdict', 'turn', 'truecost', 'mode', 'review', 'reviews', 'recheck', 'offer']) on(t, render);
+  for (const t of ['need', 'verdict', 'turn', 'mode', 'recheck']) on(t, render);
+  // offers and costs stream in by the hundred: one render per frame is enough
+  let vraf = 0;
+  const soon = () => { if (!vraf) vraf = requestAnimationFrame(() => { vraf = 0; render(); }); };
+  for (const t of ['rank', 'truecost', 'review', 'reviews', 'offer']) on(t, soon);
   on('done', () => { finished = true; render(); });
   on('error', e => { if (e && (e.kind === 'net' || e.kind === '429')) finished = true; render(); });
   render();

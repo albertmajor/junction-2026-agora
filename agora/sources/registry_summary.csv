@@ -1,0 +1,20 @@
+key,name,domain,countries,lanes,categories,kind,status,template,template_via,free_fetch,listing,links,prices,itemlist,yield,reason
+amazon_de,Amazon.de,amazon.de,de,new used,general electronics home books toys,marketplace,verified_free,https://www.amazon.de/s?k={q},known,True,^/\-/en/s/?\?(?:.*&)?qid=,227,134,False,0.9,
+backmarket_de,Back Market,backmarket.de,de,refurb,phones computers electronics,refurbisher,search_found_unverified,https://www.backmarket.de/de-de/search?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+bol_com_nl_nl,bol,bol.com,nl be,new used,general electronics books home toys,marketplace,blocked,,,False,,0,0,False,0.0,bot wall on the home page
+coolblue_nl,Coolblue,coolblue.nl,nl,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.coolblue.nl/zoeken?query={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+gigantti_fi,Gigantti,gigantti.fi,fi,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.gigantti.fi/search?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+helpling_de,Helpling,helpling.de,de,service,cleaning,service,search_found_unverified,https://www.helpling.de/?s={q},searchaction,False,,0,0,False,0.0,robots.txt disallows the search path
+huuto_net,Huuto.net,huuto.net,fi,used,general,marketplace,verified_free,https://www.huuto.net/haku?query={q},pattern,True,^/kohteet/[^/?#]+/\d+/?(?:$|\?),13,25,False,0.708,
+idealo_de,idealo,idealo.de,de,new,general electronics appliances home,comparison,search_found_unverified,https://www.idealo.de/preisvergleich/MainSearchProductCategory.html?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+ikea_com_fi_fi,IKEA,ikea.com,fi,new,furniture home,retailer,search_found_unverified,https://www.ikea.com/fi/fi/search/?q={q},form,False,,0,0,False,0.0,robots.txt disallows the search path
+kleinanzeigen_de,Kleinanzeigen,kleinanzeigen.de,de,used,general,classifieds,verified_free,https://www.kleinanzeigen.de/s-{dash}/k0,known,True,"^/s\-anzeige/[^/?#]*\d{3,}[^/?#]*/[^/?#]+/?(?:$|\?)",15,27,False,0.763,
+marktplaats_nl,Marktplaats,marktplaats.nl,nl,used,general,classifieds,verified_free,https://www.marktplaats.nl/q/{q}/,known,True,"^/v/[^/?#]+/[^/?#]+/[^/?#]*\d{3,}[^/?#]*/?(?:$|\?)",23,89,False,0.9,
+olx_pl,OLX Poland,olx.pl,pl,used,general,classifieds,blocked,https://www.olx.pl/oferty/q-{dash}/,known,False,,0,0,False,0.0,bot wall on the results page
+otto_de,OTTO,otto.de,de,new,general home furniture electronics fashion,marketplace,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+power_fi,Power,power.fi,fi,new,electronics computers phones appliances,retailer,search_found_unverified,https://www.power.fi/haku/?q={q},known,False,,0,0,False,0.0,robots.txt disallows the search path
+tori_fi,Tori,tori.fi,fi,used,general,classifieds,verified_free,https://www.tori.fi/recommerce/forsale/search?q={q},known,True,^/recommerce/forsale/item/\d+/?(?:$|\?),54,54,True,1.0,
+treatwell_nl,Treatwell,treatwell.nl,nl,service,beauty_services,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"
+verkkokauppa_com_fi,Verkkokauppa.com,verkkokauppa.com,fi,new,electronics computers phones appliances home toys general,retailer,search_found_unverified,https://www.verkkokauppa.com/fi/search?query={q},known,False,,0,0,False,0.05,results page without listing links for a plain fetch
+vinted_fi,Vinted,vinted.fi,fi,used,fashion kids home,classifieds,verified_free,https://www.vinted.fi/catalog?search_text={q},known,True,"^/items/[^/?#]*\d{3,}[^/?#]*/?(?:$|\?)",96,192,False,0.9,
+werkspot_nl,Werkspot,werkspot.nl,nl,service,trades renovation handyman,service,no_search,,,False,,0,0,False,0.0,"no search form, OpenSearch or SearchAction; common patterns failed"

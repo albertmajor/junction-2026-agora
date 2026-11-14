@@ -65,7 +65,7 @@ def test_true_cost_new_vs_used_receipt():
     assert tc.sticker_eur == pytest.approx(1286.16)
     assert tc.resale_eur == pytest.approx(753.4 * 0.88, abs=0.5)
     # B&H prices in USD: import VAT is part of the true cost and has its own receipt line
-    assert tc.extras_eur == pytest.approx(1286.16 * 0.255, abs=0.01)
+    assert tc.extras_eur == pytest.approx(1286.16 * 0.255 + 15.0, abs=0.01)   # + courier clearance (est.)
     assert any("import VAT" in label for label, _ in tc.receipt)
     assert tc.total_eur == pytest.approx(tc.sticker_eur + tc.extras_eur - tc.resale_eur, abs=0.01)
     assert tc.per_month_eur == pytest.approx(tc.total_eur / 12, abs=0.01)

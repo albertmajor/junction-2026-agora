@@ -44,14 +44,15 @@ def test_headline_ratio_is_honest():
             o.raw["ships_text"] = "anywhere"      # its page says it ships abroad: it may lead the headline
     v = judge(need, resolve(need, offers))
     assert "/mo" not in v.headline
-    assert v.headline.startswith("€629 all in: used at usedlens.co.uk")   # it ships here now: cheapest all-in wins
+    assert v.headline.startswith("€644 all in: used at usedlens.co.uk")   # it ships here now: cheapest all-in wins
+    # (€629 + est. €15 courier customs clearance from the UK)
 
 
 def test_unconfirmed_shipping_leads_with_what_you_can_surely_buy():
     """usedlens.co.uk (UK) is cheapest to own, but nothing says it ships to Finland."""
     _, _, v, by = sony()
     assert v.headline.startswith("€1,029 all in: new at e-infin.com")
-    assert "Used from €629 (may not ship to Finland)" in v.headline
+    assert "Used from €644 (may not ship to Finland)" in v.headline
     assert any("usedlens.co.uk is cheaper" in line and "ships to Finland" in line for line in v.lines)
     assert "usedlens" not in v.best_offer_url
     assert any("shipping to Finland unconfirmed" in f for f in by["usedlens.co.uk"].flags)
@@ -129,17 +130,19 @@ def test_uk_vat_comes_off_before_finnish_import_vat():
     o = Offer(url="u", source="cvp.com", title="Sony A7III", price=1169, currency="GBP", price_eur=1375.29,
               condition="new")
     lines = import_lines(o)
-    assert [round(v, 2) for _, v in lines] == [-229.21, round(1375.29 / 1.2 * 0.255, 2)]
-    assert jd.import_fee(o) == pytest.approx(1375.29 / 1.2 * 1.255 - 1375.29, abs=0.02)   # ~ +4.6%, not +25.5%
+    assert [round(v, 2) for _, v in lines] == [-229.21, round(1375.29 / 1.2 * 0.255, 2), 15.0, 0.0]
+    assert "courier customs clearance" in lines[2][0] and "est." in lines[2][0]
+    assert lines[3][0] == "customs duty: 0% for cameras (ITA agreement)"
+    assert jd.import_fee(o) == pytest.approx(1375.29 / 1.2 * 1.255 - 1375.29 + 15, abs=0.02)   # ~ +4.6% + clearance
     us = Offer(url="b", source="bh.com", title="x", price=100, currency="USD", price_eur=90, condition="new")
-    assert jd.import_fee(us) == pytest.approx(90 * 0.255)
+    assert jd.import_fee(us) == pytest.approx(90 * 0.255 + 15)          # under €150: no duty note
 
 
 def test_cheapest_up_front_is_landed_and_best_link_prefers_eu():
     need, offers, _ = load("iphone-15-128gb-used")
     v = judge(need, resolve(need, offers))
     assert v.headline.startswith("€392 all in: refurbished at remobile.eu")    # the winner comes first
-    assert any("swappa.com" in line and "€369" in line for line in v.lines)    # €294 sticker + €75 import VAT, all in
+    assert any("swappa.com" in line and "€374" in line for line in v.lines)    # €294 + €75 import VAT + €5 postal handling
     assert "remobile.eu" in (v.best_offer_url or "")     # an EU shop exists: no US-only marketplace link
 
 

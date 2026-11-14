@@ -44,7 +44,7 @@ async function mountAll() {
   const plan = [
     ['verdict', 'mountVerdict', 'verdict'], ['sheet', 'mountSheet', 'sheet'], ['drawer', 'mountDrawer', 'drawer'],
     ['agent', 'mountAgent', 'agent'], ['tag', 'mountTag', 'tag', true], ['finale', 'mountFinale', 'finale', true],
-    ['ledger', 'mountLedger', 'ledger'],
+    ['ledger', 'mountLedger', 'ledger'], ['market', 'mountMarket', 'market'],
   ];
   await Promise.all(plan.map(async ([name, fn, id, withLine]) => {
     const m = await load(name);

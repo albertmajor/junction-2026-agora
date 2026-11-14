@@ -214,6 +214,8 @@ SERVICES: dict[str, dict] = {
         "Glaziers|Lasitustyöt|Glaser|Glaszetter|Glasmästare ~ glazier, lasittaja, glaser": {},
         "Welding & metalwork|Hitsaus ja metallityöt|Schweißen & Metallbau|Lassen & metaalbewerking|Svetsning & smide": {},
         "Groundwork & excavation|Maanrakennus|Erdarbeiten|Grondwerk|Markarbeten ~ digger, kaivinkone, bagger": {},
+        "Other trades & specialists|Muut ammattilaiset ja erikoisosaajat|Weitere Handwerker & Spezialisten|"
+        "Overige vakmensen & specialisten|Övriga hantverkare & specialister ~ specialist trades": {},
         "Tool & equipment hire|Työkalu- ja konevuokraus|Werkzeug- & Maschinenverleih|Gereedschapsverhuur|"
         "Verktygs- & maskinuthyrning ~ tool rental, konevuokraamo, mietwerkzeug": {},
     }),
@@ -649,6 +651,11 @@ WHERE: dict[str, list[tuple[str, str]]] = {
     "utilities": [("sahkonhinta.fi", "comparison"), ("sahkovertailu.fi", "comparison"), ("check24.de", "comparison"),
                   ("verivox.de", "comparison"), ("gaslicht.com", "comparison"), ("elskling.se", "comparison"),
                   ("puhelinliittymat.fi", "comparison")],
+    "events-leisure.weddings": [("bark.com", "service"), ("yelp.com", "service")],
+    "events-leisure.photography-video": [("bark.com", "service"), ("yelp.com", "service"), ("fiverr.com", "service")],
+    "pets.pet-services": [("rover.com", "service"), ("yelp.com", "service")],
+    "food-drink.restaurants-takeaway": [("wolt.com", "service"), ("foodora.fi", "service"), ("lieferando.de", "service"),
+                                        ("thuisbezorgd.nl", "service"), ("ubereats.com", "service"), ("yelp.com", "service")],
     "personal-services": [("care.com", "service"), ("yoopies.de", "service"), ("rover.com", "service"),
                           ("tori.fi", "service")],
 }

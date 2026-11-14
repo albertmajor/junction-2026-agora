@@ -191,6 +191,9 @@ function handle(ev, my) {
       break;
     }
     case 'budget': d._t = ev.t_ms; S.budget = d; emit('budget', d); break;
+    // where we looked and why (bulky things: near you first), then how big the market is (before resolve)
+    case 'scope': S.scope = d; emit('scope', d); break;
+    case 'market': S.market = d; if (!S.scope && d.scope) S.scope = d.scope; emit('market', d); break;
     case 'depreciation': S.depreciation = d; emit('depreciation', d); break;
     case 'thing': S.things = (S.things || []).concat(d); emit('thing', d); break;
     case 'offer': {
@@ -272,17 +275,19 @@ function handle(ev, my) {
   }
 }
 
-function open(q, slug, { keepError = false } = {}) {
+function open(q, slug, { keepError = false, depth = 1 } = {}) {
   stop();
   const my = gen;
   resetStore(q);
+  S.depth = depth;
   S.slug = slug || null;
   S.live = live;
   S.phase = 'hunting';
   S.done = false; S.things = []; S.hunt_id = null; S.rateLimited = 0;
   turnFirstAt = 0;
-  emit('reset', { q, slug: S.slug, replay: !!slug, keepError });
+  emit('reset', { q, slug: S.slug, replay: !!slug, keepError, depth });
   const p = new URLSearchParams({ q });
+  if (depth > 1 && !slug) p.set('depth', String(depth));
   if (slug) { p.set('replay', slug); p.set('speed', String(cfg.speed)); p.set('max_gap', String(cfg.max_gap)); }
   let src;
   try { src = new EventSource('/hunt?' + p.toString()); }
@@ -321,6 +326,34 @@ export const liveReady = fetch('/status', { headers: { accept: 'application/json
   .catch(() => {});
 export function setLive(on) { live = !!on; S.live = live; }
 export function isLive() { return live; }
+
+// ---------- "Compare more": the same hunt again, asking for deeper pages ----------
+export const READS_PER_MIN = 10;     // Context.dev's account-wide limit
+export const MORE_TOKENS = 6;        // reads a deeper hunt wants ready before it starts
+/** The shared Context.dev bucket, from GET /status: {tokens, per_min} or null when the server does not say. */
+export async function bucket() {
+  try {
+    const r = await fetch('/status', { headers: { accept: 'application/json' } });
+    const j = r.ok ? await r.json() : null;
+    return j && j.bucket && typeof j.bucket.tokens === 'number' ? j.bucket : null;
+  } catch { return null; }
+}
+/** Seconds until the bucket holds `want` reads again (0 = go now). */
+export function waitFor(b, want = MORE_TOKENS) {
+  if (!b) return 0;
+  const per = (b.per_min || READS_PER_MIN) / 60;
+  return b.tokens >= want ? 0 : Math.ceil((want - b.tokens) / per);
+}
+/** Re-run the current hunt one level deeper. Recorded hunts cannot read more: {error:'replay'}. */
+export async function compareMore() {
+  const q = S.q;
+  if (!q) return { error: 'none' };
+  await liveReady;
+  if (!live) return { error: 'offline' };
+  const depth = Math.min(3, (S.depth || 1) + 1);
+  open(q, null, { depth });
+  return { live: true, depth };
+}
 
 /** Start a hunt for q. Resolves to {slug, live} or {error}. */
 export async function startHunt(q) {

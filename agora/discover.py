@@ -648,6 +648,16 @@ def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int) ->
 EU_USED_SITES = ("kleinanzeigen", "vinted")
 
 
+def _note_listicle(url: str, title: str, snippet: str) -> None:
+    """Hand a skipped 'best X / alternatives' page to the long-tail lane (agora.longtail), when a hunt collects
+    them. Never fatal: the long tail is optional."""
+    try:
+        from agora import longtail
+        longtail.note_listicle(url, title, snippet)
+    except Exception:
+        pass
+
+
 async def discover(need: Need, *, depth: int | None = None, max_sources: int = 40,
                    settle_s: float = SETTLE_S, tokens: float | None = None) -> AsyncIterator[Event]:
     """Need -> stream of lane / source / skip / error Events. Searches run concurrently (the shared
@@ -841,6 +851,8 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                             url, title, contextdev.highlight_text(r) or r.get("description") or ""):
                         reason = "job ad (a wage, not a price)"
                     if reason:
+                        if not directory:     # a 'best X' article: the long-tail lane mines it for providers
+                            _note_listicle(url, title, contextdev.highlight_text(r) or r.get("description") or "")
                         yield ev("skip", url=url, reason=reason, lane=lane)
                         continue
                     order += 1

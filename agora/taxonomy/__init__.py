@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import bisect
 import collections
+import functools
 import gzip
 import json
 import math
@@ -59,6 +60,7 @@ SOURCES: list[dict[str, str]] = [
      "use": "extra categories, local-language labels, per-node shop domains (where to look)"},
 ]
 
+_WORD = re.compile(r"[a-z0-9]+")
 KINDS = {"p": "product", "s": "service", "d": "digital", "v": "vehicle", "r": "property", "f": "food"}
 LANES_BY_KIND = {"product": ["new", "used", "refurbished"], "vehicle": ["used", "new"], "food": ["new", "service"],
                  "service": ["service"], "digital": ["new"], "property": ["rental", "new"]}
@@ -70,18 +72,29 @@ _STOP = {"and", "or", "the", "of", "for", "with", "a", "an", "in", "ja", "tai", 
 
 def fold(s: str) -> str:
     s = s.lower().replace("ß", "ss")
+    if s.isascii():
+        return s
     return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
 
 
+def _stem(t: str) -> str:
+    """Plural -> singular, crude but the same on both sides (shelves -> shelf, batteries -> battery)."""
+    if len(t) > 4 and t.endswith("ies"):
+        return t[:-3] + "y"
+    if len(t) > 5 and t.endswith("ves") and t[-4] in "lr":
+        return t[:-3] + "f"
+    if len(t) > 3 and t.endswith("s") and not t.endswith(("ss", "us", "is")):
+        return t[:-1]
+    return t
+
+
+@functools.lru_cache(maxsize=200_000)
+def _tokens(s: str) -> tuple[str, ...]:
+    return tuple(_stem(t) for t in _WORD.findall(fold(s)) if t not in _STOP)
+
+
 def tokens(s: str) -> list[str]:
-    out = []
-    for t in re.findall(r"[a-z0-9]+", fold(s)):
-        if t in _STOP:
-            continue
-        if len(t) > 3 and t.endswith("s") and not t.endswith("ss"):
-            t = t[:-1]
-        out.append(t)
-    return out
+    return list(_tokens(s))
 
 
 class Taxonomy:
@@ -230,12 +243,14 @@ class Taxonomy:
             return []
         n_docs = len(self.ids)
         weights, cand_tok = [], []
+        near: dict[str, float] = {}       # query token or near form -> closeness
         for t in q:
             exp = self._expand(t)
             df = max((len(self._post[v]) for v, _ in exp if v == t), default=None)
             if df is None:
                 df = min((len(self._post[v]) for v, _ in exp), default=n_docs)
-            weights.append(math.log(1 + n_docs / (1 + df)) if exp else 0.0)
+            w = math.log(1 + n_docs / (1 + df)) if exp else 0.0
+            weights.append(w * 0.35 if t.isdigit() else w)
             hits: dict[int, float] = {}
             for v, w in exp:
                 for i, fw in self._post[v]:
@@ -243,6 +258,8 @@ class Taxonomy:
                     if s > hits.get(i, 0):
                         hits[i] = s
             cand_tok.append(hits)
+            for v, w_ in exp:
+                near[v] = max(near.get(v, 0.0), w_)
         total = sum(weights) or 1.0
         known = [w > 0 for w in weights]
         known_total = sum(w for w in weights if w > 0) or 1.0
@@ -271,12 +288,15 @@ class Taxonomy:
                 continue
             # how much of the node's own label the query explains (prefer "Game Controllers" over
             # "Game Controller Charging Stations" for "game controller")
-            lab_toks = set(tokens(self.label(i)))
-            qset = set(q)
-            lab_cov = len(lab_toks & qset) / len(lab_toks) if lab_toks else 0.0
-            if not lab_cov:
-                lab_cov = max((len(set(tokens(l)) & qset) / max(1, len(set(tokens(l)))) for l in self.labels[i].values()),
-                              default=0.0)
+            lab_cov = 0.0
+            for l in self.labels[i].values():
+                lt = set(_tokens(l))
+                if lt:
+                    lab_cov = max(lab_cov, sum(near.get(x, 0.0) for x in lt) / len(lt))
+            for syn in self.syn[i]:
+                st = set(_tokens(syn))
+                if st and all(x in near for x in st):
+                    lab_cov = max(lab_cov, 0.9 * sum(near[x] for x in st) / len(st))
             score = (own_cov + ctx_cov) / known_total
             score *= 0.75 + 0.25 * sum(known) / len(known)
             score += 0.25 * lab_cov + (0.3 if i in exact else 0.0)
@@ -341,9 +361,10 @@ def _strip_need(text: str) -> tuple[str, str | None, str | None]:
         if span:
             thing = (thing[:span[0]] + " " + thing[span[1]:]).strip()
         service, _ = need.detect_service(thing)
-        _conds, spans = need.detect_conditions(thing)
-        for a, b in sorted(spans, reverse=True):
-            thing = thing[:a] + " " + thing[b:]
+        conds, spans = need.detect_conditions(thing)
+        if "rental" not in conds:          # 'flat to rent' must keep 'rent'; used/new/refurbished words go
+            for a, b in sorted(spans, reverse=True):
+                thing = thing[:a] + " " + thing[b:]
     except Exception:
         pass
     return re.sub(r"\s+", " ", thing).strip(), service, place
