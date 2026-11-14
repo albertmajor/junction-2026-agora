@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
-import json
 import os
 import re
 import time
@@ -51,10 +50,11 @@ from agora.models import Event, Need, Offer
 
 PAID_MAX = 3                 # Context.dev requests per hunt for this lane (searches + reads together)
 FIRST_PAID_SPARE = 1.0       # the first paid call waits until the shared bucket has this many tokens left
-LATER_PAID_SPARE = 2.0       # later ones leave more for the core lanes
+LATER_PAID_SPARE = 1.5       # later ones leave more for the core lanes' paid reads
 PAID_START_DELAY = 1.2       # seconds: let the core lanes' searches take their tokens first
 MAX_PROVIDERS = 10           # provider sites read per hunt
 MAX_LISTICLES = 3            # articles mined per hunt
+LOCAL_RESERVE = 3            # provider slots kept for the asked-for country's own sites
 MAX_NAMES_PER_LISTICLE = 8   # numbered headings turned into domains per article
 FREE_CONCURRENCY = 6
 FETCH_TIMEOUT = 5.0
@@ -528,6 +528,7 @@ NAME_SKIP = re.compile(
     r"get started|start(?: now| today| free trial)?|choose(?: plan)?|book a call|contact(?: us| sales)?|buy now|"
     r"sign up|subscribe|features?|what'?s included|includes?|everything in .*|compare.*|from|starting at|"
     r"only|just|per month|/mo|/month|month|year|new|hot|sale|free trial|try .*|learn more|see more|show more|"
+    r"starts?(?: at| from)?|starting(?: at| from)?|find the.*|sales tax|vat|alv|"
     r"suosituin|suositeltu|kuukausittain|vuosittain|beliebt|empfohlen|monatlich|jährlich|tilaa|aloita|osta)$",
     re.I)
 BUTTON = re.compile(r"^(?:get started|start|choose|book a call|contact|buy|sign up|subscribe|learn more|"
@@ -597,7 +598,8 @@ def _plan_name(lines: list[str], i: int, before: str) -> str | None:
             continue
         if not re.search(r"[A-Za-zÀ-ÿ]", c) or NAME_SKIP.match(c) or BUTTON.match(c):
             continue
-        return c
+        c = re.sub(r"\s+(?:at|from|for|only|just|starting|starts|ab|alk\.?|alkaen)$", "", c, flags=re.I).strip()
+        return c or None
     return None
 
 
@@ -825,11 +827,21 @@ class _Lane:
         self.unpriced: list[tuple[str, str, str]] = []   # (pricing url, provider, found_via): extract candidates
         self.stats = {"providers": 0, "priced": 0, "listicles": 0, "paid": 0, "registry": 0}
         self.similar_done = False
+        self.cc = _lang_for(need)[0]
+        self.score: dict[str, int] = {}          # registrable -> core words its page title names
+        words = re.findall(r"[a-zäöåüß]{4,}", " ".join([core_of(need)] + [str(v) for v in
+                                                       (cat.get("labels") or {}).values()]).lower())
+        self.stems = {w[:6] for w in words}
         from agora import longtail_store
         self.store = longtail_store
         self.terms = longtail_store.terms_of(" ".join([core_of(need), str(cat.get("label") or "")]))
 
     # ---- helpers
+    def about(self, text: str) -> int:
+        """How many of the need's core words (6-letter stems, taxonomy labels too) `text` names."""
+        low = (text or "").lower()
+        return sum(1 for st in self.stems if st in low)
+
     def left(self) -> float:
         return self.deadline - time.monotonic()
 
@@ -881,6 +893,8 @@ class _Lane:
         """Read one provider: home page -> pricing page -> plans (free) -> Offer(s)."""
         if self.stats["providers"] >= MAX_PROVIDERS or self.left() < 2.0:
             return
+        if self.cc and not self.is_local(home) and self.stats["providers"] >= MAX_PROVIDERS - LOCAL_RESERVE:
+            return               # the last slots are kept for providers in the asked-for country
         self.stats["providers"] += 1
         await self.put(self.ev("source", url=pricing_hint or home, domain=host(home), lane="longtail", via=via,
                                title=title, **({"from": origin} if origin else {})))
@@ -897,6 +911,8 @@ class _Lane:
                 o.raw["description"] = meta.get("description", "")
             self.stats["priced"] += 1
             self.strong.append((reg, home))
+            self.score[reg] = self.about(" ".join([meta.get("title", ""), meta.get("h1", ""),
+                                                   meta.get("description", "")]))
             for o in offers:
                 await self.put(o)
         else:
@@ -952,6 +968,9 @@ class _Lane:
         key = url.split("#")[0].rstrip("/")
         if key in self.mined or self.stats["listicles"] >= MAX_LISTICLES or self.left() < 3.0:
             return
+        if junk_domain(registrable(url)) or (title and not self.about(title)):
+            self.mined.add(key)      # 'refurbished vs new laptops' from a core lane is not about this need
+            return
         self.mined.add(key)
         self.stats["listicles"] += 1
         await self.put(self.ev("source", url=url, domain=host(url), lane="longtail", via="listicle", title=title,
@@ -971,7 +990,7 @@ class _Lane:
                 names, found = markdown_names_and_links(md)
             except Exception:
                 names, found = [], []
-        homes = provider_links(found, url)
+        homes = self.local_first(provider_links(found, url))
         by_name: dict[str, str] = {}
         for n in names:            # a heading's own outbound link beats a guessed domain
             for h in homes:
@@ -1018,8 +1037,17 @@ class _Lane:
                 await self.put(self.ev("error", where="longtail", message=f"search '{query}': {str(exc)[:160]}"))
             return []
 
+    def local_first(self, urls: list[Any], key: Any = lambda x: x) -> list[Any]:
+        """A place was asked ('bookkeeping service finland'): that country's own sites first (stable order)."""
+        if not self.cc:
+            return list(urls)
+        return sorted(urls, key=lambda x: not self.is_local(key(x)))
+
+    def is_local(self, url: str) -> bool:
+        return bool(self.cc) and (host(url).endswith("." + self.cc) or (self.cc == "gb" and host(url).endswith(".uk")))
+
     def take_results(self, results: list[dict[str, Any]], via: str, origin: str | None = None) -> None:
-        for r in results:
+        for r in self.local_first(results, key=lambda r: str(r.get("url") or "")):
             url = str(r.get("url") or "")
             if not url.startswith("http"):
                 continue
@@ -1039,7 +1067,7 @@ class _Lane:
         if self.similar_done or not self.strong:
             return
         self.similar_done = True
-        reg, home = self.strong[0]
+        reg, home = max(self.strong, key=lambda x: (self.score.get(x[0], 0), -self.strong.index(x)))
         results: list[dict[str, Any]] = []
         via = "exa"
         try:
@@ -1129,13 +1157,15 @@ class _Lane:
         res = await self.search(first[0], first[1], first[2])
         self.take_results(res, "search", origin=first[0])
         await self._settle(4.0)
-        if not self.strong:
-            second = next((x for x in plan if x[2] == "local"), None) or next((x for x in plan if x[2] == "listicle"),
-                                                                            None)
-            if second is not None:
-                res = await self.search(second[0], second[1], second[2])
-                self.take_results(res, "search", origin=second[0])
-                await self._settle(4.0)
+        # paid #2: the local-language query when a place was asked (its providers are what the person wants),
+        # else the listicle query when nothing is priced yet
+        second = next((x for x in plan if x[2] == "local"), None)
+        if second is None and not self.strong:
+            second = next((x for x in plan if x[2] == "listicle"), None)
+        if second is not None:
+            res = await self.search(second[0], second[1], second[2])
+            self.take_results(res, "search", origin=second[0])
+            await self._settle(4.0)
         await self.similar()
         await self._settle(5.0)
         if not self.strong or self.stats["priced"] < 3:

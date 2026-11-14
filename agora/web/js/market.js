@@ -79,7 +79,7 @@ function render() {
   const deeper = S.depth > 1 ? `<span class="mk-deep">${done ? 'deeper hunt' : 'reading deeper pages…'}</span>` : '';
   const canMore = done && !waitTimer;
   const btn = done || waitTimer
-    ? `<button type="button" class="mk-more btn sm" ${canMore ? '' : 'disabled'} aria-describedby="mk-note">${waitTimer ? 'waiting for Context.dev…' : 'Compare more'}</button>` : '';
+    ? `<button type="button" class="mk-more btn sm" ${canMore ? '' : 'disabled'} aria-describedby="mk-note" title="Run this search again, reading more pages on each marketplace">${waitTimer ? 'waiting…' : 'Compare more'}</button>` : '';
   const chips = m && m.sources && m.sources.length
     ? `<ul class="mk-chips" aria-label="Marketplaces: listings they have for this search, and how many we read">${m.sources.slice().sort((a, b) => (a.extra ? 1 : 0) - (b.extra ? 1 : 0) || (b.read || 0) - (a.read || 0)).map(chip).join('')}</ul>` : '';
   const key = [sizeLine, sc, deeper, btn, chips, note, noteKind].join('|');

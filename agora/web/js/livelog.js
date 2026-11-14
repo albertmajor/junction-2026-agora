@@ -126,6 +126,7 @@ function build(el) {
         <span class="ll-count"><span class="ll-cq"><b data-c="searches">0</b> <span data-w="searches">searches</span> · </span><b data-c="pages">0</b> <span data-w="pages">pages</span> · <b data-c="offers">0</b> <span data-w="offers">offers</span> · <b data-c="secs">0.0</b> s</span>
         <span class="ll-cd">${cdMark()}</span>
       </div>
+      <p class="ll-qs" aria-label="Web searches (Context.dev)" hidden></p>
       <ol class="ll-rows" aria-label="Pages being read"></ol>
     </div>
     <div class="ll-sum" hidden>
@@ -137,7 +138,7 @@ function build(el) {
     <div class="ll-log" hidden></div>`;
   els = {
     panel: el.querySelector('.ll-panel'), head: el.querySelector('.ll-head'), title: el.querySelector('.ll-title'),
-    list: el.querySelector('.ll-rows'), sum: el.querySelector('.ll-sum'), sumText: el.querySelector('.ll-sum-text'),
+    list: el.querySelector('.ll-rows'), qs: el.querySelector('.ll-qs'), sum: el.querySelector('.ll-sum'), sumText: el.querySelector('.ll-sum-text'),
     toggle: el.querySelector('.ll-toggle'), log: el.querySelector('.ll-log'), reel: el.querySelector('.ll-reel'),
     c: { pages: el.querySelector('[data-c=pages]'), offers: el.querySelector('[data-c=offers]'), secs: el.querySelector('[data-c=secs]'), searches: el.querySelector('[data-c=searches]') },
     w: { pages: el.querySelector('[data-w=pages]'), offers: el.querySelector('[data-w=offers]'), searches: el.querySelector('[data-w=searches]') },
@@ -201,6 +202,19 @@ function counts() {
 }
 // every web search the hunt ran (one row each), Context.dev's unless the lane says Exa
 function searchRows() { return [...rows.values()].filter(r => r.lane); }
+// the searches stay in view as a strip under the header (the rows below scroll with the reads)
+function paintQs() {
+  if (!els.qs) return;
+  const qs = searchRows();
+  els.qs.hidden = !qs.length;
+  const key = qs.map(r => r.key + ':' + r.n + ':' + r.state).join('|');
+  if (els.qs.dataset.k === key) return;
+  els.qs.dataset.k = key;
+  els.qs.innerHTML = '<span class="ll-qk">Context.dev search</span>' + qs.map(r =>
+    `<span class="ll-q" data-s="${esc(r.state)}" title="${esc((r.via && r.via[1] ? 'Context.dev web search' : 'Exa search') + ' · ' + r.laneName + ' lane')}">` +
+    `<svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M10 10l3.6 3.6"/></svg>` +
+    `“${esc(r.query || '')}” <b>${r.state === 'reading' && !r.n ? '…' : plural(r.n, 'page')}</b></span>`).join('');
+}
 function clockStart() { clockStop(); t0 = performance.now(); endS = null; clockTimer = setInterval(counts, 100); counts(); }
 function clockStop() { clearInterval(clockTimer); clockTimer = 0; }
 function seeT(d) { if (d && typeof d._t === 'number' && isFinite(d._t) && (lastT == null || d._t >= lastT)) { lastT = d._t; lastTWall = performance.now(); } }
@@ -343,6 +357,7 @@ function pageRow(d) {
 function onReset(d) {
   clearTimeout(collapseTimer); clockStop();
   rows = new Map(); vis = []; skips = []; pages = 0; budget = null; finished = false; stopped = false;
+  if (els.qs) { els.qs.hidden = true; els.qs.dataset.k = ''; els.qs.textContent = ''; }
   t0 = 0; shownS = 0; endS = null; lastT = null; logOpen = false;
   replay = !!(d && d.replay);
   els.list.innerHTML = ''; els.log.innerHTML = ''; els.log.hidden = true;
@@ -373,6 +388,7 @@ function onLane(l) {
     row.state = row.n ? 'done' : 'reading';
     if (row.el) paint(row); else promote(row);
   }
+  paintQs();
   counts();
 }
 function onSource(s) {
@@ -389,7 +405,7 @@ function onSource(s) {
   }
   // a page found by a search counts on that search's row (direct marketplace pages had no search)
   const lr = !s.direct ? (queryRow(s.query) || searchRows().find(r => r.laneName === s.lane) || null) : null;
-  if (lr) { lr.n++; lr.state = 'done'; paint(lr); }
+  if (lr) { lr.n++; lr.state = 'done'; paint(lr); paintQs(); }
   counts();
 }
 function onOffer(it) {

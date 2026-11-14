@@ -449,6 +449,7 @@ async def hunt(
     budget_s: float | None | bool = True,
     fresh: bool = False,
     hunt_id: str | None = None,
+    longtail: bool = True,
 ) -> AsyncIterator[Event]:
     """Run one hunt, yielding Events as they happen. Pass `result` to also collect the final objects.
 
@@ -794,7 +795,28 @@ async def hunt(
             await asyncio.gather(*pending, return_exceptions=True)
         await queue.put(None)
 
+    # 2b LONG TAIL (agora.longtail): providers no registry lists (designjoy.co & co). Its own small paid share
+    # (<= 3 Context.dev requests, only while the shared bucket has spare tokens), inside the hunt deadline; its
+    # offers go through accept() like any read, so after the provisional verdict they arrive as `late`.
+    lt_mod = _module("longtail") if longtail and discover is getattr(_module("discover"), "discover", None) else None
+    if lt_mod is not None and hasattr(lt_mod, "LISTICLES"):
+        lt_mod.LISTICLES.set([])        # discover hands the 'best X' articles it skips to the lane
+
+    async def longtail_lane() -> None:
+        try:
+            async for item in lt_mod.lane(need, deadline=deadline, seen_urls=seen):
+                if isinstance(item, Offer):
+                    await accept(item.url, item)
+                else:
+                    item.t_ms = int((time.monotonic() - t0) * 1000)
+                    out.events.append(item)
+                    await queue.put(item)
+        except Exception as exc:
+            await queue.put(ev("error", where="longtail", message=f"{type(exc).__name__}: {exc}"[:300]))
+
     producer = asyncio.create_task(produce())
+    if lt_mod is not None and hasattr(lt_mod, "lane"):
+        reads.add(asyncio.create_task(longtail_lane()))
     provisional: dict[str, Any] | None = None
     shown_cost: dict[str, str] = {}          # url -> what the provisional truecost event already showed
     moved_at: float | None = None            # last time the leaderboard changed (or the first offer landed)

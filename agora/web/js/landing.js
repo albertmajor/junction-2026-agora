@@ -9,11 +9,12 @@ const brand = () => core.BRAND || document.documentElement.dataset.brand || 'Ago
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// the three recorded live hunts: the pick's photo (or a monogram plate) and what the hunt read
+// the recorded live hunts: the pick's photo (or a monogram plate) and what the hunt read
 const RECORDED = {
   'sony-a7-iii-body': { img: '/web/assets/shelf/kamera-0.png', meta: '24 pages · 17 offers' },
   'iphone-15-128gb-used': { img: '/web/assets/shelf/iphone-15-0.png', meta: '11 pages · 6 offers' },
   'home-cleaning-helsinki-60m2': { svg: 'clean', meta: '13 pages · 10 offers', wide: true },
+  'city-bike-with-basket': { img: '/web/assets/shelf/rennrad-0.png', meta: '32 pages · 320 listings' },
 };
 const REC_ORDER = Object.keys(RECORDED);
 
@@ -65,7 +66,7 @@ function browseHtml() {
         ${head('01', 'Browse', 'Or start from something real.', 'ld-browse-h')}
         <p class="ld-sub">Real listings our hunts have read, at the price on their tag. Pick one and we hunt it across Europe, all in.</p>
       </header>
-      <p class="ld-note" role="status" hidden>This demo server runs offline, so it replays the three recorded live hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki). The other searches run live when a Context.dev key is set.</p>
+      <p class="ld-note" role="status" hidden>This demo server runs offline, so it replays the recorded live hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki, a city bike). The other searches run live when a Context.dev key is set.</p>
       <ul class="ld-grid" role="list"></ul>
     </div>
   </section>`;
@@ -145,7 +146,7 @@ function cdHtml() {
         <h2 class="ld-h" id="ld-cd-h">Powered by <span class="ld-cd-name"><img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="28" height="28" data-fb="sq">Context.dev</span>.</h2>
         <p class="ld-sub">Every page ${esc(brand())} reads goes through Context.dev: web search to find the shops, product extraction, structured JSON from listing pages, markdown scrapes of marketplace search results, and the brand logos you see in the live log. We spend it carefully: free JSON-LD first, paid reads where they matter.</p>
       </header>
-      <p class="ld-count ld-rv" aria-live="polite"><b>48</b> pages on <b>35</b> sites, read live in the three recorded hunts above: Context.dev where it pays, free JSON-LD where a shop already publishes it.</p>
+      <p class="ld-count ld-rv" aria-live="polite"><b>48</b> pages on <b>35</b> sites, read live in the recorded Sony, iPhone and cleaning hunts above: Context.dev where it pays, free JSON-LD where a shop already publishes it.</p>
       <ul class="ld-facts" role="list">
         ${CD_FACTS.map(([k, v], i) => `<li class="ld-rv" style="--d:${i * 60}ms"><b>${k}</b><span>${esc(v)}</span></li>`).join('')}
       </ul>

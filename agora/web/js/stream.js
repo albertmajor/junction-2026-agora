@@ -375,7 +375,7 @@ export async function startHunt(q) {
   S.phase = 'start';
   emit('reset', { q, slug: null, replay: false, empty: true });
   const order = nearest(q, list).map(r => r.slug);
-  emit('error', { kind: '404', message: 'Offline we have three recorded searches. Try one of these.',
+  emit('error', { kind: '404', message: `Offline we have ${list.length} recorded searches. Try one of these.`,
                   suggestions: order });
   return { error: '404', suggestions: order };
 }

@@ -1,17 +1,64 @@
 {
  "meta": {
-  "requests": 1053,
+  "requests": 2273,
   "seconds_last_run": 6,
   "counts": {
-   "verified_free": 44,
-   "search_found_unverified": 43,
-   "blocked": 37,
-   "no_search": 30
+   "search_found_unverified": 66,
+   "verified_free": 37,
+   "blocked": 51,
+   "no_search": 40
   },
-  "total": 154,
-  "updated": "2026-11-14T12:11:30+00:00"
+  "total": 194,
+  "updated": "2026-11-14T12:16:10+00:00"
  },
  "sources": [
+  {
+   "key": "1stdibs_com",
+   "name": "1stDibs",
+   "domain": "1stdibs.com",
+   "home": "https://www.1stdibs.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "home",
+    "furniture",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.1stdibs.com/search/?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.1stdibs.com/search/?q={q}"
+   ],
+   "test_query": "philips",
+   "tried": 7,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:19+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Home and design"
+  },
   {
    "key": "2dehands_be",
    "name": "2dehands / 2ememain",
@@ -43,8 +90,8 @@
     "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/a168768878-lego-minifiguur-ninjago-42-lego-ninjago-minifigures",
     "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/m2442186837-lego-set-13-dozen-compleet-met-instructies"
    ],
-   "links": 17,
-   "prices": 74,
+   "links": 16,
+   "prices": 71,
    "itemlist": false,
    "jsonld_products": 1,
    "embedded_prices": 0,
@@ -52,12 +99,12 @@
    "pagination": {
     "path_suffix": "/p/{page}/"
    },
-   "yield": 0.818,
+   "yield": 0.635,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:47+00:00",
+   "checked_at": "2026-11-14T12:12:00+00:00",
    "seed": "secondhand_xlsx",
    "market": "Belgium",
    "group": "Western Europe"
@@ -102,10 +149,56 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:46+00:00",
+   "checked_at": "2026-11-14T12:14:15+00:00",
    "seed": "secondhand_xlsx",
    "market": "Moldova",
    "group": "Eastern Europe"
+  },
+  {
+   "key": "abebooks_com",
+   "name": "AbeBooks",
+   "domain": "abebooks.com",
+   "home": "https://www.abebooks.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "search_found_unverified",
+   "reason": "search form posts (no GET URL)",
+   "template": "https://www.abebooks.com/servlet/SearchResults?sts=t&searchprefs=on&kn={q}",
+   "method": "post",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.abebooks.com/servlet/SearchResults?sts=t&cm_sp=SearchF-_-home-_-Results&searchprefs=on&an={q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:46+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Books and collectibles"
   },
   {
    "key": "adverts_ie",
@@ -145,7 +238,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:35+00:00",
+   "checked_at": "2026-11-14T12:11:49+00:00",
    "seed": "secondhand_xlsx",
    "market": "Ireland",
    "group": "Western Europe"
@@ -183,12 +276,12 @@
    "embedded_prices": 1,
    "next_data": false,
    "pagination": {},
-   "yield": 0.05,
+   "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:11+00:00",
+   "checked_at": "2026-11-14T12:13:41+00:00",
    "seed": "secondhand_xlsx",
    "market": "Cyprus",
    "group": "Southern Europe"
@@ -230,12 +323,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.708,
+   "yield": 0.658,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:44+00:00",
+   "checked_at": "2026-11-14T12:13:04+00:00",
    "seed": "secondhand_xlsx",
    "market": "Lithuania",
    "group": "Baltics"
@@ -277,12 +370,12 @@
    "embedded_prices": 60,
    "next_data": false,
    "pagination": {},
-   "yield": 1.0,
+   "yield": 0.996,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:05+00:00",
+   "checked_at": "2026-11-14T12:12:21+00:00",
    "seed": "secondhand_xlsx",
    "market": "Poland",
    "group": "Central Europe"
@@ -326,12 +419,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.9,
+   "yield": 0.883,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:28+00:00",
+   "checked_at": "2026-11-14T12:13:57+00:00",
    "seed": "secondhand_xlsx",
    "market": "Bulgaria",
    "group": "Southeast Europe"
@@ -371,18 +464,18 @@
     "/Samsung-Android-Smartphone-Infinity-V-Display-Awesome-Black/dp/B09ZF8QDQQ/ref=sr_1_21_so_CELLULAR_PHONE"
    ],
    "links": 49,
-   "prices": 106,
+   "prices": 104,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.735,
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:26+00:00",
+   "checked_at": "2026-11-14T12:14:57+00:00",
    "seed": "secondhand_xlsx",
    "market": "UK, selected European markets",
    "group": "Refurbished and used tech"
@@ -420,18 +513,18 @@
     "/Samsung-Android-Smartphone-Infinity-V-Display-Awesome-Black/dp/B09ZF8QDQQ/ref=sr_1_21_so_CELLULAR_PHONE"
    ],
    "links": 49,
-   "prices": 105,
+   "prices": 104,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.735,
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:23+00:00",
+   "checked_at": "2026-11-14T12:14:54+00:00",
    "seed": "secondhand_xlsx",
    "market": "UK, selected European markets",
    "group": "Refurbished and used tech"
@@ -521,12 +614,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.378,
+   "yield": 0.025,
    "robots_disallowed": [],
    "test_query": "adidas",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:38+00:00",
+   "checked_at": "2026-11-14T12:13:00+00:00",
    "seed": "secondhand_xlsx",
    "market": "Latvia",
    "group": "Baltics"
@@ -571,7 +664,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:02+00:00",
+   "checked_at": "2026-11-14T12:12:18+00:00",
    "seed": "secondhand_xlsx",
    "market": "Switzerland",
    "group": "Central Europe"
@@ -614,10 +707,55 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:12+00:00",
+   "checked_at": "2026-11-14T12:13:42+00:00",
    "seed": "secondhand_xlsx",
    "market": "Cyprus",
    "group": "Southern Europe"
+  },
+  {
+   "key": "apple_com",
+   "name": "Apple Certified Refurbished",
+   "domain": "apple.com",
+   "home": "https://www.apple.com/uk/shop/refurbished",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used",
+    "refurb"
+   ],
+   "categories": [
+    "electronics",
+    "computers"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:14:58+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Refurbished and used tech"
   },
   {
    "key": "asgoodasnew_de",
@@ -659,12 +797,12 @@
    "yield": 0.0,
    "robots_disallowed": [
     "https://asgoodasnew.de//index.php?cl=search&searchparam={q}",
-    "https://asgoodasnew.de/index.php?force_sid=ec4e5jeqinemcjs3jr5sksigt8&sid=ec4e5jeqinemcjs3jr5sksigt8&lang=0&cl=search&searchparam={q}"
+    "https://asgoodasnew.de/index.php?force_sid=icca7iqc6oioecea15kr2v5nbt&sid=icca7iqc6oioecea15kr2v5nbt&lang=0&cl=search&searchparam={q}"
    ],
    "test_query": "samsung",
    "tried": 3,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:15+00:00",
+   "checked_at": "2026-11-14T12:14:45+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany, selected European markets",
    "group": "Refurbished and used tech"
@@ -708,12 +846,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.6,
+   "yield": 0.5,
    "robots_disallowed": [],
    "test_query": "philips",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:27+00:00",
+   "checked_at": "2026-11-14T12:11:39+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Multi-market"
@@ -760,15 +898,59 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.67,
+   "yield": 0.675,
    "robots_disallowed": [],
    "test_query": "pokemon",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:08+00:00",
+   "checked_at": "2026-11-14T12:12:25+00:00",
    "seed": "secondhand_xlsx",
    "market": "Czechia, Slovakia",
    "group": "Central Europe"
+  },
+  {
+   "key": "autoscout24_com",
+   "name": "AutoScout24",
+   "domain": "autoscout24.com",
+   "home": "https://www.autoscout24.com/lst/used-cars",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:00+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Vehicles"
   },
   {
    "key": "avito_ru",
@@ -790,7 +972,7 @@
    "kind": "classifieds",
    "status": "blocked",
    "reason": "bot wall on the results page",
-   "template": "https://www.avito.ru/search?query={q}",
+   "template": "https://www.avito.ru/search?q={q}",
    "method": "get",
    "template_via": "pattern",
    "free_fetch": false,
@@ -808,7 +990,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:51+00:00",
+   "checked_at": "2026-11-14T12:14:19+00:00",
    "seed": "secondhand_xlsx",
    "market": "Russia",
    "group": "Eastern Europe"
@@ -854,7 +1036,7 @@
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:05+00:00",
+   "checked_at": "2026-11-14T12:14:36+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Refurbished and used tech"
@@ -943,7 +1125,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:55+00:00",
+   "checked_at": "2026-11-14T12:13:18+00:00",
    "seed": "secondhand_xlsx",
    "market": "Italy",
    "group": "Southern Europe"
@@ -987,12 +1169,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.6,
+   "yield": 0.508,
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:49+00:00",
+   "checked_at": "2026-11-14T12:14:18+00:00",
    "seed": "secondhand_xlsx",
    "market": "Belarus",
    "group": "Eastern Europe"
@@ -1041,7 +1223,7 @@
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:26+00:00",
+   "checked_at": "2026-11-14T12:13:56+00:00",
    "seed": "secondhand_xlsx",
    "market": "Bulgaria",
    "group": "Southeast Europe"
@@ -1083,12 +1265,12 @@
    "embedded_prices": 32,
    "next_data": false,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.869,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:12+00:00",
+   "checked_at": "2026-11-14T12:12:29+00:00",
    "seed": "secondhand_xlsx",
    "market": "Slovakia",
    "group": "Central Europe"
@@ -1131,7 +1313,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:10+00:00",
+   "checked_at": "2026-11-14T12:13:40+00:00",
    "seed": "secondhand_xlsx",
    "market": "Cyprus",
    "group": "Southern Europe"
@@ -1174,7 +1356,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:05+00:00",
+   "checked_at": "2026-11-14T12:14:35+00:00",
    "seed": "secondhand_xlsx",
    "market": "Azerbaijan",
    "group": "Turkey and Caucasus"
@@ -1216,12 +1398,12 @@
    "robots_disallowed": [
     "https://www.bazos.cz/search.php?hledat={q}",
     "https://www.bazos.cz/search.php?hledat={q}&rubriky=www&hlokalita=&humkreis=25&cenaod=&cenado=&Submit=Hledat&kitx=ano&a=1",
-    "https://www.bazos.cz/search.php?order=&kitx=ano&hledat={q}"
+    "https://www.bazos.cz/search.php?kitx=ano&hledat={q}"
    ],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:07+00:00",
+   "checked_at": "2026-11-14T12:12:23+00:00",
    "seed": "secondhand_xlsx",
    "market": "Czechia",
    "group": "Central Europe"
@@ -1263,15 +1445,60 @@
    "robots_disallowed": [
     "http://www.bazos.sk/search.php?hledat={q}",
     "https://www.bazos.sk/search.php?hledat={q}&rubriky=www&hlokalita=&humkreis=25&cenaod=&cenado=&Submit=H%C4%BEada%C5%A5&kitx=ano&a=1",
-    "https://www.bazos.sk/search.php?order=&kitx=ano&hledat={q}"
+    "https://www.bazos.sk/search.php?kitx=ano&hledat={q}"
    ],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:11+00:00",
+   "checked_at": "2026-11-14T12:12:27+00:00",
    "seed": "secondhand_xlsx",
    "market": "Slovakia",
    "group": "Central Europe"
+  },
+  {
+   "key": "beebs_app",
+   "name": "Beebs by Kiabi",
+   "domain": "beebs.app",
+   "home": "https://www.beebs.app/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "general"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.beebs.app/recherche?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:14+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France",
+   "group": "Fashion and family"
   },
   {
    "key": "bland_is",
@@ -1312,12 +1539,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.79,
+   "yield": 0.8,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:33+00:00",
+   "checked_at": "2026-11-14T12:12:54+00:00",
    "seed": "secondhand_xlsx",
    "market": "Iceland",
    "group": "Nordics"
@@ -1366,7 +1593,7 @@
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:24+00:00",
+   "checked_at": "2026-11-14T12:12:42+00:00",
    "seed": "secondhand_xlsx+extra",
    "market": "Sweden",
    "group": "Nordics"
@@ -1459,10 +1686,66 @@
    "test_query": "lego",
    "tried": 5,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:13+00:00",
+   "checked_at": "2026-11-14T12:13:45+00:00",
    "seed": "secondhand_xlsx",
    "market": "Slovenia",
    "group": "Southeast Europe"
+  },
+  {
+   "key": "bookbot_com",
+   "name": "Bookbot",
+   "domain": "bookbot.com",
+   "home": "https://bookbot.com/",
+   "countries": [
+    "cz",
+    "sk",
+    "eu"
+   ],
+   "languages": [
+    "cs",
+    "sk",
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "collectibles"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://bookbot.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": "^/g/\\d+(?:[/?#]|$)",
+   "sample": [
+    "/g/133959",
+    "/g/1671877",
+    "/g/221615"
+   ],
+   "links": 48,
+   "prices": 67,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": true,
+   "pagination": {
+    "path_suffix": "/page/{page}"
+   },
+   "yield": 0.8,
+   "robots_disallowed": [
+    "https://bookbot.com/p/q/{q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:52+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Czechia, Slovakia, selected European markets",
+   "group": "Books and collectibles"
   },
   {
    "key": "bookis_com_no",
@@ -1497,12 +1780,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.05,
+   "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "harry potter",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:29+00:00",
+   "checked_at": "2026-11-14T12:12:49+00:00",
    "seed": "secondhand_xlsx",
    "market": "Norway",
    "group": "Nordics"
@@ -1550,10 +1833,194 @@
    "test_query": "seiko",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:26+00:00",
+   "checked_at": "2026-11-14T12:12:47+00:00",
    "seed": "secondhand_xlsx",
    "market": "Sweden, Finland",
    "group": "Nordics"
+  },
+  {
+   "key": "buycycle_com",
+   "name": "buycycle",
+   "domain": "buycycle.com",
+   "home": "https://buycycle.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "bikes",
+    "sports",
+    "outdoor",
+    "music"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://buycycle.com/fi-fi/shop/search/{q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "shimano",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:21+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Bikes and sports"
+  },
+  {
+   "key": "campsider_com",
+   "name": "Campsider",
+   "domain": "campsider.com",
+   "home": "https://campsider.com/",
+   "countries": [
+    "fr",
+    "eu"
+   ],
+   "languages": [
+    "fr",
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "bikes",
+    "sports",
+    "outdoor"
+   ],
+   "kind": "specialist",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "shimano",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:33+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France, selected European markets",
+   "group": "Bikes and sports"
+  },
+  {
+   "key": "cardmarket_com_en",
+   "name": "Cardmarket",
+   "domain": "cardmarket.com",
+   "home": "https://www.cardmarket.com/en",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.cardmarket.com/en/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:55+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Books and collectibles"
+  },
+  {
+   "key": "cashconverters_co_uk",
+   "name": "Cash Converters UK",
+   "domain": "cashconverters.co.uk",
+   "home": "https://www.cashconverters.co.uk/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used",
+    "refurb"
+   ],
+   "categories": [
+    "electronics",
+    "computers"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.cashconverters.co.uk/search-results?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.cashconverters.co.uk/search-results?query={q}"
+   ],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:14:59+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "United Kingdom",
+   "group": "Refurbished and used tech"
   },
   {
    "key": "cashconverters_es",
@@ -1597,7 +2064,7 @@
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:47+00:00",
+   "checked_at": "2026-11-14T12:13:08+00:00",
    "seed": "secondhand_xlsx",
    "market": "Spain",
    "group": "Southern Europe"
@@ -1643,10 +2110,103 @@
    "test_query": "seiko",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:26+00:00",
+   "checked_at": "2026-11-14T12:11:39+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Multi-market"
+  },
+  {
+   "key": "certideal_com",
+   "name": "CertiDeal",
+   "domain": "certideal.com",
+   "home": "https://certideal.com/iphone-reconditionnes-82",
+   "countries": [
+    "fr",
+    "eu"
+   ],
+   "languages": [
+    "fr",
+    "en"
+   ],
+   "lanes": [
+    "used",
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "electronics",
+    "computers"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:14:47+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France, selected European markets",
+   "group": "Refurbished and used tech"
+  },
+  {
+   "key": "chrono24_com",
+   "name": "Chrono24",
+   "domain": "chrono24.com",
+   "home": "https://www.chrono24.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "watches",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.chrono24.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:57+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Books and collectibles"
   },
   {
    "key": "clevertronic_de",
@@ -1690,12 +2250,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.61,
+   "yield": 0.5,
    "robots_disallowed": [],
    "test_query": "iphone",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:16+00:00",
+   "checked_at": "2026-11-14T12:14:47+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany",
    "group": "Refurbished and used tech"
@@ -1718,31 +2278,31 @@
     "general"
    ],
    "kind": "classifieds",
-   "status": "verified_free",
-   "reason": null,
-   "template": "https://www.clickmonaco.com/en/ads/recherche?q={q}",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.clickmonaco.com/recherche?q={q}",
    "method": "get",
    "template_via": "pattern",
-   "free_fetch": true,
-   "listing": "^/en/ad/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "free_fetch": false,
+   "listing": "^/fr/annonces/offres/[^/?#]+(?:[/?#]|$)",
    "sample": [
-    "/en/ad/France-Eze-Real-Estate-Rentals-Cap-d-Ail-ideal-salaries-Monaco-3-km-de-Monaco-2-pieces-meuble-vue-mer-20270",
-    "/en/ad/France-Eze-Real-Estate-Rentals-Cap-d-Ail-ideal-salaries-Monaco-3-km-de-Monaco-2-pieces-meuble-vue-mer-20271",
-    "/en/ad/Monaco-Fontvieille-Cars-Jeep-Wrangler-RUBICON-392-Final-Edition-6-4L-Hemi-4-doors-20376"
+    "/fr/annonces/offres/Accessoires-Bagagerie",
+    "/fr/annonces/offres/Accessoires-Bagagerie-De-Luxe",
+    "/fr/annonces/offres/Accessoires-Chiens"
    ],
-   "links": 5,
-   "prices": 37,
+   "links": 37,
+   "prices": 0,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.487,
+   "yield": 0.5,
    "robots_disallowed": [],
    "test_query": "lego",
-   "tried": 2,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:00+00:00",
+   "checked_at": "2026-11-14T12:13:30+00:00",
    "seed": "secondhand_xlsx",
    "market": "Monaco",
    "group": "Southern Europe"
@@ -1828,12 +2388,12 @@
    "embedded_prices": 0,
    "next_data": true,
    "pagination": {},
-   "yield": 0.078,
+   "yield": 0.025,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:53+00:00",
+   "checked_at": "2026-11-14T12:13:14+00:00",
    "seed": "secondhand_xlsx",
    "market": "Portugal",
    "group": "Southern Europe"
@@ -1878,7 +2438,7 @@
    "test_query": "lego",
    "tried": 5,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:39+00:00",
+   "checked_at": "2026-11-14T12:13:00+00:00",
    "seed": "secondhand_xlsx",
    "market": "Latvia",
    "group": "Baltics"
@@ -1909,7 +2469,7 @@
    "free_fetch": true,
    "listing": "^/recommerce/forsale/item/\\d+(?:[/?#]|$)",
    "sample": [
-    "/recommerce/forsale/item/26632975",
+    "/recommerce/forsale/item/26470116",
     "/recommerce/forsale/item/26742712",
     "/recommerce/forsale/item/26743170"
    ],
@@ -1927,10 +2487,194 @@
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:29+00:00",
+   "checked_at": "2026-11-14T12:12:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "Denmark",
    "group": "Nordics"
+  },
+  {
+   "key": "decathlon_fr_occasion",
+   "name": "Decathlon Second Life",
+   "domain": "decathlon.fr",
+   "home": "https://www.decathlon.fr/occasion",
+   "countries": [
+    "fr",
+    "be"
+   ],
+   "languages": [
+    "fr",
+    "nl"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "bikes",
+    "sports",
+    "outdoor",
+    "general"
+   ],
+   "kind": "resale_retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.decathlon.fr/occasion/recherche?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "shimano",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:32+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France, Belgium and selected markets",
+   "group": "Bikes and sports"
+  },
+  {
+   "key": "dell_com",
+   "name": "Dell Outlet",
+   "domain": "dell.com",
+   "home": "https://www.dell.com/en-gb/shop/lp/outlet",
+   "countries": [
+    "gb",
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used",
+    "refurb"
+   ],
+   "categories": [
+    "electronics",
+    "computers"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:14:59+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "UK, selected European markets",
+   "group": "Refurbished and used tech"
+  },
+  {
+   "key": "depop_com",
+   "name": "Depop",
+   "domain": "depop.com",
+   "home": "https://www.depop.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.depop.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:00+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Fashion and family"
+  },
+  {
+   "key": "discogs_com_sell_list",
+   "name": "Discogs",
+   "domain": "discogs.com",
+   "home": "https://www.discogs.com/sell/list",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "media",
+    "music",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.discogs.com/sell/list/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:53+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Books and collectibles"
   },
   {
    "key": "dolap_com",
@@ -1970,7 +2714,7 @@
    "test_query": "adidas",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:59+00:00",
+   "checked_at": "2026-11-14T12:14:28+00:00",
    "seed": "secondhand_xlsx",
    "market": "Turkey",
    "group": "Turkey and Caucasus"
@@ -2015,7 +2759,7 @@
    "test_query": "volkswagen",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:37+00:00",
+   "checked_at": "2026-11-14T12:11:49+00:00",
    "seed": "secondhand_xlsx",
    "market": "Ireland",
    "group": "Western Europe"
@@ -2058,12 +2802,12 @@
    "yield": 0.0,
    "robots_disallowed": [
     "https://bons-plans.easycash.fr/catalog/search?q={q}",
-    "https://bons-plans.easycash.fr/catalog/search?q=&searchText={q}"
+    "https://bons-plans.easycash.fr/catalog/search?searchText={q}"
    ],
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:42+00:00",
+   "checked_at": "2026-11-14T12:11:54+00:00",
    "seed": "secondhand_xlsx",
    "market": "France",
    "group": "Western Europe"
@@ -2106,7 +2850,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:21+00:00",
+   "checked_at": "2026-11-14T12:11:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Multi-market"
@@ -2152,7 +2896,7 @@
    "test_query": "adidas",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:24+00:00",
+   "checked_at": "2026-11-14T12:11:36+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Multi-market"
@@ -2195,7 +2939,7 @@
    "test_query": "lego",
    "tried": 0,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:21+00:00",
+   "checked_at": "2026-11-14T12:11:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Multi-market"
@@ -2228,12 +2972,12 @@
    "free_fetch": true,
    "listing": "^/recommerce/forsale/item/\\d+(?:[/?#]|$)",
    "sample": [
-    "/recommerce/forsale/item/332877907",
-    "/recommerce/forsale/item/338628750",
-    "/recommerce/forsale/item/339444465"
+    "/recommerce/forsale/item/327493711",
+    "/recommerce/forsale/item/357800393",
+    "/recommerce/forsale/item/380698007"
    ],
    "links": 54,
-   "prices": 48,
+   "prices": 54,
    "itemlist": true,
    "jsonld_products": 53,
    "embedded_prices": 53,
@@ -2241,12 +2985,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 1.0,
+   "yield": 0.998,
    "robots_disallowed": [],
-   "test_query": "volkswagen",
+   "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:28+00:00",
+   "checked_at": "2026-11-14T12:12:48+00:00",
    "seed": "secondhand_xlsx+secondhand_xlsx",
    "market": "Norway",
    "group": "Nordics"
@@ -2295,7 +3039,7 @@
    "test_query": "harry potter",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:40+00:00",
+   "checked_at": "2026-11-14T12:11:52+00:00",
    "seed": "secondhand_xlsx+extra",
    "market": "France",
    "group": "Western Europe"
@@ -2338,7 +3082,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:34+00:00",
+   "checked_at": "2026-11-14T12:11:46+00:00",
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Western Europe"
@@ -2381,7 +3125,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:34+00:00",
+   "checked_at": "2026-11-14T12:11:47+00:00",
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Western Europe"
@@ -2424,7 +3168,7 @@
    "test_query": "adidas",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:59+00:00",
+   "checked_at": "2026-11-14T12:14:30+00:00",
    "seed": "secondhand_xlsx",
    "market": "Turkey",
    "group": "Turkey and Caucasus"
@@ -2477,6 +3221,53 @@
    "seed": "extra"
   },
   {
+   "key": "grailed_com",
+   "name": "Grailed",
+   "domain": "grailed.com",
+   "home": "https://www.grailed.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "luxury",
+    "kids",
+    "home",
+    "furniture"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.grailed.com/?s={q}&post_type=product",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 5,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:05+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Fashion and family"
+  },
+  {
    "key": "guloggratis_dk",
    "name": "GulogGratis",
    "domain": "guloggratis.dk",
@@ -2496,29 +3287,29 @@
    "kind": "classifieds",
    "status": "verified_free",
    "reason": null,
-   "template": "https://www.guloggratis.dk/?term={q}",
+   "template": "https://www.guloggratis.dk/s?k={q}",
    "method": "get",
-   "template_via": "form",
+   "template_via": "pattern",
    "free_fetch": true,
    "listing": "^/annonce/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
-    "/annonce/18e1f3cd-7ab9-403b-8966-d1f1b40134a9/6-uger-blandings-hvalpe",
-    "/annonce/26756920-76da-4947-93b3-cda2b2d58c1c/new-works-sofabord",
-    "/annonce/31ed3fe8-5498-475a-97e8-64142a8a8f1c/soedeste-9-hundehvalpe-klar-til-jul"
+    "/annonce/054c2b92-8aa7-49f2-b5c5-952f86a0cde2/skindjakke-til-herre",
+    "/annonce/0efd64bc-b056-4219-9f23-28c1dac70dfe/ualmindelig-flot-serveringsbakke",
+    "/annonce/1092e2fd-cd70-44a8-aa3e-0e65a5329521/muldvarmen-der-ville-vide-lort-paa-dens-hoved-bamse"
    ],
-   "links": 9,
-   "prices": 13,
-   "itemlist": false,
-   "jsonld_products": 0,
-   "embedded_prices": 1,
+   "links": 45,
+   "prices": 86,
+   "itemlist": true,
+   "jsonld_products": 57,
+   "embedded_prices": 82,
    "next_data": false,
    "pagination": {},
-   "yield": 0.492,
+   "yield": 0.9,
    "robots_disallowed": [],
    "test_query": "lego",
-   "tried": 1,
+   "tried": 6,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:31+00:00",
+   "checked_at": "2026-11-14T12:12:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "Denmark",
    "group": "Nordics"
@@ -2563,7 +3354,7 @@
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:30+00:00",
+   "checked_at": "2026-11-14T12:11:42+00:00",
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Western Europe"
@@ -2606,7 +3397,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:28+00:00",
+   "checked_at": "2026-11-14T12:13:59+00:00",
    "seed": "secondhand_xlsx",
    "market": "Serbia",
    "group": "Southeast Europe"
@@ -2630,27 +3421,31 @@
     "computers"
    ],
    "kind": "classifieds",
-   "status": "no_search",
-   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
-   "template": null,
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://hardverapro.hu/aprok/keres.php?stext={q}",
    "method": "get",
-   "template_via": null,
+   "template_via": "form",
    "free_fetch": false,
-   "listing": null,
-   "sample": [],
-   "links": 0,
-   "prices": 0,
+   "listing": "^/aprok/hirdeto/rudilicenc/index\\.html/?\\?(?:.*&)?uadid=",
+   "sample": [
+    "/aprok/hirdeto/rudilicenc/index.html?uadid=4137223",
+    "/aprok/hirdeto/rudilicenc/index.html?uadid=5099694",
+    "/aprok/hirdeto/rudilicenc/index.html?uadid=5327060"
+   ],
+   "links": 7,
+   "prices": 190,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.0,
+   "yield": 0.28,
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:18+00:00",
+   "checked_at": "2026-11-14T12:12:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Hungary",
    "group": "Central Europe"
@@ -2716,12 +3511,12 @@
     "general"
    ],
    "kind": "resale_retailer",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
    "template": "https://www.hetgoed.nl/?s={q}",
    "method": "get",
    "template_via": "searchaction",
-   "free_fetch": true,
+   "free_fetch": false,
    "listing": "^/verhalen/[^/?#]+(?:[/?#]|$)",
    "sample": [
     "/verhalen/generaties-kringloopgeluk",
@@ -2735,12 +3530,12 @@
    "embedded_prices": 0,
    "next_data": true,
    "pagination": {},
-   "yield": 0.515,
+   "yield": 0.165,
    "robots_disallowed": [],
    "test_query": "lego",
-   "tried": 1,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:49+00:00",
+   "checked_at": "2026-11-14T12:12:03+00:00",
    "seed": "secondhand_xlsx",
    "market": "Netherlands",
    "group": "Western Europe"
@@ -2771,23 +3566,23 @@
    "free_fetch": true,
    "listing": "^/i/[^/?#]*\\d{3,}[^/?#]*\\.htm(?:[/?#]|$)",
    "sample": [
+    "/i/42614-friends-vintage-modegeschaeft-126043259.htm",
     "/i/71811-lego-ninjago-arin-s-ninja-off-road-buggy-130172190.htm",
-    "/i/75372-lego-star-wars-clone-trooper-battle-droid-battle-pack-130363449.htm",
-    "/i/essbar-ninjago-lego-tortenaufleger-torte-tortenbild-zuckerbild-2-112223780.htm"
+    "/i/75372-lego-star-wars-clone-trooper-battle-droid-battle-pack-130363449.htm"
    ],
    "links": 48,
-   "prices": 114,
+   "prices": 110,
    "itemlist": false,
    "jsonld_products": 48,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.898,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:59+00:00",
+   "checked_at": "2026-11-14T12:12:15+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany",
    "group": "Central Europe"
@@ -2811,19 +3606,19 @@
     "general"
    ],
    "kind": "marketplace",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
    "template": "https://www.huuto.net/haku?query={q}",
    "method": "get",
    "template_via": "pattern",
-   "free_fetch": true,
+   "free_fetch": false,
    "listing": "^/kohteet/[^/?#]+/\\d+(?:[/?#]|$)",
    "sample": [
     "/kohteet/asevelimerkki-ja-matkailumerkki/654806277",
     "/kohteet/auk-5-tykiston-aliupseerikurssi-risti/654855758",
     "/kohteet/baromaster-seinasaaasema/654643074"
    ],
-   "links": 13,
+   "links": 14,
    "prices": 25,
    "itemlist": false,
    "jsonld_products": 0,
@@ -2832,15 +3627,15 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.708,
+   "yield": 0.65,
    "robots_disallowed": [
     "https://www.huuto.net/haku?q={q}",
     "https://www.huuto.net/?q={q}"
    ],
    "test_query": "lego",
-   "tried": 1,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:19+00:00",
+   "checked_at": "2026-11-14T12:12:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Finland",
    "group": "Nordics"
@@ -2866,12 +3661,12 @@
     "general"
    ],
    "kind": "auction",
-   "status": "verified_free",
-   "reason": null,
-   "template": "https://huutokaupat.com/haku?q={q}",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://huutokaupat.com/haku?query={q}",
    "method": "get",
    "template_via": "pattern",
-   "free_fetch": true,
+   "free_fetch": false,
    "listing": "^/kohde/\\d+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
     "/kohde/5987270/ylojarvi-aku-pro-markkinoiden-jarein-kuomuperakarry-350-pro",
@@ -2887,12 +3682,12 @@
    "pagination": {
     "param": "sivu"
    },
-   "yield": 0.9,
+   "yield": 0.805,
    "robots_disallowed": [],
    "test_query": "volkswagen",
-   "tried": 1,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:21+00:00",
+   "checked_at": "2026-11-14T12:12:40+00:00",
    "seed": "secondhand_xlsx",
    "market": "Finland",
    "group": "Nordics"
@@ -2941,7 +3736,7 @@
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:10+00:00",
+   "checked_at": "2026-11-14T12:12:26+00:00",
    "seed": "secondhand_xlsx",
    "market": "Czechia",
    "group": "Central Europe"
@@ -3075,7 +3870,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:19+00:00",
+   "checked_at": "2026-11-14T12:13:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "Croatia",
    "group": "Southeast Europe"
@@ -3124,7 +3919,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:14+00:00",
+   "checked_at": "2026-11-14T12:12:31+00:00",
    "seed": "secondhand_xlsx",
    "market": "Hungary",
    "group": "Central Europe"
@@ -3151,12 +3946,12 @@
     "general"
    ],
    "kind": "classifieds",
-   "status": "verified_free",
-   "reason": null,
-   "template": "https://jumblego.com/?q={q}",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://jumblego.com/recherche?q={q}",
    "method": "get",
-   "template_via": "form",
-   "free_fetch": true,
+   "template_via": "searchaction",
+   "free_fetch": false,
    "listing": "^/categorie/services/?\\?(?:.*&)?sub=",
    "sample": [
     "/categorie/services?sub=artistes-musiciens",
@@ -3164,21 +3959,73 @@
     "/categorie/services?sub=baby-sitting"
    ],
    "links": 12,
-   "prices": 24,
+   "prices": 2,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.68,
+   "yield": 0.4,
    "robots_disallowed": [],
    "test_query": "lego",
-   "tried": 2,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:53+00:00",
+   "checked_at": "2026-11-14T12:12:10+00:00",
    "seed": "secondhand_xlsx",
    "market": "Luxembourg and nearby border regions",
    "group": "Western Europe"
+  },
+  {
+   "key": "kamerastore_com_en_eu",
+   "name": "Kamerastore",
+   "domain": "kamerastore.com",
+   "home": "https://kamerastore.com/en-eu/",
+   "countries": [
+    "fi",
+    "eu"
+   ],
+   "languages": [
+    "fi",
+    "sv",
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "media",
+    "music",
+    "cameras"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "results drawn by JavaScript (prices in app state)",
+   "template": "https://kamerastore.com/en-eu/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": "^/en\\-eu/collections/[^/?#]+(?:[/?#]|$)",
+   "sample": [
+    "/en-eu/collections/35mm-b-w-film",
+    "/en-eu/collections/35mm-color-film",
+    "/en-eu/collections/35mm-film-cameras"
+   ],
+   "links": 28,
+   "prices": 14,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 6,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.5,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:35+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Finland, international shipping",
+   "group": "Cameras and music gear"
   },
   {
    "key": "kauppa_kierratyskeskus_fi",
@@ -3222,10 +4069,55 @@
    "test_query": "adidas",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:23+00:00",
+   "checked_at": "2026-11-14T12:12:41+00:00",
    "seed": "secondhand_xlsx",
    "market": "Finland",
    "group": "Nordics"
+  },
+  {
+   "key": "kidkanai_fr",
+   "name": "KidKanaï",
+   "domain": "kidkanai.fr",
+   "home": "https://www.kidkanai.fr/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "music"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "unreachable",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 0,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:15+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France",
+   "group": "Fashion and family"
   },
   {
    "key": "kidstaff_com_ua",
@@ -3269,7 +4161,7 @@
    "test_query": "adidas",
    "tried": 0,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:46+00:00",
+   "checked_at": "2026-11-14T12:14:14+00:00",
    "seed": "secondhand_xlsx",
    "market": "Ukraine",
    "group": "Eastern Europe"
@@ -3293,12 +4185,12 @@
     "general"
    ],
    "kind": "auction",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
    "template": "https://kiertonet.fi/kaikki?haku={q}",
    "method": "get",
    "template_via": "form",
-   "free_fetch": true,
+   "free_fetch": false,
    "listing": "^/huutokaupat/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
     "/huutokaupat/heikki-soras-rst-vaunu-nro-574-tila-s21-165-256027",
@@ -3312,12 +4204,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.525,
+   "yield": 0.5,
    "robots_disallowed": [],
    "test_query": "lego",
-   "tried": 1,
+   "tried": 3,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:21+00:00",
+   "checked_at": "2026-11-14T12:12:37+00:00",
    "seed": "secondhand_xlsx",
    "market": "Finland",
    "group": "Nordics"
@@ -3348,23 +4240,23 @@
    "free_fetch": true,
    "listing": "^/s\\-anzeige/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
-    "/s-anzeige/2-lego-city-sets-60060-autotransporter-und-4432-muellwagen/3571049277-23-4743",
-    "/s-anzeige/botanical-garden-lego-21353/3571048347-23-3157",
-    "/s-anzeige/lego-10328-botanicals-roter-rosenstrauss-set-neuware-/3486373805-23-3489"
+    "/s-anzeige/lego-21065-architecture-sagrada-familia-neu-ovp/3565759452-23-6837",
+    "/s-anzeige/lego-architecture-21051-tokyo-skyline-set/3571056146-23-3010",
+    "/s-anzeige/lego-architecture-paris-21044-mit-ovp/3571055553-23-2915"
    ],
-   "links": 17,
-   "prices": 26,
+   "links": 18,
+   "prices": 25,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.818,
+   "yield": 0.82,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:56+00:00",
+   "checked_at": "2026-11-14T12:12:12+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany",
    "group": "Central Europe"
@@ -3407,7 +4299,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:48+00:00",
+   "checked_at": "2026-11-14T12:14:16+00:00",
    "seed": "secondhand_xlsx",
    "market": "Belarus",
    "group": "Eastern Europe"
@@ -3451,7 +4343,7 @@
    "test_query": "pokemon",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:33+00:00",
+   "checked_at": "2026-11-14T12:14:01+00:00",
    "seed": "secondhand_xlsx",
    "market": "Serbia",
    "group": "Southeast Europe"
@@ -3476,25 +4368,27 @@
    "kind": "classifieds",
    "status": "search_found_unverified",
    "reason": "results page without listing links for a plain fetch",
-   "template": "https://www.kupujemprodajem.com/?keywords={q}",
+   "template": "https://www.kupujemprodajem.com/pretraga?keywords={q}",
    "method": "get",
-   "template_via": "form",
+   "template_via": "searchaction",
    "free_fetch": false,
-   "listing": null,
-   "sample": [],
-   "links": 0,
+   "listing": "^/[^/?#]+(?:[/?#]|$)",
+   "sample": [
+    "/zaboravljena-lozinka"
+   ],
+   "links": 1,
    "prices": 0,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 2,
    "next_data": true,
    "pagination": {},
-   "yield": 0.05,
+   "yield": 0.025,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:28+00:00",
+   "checked_at": "2026-11-14T12:13:58+00:00",
    "seed": "secondhand_xlsx",
    "market": "Serbia",
    "group": "Southeast Europe"
@@ -3546,7 +4440,7 @@
    "test_query": "harry potter",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:41+00:00",
+   "checked_at": "2026-11-14T12:11:54+00:00",
    "seed": "secondhand_xlsx",
    "market": "France",
    "group": "Western Europe"
@@ -3569,12 +4463,12 @@
     "books"
    ],
    "kind": "resale_retailer",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results drawn by JavaScript (prices in app state)",
    "template": "https://labourseauxlivres.fr/search?q={q}",
    "method": "get",
    "template_via": "searchaction",
-   "free_fetch": true,
+   "free_fetch": false,
    "listing": "^/products/\\d+(?:[/?#]|$)",
    "sample": [
     "/products/9781408855652",
@@ -3590,12 +4484,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.48,
+   "yield": 0.3,
    "robots_disallowed": [],
    "test_query": "harry potter",
-   "tried": 1,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:44+00:00",
+   "checked_at": "2026-11-14T12:11:57+00:00",
    "seed": "secondhand_xlsx",
    "market": "France",
    "group": "Western Europe"
@@ -3638,7 +4532,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:25+00:00",
+   "checked_at": "2026-11-14T12:13:53+00:00",
    "seed": "secondhand_xlsx",
    "market": "Romania",
    "group": "Southeast Europe"
@@ -3677,12 +4571,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.05,
+   "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:58+00:00",
+   "checked_at": "2026-11-14T12:13:24+00:00",
    "seed": "secondhand_xlsx",
    "market": "Andorra",
    "group": "Southern Europe"
@@ -3725,7 +4619,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:37+00:00",
+   "checked_at": "2026-11-14T12:11:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "France",
    "group": "Western Europe"
@@ -3768,7 +4662,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:57+00:00",
+   "checked_at": "2026-11-14T12:14:26+00:00",
    "seed": "secondhand_xlsx",
    "market": "Turkey",
    "group": "Turkey and Caucasus"
@@ -3812,7 +4706,7 @@
    "test_query": "pokemon",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:30+00:00",
+   "checked_at": "2026-11-14T12:13:59+00:00",
    "seed": "secondhand_xlsx",
    "market": "Serbia",
    "group": "Southeast Europe"
@@ -3855,7 +4749,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:02+00:00",
+   "checked_at": "2026-11-14T12:14:33+00:00",
    "seed": "secondhand_xlsx",
    "market": "Armenia",
    "group": "Turkey and Caucasus"
@@ -3900,7 +4794,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:50+00:00",
+   "checked_at": "2026-11-14T12:12:03+00:00",
    "seed": "secondhand_xlsx",
    "market": "Luxembourg",
    "group": "Western Europe"
@@ -3947,7 +4841,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:51+00:00",
+   "checked_at": "2026-11-14T12:12:07+00:00",
    "seed": "secondhand_xlsx",
    "market": "Luxembourg and nearby border regions",
    "group": "Western Europe"
@@ -3980,8 +4874,8 @@
    "listing": "^/item/details/\\d+(?:[/?#]|$)",
    "sample": [
     "/item/details/10037520",
-    "/item/details/10057786",
-    "/item/details/10081281"
+    "/item/details/10081281",
+    "/item/details/10082486"
    ],
    "links": 40,
    "prices": 144,
@@ -3990,12 +4884,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.878,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:07+00:00",
+   "checked_at": "2026-11-14T12:13:33+00:00",
    "seed": "secondhand_xlsx",
    "market": "Malta",
    "group": "Southern Europe"
@@ -4038,7 +4932,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:48+00:00",
+   "checked_at": "2026-11-14T12:12:03+00:00",
    "seed": "secondhand_xlsx",
    "market": "Netherlands",
    "group": "Western Europe"
@@ -4080,12 +4974,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.693,
+   "yield": 0.635,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 3,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:58+00:00",
+   "checked_at": "2026-11-14T12:12:14+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany",
    "group": "Central Europe"
@@ -4120,8 +5014,8 @@
     "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/a1533866496-lego-grondplaten-city-straatplaten",
     "/v/kinderen-en-baby-s/speelgoed-duplo-en-lego/a1533877724-lego-ideas-dungeons-amp-dragons"
    ],
-   "links": 22,
-   "prices": 86,
+   "links": 23,
+   "prices": 89,
    "itemlist": false,
    "jsonld_products": 1,
    "embedded_prices": 0,
@@ -4129,15 +5023,62 @@
    "pagination": {
     "path_suffix": "/p/{page}/"
    },
-   "yield": 0.9,
+   "yield": 0.84,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:47+00:00",
+   "checked_at": "2026-11-14T12:12:00+00:00",
    "seed": "secondhand_xlsx",
    "market": "Netherlands",
    "group": "Western Europe"
+  },
+  {
+   "key": "medimops_de",
+   "name": "medimops",
+   "domain": "medimops.de",
+   "home": "https://www.medimops.de/",
+   "countries": [
+    "de",
+    "at"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "media",
+    "music",
+    "collectibles"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.medimops.de/?searchparam={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 25,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:44+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Germany, Austria",
+   "group": "Books and collectibles"
   },
   {
    "key": "mercatinousato_com",
@@ -4179,7 +5120,7 @@
    "test_query": "philips",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:56+00:00",
+   "checked_at": "2026-11-14T12:13:20+00:00",
    "seed": "secondhand_xlsx",
    "market": "Italy",
    "group": "Southern Europe"
@@ -4224,7 +5165,7 @@
    "test_query": "philips",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:57+00:00",
+   "checked_at": "2026-11-14T12:13:21+00:00",
    "seed": "secondhand_xlsx",
    "market": "Italy",
    "group": "Southern Europe"
@@ -4266,12 +5207,12 @@
    "embedded_prices": 50,
    "next_data": false,
    "pagination": {},
-   "yield": 1.0,
+   "yield": 0.916,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:40+00:00",
+   "checked_at": "2026-11-14T12:14:10+00:00",
    "seed": "secondhand_xlsx",
    "market": "Albania",
    "group": "Southeast Europe"
@@ -4311,12 +5252,12 @@
    "embedded_prices": 9,
    "next_data": false,
    "pagination": {},
-   "yield": 0.263,
+   "yield": 0.264,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:40+00:00",
+   "checked_at": "2026-11-14T12:14:10+00:00",
    "seed": "secondhand_xlsx",
    "market": "Kosovo",
    "group": "Southeast Europe"
@@ -4341,33 +5282,33 @@
     "fashion"
    ],
    "kind": "resale_retailer",
-   "status": "verified_free",
-   "reason": null,
-   "template": "https://www.micolet.com/busqueda?q={q}",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.micolet.com/s?k={q}",
    "method": "get",
    "template_via": "pattern",
-   "free_fetch": true,
-   "listing": "^/bolsos/?\\?(?:.*&)?tag_ids=",
+   "free_fetch": false,
+   "listing": "^/tops/s/\\d+(?:[/?#]|$)",
    "sample": [
-    "/bolsos?tag_ids=401",
-    "/bolsos?tag_ids=402",
-    "/bolsos?tag_ids=404"
+    "/tops/s/3008563",
+    "/tops/s/3008881",
+    "/tops/s/3488862"
    ],
-   "links": 6,
-   "prices": 5,
+   "links": 9,
+   "prices": 76,
    "itemlist": true,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.39,
+   "yield": 0.46,
    "robots_disallowed": [
-    "https://www.micolet.com/apply_filters/woman?show_discounts=&search={q}"
+    "https://www.micolet.com/apply_filters/woman?search={q}"
    ],
    "test_query": "adidas",
-   "tried": 3,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:49+00:00",
+   "checked_at": "2026-11-14T12:13:10+00:00",
    "seed": "secondhand_xlsx",
    "market": "Spain, cross-border shipping",
    "group": "Southern Europe"
@@ -4410,10 +5351,240 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:46+00:00",
+   "checked_at": "2026-11-14T12:13:07+00:00",
    "seed": "secondhand_xlsx",
    "market": "Spain",
    "group": "Southern Europe"
+  },
+  {
+   "key": "mobile_de",
+   "name": "mobile.de",
+   "domain": "mobile.de",
+   "home": "https://www.mobile.de/",
+   "countries": [
+    "de",
+    "eu"
+   ],
+   "languages": [
+    "de",
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.mobile.de/suche/{q}/",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:16:00+00:00",
+   "seed": "secondhand_xlsx+extra",
+   "market": "Germany, cross-border buyers",
+   "group": "Vehicles"
+  },
+  {
+   "key": "mobile_secondhand_ikea_com",
+   "name": "IKEA Second-hand",
+   "domain": "mobile.secondhand.ikea.com",
+   "home": "https://mobile.secondhand.ikea.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "home",
+    "furniture"
+   ],
+   "kind": "specialist",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:17+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Home and design"
+  },
+  {
+   "key": "momox_shop_fr",
+   "name": "momox-shop",
+   "domain": "momox-shop.fr",
+   "home": "https://www.momox-shop.fr/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "media",
+    "music",
+    "collectibles"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.momox-shop.fr/?searchparam={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 19,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:44+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France",
+   "group": "Books and collectibles"
+  },
+  {
+   "key": "mpb_com_en_eu",
+   "name": "MPB",
+   "domain": "mpb.com",
+   "home": "https://www.mpb.com/en-eu",
+   "countries": [
+    "eu",
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "media",
+    "music",
+    "cameras"
+   ],
+   "kind": "resale_retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.mpb.com/en-eu/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:33+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "EU, United Kingdom",
+   "group": "Cameras and music gear"
+  },
+  {
+   "key": "musamaailma_fi",
+   "name": "Musamaailma Used",
+   "domain": "musamaailma.fi",
+   "home": "https://www.musamaailma.fi/en/guitar/b-stock-used-guitars",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "media",
+    "music",
+    "cameras"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.musamaailma.fi/en/catalogsearch/result/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.musamaailma.fi/en/catalogsearch/result/?q={q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 4,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:39+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Finland",
+   "group": "Cameras and music gear"
   },
   {
    "key": "musicmagpie_co_uk_store",
@@ -4457,7 +5628,7 @@
    "test_query": "harry potter",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:21+00:00",
+   "checked_at": "2026-11-14T12:14:52+00:00",
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Refurbished and used tech"
@@ -4499,12 +5670,12 @@
    "embedded_prices": 28,
    "next_data": true,
    "pagination": {},
-   "yield": 0.38,
+   "yield": 0.4,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 6,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:02+00:00",
+   "checked_at": "2026-11-14T12:14:33+00:00",
    "seed": "secondhand_xlsx",
    "market": "Georgia",
    "group": "Turkey and Caucasus"
@@ -4549,7 +5720,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:18+00:00",
+   "checked_at": "2026-11-14T12:13:46+00:00",
    "seed": "secondhand_xlsx",
    "market": "Croatia",
    "group": "Southeast Europe"
@@ -4592,7 +5763,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:36+00:00",
+   "checked_at": "2026-11-14T12:14:04+00:00",
    "seed": "secondhand_xlsx",
    "market": "Montenegro",
    "group": "Southeast Europe"
@@ -4635,7 +5806,7 @@
    "test_query": "lego",
    "tried": 5,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:20+00:00",
+   "checked_at": "2026-11-14T12:13:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "Croatia",
    "group": "Southeast Europe"
@@ -4679,7 +5850,7 @@
    "test_query": "pokemon",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:24+00:00",
+   "checked_at": "2026-11-14T12:13:52+00:00",
    "seed": "secondhand_xlsx",
    "market": "Romania",
    "group": "Southeast Europe"
@@ -4722,7 +5893,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:36+00:00",
+   "checked_at": "2026-11-14T12:12:57+00:00",
    "seed": "secondhand_xlsx",
    "market": "Estonia",
    "group": "Baltics"
@@ -4765,7 +5936,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:34+00:00",
+   "checked_at": "2026-11-14T12:14:02+00:00",
    "seed": "secondhand_xlsx",
    "market": "Bosnia and Herzegovina",
    "group": "Southeast Europe"
@@ -4808,7 +5979,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:25+00:00",
+   "checked_at": "2026-11-14T12:13:55+00:00",
    "seed": "secondhand_xlsx",
    "market": "Bulgaria",
    "group": "Southeast Europe"
@@ -4851,7 +6022,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:04+00:00",
+   "checked_at": "2026-11-14T12:12:21+00:00",
    "seed": "secondhand_xlsx",
    "market": "Poland",
    "group": "Central Europe"
@@ -4894,7 +6065,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:51+00:00",
+   "checked_at": "2026-11-14T12:13:12+00:00",
    "seed": "secondhand_xlsx",
    "market": "Portugal",
    "group": "Southern Europe"
@@ -4937,7 +6108,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:21+00:00",
+   "checked_at": "2026-11-14T12:13:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "Romania",
    "group": "Southeast Europe"
@@ -4980,10 +6151,57 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:43+00:00",
+   "checked_at": "2026-11-14T12:14:12+00:00",
    "seed": "secondhand_xlsx",
    "market": "Ukraine",
    "group": "Eastern Europe"
+  },
+  {
+   "key": "onlineshop_oxfam_org_uk",
+   "name": "Oxfam Online Shop",
+   "domain": "onlineshop.oxfam.org.uk",
+   "home": "https://onlineshop.oxfam.org.uk/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "fashion",
+    "kids",
+    "home",
+    "furniture"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:09+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "United Kingdom",
+   "group": "Fashion and family"
   },
   {
    "key": "osta_ee",
@@ -5005,7 +6223,7 @@
    "kind": "marketplace",
    "status": "blocked",
    "reason": "bot wall on the results page",
-   "template": "https://www.osta.ee/otsi?q={q}",
+   "template": "https://www.osta.ee/search?q={q}",
    "method": "get",
    "template_via": "pattern",
    "free_fetch": false,
@@ -5023,7 +6241,7 @@
    "test_query": "lego",
    "tried": 3,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:34+00:00",
+   "checked_at": "2026-11-14T12:12:56+00:00",
    "seed": "secondhand_xlsx",
    "market": "Estonia",
    "group": "Baltics"
@@ -5074,6 +6292,54 @@
    "seed": "extra"
   },
   {
+   "key": "pamono_eu",
+   "name": "Pamono",
+   "domain": "pamono.eu",
+   "home": "https://www.pamono.eu/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "home",
+    "furniture"
+   ],
+   "kind": "specialist",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.pamono.eu/catalogsearch/result/?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/advertising-sign-from-philips-1960s-1",
+    "/after-andy-warhol-philip-rosenthal-1980s-print",
+    "/after-philips-wouwerman-the-farewell-1747-print"
+   ],
+   "links": 66,
+   "prices": 100,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.888,
+   "robots_disallowed": [],
+   "test_query": "philips",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:17+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Home and design"
+  },
+  {
    "key": "paruvendu_fr_mondebarras",
    "name": "ParuVendu",
    "domain": "paruvendu.fr",
@@ -5111,7 +6377,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:38+00:00",
+   "checked_at": "2026-11-14T12:11:52+00:00",
    "seed": "secondhand_xlsx",
    "market": "France",
    "group": "Western Europe"
@@ -5154,7 +6420,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:37+00:00",
+   "checked_at": "2026-11-14T12:14:05+00:00",
    "seed": "secondhand_xlsx",
    "market": "Montenegro",
    "group": "Southeast Europe"
@@ -5196,12 +6462,12 @@
    "embedded_prices": 50,
    "next_data": false,
    "pagination": {},
-   "yield": 0.643,
+   "yield": 0.575,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:37+00:00",
+   "checked_at": "2026-11-14T12:14:07+00:00",
    "seed": "secondhand_xlsx",
    "market": "North Macedonia",
    "group": "Southeast Europe"
@@ -5245,12 +6511,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.625,
+   "yield": 0.53,
    "robots_disallowed": [],
    "test_query": "adidas",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:26+00:00",
+   "checked_at": "2026-11-14T12:12:46+00:00",
    "seed": "secondhand_xlsx",
    "market": "Sweden",
    "group": "Nordics"
@@ -5343,7 +6609,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:33+00:00",
+   "checked_at": "2026-11-14T12:11:46+00:00",
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Western Europe"
@@ -5376,9 +6642,9 @@
    "sample": [
     "/anunturi/mama-si-copilul/jucarii/anunt/lego-30683-mclaren-formula-1-car-nou-sigilat/68ehf904h90179g328d517240df06h1h.html",
     "/anunturi/mama-si-copilul/jucarii/anunt/lego-cars-9485-ultimate-race-set/i982he34647d76hhehe27d80h5iedie9.html",
-    "/anunturi/mama-si-copilul/jucarii/anunt/lego-creator-4995-3-in-1-cargo-copter/7i606338d919730dei707153d29e683f.html"
+    "/anunturi/mama-si-copilul/jucarii/anunt/lego-city-60251-monster-truck-2020/ded2d0fiie1i7i4hdgf56ffg70i35878.html"
    ],
-   "links": 6,
+   "links": 7,
    "prices": 44,
    "itemlist": false,
    "jsonld_products": 0,
@@ -5387,12 +6653,12 @@
    "pagination": {
     "param": "pag"
    },
-   "yield": 0.515,
+   "yield": 0.38,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:23+00:00",
+   "checked_at": "2026-11-14T12:13:51+00:00",
    "seed": "secondhand_xlsx",
    "market": "Romania",
    "group": "Southeast Europe"
@@ -5417,7 +6683,7 @@
    "kind": "classifieds",
    "status": "verified_free",
    "reason": null,
-   "template": "https://www.quoka.de/anzeigen?County=&City=&Area=&q={q}",
+   "template": "https://www.quoka.de/anzeigen?q={q}",
    "method": "get",
    "template_via": "form",
    "free_fetch": true,
@@ -5436,12 +6702,12 @@
    "pagination": {
     "param": "pag"
    },
-   "yield": 0.542,
+   "yield": 0.395,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:56+00:00",
+   "checked_at": "2026-11-14T12:12:13+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany",
    "group": "Central Europe"
@@ -5492,7 +6758,7 @@
    "test_query": "harry potter",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:12+00:00",
+   "checked_at": "2026-11-14T12:14:42+00:00",
    "seed": "secondhand_xlsx",
    "market": "Germany, selected European markets",
    "group": "Refurbished and used tech"
@@ -5542,7 +6808,7 @@
    "test_query": "iphone",
    "tried": 4,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:19+00:00",
+   "checked_at": "2026-11-14T12:14:49+00:00",
    "seed": "secondhand_xlsx",
    "market": "France, selected European markets",
    "group": "Refurbished and used tech"
@@ -5592,7 +6858,7 @@
    "test_query": "philips",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:10+00:00",
+   "checked_at": "2026-11-14T12:14:38+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Refurbished and used tech"
@@ -5617,7 +6883,7 @@
    "kind": "classifieds",
    "status": "blocked",
    "reason": "bot wall on the results page",
-   "template": "https://reklama5.com/Search?city=&cat=&q={q}",
+   "template": "https://reklama5.com/Search?q={q}",
    "method": "get",
    "template_via": "form",
    "free_fetch": false,
@@ -5635,7 +6901,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:37+00:00",
+   "checked_at": "2026-11-14T12:14:06+00:00",
    "seed": "secondhand_xlsx",
    "market": "North Macedonia",
    "group": "Southeast Europe"
@@ -5680,10 +6946,55 @@
    "test_query": "adidas",
    "tried": 0,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:32+00:00",
+   "checked_at": "2026-11-14T12:12:53+00:00",
    "seed": "secondhand_xlsx",
    "market": "Denmark",
    "group": "Nordics"
+  },
+  {
+   "key": "reverb_com",
+   "name": "Reverb",
+   "domain": "reverb.com",
+   "home": "https://reverb.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "media",
+    "music",
+    "cameras"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://reverb.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:36+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Cameras and music gear"
   },
   {
    "key": "ricardo_ch",
@@ -5727,7 +7038,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:00+00:00",
+   "checked_at": "2026-11-14T12:12:17+00:00",
    "seed": "secondhand_xlsx",
    "market": "Switzerland",
    "group": "Central Europe"
@@ -5752,11 +7063,11 @@
     "general"
    ],
    "kind": "classifieds",
-   "status": "blocked",
-   "reason": "bot wall on the results page",
-   "template": "https://www.sahibinden.com/search?q={q}",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://secure.sahibinden.com/kelime-ile-arama?query_text={q}",
    "method": "get",
-   "template_via": "pattern",
+   "template_via": "form",
    "free_fetch": false,
    "listing": null,
    "sample": [],
@@ -5770,9 +7081,9 @@
    "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "volkswagen",
-   "tried": 2,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:56+00:00",
+   "checked_at": "2026-11-14T12:14:26+00:00",
    "seed": "secondhand_xlsx",
    "market": "Turkey",
    "group": "Turkey and Caucasus"
@@ -5815,7 +7126,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:04+00:00",
+   "checked_at": "2026-11-14T12:13:31+00:00",
    "seed": "secondhand_xlsx",
    "market": "San Marino",
    "group": "Southern Europe"
@@ -5861,10 +7172,106 @@
    "test_query": "lego",
    "tried": 0,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:08+00:00",
+   "checked_at": "2026-11-14T12:12:24+00:00",
    "seed": "secondhand_xlsx",
    "market": "Czechia",
    "group": "Central Europe"
+  },
+  {
+   "key": "selency_fr",
+   "name": "Selency",
+   "domain": "selency.fr",
+   "home": "https://www.selency.fr/",
+   "countries": [
+    "fr",
+    "eu"
+   ],
+   "languages": [
+    "fr",
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "home",
+    "furniture"
+   ],
+   "kind": "specialist",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.selency.fr/s/{q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[A-Za-z0-9]+(?:[/?#]|$)",
+   "sample": [
+    "/p/1FC42S61/spot-philips",
+    "/p/1GD3PCW2/lampe-philips-bijou-tripode-annees-50-60",
+    "/p/1WZW5QSE/lampe-de-plafond-de-philips"
+   ],
+   "links": 34,
+   "prices": 81,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 60,
+   "next_data": true,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "philips",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:15+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France, cross-border shipping",
+   "group": "Home and design"
+  },
+  {
+   "key": "sellpy_com",
+   "name": "Sellpy",
+   "domain": "sellpy.com",
+   "home": "https://www.sellpy.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:07+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Fashion and family"
   },
   {
    "key": "shafa_ua",
@@ -5910,7 +7317,7 @@
    "test_query": "adidas",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:44+00:00",
+   "checked_at": "2026-11-14T12:14:13+00:00",
    "seed": "secondhand_xlsx",
    "market": "Ukraine",
    "group": "Eastern Europe"
@@ -5955,12 +7362,12 @@
    "embedded_prices": 80,
    "next_data": true,
    "pagination": {},
-   "yield": 0.89,
+   "yield": 0.868,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:23+00:00",
+   "checked_at": "2026-11-14T12:11:35+00:00",
    "seed": "secondhand_xlsx",
    "market": "UK, Germany, Austria",
    "group": "Multi-market"
@@ -5985,7 +7392,7 @@
    "kind": "classifieds",
    "status": "search_found_unverified",
    "reason": "robots.txt disallows the search path",
-   "template": "https://www.skelbiu.lt/skelbimai/?autocompleted=1&search=1&cities=&keywords={q}",
+   "template": "https://www.skelbiu.lt/skelbimai/?autocompleted=1&search=1&distance=0&keywords={q}",
    "method": "get",
    "template_via": "form",
    "free_fetch": false,
@@ -6000,12 +7407,12 @@
    "pagination": {},
    "yield": 0.0,
    "robots_disallowed": [
-    "https://www.skelbiu.lt/skelbimai/?autocompleted=1&search=1&cities=&keywords={q}"
+    "https://www.skelbiu.lt/skelbimai/?autocompleted=1&search=1&distance=0&keywords={q}"
    ],
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:44+00:00",
+   "checked_at": "2026-11-14T12:13:04+00:00",
    "seed": "secondhand_xlsx",
    "market": "Lithuania",
    "group": "Baltics"
@@ -6047,14 +7454,14 @@
    "embedded_prices": 30,
    "next_data": false,
    "pagination": {},
-   "yield": 1.0,
+   "yield": 0.997,
    "robots_disallowed": [
     "http://sprzedajemy.pl/szukaj?inp_text={q}&source=opensearch"
    ],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:07+00:00",
+   "checked_at": "2026-11-14T12:12:23+00:00",
    "seed": "secondhand_xlsx",
    "market": "Poland",
    "group": "Central Europe"
@@ -6097,7 +7504,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:37+00:00",
+   "checked_at": "2026-11-14T12:12:58+00:00",
    "seed": "secondhand_xlsx",
    "market": "Latvia",
    "group": "Baltics"
@@ -6120,12 +7527,12 @@
     "general"
    ],
    "kind": "classifieds",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
    "template": "https://www.subito.it/annunci-italia/vendita/usato/?q={q}",
    "method": "get",
    "template_via": "known",
-   "free_fetch": true,
+   "free_fetch": false,
    "listing": "^/auto/[^/?#]*\\d{3,}[^/?#]*\\.htm(?:[/?#]|$)",
    "sample": [
     "/auto/abarth-595-1-4-turbo-t-jet-165-cv-turismo-70-anni-salerno-668342990.htm",
@@ -6139,12 +7546,12 @@
    "embedded_prices": 0,
    "next_data": true,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.817,
    "robots_disallowed": [],
    "test_query": "lego",
-   "tried": 1,
+   "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:54+00:00",
+   "checked_at": "2026-11-14T12:13:17+00:00",
    "seed": "secondhand_xlsx",
    "market": "Italy",
    "group": "Southern Europe"
@@ -6189,7 +7596,7 @@
    "test_query": "samsung",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:10+00:00",
+   "checked_at": "2026-11-14T12:14:41+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Refurbished and used tech"
@@ -6232,7 +7639,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:04+00:00",
+   "checked_at": "2026-11-14T12:14:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Azerbaijan",
    "group": "Turkey and Caucasus"
@@ -6276,12 +7683,12 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.05,
+   "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "adidas",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:28+00:00",
+   "checked_at": "2026-11-14T12:12:49+00:00",
    "seed": "secondhand_xlsx",
    "market": "Norway, Sweden, Denmark, Finland",
    "group": "Nordics"
@@ -6325,7 +7732,7 @@
    "test_query": "harry potter",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:46+00:00",
+   "checked_at": "2026-11-14T12:13:07+00:00",
    "seed": "secondhand_xlsx",
    "market": "Spain",
    "group": "Southern Europe"
@@ -6357,7 +7764,7 @@
    "free_fetch": true,
    "listing": "^/recommerce/forsale/item/\\d+(?:[/?#]|$)",
    "sample": [
-    "/recommerce/forsale/item/47558720",
+    "/recommerce/forsale/item/32418066",
     "/recommerce/forsale/item/49871609",
     "/recommerce/forsale/item/49872184"
    ],
@@ -6370,12 +7777,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 1.0,
+   "yield": 0.998,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:18+00:00",
+   "checked_at": "2026-11-14T12:12:34+00:00",
    "seed": "secondhand_xlsx+extra",
    "market": "Finland",
    "group": "Nordics"
@@ -6412,21 +7819,21 @@
     "/item/1000613/751023680/philips-laddare",
     "/item/1001284/754989067/philips-airfryer"
    ],
-   "links": 66,
+   "links": 65,
    "prices": 95,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.9,
+   "yield": 0.887,
    "robots_disallowed": [
     "https://www.tradera.com/search?categoryId=0&q={q}"
    ],
    "test_query": "philips",
    "tried": 4,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:24+00:00",
+   "checked_at": "2026-11-14T12:12:45+00:00",
    "seed": "secondhand_xlsx",
    "market": "Sweden",
    "group": "Nordics"
@@ -6473,6 +7880,58 @@
    "seed": "extra"
   },
   {
+   "key": "troc_velo_com",
+   "name": "Troc-Vélo",
+   "domain": "troc-velo.com",
+   "home": "https://www.troc-velo.com/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "bikes",
+    "sports",
+    "outdoor",
+    "music"
+   ],
+   "kind": "specialist",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.troc-velo.com/recherche?text={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": "^/fr\\-fr/annonce/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/fr-fr/annonce/adris-performance-s2-dura-ace-di2-4313074",
+    "/fr-fr/annonce/aeroad-cfr-4313075",
+    "/fr-fr/annonce/arrivage-exceptionnel-black-friday-kit-cadre-cervelo-r5-cx-team-visma-lease-a-bike-taille-51-s-4312019"
+   ],
+   "links": 24,
+   "prices": 45,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "p"
+   },
+   "yield": 0.807,
+   "robots_disallowed": [],
+   "test_query": "shimano",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:25+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "France",
+   "group": "Bikes and sports"
+  },
+  {
    "key": "tutti_ch",
    "name": "tutti.ch",
    "domain": "tutti.ch",
@@ -6513,10 +7972,102 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:01+00:00",
+   "checked_at": "2026-11-14T12:12:18+00:00",
    "seed": "secondhand_xlsx",
    "market": "Switzerland, Liechtenstein",
    "group": "Central Europe"
+  },
+  {
+   "key": "tuvalum_eu",
+   "name": "Tuvalum",
+   "domain": "tuvalum.eu",
+   "home": "https://tuvalum.eu/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "bikes",
+    "sports",
+    "outdoor"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "unreachable",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "shimano",
+   "tried": 0,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:31+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Bikes and sports"
+  },
+  {
+   "key": "uk_designerexchange_com",
+   "name": "Designer Exchange",
+   "domain": "uk.designerexchange.com",
+   "home": "https://uk.designerexchange.com/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "luxury",
+    "kids",
+    "home",
+    "furniture"
+   ],
+   "kind": "resale_retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://uk.designerexchange.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:13+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "United Kingdom",
+   "group": "Fashion and family"
   },
   {
    "key": "uk_webuy_com",
@@ -6561,10 +8112,55 @@
    "test_query": "harry potter",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:11:20+00:00",
+   "checked_at": "2026-11-14T12:14:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "UK, selected European markets",
    "group": "Refurbished and used tech"
+  },
+  {
+   "key": "upway_co",
+   "name": "Upway",
+   "domain": "upway.co",
+   "home": "https://upway.co/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "bikes",
+    "sports",
+    "outdoor"
+   ],
+   "kind": "resale_retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "shimano",
+   "tried": 6,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:24+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Bikes and sports"
   },
   {
    "key": "vatera_hu",
@@ -6604,7 +8200,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:17+00:00",
+   "checked_at": "2026-11-14T12:12:33+00:00",
    "seed": "secondhand_xlsx",
    "market": "Hungary",
    "group": "Central Europe"
@@ -6648,7 +8244,7 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:00+00:00",
+   "checked_at": "2026-11-14T12:13:24+00:00",
    "seed": "secondhand_xlsx",
    "market": "Andorra",
    "group": "Southern Europe"
@@ -6694,12 +8290,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.89,
+   "yield": 0.9,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:07+00:00",
+   "checked_at": "2026-11-14T12:13:36+00:00",
    "seed": "secondhand_xlsx",
    "market": "Greece, EU buyer delivery",
    "group": "Southern Europe"
@@ -6753,6 +8349,53 @@
    "seed": "extra"
   },
   {
+   "key": "vestiairecollective_com",
+   "name": "Vestiaire Collective",
+   "domain": "vestiairecollective.com",
+   "home": "https://www.vestiairecollective.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "luxury",
+    "kids",
+    "home",
+    "furniture"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.vestiairecollective.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:03+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Fashion and family"
+  },
+  {
    "key": "vinted_com",
    "name": "Vinted",
    "domain": "vinted.com",
@@ -6783,8 +8426,8 @@
    "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
     "/items/10046495063-18m-adidas-outfit",
-    "/items/10077821236-men-adidas-royal-blue-size-11",
-    "/items/10199489302-adidas-tigres-uanl-2526-home-jersey-mens-size-medium"
+    "/items/10199489302-adidas-tigres-uanl-2526-home-jersey-mens-size-medium",
+    "/items/10209658615-adidas-adistar-control-5-new-wboxtags-size-8m-9w-silverblack-metallic"
    ],
    "links": 96,
    "prices": 0,
@@ -6800,7 +8443,7 @@
    "test_query": "adidas",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:21+00:00",
+   "checked_at": "2026-11-14T12:11:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Multi-market"
@@ -6856,6 +8499,52 @@
    "seed": "extra"
   },
   {
+   "key": "vinterior_co",
+   "name": "Vinterior",
+   "domain": "vinterior.co",
+   "home": "https://www.vinterior.co/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "home",
+    "furniture"
+   ],
+   "kind": "specialist",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.vinterior.co/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.vinterior.co/search?q={q}"
+   ],
+   "test_query": "philips",
+   "tried": 4,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:18+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "United Kingdom",
+   "group": "Home and design"
+  },
+  {
    "key": "wallapop_com",
    "name": "Wallapop",
    "domain": "wallapop.com",
@@ -6899,7 +8588,7 @@
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:21+00:00",
+   "checked_at": "2026-11-14T12:11:34+00:00",
    "seed": "secondhand_xlsx",
    "market": "Spain, Italy, Portugal",
    "group": "Multi-market"
@@ -6948,6 +8637,96 @@
    "seed": "extra"
   },
   {
+   "key": "wexphotovideo_com_used",
+   "name": "Wex Used",
+   "domain": "wexphotovideo.com",
+   "home": "https://www.wexphotovideo.com/used/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "media",
+    "music",
+    "cameras"
+   ],
+   "kind": "resale_retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.wexphotovideo.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "harry potter",
+   "tried": 4,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:35+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "United Kingdom",
+   "group": "Cameras and music gear"
+  },
+  {
+   "key": "whoppah_com",
+   "name": "Whoppah",
+   "domain": "whoppah.com",
+   "home": "https://www.whoppah.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "home",
+    "furniture",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.whoppah.com/s?k={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "philips",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:16+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Selected European markets",
+   "group": "Home and design"
+  },
+  {
    "key": "willhaben_at",
    "name": "willhaben",
    "domain": "willhaben.at",
@@ -6990,10 +8769,59 @@
    "test_query": "wien",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:08:59+00:00",
+   "checked_at": "2026-11-14T12:12:16+00:00",
    "seed": "secondhand_xlsx+extra",
    "market": "Austria",
    "group": "Central Europe"
+  },
+  {
+   "key": "worldofbooks_com",
+   "name": "World of Books",
+   "domain": "worldofbooks.com",
+   "home": "https://www.worldofbooks.com/",
+   "countries": [
+    "gb",
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "media",
+    "music",
+    "collectibles"
+   ],
+   "kind": "resale_retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.worldofbooks.com/en-gb/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.worldofbooks.com/en-gb/search?q={q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 6,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:40+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "UK, selected European markets",
+   "group": "Books and collectibles"
   },
   {
    "key": "xe_gr_marketplace",
@@ -7033,7 +8861,7 @@
    "test_query": "lego",
    "tried": 2,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:10+00:00",
+   "checked_at": "2026-11-14T12:13:39+00:00",
    "seed": "secondhand_xlsx",
    "market": "Greece",
    "group": "Southern Europe"
@@ -7076,7 +8904,7 @@
    "test_query": "adidas",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:09:37+00:00",
+   "checked_at": "2026-11-14T12:12:57+00:00",
    "seed": "secondhand_xlsx",
    "market": "Estonia",
    "group": "Baltics"
@@ -7119,10 +8947,60 @@
    "test_query": "lego",
    "tried": 8,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:10:52+00:00",
+   "checked_at": "2026-11-14T12:14:21+00:00",
    "seed": "secondhand_xlsx",
    "market": "Russia",
    "group": "Eastern Europe"
+  },
+  {
+   "key": "zvab_com",
+   "name": "ZVAB",
+   "domain": "zvab.com",
+   "home": "https://www.zvab.com/",
+   "countries": [
+    "de",
+    "at",
+    "ch"
+   ],
+   "languages": [
+    "de",
+    "fr",
+    "it"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "books",
+    "collectibles"
+   ],
+   "kind": "specialist",
+   "status": "search_found_unverified",
+   "reason": "search form posts (no GET URL)",
+   "template": "https://www.zvab.com/servlet/SearchResults?sts=t&searchprefs=on&kn={q}",
+   "method": "post",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.zvab.com/servlet/SearchResults?sts=t&cm_sp=SearchF-_-home-_-Results&searchprefs=on&an={q}"
+   ],
+   "test_query": "harry potter",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:15:47+00:00",
+   "seed": "secondhand_xlsx",
+   "market": "Germany, Austria and Switzerland focus",
+   "group": "Books and collectibles"
   }
  ]
 }

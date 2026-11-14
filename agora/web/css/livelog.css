@@ -205,3 +205,15 @@
 /* round B: the searches counter (Context.dev ran them too) and the summary that credits search + reads */
 #reading .ll-cdw b.ll-cd-n { color: var(--ll-blue, var(--ink-blue)); }
 @media (max-width: 640px) { #reading .ll-cq { display: none; } }
+/* the searches strip: every Context.dev web search stays in view, with the pages it found */
+#reading .ll-qs {
+  margin: 0; padding: 7px 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+  border-bottom: 1px solid var(--hair); font: 400 12px/1.4 var(--sans); color: var(--ink-2);
+}
+#reading .ll-qs[hidden] { display: none; }
+#reading .ll-qk { font: 500 11px var(--mono); color: var(--ll-blue, var(--ink-blue)); }
+#reading .ll-q { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
+#reading .ll-q svg { flex: none; fill: none; stroke: var(--ink-3); stroke-width: 1.6; }
+#reading .ll-q b { font: 500 11.5px var(--mono); color: var(--ink); white-space: nowrap; }
+#reading .ll-q[data-s="reading"] b { color: var(--ink-3); }
+@media (max-width: 640px) { #reading .ll-qs { gap: 2px 10px; font-size: 11.5px; } #reading .ll-qk { display: none; } }

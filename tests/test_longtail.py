@@ -293,3 +293,54 @@ def test_lane_off_for_products_and_env(monkeypatch):
     assert asyncio.run(go(need("sony a7 iii body"))) == []
     monkeypatch.setenv("AGORA_LONGTAIL", "0")
     assert asyncio.run(go(need())) == []
+
+
+def test_lane_skips_core_listicles_that_are_not_about_the_need(monkeypatch):
+    served: list[str] = []
+    calls: list[str] = []
+
+    async def fake_search(query, n=10, highlights=False, country=None, **kw):
+        calls.append(query)
+        return []
+    monkeypatch.setattr(longtail.contextdev, "search", fake_search)
+    monkeypatch.setattr(longtail, "_transport", transport(served))
+    monkeypatch.setattr(longtail, "PAID_START_DELAY", 0.0)
+
+    async def go():
+        longtail.LISTICLES.set([{"url": "https://shop.ca/refurbished-vs-new-laptops", "title": "Refurbished vs new laptops"},
+                                {"url": "https://www.webtonic.io/blog/8-best-graphic-design-subscription-services"
+                                        "-unlimited-design-compared",
+                                 "title": "8 Best Graphic Design Subscription Services Compared"}])
+        return [x async for x in longtail.lane(need(), deadline=time.monotonic() + 5, paid_max=0)]
+    items = asyncio.run(go())
+    assert not any("shop.ca" in u for u in served)
+    assert any("webtonic" in u for u in served)
+    assert any(isinstance(x, Offer) and x.source == "manypixels.co" for x in items)
+
+
+def test_local_query_runs_second_and_local_sites_go_first(monkeypatch):
+    served: list[str] = []
+    calls: list[tuple[str, str | None]] = []
+    fi_home = ("<html><head><title>Tilipalvelu Oy | Kirjanpito pienyrityksille</title></head><body>"
+               "<h3>Pienyritys</h3><p>89 € / kk</p></body></html>")
+    SITE["https://tilipalvelu.fi/"] = fi_home
+
+    async def fake_search(query, n=10, highlights=False, country=None, **kw):
+        calls.append((query, country))
+        if "Kirjanpito" in query:
+            return [{"url": "https://tilipalvelu.fi/", "title": "Tilipalvelu Oy"}]
+        return [{"url": "https://designjoy.co/", "title": "x"}]
+    monkeypatch.setattr(longtail.contextdev, "search", fake_search)
+    monkeypatch.setattr(longtail, "_transport", transport(served))
+    monkeypatch.setattr(longtail, "PAID_START_DELAY", 0.0)
+
+    async def go():
+        return [x async for x in longtail.lane(need("bookkeeping service finland"),
+                                               deadline=time.monotonic() + 8)]
+    try:
+        items = asyncio.run(go())
+    finally:
+        SITE.pop("https://tilipalvelu.fi/")
+    assert calls[1] == ("Kirjanpito hinnasto", "fi")
+    fi = [x for x in items if isinstance(x, Offer) and x.source == "tilipalvelu.fi"]
+    assert fi and fi[0].price == 89 and fi[0].currency == "EUR" and fi[0].unit == "month"
