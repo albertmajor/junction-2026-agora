@@ -396,11 +396,19 @@ NOT_VEHICLE = re.compile(
     r"remote[- ]control\w*|kauko-ohja\w*|bed|sänky|bett|seng|poster|sticker|keychain|key\s?ring|costume|puzzle|"
     r"tinter|paint|maali|lack|lp\b|vinyl|album|cd\b|dvd|book|kirja|buch|t-?shirt|hoodie|sweat\w*|jacket|"
     r"spodnie|jeans|trousers|pants|cargo\s+\w*pants|car\s+seat|turvaistuin|kindersitz|bilbarnstol|"
-    r"car\s+charger|cover|mat|matto|cam\b|dashcam|vacuum|imuri)\b", re.I)
+    r"car\s+charger|cover|mat|matto|cam\b|dashcam|vacuum|imuri|shades?|aurinkosuoj\w*|sun\s?shades?|"
+    r"vaihdelaatikko|gearbox|getriebe|moottori\s+osat?|varaosa\w*|spare\s+parts?|parts\s+car|osiksi|"
+    r"hyll\w*|shelving|laatikosto\w*|trailer|peräkärry|anhänger|släpvagn|aanhanger|\w*takki|jacket|"
+    r"alut|alumiinivantee\w*|\w*vanteet|nastat|\w*renkaat|tyres?|tires?|rims?|rig|golf\s?(?:cart|car)|"
+    r"golfauto|sähkökärry|opas|brochure|showcase|magazine|lehti|collection|kokoelma|figure|figuuri)\b", re.I)
 VEHICLE_EVIDENCE = re.compile(
     r"\b(?:19[5-9]\d|20[0-2]\d)\b|\b\d[\d .]*\s?(?:km|tkm|mi|miles)\b|\b(?:diesel|bensiini|benzin|petrol|"
     r"gasoline|hybrid|electric|sähkö|automatic|automaatti|manual|manuaali|vaihteisto|kw|hp|ps|hv|cc|tdi|tsi|"
     r"awd|4wd|4x4|katsastettu|inspected|registered|rekisteröity)\b", re.I)
+# a year alone is no proof ('Toyota Corolla New Car Features -opas Apr. 1997' is a brochure)
+STRONG_EVIDENCE = re.compile(
+    r"\b\d[\d .]*\s?(?:km|tkm|mi|miles)\b|\b(?:diesel|bensiini|benzin|petrol|gasoline|hybrid|automatic|"
+    r"automaatti|manuaali|vaihteisto|tdi|tsi|awd|4wd|4x4|katsastettu|inspected|registered|rekisteröity)\b", re.I)
 VEHICLE_FLOOR_EUR = 500.0      # a whole used car for less is a toy, a part or a scam unless the listing says so
 
 
@@ -432,9 +440,12 @@ def vehicle_mismatch(need: Need, offer: Offer) -> str | None:
     title = offer.title or ""
     if m := NOT_VEHICLE.search(title):
         return f"not a vehicle ({m.group(0).lower()})"
+    if offer.raw.get("category") == "vehicle":
+        return None            # listed in a cars category (nettiauto, tori autot ...): a vehicle, cheap or not
+    evidence = bool(CAR_MAKES.search(title) and STRONG_EVIDENCE.search(title))
     p = offer.price_eur
-    if p is not None and p < VEHICLE_FLOOR_EUR and not (CAR_MAKES.search(title) and VEHICLE_EVIDENCE.search(title)):
-        return f"€{p:,.0f} is too little for a car and the listing names no make, year or mileage"
+    if p is not None and p < VEHICLE_FLOOR_EUR and not evidence:
+        return f"€{p:,.0f} is too little for a car and the listing names no make with mileage, fuel or gearbox"
     return None
 
 

@@ -192,7 +192,6 @@ SERVICES: dict[str, dict] = {
         "Carpentry & joinery|Puusepäntyöt|Tischler & Schreiner|Timmerman|Snickeri ~ carpenter, kirvesmies, puuseppä, "
         "schreiner, tischler, timmerman, snickare": S({
             "Kitchen fitting|Keittiöasennus|Küchenmontage|Keukenmontage|Köksmontering ~ kitchen installation": {},
-            "Doors & windows|Ovet ja ikkunat|Türen & Fenster|Deuren & kozijnen|Dörrar & fönster ~ window replacement": {},
             "Decking & fences|Terassit ja aidat|Terrassenbau & Zäune|Vlonders & schuttingen|Altaner & staket": {},
         }),
         "Painting & decorating|Maalaus ja tapetointi|Maler & Lackierer|Schilder & behanger|Måleri & tapetsering ~ "
@@ -214,6 +213,48 @@ SERVICES: dict[str, dict] = {
         "Glaziers|Lasitustyöt|Glaser|Glaszetter|Glasmästare ~ glazier, lasittaja, glaser": {},
         "Welding & metalwork|Hitsaus ja metallityöt|Schweißen & Metallbau|Lassen & metaalbewerking|Svetsning & smide": {},
         "Groundwork & excavation|Maanrakennus|Erdarbeiten|Grondwerk|Markarbeten ~ digger, kaivinkone, bagger": {},
+        "Windows, doors & conservatories|Ikkunat, ovet ja viherhuoneet|Fenster, Türen & Wintergärten|"
+        "Ramen, deuren & serres|Fönster, dörrar & uterum ~ window replacement, window fitter, conservatory builder, "
+        "upvc windows, double glazing, ikkunaremontti, fensterbauer, kozijnen vervangen, fönsterbyte": {},
+        "Plastering & drylining|Rappaus ja kipsilevytyöt|Verputz & Trockenbau|Stukadoor & droogbouw|"
+        "Putsning & gipsarbeten ~ plasterer, rendering, drywall installer, rappaaja, stuckateur, trockenbauer, "
+        "stukadoor, putsare": {},
+        "Driveways, paving & fencing|Pihatiet, kiveykset ja aidat|Einfahrten, Pflaster & Zäune|"
+        "Opritten, bestrating & schuttingen|Uppfarter, stenläggning & staket ~ block paving, tarmac driveway, "
+        "fencing contractor, pihakiveys, pflasterarbeiten, stratenmaker, stenläggare": {},
+        "Garden buildings & structures|Piharakennukset ja katokset|Gartenhäuser & Überdachungen|"
+        "Tuinhuizen & overkappingen|Trädgårdsbyggnader & skärmtak ~ shed builder, summerhouse builder, log cabin "
+        "installer, gazebo builder, pergola builder, carport builder, greenhouse installation": {},
+        "Kitchens, bedrooms & fitted furniture|Keittiöt, makuuhuoneet ja kiintokalusteet|"
+        "Küchen, Schlafzimmer & Einbaumöbel|Keukens, slaapkamers & inbouwmeubelen|Kök, sovrum & platsbyggda möbler ~ "
+        "fitted wardrobes, kitchen fitter, worktops, bespoke furniture maker, kiintokalusteet, einbauschrank, "
+        "inbouwkast": {},
+        "Chimneys, fireplaces & stoves|Savupiiput, takat ja kamiinat|Schornsteine, Kamine & Öfen|"
+        "Schoorstenen, haarden & kachels|Skorstenar, eldstäder & kaminer ~ chimney repair, flue installer, "
+        "wood burner installation, log burner, takka-asennus, kaminbauer, kachelsmid, kaminmontering": {},
+        "Damp, flood & structural repairs|Kosteus-, vesi- ja rakennevauriot|Feuchte-, Wasser- & Bauschäden|"
+        "Vocht-, water- & constructieschade|Fukt-, vatten- & konstruktionsskador ~ damp proofing, subsidence repair, "
+        "woodworm treatment, dry rot, underpinning, kosteusvaurio, schimmelsanierung, vochtbestrijding, fuktsanering": {},
+        "Surveys, planning & inspections|Kuntotarkastukset ja suunnittelu|Gutachten, Planung & Prüfung|"
+        "Keuringen & bouwadvies|Besiktning, planering & kontroll ~ building survey, chartered surveyor, "
+        "planning permission, party wall, kuntotarkastus, bausachverständiger, bouwkundige keuring, "
+        "överlåtelsebesiktning": {},
+        "Energy & renewables|Energiaremontit ja uusiutuva energia|Energiesanierung & erneuerbare Energien|"
+        "Energiebesparing & duurzame energie|Energi & förnybart ~ renewable energy installer, wind turbine, "
+        "solar battery storage, energiaremontti, energieberater, verduurzaming": {},
+        "TV aerials, telecom & networking|Antennit, tietoliikenne ja verkot|Antennen, Telefon & Netzwerk|"
+        "Antennes, telefonie & netwerken|Antenner, tele & nätverk ~ aerial installer, satellite dish installer, "
+        "network cabling, antenniasennus, sat-anlage, kabelinstallateur": {},
+        "Restoration & specialist crafts|Entisöinti ja erikoiskäsityöt|Restaurierung & Kunsthandwerk|"
+        "Restauratie & ambachten|Restaurering & hantverk ~ furniture restoration, french polisher, antique restoration, "
+        "huonekalujen entisöinti, möbelrestaurierung, meubelrestauratie, möbelrenovering": {},
+        "Accessibility & mobility adaptations|Esteettömyys ja apuvälineet|Barrierefreiheit & Mobilitätshilfen|"
+        "Toegankelijkheid & hulpmiddelen|Tillgänglighet & hjälpmedel ~ stairlift installation, mobility scooters, "
+        "disabled bathroom, esteetön kylpyhuone, treppenlift, traplift, trapphiss": {},
+        "Scaffolding|Rakennustelineet|Gerüstbau|Steigerbouw|Byggnadsställningar ~ scaffolder, telineasennus, "
+        "gerüstbauer, steigerbouwer, ställningsbyggare": {},
+        "Merchants & trade suppliers|Rautakaupat ja tukkurit|Baustoffhandel & Fachhandel|Bouwmaterialen & groothandel|"
+        "Bygghandel & grossister ~ builders merchant, timber merchant, trade counter": {},
         "Other trades & specialists|Muut ammattilaiset ja erikoisosaajat|Weitere Handwerker & Spezialisten|"
         "Overige vakmensen & specialisten|Övriga hantverkare & specialister ~ specialist trades": {},
         "Tool & equipment hire|Työkalu- ja konevuokraus|Werkzeug- & Maschinenverleih|Gereedschapsverhuur|"
@@ -659,3 +700,107 @@ WHERE: dict[str, list[tuple[str, str]]] = {
     "personal-services": [("care.com", "service"), ("yoopies.de", "service"), ("rover.com", "service"),
                           ("tori.fi", "service")],
 }
+
+
+# Curated ids that moved: old id -> new id (written into tree.json "aliases", so old ids keep resolving).
+ID_ALIASES: dict[str, str] = {
+    "trades.carpentry-joinery.doors-windows": "trades.windows-doors-conservatories",
+}
+
+# The A-Z list a trades platform publishes (Checkatrade, ~1,000 entries) lands in "Other trades & specialists";
+# these rules spread it over the curated groups. First match wins (lower-case English label, regex search).
+TRADE_BUCKET_RULES: list[tuple[str, str]] = [
+    (r"^(emergency )?miscellaneous|^hire services$|^restoration$|^refurbishments$|^glass$|^fault finding$", "-fold"),
+    # vehicles
+    (r"accident repair|dent repair|smart repairs|vehicle paint|alloy wheel|wheel refurb|vehicle wrapping|"
+     r"vehicle signwriting|vehicle window tinting", "auto-services.bodywork-paint"),
+    (r"motorcycle tyres|scooter tyres", "auto-services.tyre-change-storage"),
+    (r"\bmots?\b", "auto-services.vehicle-inspection"),
+    (r"vehicle recovery|towing", "auto-services.towing-roadside-assistance"),
+    (r"windscreen", "auto-services.windscreen-repair"),
+    (r"valeting", "auto-services.car-wash-detailing"),
+    (r"cambelt|clutch|gearbox|engine rebuild|garage vehicle|motorcycle services|motor home|vehicle air con|"
+     r"battery exhaust|locking wheel nut|car alarm|car audio|classic car|van conversion", "auto-services.car-repair-servicing"),
+    (r"scrap car|scrap metal|salvage|rubbish|waste clearance|garden clearance|warehouse clearance|decluttering|"
+     r"skip bag|oil tank emptying", "home-services.moving-removals.junk-removal-disposal"),
+    (r"international removals", "home-services.moving-removals.international-moving"),
+    (r"removals|storage service|loft storage room", "home-services.moving-removals"),
+    # security, locks, mobility
+    (r"car key|vehicle locksmith|\block|key cutting|doors opened|\bsafes?\b", "home-services.handyman.lock-key-services"),
+    (r"alarm|cctv|intercom|door entry|fire extinguisher", "home-services.home-security-alarms"),
+    (r"stairlift|mobility|wheelchair|rise and recline|adjustable beds|disabled|accessible", "trades.accessibility-mobility-adaptations"),
+    # structure, roofs, damp
+    (r"conservator|orangeri|\bporch|lean to", "trades.windows-doors-conservatories"),
+    (r"chimney|\bflues?\b|stove|wood burner|log burn|fireplace|rayburn|solid fuel|smokeless fuel|\blogs\b",
+     "trades.chimneys-fireplaces-stoves"),
+    (r"asbestos (survey|testing)|survey|planning|party wall|inventor|legionella|risk assessment|pat testing|"
+     r"portable appliance|investigation|structural designer|architect|technician$", "trades.surveys-planning-inspections"),
+    (r"asbestos|knock through|chimney breast removal", "trades.building-renovation.demolition"),
+    (r"damp|condensation|mould|dry rot|woodworm|timber treatment|timber resin|subsidence|under ?pinning|wall tie|"
+     r"lintel|\brsj\b|rolled steel joist|structural|spalling|crack|water ?proofing|foundation|piling|sagging|"
+     r"flood|fire damage|water damage", "trades.damp-flood-structural-repairs"),
+    (r"insulation|draught proofing|sound proofing|thermal dynamics|cavity", "trades.building-renovation.insulation"),
+    (r"scaffold", "trades.scaffolding"),
+    # heating, electrics, plumbing
+    (r"heat pump|gshp", "trades.heating-ventilation-air-conditioning.heat-pump-installation"),
+    (r"boiler", "trades.heating-ventilation-air-conditioning.boiler-service"),
+    (r"air conditioning|refrigeration", "trades.heating-ventilation-air-conditioning.air-conditioning-installation"),
+    (r"radiator|central heating|underfloor|\bufh\b|thermostat|\btrv\b|hive heating|tado|lpg|oil tank|oil central|"
+     r"storage heating|electric heating|heater repair|power flush|extractor fan|fume extraction|ventilation",
+     "trades.heating-ventilation-air-conditioning"),
+    (r"electric vehicle|ev charg", "trades.electrical-work.ev-charger-installation"),
+    (r"solar|photovoltaic", "trades.electrical-work.solar-panel-installation"),
+    (r"lighting|\bled\b", "trades.electrical-work.lighting-installation"),
+    (r"renewable|wind turbine|biomass|thermodynamic|battery storage|feed in tariff|rainwater harvesting|energy tariff",
+     "trades.energy-renewables"),
+    (r"rewiring|socket|fuseboard|consumer unit|electric gate|electric shower|ceiling fan|cabling$|^cabling|wiring",
+     "trades.electrical-work"),
+    (r"drain|sewer|soakaway|sewage|septic|macerator|soil stack", "trades.plumbing.drain-unblocking"),
+    (r"bath|shower|wet room|toilet|basin|sink", "trades.plumbing.bathroom-renovation"),
+    (r"immersion|hot water|unvented", "trades.plumbing.water-heater-installation"),
+    (r"pipe|pipework|\btap\b|tap |water|leak detection|moling|plumb|dishwasher draining", "trades.plumbing"),
+    # roofs (after conservatories), windows, doors
+    (r"roof|fascia|soffit|gutter|lead ?flashing|leadwork|lead roofer|ridge|dry verge|dormer|thatch|slate|plain tiles|"
+     r"skylight|velux|felt lap", "trades.roofing"),
+    (r"window|door|bifold|upvc|\bsash|canop|insect screen|cat flap|dog flap|blind|curtain|shutter",
+     "trades.windows-doors-conservatories"),
+    (r"glass|glazing|mirror|splashback", "trades.glaziers"),
+    # walls, floors, finishes
+    (r"plaster|render|pebble dash|k rend|monocouche|skim|coving|dry ?lining|drywall|sheetrock|stud|partition|artex|"
+     r"ceiling|screed|tape and jointing|lath|silicone", "trades.plastering-drylining"),
+    (r"brick|repointing|stone|flint|lime mortar|masonry|concret|core drilling|diamond drilling|memorial|gravestone",
+     "trades.masonry-bricklaying"),
+    (r"tile|tiling|mosaic", "trades.tiling"),
+    (r"carpet|floor|laminate|skirting", "trades.flooring"),
+    # furniture, joinery, outside
+    (r"kitchen|worktop|wardrobe|bedroom|built in|fitted|media wall|alcove|cupboard|shelving|under stairs|"
+     r"bespoke (dining|living|bedroom|pine|oak|furniture)", "trades.kitchens-bedrooms-fitted-furniture"),
+    (r"restor|french polish|antique|refurbish|furniture (painting|spray|strip)|stripper|stripping|leather repair|"
+     r"chair repair|wood turning|stone carving|stained glass", "trades.restoration-specialist-crafts"),
+    (r"shed|summer ?house|log cabin|gazebo|pergola|garden room|garden studio|garden structure|outbuilding|greenhouse|"
+     r"polytunnel|car ?port|aviar|stable|workshop builder|concrete garage|play area|sail shade|timber structure|"
+     r"oak framing", "trades.garden-buildings-structures"),
+    (r"decking|deck ", "trades.carpentry-joinery.decking-fences"),
+    (r"driveway|paving|patio|tarmac|resin|gravel|imprinted|kerb|fenc|gate|railing|trellis|sleepers|road marking|"
+     r"surfacing|block paving", "trades.driveways-paving-fencing"),
+    (r"joiner|joinery|carpent|stair|handrail|balustrade|architrave|woodwork|roof truss|wood", "trades.carpentry-joinery"),
+    (r"loft|garage conversion|basement|barn conversion|extension|new build|renovation|eco builder|sustainable|"
+     r"builders?$|agricultural build|listed building|heritage|property maintenance|dormer|rsj beam",
+     "trades.building-renovation"),
+    (r"grass|turf|mulch|weed|scarification|stump|crown (reduction|thinning)|grounds maintenance|garden maintenance|"
+     r"knotweed|moss removal|sensory garden|roof garden|water garden|water feature|pond|gritting|garden",
+     "home-services.garden-outdoor"),
+    (r"graffiti|soft washing|render cleaning|stain protection|glass polishing|ironing", "home-services.cleaning"),
+    (r"wasp|fumigation|bird restriction|pest", "home-services.pest-control"),
+    (r"dishwasher|fridge|tumble dryer|oven|cooker|vacuum|appliance repair", "home-services.appliance-electronics-repair.home-appliance-repair"),
+    (r"video audio", "home-services.appliance-electronics-repair.tv-audio-repair"),
+    (r"computer maintenance|hardware consult", "home-services.appliance-electronics-repair.computer-repair"),
+    (r"aerial|satellite|freesat|freeview|television point|telephone|broadband|network|wifi|volp|voip|fixed lines|epos|"
+     r"\bit\b", "trades.tv-aerials-telecom-networking"),
+    (r"metal|steel|blacksmith|weld|laser cutting", "trades.welding-metalwork"),
+    (r"digger|cherry picker|grab hire|hire", "trades.tool-equipment-hire"),
+    (r"borehole|groundwork|excavat|agricultural contractor", "trades.groundwork-excavation"),
+    (r"paint|decorat|wallpaper|mural|spray|sign writer|lime wash|coating|door dipping", "trades.painting-decorating"),
+    (r"merchant|supplier|retailer|showroom", "trades.merchants-trade-suppliers"),
+    (r"handyman|odd jobs|assembly|mounting|shelves", "home-services.handyman"),
+]

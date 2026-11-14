@@ -1,15 +1,17 @@
 {
  "meta": {
-  "requests": 6040,
-  "seconds_last_run": 6,
+  "requests": 6671,
+  "seconds_last_run": 0,
   "counts": {
-   "search_found_unverified": 242,
-   "verified_free": 89,
-   "blocked": 185,
-   "no_search": 165
+   "search_found_unverified": 267,
+   "verified_free": 123,
+   "blocked": 204,
+   "no_search": 186,
+   "verified_contextdev": 4
   },
-  "total": 681,
-  "updated": "2026-11-14T12:31:37+00:00"
+  "total": 784,
+  "updated": "2026-11-14T12:40:49+00:00",
+  "contextdev_requests": 7
  },
  "sources": [
   {
@@ -58,6 +60,51 @@
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Home and design"
+  },
+  {
+   "key": "220_lv",
+   "name": "220.lv",
+   "domain": "220.lv",
+   "home": "https://220.lv/",
+   "countries": [
+    "lv"
+   ],
+   "languages": [
+    "lv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "home"
+   ],
+   "kind": "marketplace",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://220.lv/lv/sq?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://220.lv/lv/sq?q={q}"
+   ],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:10+00:00",
+   "seed": "extra"
   },
   {
    "key": "2dehands_be",
@@ -1125,20 +1172,20 @@
     "toys"
    ],
    "kind": "marketplace",
-   "status": "search_found_unverified",
-   "reason": "results page without listing links for a plain fetch",
+   "status": "verified_contextdev",
+   "reason": "plain fetch blocked or JS; Context.dev scrape works",
    "template": "https://www.amazon.de/s?k={q}",
    "method": "get",
    "template_via": "known",
    "free_fetch": false,
-   "listing": "^/gp/offer\\-listing/[A-Za-z0-9]+(?:[/?#]|$)",
+   "listing": "^/\\-/en/gp/offer\\-listing/[A-Za-z0-9]+(?:[/?#]|$)",
    "sample": [
-    "/gp/offer-listing/B00PY3EYQO/ref=sr_1_16_olp",
-    "/gp/offer-listing/B01N10IAFG/ref=sr_1_57_olp",
-    "/gp/offer-listing/B01N4NJ3HX/ref=sr_1_44_olp"
+    "/-/en/gp/offer-listing/B00NVDP3ZU/ref=sr_1_1_olp",
+    "/-/en/gp/offer-listing/B01N4NJ3HX/ref=sr_1_49_olp",
+    "/-/en/gp/offer-listing/B01N6CJ1QW/ref=sr_1_27_olp"
    ],
-   "links": 46,
-   "prices": 391,
+   "links": 38,
+   "prices": 430,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
@@ -1146,11 +1193,12 @@
    "pagination": {
     "param": "page"
    },
-   "yield": 0.63,
+   "yield": 0.9,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:38:22+00:00",
    "checked_at": "2026-11-14T12:19:17+00:00",
    "seed": "extra"
   },
@@ -1790,6 +1838,92 @@
    "seed": "extra"
   },
   {
+   "key": "aruodas_lt",
+   "name": "Aruodas",
+   "domain": "aruodas.lt",
+   "home": "https://www.aruodas.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "rental",
+    "service"
+   ],
+   "categories": [
+    "housing"
+   ],
+   "kind": "housing",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "vilnius",
+   "tried": 0,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:16+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "arvutitark_ee",
+   "name": "Arvutitark",
+   "domain": "arvutitark.ee",
+   "home": "https://arvutitark.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "computers",
+    "electronics"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://arvutitark.ee/otsing?search={q}&sort=top",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://arvutitark.ee/otsing?search={q}&sort=top"
+   ],
+   "test_query": "lenovo",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:06+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "asgoodasnew_de",
    "name": "asgoodasnew",
    "domain": "asgoodasnew.de",
@@ -2066,9 +2200,7 @@
    "jsonld_products": 60,
    "embedded_prices": 300,
    "next_data": false,
-   "pagination": {
-    "param": "page"
-   },
+   "pagination": {},
    "yield": 0.675,
    "robots_disallowed": [],
    "test_query": "pokemon",
@@ -2078,6 +2210,90 @@
    "seed": "secondhand_xlsx",
    "market": "Czechia, Slovakia",
    "group": "Central Europe"
+  },
+  {
+   "key": "auto24_ee",
+   "name": "auto24",
+   "domain": "auto24.ee",
+   "home": "https://www.auto24.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.auto24.ee/otsi?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:08+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "autoplius_lt",
+   "name": "Autoplius",
+   "domain": "autoplius.lt",
+   "home": "https://autoplius.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:16+00:00",
+   "seed": "extra"
   },
   {
    "key": "autoscout24_com",
@@ -2700,6 +2916,52 @@
    "seed": "extra"
   },
   {
+   "key": "backmarket_fi",
+   "name": "Back Market",
+   "domain": "backmarket.fi",
+   "home": "https://www.backmarket.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "http://www.backmarket.fi/fi-fi/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "http://www.backmarket.fi/fi-fi/search?q={q}"
+   ],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:52+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "backmarket_fr",
    "name": "Back Market",
    "domain": "backmarket.fr",
@@ -2742,6 +3004,51 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:25:23+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "backmarket_gr",
+   "name": "Back Market",
+   "domain": "backmarket.gr",
+   "home": "https://www.backmarket.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "http://www.backmarket.gr/el-gr/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "http://www.backmarket.gr/el-gr/search?q={q}"
+   ],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:59+00:00",
    "seed": "extra"
   },
   {
@@ -2922,6 +3229,96 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:27:43+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "backmarket_se",
+   "name": "Back Market",
+   "domain": "backmarket.se",
+   "home": "https://www.backmarket.se/",
+   "countries": [
+    "se"
+   ],
+   "languages": [
+    "sv"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "http://www.backmarket.se/sv-se/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "http://www.backmarket.se/sv-se/search?q={q}"
+   ],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:49+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "backmarket_sk",
+   "name": "Back Market",
+   "domain": "backmarket.sk",
+   "home": "https://www.backmarket.sk/",
+   "countries": [
+    "sk"
+   ],
+   "languages": [
+    "sk"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "http://www.backmarket.sk/sk-sk/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "http://www.backmarket.sk/sk-sk/search?q={q}"
+   ],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:59+00:00",
    "seed": "extra"
   },
   {
@@ -3689,15 +4086,59 @@
    "jsonld_products": 10,
    "embedded_prices": 0,
    "next_data": false,
-   "pagination": {
-    "param": "page"
-   },
+   "pagination": {},
    "yield": 0.822,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
    "contextdev": false,
    "checked_at": "2026-11-14T12:23:02+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "bestprice_gr",
+   "name": "BestPrice",
+   "domain": "bestprice.gr",
+   "home": "https://www.bestprice.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "comparison",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.bestprice.gr/search?q={q}&bpref=opensearch",
+   "method": "get",
+   "template_via": "opensearch",
+   "free_fetch": true,
+   "listing": "^/item/\\d+/[^/?#]*\\d{3,}[^/?#]*\\.html(?:[/?#]|$)",
+   "sample": [
+    "/item/2154510561/lego-classic-megalo-kouti-gia-dimiourgies-gia-4-plus-eton-10698.html",
+    "/item/2156442678/lego-botanicals-mponsai-gia-18-plus-eton-10281.html",
+    "/item/2156486972/lego-ninjago-legacy-city-gardens-gia-14-plus-eton-71741.html"
+   ],
+   "links": 18,
+   "prices": 24,
+   "itemlist": true,
+   "jsonld_products": 16,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.95,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:45+00:00",
    "seed": "extra"
   },
   {
@@ -3785,6 +4226,52 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:21:00+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "bigbang_si",
+   "name": "Big Bang",
+   "domain": "bigbang.si",
+   "home": "https://www.bigbang.si/",
+   "countries": [
+    "si"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.bigbang.si/izdelki/?search_q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/brb70f26ces0eo-izdelek-21740133",
+    "/demo-ctr164nc01-bol-izdelek-5000492982",
+    "/dv80dg52b0aele-izdelek-5000555236"
+   ],
+   "links": 29,
+   "prices": 78,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 1,
+   "next_data": true,
+   "pagination": {},
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:58+00:00",
    "seed": "extra"
   },
   {
@@ -4653,6 +5140,47 @@
    "group": "Nordics"
   },
   {
+   "key": "booksy_com_en_gb",
+   "name": "Booksy",
+   "domain": "booksy.com",
+   "home": "https://booksy.com/en-gb/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "beauty_services"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "london",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:48+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "booksy_com_pl_pl",
    "name": "Booksy",
    "domain": "booksy.com",
@@ -4761,13 +5289,13 @@
    "method": "get",
    "template_via": "pattern",
    "free_fetch": true,
-   "listing": "^/se/sv/adidas\\-originals/[^/?#]*\\d{3,}[^/?#]*/\\d+(?:[/?#]|$)",
+   "listing": "^/se/sv/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*/\\d+(?:[/?#]|$)",
    "sample": [
     "/se/sv/adidas-originals/3s-crew-s-3p_32814766/229560837",
     "/se/sv/adidas-originals/campus-00s-j_31324939/225107574",
     "/se/sv/adidas-originals/campus-00s-w_32915261/230672977"
    ],
-   "links": 35,
+   "links": 60,
    "prices": 114,
    "itemlist": false,
    "jsonld_products": 0,
@@ -5873,6 +6401,48 @@
    "tried": 0,
    "contextdev": false,
    "checked_at": "2026-11-14T12:31:07+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ceneje_si",
+   "name": "Ceneje",
+   "domain": "ceneje.si",
+   "home": "https://www.ceneje.si/",
+   "countries": [
+    "si"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "comparison",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.ceneje.si/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:00+00:00",
    "seed": "extra"
   },
   {
@@ -7571,6 +8141,49 @@
    "seed": "extra"
   },
   {
+   "key": "decathlon_at",
+   "name": "Decathlon",
+   "domain": "decathlon.at",
+   "home": "https://www.decathlon.at/",
+   "countries": [
+    "at"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "sports",
+    "outdoor",
+    "bikes"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.decathlon.at/suche?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:03+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "decathlon_be_nl",
    "name": "Decathlon",
    "domain": "decathlon.be",
@@ -8721,6 +9334,52 @@
    "seed": "extra"
   },
   {
+   "key": "e_shop_gr",
+   "name": "e-shop.gr",
+   "domain": "e-shop.gr",
+   "home": "https://www.e-shop.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers"
+   ],
+   "kind": "retailer",
+   "status": "verified_free",
+   "reason": null,
+   "template": "http://www.e-shop.gr/sort_search.phtml?stuff={q}",
+   "method": "get",
+   "template_via": "opensearch",
+   "free_fetch": true,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/exoterikos-skliros-samsung-mu-pc2t0t-ww-portable-ssd-t7-2tb-usb-32-gray-p-PER.306340",
+    "/exoterikos-skliros-samsung-mu-pg1t0b-eu-portable-ssd-t9-1tb-usb-32-gen2x2-black-p-PER.578506",
+    "/othoni-samsung-essential-ls27f434uauxen-27-led-ips-fhd-pivot-black-p-PER.281002"
+   ],
+   "links": 74,
+   "prices": 75,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.862,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:46+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "easycash_fr",
    "name": "Easy Cash",
    "domain": "easycash.fr",
@@ -8809,6 +9468,51 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:21:38+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ebay_ch",
+   "name": "eBay.ch",
+   "domain": "ebay.ch",
+   "home": "https://www.ebay.ch/",
+   "countries": [
+    "ch"
+   ],
+   "languages": [
+    "de",
+    "fr",
+    "it"
+   ],
+   "lanes": [
+    "new",
+    "used"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "marketplace",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.ebay.ch/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:36+00:00",
    "seed": "extra"
   },
   {
@@ -9040,6 +9744,49 @@
    "seed": "extra"
   },
   {
+   "key": "ebay_ie",
+   "name": "eBay.ie",
+   "domain": "ebay.ie",
+   "home": "https://www.ebay.ie/",
+   "countries": [
+    "ie"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "new",
+    "used"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "marketplace",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.ebay.ie/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:27+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "ebay_it",
    "name": "eBay.it",
    "domain": "ebay.it",
@@ -9083,6 +9830,92 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:27:02+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ebay_nl",
+   "name": "eBay.nl",
+   "domain": "ebay.nl",
+   "home": "https://www.ebay.nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "new",
+    "used"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "marketplace",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.ebay.nl/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:36+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ebay_pl",
+   "name": "eBay.pl",
+   "domain": "ebay.pl",
+   "home": "https://www.ebay.pl/",
+   "countries": [
+    "pl"
+   ],
+   "languages": [
+    "pl"
+   ],
+   "lanes": [
+    "new",
+    "used"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "marketplace",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.ebay.pl/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:30+00:00",
    "seed": "extra"
   },
   {
@@ -9167,7 +10000,7 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {
-    "path_suffix": "/p{page}"
+    "path_suffix": "/samsung/p{page}"
    },
    "yield": 0.9,
    "robots_disallowed": [],
@@ -9529,7 +10362,7 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {
-    "path_suffix": "/p{page}"
+    "path_suffix": "/lego/p{page}"
    },
    "yield": 0.9,
    "robots_disallowed": [],
@@ -9578,7 +10411,7 @@
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {
-    "path_suffix": "/p{page}"
+    "path_suffix": "/lego/p{page}"
    },
    "yield": 0.9,
    "robots_disallowed": [],
@@ -9633,8 +10466,52 @@
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:39:28+00:00",
    "checked_at": "2026-11-14T12:31:05+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "emmezeta_hr",
+   "name": "Emmezeta",
+   "domain": "emmezeta.hr",
+   "home": "https://www.emmezeta.hr/",
+   "countries": [
+    "hr"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.emmezeta.hr/?search={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "sofa",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:51+00:00",
    "seed": "extra"
   },
   {
@@ -9859,6 +10736,52 @@
    "seed": "extra"
   },
   {
+   "key": "euronics_ee",
+   "name": "Euronics",
+   "domain": "euronics.ee",
+   "home": "https://www.euronics.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.euronics.ee/otsi?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": true,
+   "listing": "^/telefonid/nutitelefonid/android/[^/?#]*\\d{3,}[^/?#]*/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/telefonid/nutitelefonid/android/sm-f776bligeue/samsung-galaxy-flip8-256-gb-roosa-nutitelefon",
+    "/telefonid/nutitelefonid/android/sm-s741blgdeue/samsung-galaxy-s26-fe-128-gb-heleroheline-nutitelefon",
+    "/telefonid/nutitelefonid/android/sm-s741blggeue/samsung-galaxy-s26-fe-256-gb-heleroheline-nutitelefon"
+   ],
+   "links": 7,
+   "prices": 42,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 5,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.38,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:04+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "euronics_it",
    "name": "Euronics",
    "domain": "euronics.it",
@@ -9883,22 +10806,20 @@
    "method": "get",
    "template_via": "form",
    "free_fetch": true,
-   "listing": "^/telefonia/[^/?#]+/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*/\\d+\\.html(?:[/?#]|$)",
+   "listing": "^/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*/\\d+\\.html(?:[/?#]|$)",
    "sample": [
+    "/elettrodomestici/elettrodomestici-da-incasso/frigoriferi-da-incasso/samsung---frigorifero-combinato-brb70f26ces0ef-classe-e-267l-bianco/252001950.html",
     "/telefonia/smartphone-e-cellulari/smartphone-dual-sim/samsung---galaxy-s25-edge-12256gb-titanium-jetblack/252006283.html",
-    "/telefonia/smartphone-e-cellulari/smartphone-dual-sim/samsung---smartphone-galaxy-a27-5g-%286gb128gb%29-black/262007194.html",
-    "/telefonia/smartphone-e-cellulari/smartphone-dual-sim/samsung---smartphone-galaxy-a27-5g-%286gb128gb%29-light-pink/262007198.html"
+    "/telefonia/smartphone-e-cellulari/smartphone-dual-sim/samsung---smartphone-galaxy-a27-5g-%286gb128gb%29-black/262007194.html"
    ],
-   "links": 12,
+   "links": 15,
    "prices": 198,
    "itemlist": true,
    "jsonld_products": 0,
    "embedded_prices": 48,
    "next_data": false,
-   "pagination": {
-    "param": "p"
-   },
-   "yield": 0.676,
+   "pagination": {},
+   "yield": 0.87,
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 2,
@@ -10324,26 +11245,31 @@
     "computers"
    ],
    "kind": "retailer",
-   "status": "blocked",
-   "reason": "bot wall on the results page",
+   "status": "verified_contextdev",
+   "reason": "plain fetch blocked or JS; Context.dev scrape works",
    "template": "https://www.fnac.com/SearchResult/ResultList.aspx?Search={q}",
    "method": "get",
    "template_via": "searchaction",
    "free_fetch": false,
-   "listing": null,
-   "sample": [],
-   "links": 0,
-   "prices": 0,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*/[A-Za-z0-9]+(?:[/?#]|$)",
+   "sample": [
+    "/Pack-Smartphone-Samsung-Galaxy-S25-Edge-6-7-5G-Nano-SIM-256-Go-Noir-absolu-titane-Casque-Force-Play-Immersion-II-Bluetooth-avec-reduction-du-bruit-active-hybride-Noir/a23751964/w-4",
+    "/Pack-Smartphone-Samsung-Galaxy-S26-FE-6-7-5G-Double-Nano-SIM-128-Go-Graphite-Ecouteurs-Buds3-FE-Noir/a23531032/w-4",
+    "/Samsung-Galaxy-A56-Enterprise-Edition-5G-smartphone-double-SIM-RAM-8-Go-Memoire-interne-256-Go-ecran-OEL-6-7-2340-x-1080-pixels-120-Hz-3-x-cameras-arriere-50-MP-12-MP-5-MP-front-camera-12-MP-graphite-magnifique/a23596841/w-4"
+   ],
+   "links": 18,
+   "prices": 98,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.0,
+   "yield": 0.82,
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 2,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:37:52+00:00",
    "checked_at": "2026-11-14T12:24:39+00:00",
    "seed": "extra"
   },
@@ -10470,9 +11396,7 @@
    "jsonld_products": 1,
    "embedded_prices": 0,
    "next_data": false,
-   "pagination": {
-    "param": "p"
-   },
+   "pagination": {},
    "yield": 0.8,
    "robots_disallowed": [],
    "test_query": "iphone",
@@ -10616,6 +11540,47 @@
    "seed": "secondhand_xlsx",
    "market": "United Kingdom",
    "group": "Western Europe"
+  },
+  {
+   "key": "fresha_com",
+   "name": "Fresha",
+   "domain": "fresha.com",
+   "home": "https://www.fresha.com/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "beauty_services"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "london",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:27+00:00",
+   "seed": "extra"
   },
   {
    "key": "fressnapf_de",
@@ -11294,6 +12259,49 @@
    "group": "Fashion and family"
   },
   {
+   "key": "grover_com_at_de",
+   "name": "Grover",
+   "domain": "grover.com",
+   "home": "https://www.grover.com/at-de",
+   "countries": [
+    "at"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "rental"
+   ],
+   "categories": [
+    "electronics",
+    "phones",
+    "computers"
+   ],
+   "kind": "rental",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:23+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "grover_com_de_de",
    "name": "Grover",
    "domain": "grover.com",
@@ -11334,6 +12342,92 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:20:51+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "grover_com_es_es",
+   "name": "Grover",
+   "domain": "grover.com",
+   "home": "https://www.grover.com/es-es",
+   "countries": [
+    "es"
+   ],
+   "languages": [
+    "es"
+   ],
+   "lanes": [
+    "rental"
+   ],
+   "categories": [
+    "electronics",
+    "phones",
+    "computers"
+   ],
+   "kind": "rental",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:24+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "grover_com_nl_en",
+   "name": "Grover",
+   "domain": "grover.com",
+   "home": "https://www.grover.com/nl-en",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "rental"
+   ],
+   "categories": [
+    "electronics",
+    "phones",
+    "computers"
+   ],
+   "kind": "rental",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:18+00:00",
    "seed": "extra"
   },
   {
@@ -11971,26 +13065,22 @@
     "cleaning"
    ],
    "kind": "service",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results page not clearly listings of the query (re-check)",
    "template": "https://www.helpling.ch/?s={q}",
    "method": "get",
    "template_via": "searchaction",
-   "free_fetch": true,
-   "listing": "^/page/\\d+(?:[/?#]|$)",
-   "sample": [
-    "/page/2",
-    "/page/3",
-    "/page/4"
-   ],
-   "links": 8,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
    "prices": 0,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.3,
+   "yield": 0.0,
    "robots_disallowed": [],
    "test_query": "reinigung",
    "tried": 1,
@@ -12547,6 +13637,54 @@
    "tried": 2,
    "contextdev": false,
    "checked_at": "2026-11-14T12:30:38+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "hinnavaatlus_ee",
+   "name": "Hinnavaatlus",
+   "domain": "hinnavaatlus.ee",
+   "home": "https://www.hinnavaatlus.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers"
+   ],
+   "kind": "comparison",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.hinnavaatlus.ee/search/?query={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": true,
+   "listing": "^/\\d+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/1985107/samsung-870-evo-500-gb",
+    "/2484228/samsung-990-pro-1tb",
+    "/2484229/samsung-990-pro-2tb"
+   ],
+   "links": 35,
+   "prices": 72,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:03+00:00",
    "seed": "extra"
   },
   {
@@ -14084,6 +15222,50 @@
    "seed": "extra"
   },
   {
+   "key": "ikea_com_hr_hr",
+   "name": "IKEA",
+   "domain": "ikea.com",
+   "home": "https://www.ikea.com/hr/hr/",
+   "countries": [
+    "hr"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.ikea.com/hr/hr/search/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.ikea.com/hr/hr/search/?q={q}"
+   ],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:09+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "ikea_com_hu_hu",
    "name": "IKEA",
    "domain": "ikea.com",
@@ -14125,6 +15307,50 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:30:55+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_com_ie_en",
+   "name": "IKEA",
+   "domain": "ikea.com",
+   "home": "https://www.ikea.com/ie/en/",
+   "countries": [
+    "ie"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.ikea.com/ie/en/search/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.ikea.com/ie/en/search/?q={q}"
+   ],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:06+00:00",
    "seed": "extra"
   },
   {
@@ -14436,6 +15662,262 @@
    "seed": "extra"
   },
   {
+   "key": "ikea_com_si_sl",
+   "name": "IKEA",
+   "domain": "ikea.com",
+   "home": "https://www.ikea.com/si/sl/",
+   "countries": [
+    "si"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.ikea.com/si/sl/search/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.ikea.com/si/sl/search/?q={q}"
+   ],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:15+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_com_sk_sk",
+   "name": "IKEA",
+   "domain": "ikea.com",
+   "home": "https://www.ikea.com/sk/sk/",
+   "countries": [
+    "sk"
+   ],
+   "languages": [
+    "sk"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.ikea.com/sk/sk/search/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.ikea.com/sk/sk/search/?q={q}"
+   ],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:06+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_ee",
+   "name": "IKEA",
+   "domain": "ikea.ee",
+   "home": "https://www.ikea.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.ikea.com/ee/et/search/?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:20+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_gr",
+   "name": "IKEA",
+   "domain": "ikea.gr",
+   "home": "https://www.ikea.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.ikea.gr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "billy",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:48+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_lt",
+   "name": "IKEA",
+   "domain": "ikea.lt",
+   "home": "https://www.ikea.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.ikea.com/lt/lt/search/?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:17+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "ikea_lv",
+   "name": "IKEA",
+   "domain": "ikea.lv",
+   "home": "https://www.ikea.lv/",
+   "countries": [
+    "lv"
+   ],
+   "languages": [
+    "lv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "furniture",
+    "home"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.ikea.com/lv/lv/search/?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "billy",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:16+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "immobiliare_it",
    "name": "Immobiliare.it",
    "domain": "immobiliare.it",
@@ -14644,6 +16126,48 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:31:23+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "imot_bg",
+   "name": "imot.bg",
+   "domain": "imot.bg",
+   "home": "https://www.imot.bg/",
+   "countries": [
+    "bg"
+   ],
+   "languages": [
+    "bg"
+   ],
+   "lanes": [
+    "rental",
+    "service"
+   ],
+   "categories": [
+    "housing"
+   ],
+   "kind": "housing",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "sofia",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:33+00:00",
    "seed": "extra"
   },
   {
@@ -15107,21 +16631,19 @@
    "method": "get",
    "template_via": "pattern",
    "free_fetch": true,
-   "listing": "^/budapest/[^/?#]*\\d{3,}[^/?#]*\\.htm(?:[/?#]|$)",
+   "listing": "^/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*\\.htm(?:[/?#]|$)",
    "sample": [
     "/budapest/LEGO_10294_Titanic_Lego_Titanic_159336271.htm",
     "/budapest/LEGO_10299_Real_Madrid_Santiago_Bernabeu_Stadion_161664142.htm",
     "/budapest/LEGO_21065_Sagrada_Familia_Lego_Architecture_21065_Lego_Sagrada_162820014.htm"
    ],
-   "links": 27,
+   "links": 33,
    "prices": 72,
    "itemlist": true,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": true,
-   "pagination": {
-    "param": "o"
-   },
+   "pagination": {},
    "yield": 1.0,
    "robots_disallowed": [],
    "test_query": "lego",
@@ -15252,11 +16774,11 @@
    "free_fetch": true,
    "listing": "^/catalog/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
-    "/catalog/verktoy-og-maskiner/el-verktoy-og-maskiner/tilbehor-til-batteridriften/batteridrevne-tilbehor/batteridrevet-luftpumpe-029396",
-    "/catalog/verktoy-og-maskiner/el-verktoy-og-maskiner/tilbehor-til-batteridriften/batteridrevne-tilbehor/batteridrevet-multikompressor-033723",
-    "/catalog/verktoy-og-maskiner/el-verktoy-og-maskiner/tilbehor-til-batteridriften/batteridrevne-tilbehor/bluetooth-hoyttaler-033722"
+    "/catalog/verktoy-og-maskiner/el-verktoy-og-maskiner/boremaskiner/elektriske-slagbormaskiner/slagboremaskin-029747",
+    "/catalog/verktoy-og-maskiner/el-verktoy-og-maskiner/boremaskiner/stasjonare-boremaskiner/soyleboremaskin-254018",
+    "/catalog/verktoy-og-maskiner/el-verktoy-og-maskiner/borhammer/batteridreven-borhammer/batteridrevet-borhammer-026021"
    ],
-   "links": 31,
+   "links": 55,
    "prices": 99,
    "itemlist": false,
    "jsonld_products": 0,
@@ -15300,11 +16822,11 @@
    "free_fetch": true,
    "listing": "^/catalog/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
-    "/catalog/verktyg-och-maskiner/elverktyg-och-maskiner/tillbehor-till-batteridrivet/batteridrivna-tillbehor/batteridriven-luftpump-029396",
-    "/catalog/verktyg-och-maskiner/elverktyg-och-maskiner/tillbehor-till-batteridrivet/batteridrivna-tillbehor/batteridriven-multikompressor-033723",
-    "/catalog/verktyg-och-maskiner/elverktyg-och-maskiner/tillbehor-till-batteridrivet/batteridrivna-tillbehor/bluetooth-hogtalare-033722"
+    "/catalog/verktyg-och-maskiner/elverktyg-och-maskiner/borrhammare/batteridrivna-borrhammare/batteridriven-borrhammare-026021",
+    "/catalog/verktyg-och-maskiner/elverktyg-och-maskiner/borrhammare/elektriska-borrhammare/borrhammare-029732",
+    "/catalog/verktyg-och-maskiner/elverktyg-och-maskiner/borrmaskiner/elektriska-slagborrmaskiner/slagborrmaskin-029747"
    ],
-   "links": 25,
+   "links": 59,
    "prices": 99,
    "itemlist": false,
    "jsonld_products": 0,
@@ -15500,6 +17022,52 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:16:29+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "kaina24_lt",
+   "name": "Kaina24",
+   "domain": "kaina24.lt",
+   "home": "https://www.kaina24.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "comparison",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.kaina24.lt/search?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/p/lego-advento-kalendorius-75456",
+    "/p/lego-art-31212",
+    "/p/lego-botanicals-11505"
+   ],
+   "links": 20,
+   "prices": 28,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:14+00:00",
    "seed": "extra"
   },
   {
@@ -15773,6 +17341,51 @@
    "tried": 2,
    "contextdev": false,
    "checked_at": "2026-11-14T12:19:44+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "kaup24_ee",
+   "name": "Kaup24",
+   "domain": "kaup24.ee",
+   "home": "https://kaup24.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "home"
+   ],
+   "kind": "marketplace",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://kaup24.ee/et/sq?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://kaup24.ee/et/sq?q={q}"
+   ],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:03+00:00",
    "seed": "extra"
   },
   {
@@ -16167,20 +17780,20 @@
    "method": "get",
    "template_via": "known",
    "free_fetch": true,
-   "listing": "^/s\\-anzeige/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "listing": "^/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
     "/s-anzeige/lego-21065-architecture-sagrada-familia-neu-ovp/3565759452-23-6837",
     "/s-anzeige/lego-architecture-21051-tokyo-skyline-set/3571056146-23-3010",
     "/s-anzeige/lego-architecture-paris-21044-mit-ovp/3571055553-23-2915"
    ],
-   "links": 18,
+   "links": 23,
    "prices": 25,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.82,
+   "yield": 0.823,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 1,
@@ -16189,6 +17802,48 @@
    "seed": "secondhand_xlsx",
    "market": "Germany",
    "group": "Central Europe"
+  },
+  {
+   "key": "klick_ee",
+   "name": "Klick",
+   "domain": "klick.ee",
+   "home": "https://www.klick.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "phones"
+   ],
+   "kind": "retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:05+00:00",
+   "seed": "extra"
   },
   {
    "key": "komplett_no",
@@ -16358,6 +18013,48 @@
    "tried": 0,
    "contextdev": false,
    "checked_at": "2026-11-14T12:17:06+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "kotsovolos_gr",
+   "name": "Kotsovolos",
+   "domain": "kotsovolos.gr",
+   "home": "https://www.kotsovolos.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the home page",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:42+00:00",
    "seed": "extra"
   },
   {
@@ -16576,6 +18273,52 @@
    "seed": "secondhand_xlsx",
    "market": "Serbia",
    "group": "Southeast Europe"
+  },
+  {
+   "key": "kv_ee",
+   "name": "kv.ee",
+   "domain": "kv.ee",
+   "home": "https://www.kv.ee/",
+   "countries": [
+    "ee"
+   ],
+   "languages": [
+    "et"
+   ],
+   "lanes": [
+    "rental",
+    "service"
+   ],
+   "categories": [
+    "housing"
+   ],
+   "kind": "housing",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.kv.ee/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": true,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/360-vaatedarsenali-veetorn-erika-tanaval-on-pohja--3937047",
+    "/aasta-lopuni-hinnavoit-kuni-30-000-soodustus-valit-3880376",
+    "/avar-a-energiaklassi-kodu-kassisaba-sudames908-m-2-3700130"
+   ],
+   "links": 56,
+   "prices": 211,
+   "itemlist": true,
+   "jsonld_products": 0,
+   "embedded_prices": 50,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.982,
+   "robots_disallowed": [],
+   "test_query": "tallinn",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:06+00:00",
+   "seed": "extra"
   },
   {
    "key": "kwantum_nl",
@@ -17004,26 +18747,31 @@
     "general"
    ],
    "kind": "classifieds",
-   "status": "blocked",
-   "reason": "bot wall on the results page",
+   "status": "verified_contextdev",
+   "reason": "plain fetch blocked or JS; Context.dev scrape works",
    "template": "https://www.leboncoin.fr/recherche?text={q}",
    "method": "get",
    "template_via": "known",
    "free_fetch": false,
-   "listing": null,
-   "sample": [],
-   "links": 0,
-   "prices": 0,
+   "listing": "^/ad/[^/?#]+/\\d+(?:[/?#]|$)",
+   "sample": [
+    "/ad/collection/3294187164",
+    "/ad/collection/3294188609",
+    "/ad/collection/3306885999"
+   ],
+   "links": 35,
+   "prices": 130,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.0,
+   "yield": 0.897,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 2,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:35:36+00:00",
    "checked_at": "2026-11-14T12:11:50+00:00",
    "seed": "secondhand_xlsx",
    "market": "France",
@@ -17109,9 +18857,7 @@
    "jsonld_products": 24,
    "embedded_prices": 24,
    "next_data": true,
-   "pagination": {
-    "param": "page"
-   },
+   "pagination": {},
    "yield": 1.0,
    "robots_disallowed": [],
    "test_query": "bank",
@@ -17468,6 +19214,54 @@
    "seed": "secondhand_xlsx",
    "market": "Serbia",
    "group": "Southeast Europe"
+  },
+  {
+   "key": "links_hr",
+   "name": "Links",
+   "domain": "links.hr",
+   "home": "https://www.links.hr/",
+   "countries": [
+    "hr"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "computers",
+    "electronics"
+   ],
+   "kind": "retailer",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.links.hr/hr/search/?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": true,
+   "listing": "^/hr/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/hr/igraca-konzola-lenovo-legion-go-s-8arp1-83l3000msc-1tb-bijela-011101159",
+    "/hr/laptop-lenovo-ideapad-slim-3-83k100jmsc-core-i5-13420h-16gb-1tb-ssd-intel-hd-graphics-156-wuxga-ips-bez-os-plavi-0101012848",
+    "/hr/laptop-lenovo-ideapad-slim-3-83k10130sc-core-i5-13420h-16gb-1tb-ssd-intel-hd-graphics-153-wuxga-ips-bez-os-plavi-0101012850"
+   ],
+   "links": 24,
+   "prices": 37,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.84,
+   "robots_disallowed": [
+    "https://www.links.hr/hr/search?q={q}"
+   ],
+   "test_query": "lenovo",
+   "tried": 3,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:52+00:00",
+   "seed": "extra"
   },
   {
    "key": "list_am_en",
@@ -18282,7 +20076,8 @@
    "robots_disallowed": [],
    "test_query": "samsung",
    "tried": 8,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:37:13+00:00",
    "checked_at": "2026-11-14T12:19:24+00:00",
    "seed": "extra"
   },
@@ -18381,6 +20176,48 @@
    "seed": "extra"
   },
   {
+   "key": "mediamarkt_it",
+   "name": "MediaMarkt",
+   "domain": "mediamarkt.it",
+   "home": "https://www.mediamarkt.it/",
+   "countries": [
+    "it"
+   ],
+   "languages": [
+    "it"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "no_search",
+   "reason": "unreachable",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 0,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:26+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "mediamarkt_nl",
    "name": "MediaMarkt",
    "domain": "mediamarkt.nl",
@@ -18471,6 +20308,48 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:29:37+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "mediamarkt_pt",
+   "name": "MediaMarkt",
+   "domain": "mediamarkt.pt",
+   "home": "https://www.mediamarkt.pt/",
+   "countries": [
+    "pt"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results drawn by JavaScript (prices in app state)",
+   "template": "https://darty.pt/search?q={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 1,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 8,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:25+00:00",
    "seed": "extra"
   },
   {
@@ -18744,6 +20623,51 @@
    "group": "Southern Europe"
   },
   {
+   "key": "merkur_si",
+   "name": "Merkur",
+   "domain": "merkur.si",
+   "home": "https://www.merkur.si/",
+   "countries": [
+    "si"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "diy",
+    "tools",
+    "garden"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://www.merkur.si/catalogsearch/result/index/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://www.merkur.si/catalogsearch/result/index/?q={q}"
+   ],
+   "test_query": "bosch",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:00+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "merrjep_al",
    "name": "MerrJep Albania",
    "domain": "merrjep.al",
@@ -18974,6 +20898,48 @@
    "group": "Southern Europe"
   },
   {
+   "key": "mimovrste_com",
+   "name": "Mimovrste",
+   "domain": "mimovrste.com",
+   "home": "https://www.mimovrste.com/",
+   "countries": [
+    "si"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.mimovrste.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:57+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "mittanbud_no",
    "name": "Mittanbud",
    "domain": "mittanbud.no",
@@ -19015,6 +20981,48 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:18:42+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "mobile_bg",
+   "name": "mobile.bg",
+   "domain": "mobile.bg",
+   "home": "https://www.mobile.bg/",
+   "countries": [
+    "bg"
+   ],
+   "languages": [
+    "bg"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "cars",
+    "vehicles"
+   ],
+   "kind": "vehicles",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "volkswagen",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:36+00:00",
    "seed": "extra"
   },
   {
@@ -19651,6 +21659,48 @@
    "group": "Turkey and Caucasus"
   },
   {
+   "key": "nabava_net",
+   "name": "Nabava.net",
+   "domain": "nabava.net",
+   "home": "https://www.nabava.net/",
+   "countries": [
+    "hr"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "comparison",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.nabava.net/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:57+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "nay_sk",
    "name": "NAY",
    "domain": "nay.sk",
@@ -19729,9 +21779,7 @@
    "jsonld_products": 30,
    "embedded_prices": 60,
    "next_data": false,
-   "pagination": {
-    "param": "page"
-   },
+   "pagination": {},
    "yield": 0.832,
    "robots_disallowed": [],
    "test_query": "bratislava",
@@ -19781,6 +21829,48 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:30:28+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "nepremicnine_net",
+   "name": "Nepremičnine.net",
+   "domain": "nepremicnine.net",
+   "home": "https://www.nepremicnine.net/",
+   "countries": [
+    "si"
+   ],
+   "languages": [
+    "sl"
+   ],
+   "lanes": [
+    "rental",
+    "service"
+   ],
+   "categories": [
+    "housing"
+   ],
+   "kind": "housing",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.nepremicnine.net/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "ljubljana",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:02+00:00",
    "seed": "extra"
   },
   {
@@ -20769,26 +22859,33 @@
     "general"
    ],
    "kind": "classifieds",
-   "status": "blocked",
-   "reason": "bot wall on the results page",
+   "status": "verified_contextdev",
+   "reason": "plain fetch blocked or JS; Context.dev scrape works",
    "template": "https://www.olx.pl/oferty/q-{dash}/",
    "method": "get",
    "template_via": "known",
    "free_fetch": false,
-   "listing": null,
-   "sample": [],
-   "links": 0,
-   "prices": 0,
+   "listing": "^/d/oferta/[^/?#]+\\.html(?:[/?#]|$)",
+   "sample": [
+    "/d/oferta/15-kg-klockow-lego-uzywanych-CID88-ID1dg3N9.html",
+    "/d/oferta/6-x-lego-friends-nowe-zestawy-CID88-ID1d5GnO.html",
+    "/d/oferta/bionicle-lego-archiwalne-zestawy-CID88-ID1dfXDK.html"
+   ],
+   "links": 33,
+   "prices": 50,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
-   "pagination": {},
-   "yield": 0.0,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 2,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:38:50+00:00",
    "checked_at": "2026-11-14T12:12:21+00:00",
    "seed": "secondhand_xlsx",
    "market": "Poland",
@@ -21283,6 +23380,50 @@
    "seed": "secondhand_xlsx",
    "market": "Selected European markets",
    "group": "Vehicles"
+  },
+  {
+   "key": "ozone_bg",
+   "name": "Ozone",
+   "domain": "ozone.bg",
+   "home": "https://www.ozone.bg/",
+   "countries": [
+    "bg"
+   ],
+   "languages": [
+    "bg"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "games",
+    "books",
+    "electronics",
+    "toys"
+   ],
+   "kind": "retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "playstation",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:32+00:00",
+   "seed": "extra"
   },
   {
    "key": "pagesjaunes_fr",
@@ -21849,6 +23990,93 @@
    "tried": 6,
    "contextdev": false,
    "checked_at": "2026-11-14T12:22:32+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "pigu_lt",
+   "name": "Pigu",
+   "domain": "pigu.lt",
+   "home": "https://pigu.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "home"
+   ],
+   "kind": "marketplace",
+   "status": "search_found_unverified",
+   "reason": "robots.txt disallows the search path",
+   "template": "https://pigu.lt/lt/sq?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [
+    "https://pigu.lt/lt/sq?q={q}"
+   ],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:13+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "plaisio_gr",
+   "name": "Plaisio",
+   "domain": "plaisio.gr",
+   "home": "https://www.plaisio.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "computers",
+    "electronics"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.plaisio.gr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lenovo",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:42+00:00",
    "seed": "extra"
   },
   {
@@ -22951,6 +25179,49 @@
    "group": "Southeast Europe"
   },
   {
+   "key": "public_gr",
+   "name": "Public",
+   "domain": "public.gr",
+   "home": "https://www.public.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "books",
+    "games"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.public.gr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:39+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "qasa_se",
    "name": "Qasa",
    "domain": "qasa.se",
@@ -23179,6 +25450,48 @@
    "seed": "extra"
   },
   {
+   "key": "rdveikals_lv",
+   "name": "RD Electronics",
+   "domain": "rdveikals.lv",
+   "home": "https://www.rdveikals.lv/",
+   "countries": [
+    "lv"
+   ],
+   "languages": [
+    "lv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.rdveikals.lv/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:11+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "rebuy_de",
    "name": "rebuy",
    "domain": "rebuy.de",
@@ -23327,6 +25640,103 @@
    "seed": "extra"
   },
   {
+   "key": "refurbed_be",
+   "name": "refurbed",
+   "domain": "refurbed.be",
+   "home": "https://www.refurbed.be/",
+   "countries": [
+    "be"
+   ],
+   "languages": [
+    "nl",
+    "fr"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.refurbed.be/search?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/p/iphone-13-mini/14190b",
+    "/p/iphone-14-pro/55467c",
+    "/p/iphone-15-pro-max/98058b"
+   ],
+   "links": 7,
+   "prices": 40,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.515,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:04+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "refurbed_ch",
+   "name": "refurbed",
+   "domain": "refurbed.ch",
+   "home": "https://www.refurbed.ch/",
+   "countries": [
+    "ch"
+   ],
+   "languages": [
+    "de",
+    "fr",
+    "it"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.refurbed.ch/search?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]+/\\d+(?:[/?#]|$)",
+   "sample": [
+    "/p/iphone-14-pro/41025",
+    "/p/iphone-15-pro-max/98081",
+    "/p/iphone-15-pro/98119"
+   ],
+   "links": 5,
+   "prices": 39,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.33,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:07+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "refurbed_com",
    "name": "refurbed",
    "domain": "refurbed.com",
@@ -23471,6 +25881,101 @@
    "seed": "extra"
   },
   {
+   "key": "refurbed_dk",
+   "name": "refurbed",
+   "domain": "refurbed.dk",
+   "home": "https://www.refurbed.dk/",
+   "countries": [
+    "dk"
+   ],
+   "languages": [
+    "da"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.refurbed.dk/search?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/p/iphone-13-pro-max/14202c",
+    "/p/iphone-14-pro/41022c",
+    "/p/iphone-15-pro-max/98057c"
+   ],
+   "links": 7,
+   "prices": 40,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.515,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:04+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "refurbed_fi",
+   "name": "refurbed",
+   "domain": "refurbed.fi",
+   "home": "https://www.refurbed.fi/",
+   "countries": [
+    "fi"
+   ],
+   "languages": [
+    "fi",
+    "sv"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.refurbed.fi/search?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/p/iphone-13-mini/14178b",
+    "/p/iphone-14-pro/55468b",
+    "/p/iphone-15-pro-max/98043b"
+   ],
+   "links": 7,
+   "prices": 37,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.515,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:02+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "refurbed_fr",
    "name": "refurbed",
    "domain": "refurbed.fr",
@@ -23515,6 +26020,53 @@
    "tried": 1,
    "contextdev": false,
    "checked_at": "2026-11-14T12:25:26+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "refurbed_ie",
+   "name": "refurbed",
+   "domain": "refurbed.ie",
+   "home": "https://www.refurbed.ie/",
+   "countries": [
+    "ie"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.refurbed.ie/search?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/p/iphone-14-pro-max/41033c",
+    "/p/iphone-14-pro/41022c",
+    "/p/iphone-15-pro-max/98057c"
+   ],
+   "links": 8,
+   "prices": 40,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.54,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:59+00:00",
    "seed": "extra"
   },
   {
@@ -23656,6 +26208,53 @@
    "tried": 1,
    "contextdev": false,
    "checked_at": "2026-11-14T12:30:02+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "refurbed_se",
+   "name": "refurbed",
+   "domain": "refurbed.se",
+   "home": "https://www.refurbed.se/",
+   "countries": [
+    "se"
+   ],
+   "languages": [
+    "sv"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones",
+    "computers",
+    "electronics"
+   ],
+   "kind": "refurbisher",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.refurbed.se/search?query={q}",
+   "method": "get",
+   "template_via": "searchaction",
+   "free_fetch": true,
+   "listing": "^/p/[^/?#]+/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/p/iphone-14-pro-max/41033c",
+    "/p/iphone-14-pro/55467c",
+    "/p/iphone-15-plus/98226c"
+   ],
+   "links": 7,
+   "prices": 40,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.515,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:01+00:00",
    "seed": "extra"
   },
   {
@@ -24105,6 +26704,170 @@
    "seed": "extra"
   },
   {
+   "key": "rover_com_de",
+   "name": "Rover",
+   "domain": "rover.com",
+   "home": "https://www.rover.com/de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "petcare"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "berlin",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:32+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "rover_com_es",
+   "name": "Rover",
+   "domain": "rover.com",
+   "home": "https://www.rover.com/es/",
+   "countries": [
+    "es"
+   ],
+   "languages": [
+    "es"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "petcare"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "madrid",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:32+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "rover_com_fr",
+   "name": "Rover",
+   "domain": "rover.com",
+   "home": "https://www.rover.com/fr/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "petcare"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "paris",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:27+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "rover_com_nl",
+   "name": "Rover",
+   "domain": "rover.com",
+   "home": "https://www.rover.com/nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "petcare"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "amsterdam",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:35+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "rover_com_uk",
    "name": "Rover",
    "domain": "rover.com",
@@ -24232,6 +26995,90 @@
    "seed": "secondhand_xlsx",
    "market": "Turkey",
    "group": "Turkey and Caucasus"
+  },
+  {
+   "key": "salidzini_lv",
+   "name": "Salidzini",
+   "domain": "salidzini.lv",
+   "home": "https://www.salidzini.lv/",
+   "countries": [
+    "lv"
+   ],
+   "languages": [
+    "lv"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "comparison",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.salidzini.lv/search.php?q={q}",
+   "method": "get",
+   "template_via": "opensearch",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:11+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "sancta_domenica_hr",
+   "name": "Sancta Domenica",
+   "domain": "sancta-domenica.hr",
+   "home": "https://www.sancta-domenica.hr/",
+   "countries": [
+    "hr"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.bigbang.hr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:54+00:00",
+   "seed": "extra"
   },
   {
    "key": "sanmarinomarket_com",
@@ -24408,6 +27255,49 @@
    "tried": 2,
    "contextdev": false,
    "checked_at": "2026-11-14T12:28:16+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "scanmalta_com",
+   "name": "Scan Malta",
+   "domain": "scanmalta.com",
+   "home": "https://www.scanmalta.com/",
+   "countries": [
+    "mt"
+   ],
+   "languages": [
+    "en",
+    "mt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "computers"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.scanmalta.com/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:51+00:00",
    "seed": "extra"
   },
   {
@@ -24908,6 +27798,51 @@
    "group": "Baltics"
   },
   {
+   "key": "skroutz_gr",
+   "name": "Skroutz",
+   "domain": "skroutz.gr",
+   "home": "https://www.skroutz.gr/",
+   "countries": [
+    "gr",
+    "cy"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics",
+    "appliances",
+    "home"
+   ],
+   "kind": "comparison",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.skroutz.gr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:37+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "smythstoys_com_ie_en_ie",
    "name": "Smyths",
    "domain": "smythstoys.com",
@@ -25035,6 +27970,48 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:29:28+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "spitogatos_gr",
+   "name": "Spitogatos",
+   "domain": "spitogatos.gr",
+   "home": "https://www.spitogatos.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "rental",
+    "service"
+   ],
+   "categories": [
+    "housing"
+   ],
+   "kind": "housing",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.spitogatos.gr/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "athina",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:48+00:00",
    "seed": "extra"
   },
   {
@@ -25578,6 +28555,54 @@
    "seed": "extra"
   },
   {
+   "key": "stephanis_com_cy",
+   "name": "Stephanis",
+   "domain": "stephanis.com.cy",
+   "home": "https://www.stephanis.com.cy/",
+   "countries": [
+    "cy"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.stephanis.com.cy/search?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": true,
+   "listing": "^/el/products/\\d+(?:[/?#]|$)",
+   "sample": [
+    "/el/products/413138",
+    "/el/products/413139",
+    "/el/products/413143"
+   ],
+   "links": 12,
+   "prices": 24,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.53,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:31:51+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "stockmann_com",
    "name": "Stockmann",
    "domain": "stockmann.com",
@@ -25710,7 +28735,8 @@
    "robots_disallowed": [],
    "test_query": "lego",
    "tried": 8,
-   "contextdev": false,
+   "contextdev": true,
+   "contextdev_checked": "2026-11-14T12:36:03+00:00",
    "checked_at": "2026-11-14T12:13:17+00:00",
    "seed": "secondhand_xlsx",
    "market": "Italy",
@@ -25797,6 +28823,47 @@
    "tried": 2,
    "contextdev": false,
    "checked_at": "2026-11-14T12:29:19+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "superprof_de",
+   "name": "Superprof",
+   "domain": "superprof.de",
+   "home": "https://www.superprof.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "tutoring"
+   ],
+   "kind": "service",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.superprof.de/suche?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "berlin",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:46+00:00",
    "seed": "extra"
   },
   {
@@ -26006,6 +29073,47 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:19:14+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "swappie_com_en",
+   "name": "Swappie",
+   "domain": "swappie.com",
+   "home": "https://www.swappie.com/en/",
+   "countries": [
+    "eu"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "refurb"
+   ],
+   "categories": [
+    "phones"
+   ],
+   "kind": "refurbisher",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "iphone",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:16+00:00",
    "seed": "extra"
   },
   {
@@ -26260,6 +29368,135 @@
    "seed": "extra"
   },
   {
+   "key": "taskrabbit_de",
+   "name": "Taskrabbit",
+   "domain": "taskrabbit.de",
+   "home": "https://www.taskrabbit.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "handyman",
+    "cleaning",
+    "moving"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "reinigung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:43+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "taskrabbit_es",
+   "name": "Taskrabbit",
+   "domain": "taskrabbit.es",
+   "home": "https://www.taskrabbit.es/",
+   "countries": [
+    "es"
+   ],
+   "languages": [
+    "es"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "handyman",
+    "cleaning",
+    "moving"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "limpieza",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:45+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "taskrabbit_fr",
+   "name": "Taskrabbit",
+   "domain": "taskrabbit.fr",
+   "home": "https://www.taskrabbit.fr/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "service"
+   ],
+   "categories": [
+    "handyman",
+    "cleaning",
+    "moving"
+   ],
+   "kind": "service",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "ménage",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:38+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "tchibo_de",
    "name": "Tchibo",
    "domain": "tchibo.de",
@@ -26390,6 +29627,51 @@
    "tried": 0,
    "contextdev": false,
    "checked_at": "2026-11-14T12:31:30+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "thomann_co_uk",
+   "name": "Thomann",
+   "domain": "thomann.co.uk",
+   "home": "https://www.thomann.co.uk/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "music"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results drawn by JavaScript (prices in app state)",
+   "template": "https://www.thomann.co.uk/search.html?sw={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": "^/[^/?#]*\\d{3,}[^/?#]*\\.htm(?:[/?#]|$)",
+   "sample": [
+    "/yamaha_cgs102.htm",
+    "/yamaha_clp_845_b.htm",
+    "/yamaha_p_145_b_bt.htm"
+   ],
+   "links": 20,
+   "prices": 2,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 92,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.6,
+   "robots_disallowed": [],
+   "test_query": "yamaha",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:06+00:00",
    "seed": "extra"
   },
   {
@@ -26708,6 +29990,48 @@
    "tried": 3,
    "contextdev": false,
    "checked_at": "2026-11-14T12:20:12+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "topocentras_lt",
+   "name": "Topocentras",
+   "domain": "topocentras.lt",
+   "home": "https://www.topocentras.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "electronics",
+    "appliances"
+   ],
+   "kind": "retailer",
+   "status": "no_search",
+   "reason": "no search form, OpenSearch or SearchAction; common patterns failed",
+   "template": null,
+   "method": "get",
+   "template_via": null,
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "samsung",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:14+00:00",
    "seed": "extra"
   },
   {
@@ -27912,6 +31236,48 @@
    "seed": "extra"
   },
   {
+   "key": "varle_lt",
+   "name": "Varle",
+   "domain": "varle.lt",
+   "home": "https://www.varle.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "general",
+    "electronics"
+   ],
+   "kind": "retailer",
+   "status": "blocked",
+   "reason": "bot wall on the results page",
+   "template": "https://www.varle.lt/search?q={q}",
+   "method": "get",
+   "template_via": "pattern",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 0,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "lego",
+   "tried": 2,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:13+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "vatera_hu",
    "name": "Vatera",
    "domain": "vatera.hu",
@@ -28036,9 +31402,7 @@
    "jsonld_products": 36,
    "embedded_prices": 36,
    "next_data": false,
-   "pagination": {
-    "param": "page"
-   },
+   "pagination": {},
    "yield": 0.9,
    "robots_disallowed": [],
    "test_query": "lego",
@@ -28189,6 +31553,154 @@
    "group": "Fashion and family"
   },
   {
+   "key": "vinted_at",
+   "name": "Vinted",
+   "domain": "vinted.at",
+   "home": "https://www.vinted.at/",
+   "countries": [
+    "at"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.at/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10165503794-leggins-adidas-climalite",
+    "/items/10292627943-adidas-spezial-handball-38",
+    "/items/10304130844-adidas-hoodie-grosse-s"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:16+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_be",
+   "name": "Vinted",
+   "domain": "vinted.be",
+   "home": "https://www.vinted.be/",
+   "countries": [
+    "be"
+   ],
+   "languages": [
+    "nl",
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.be/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10093104808-ensemble-adidas-38",
+    "/items/10290755433-sweat-pull-hiver-adidas-original-upcycled-patchwork-design-premium-bleu-gris-taille-m-1094",
+    "/items/10515565866-veste-a-capuche-adidas-originals-noir-et-creme-taille-l-excellent-etat"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:15+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_co_uk",
+   "name": "Vinted",
+   "domain": "vinted.co.uk",
+   "home": "https://www.vinted.co.uk/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.co.uk/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10151246822-adidas-originals-sporty-rich",
+    "/items/10222628399-adidas-polo-shirt-size-l",
+    "/items/10271260848-adidas-original-sl72-sporty-rich-womens-trainers"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:14+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "vinted_com",
    "name": "Vinted",
    "domain": "vinted.com",
@@ -28242,6 +31754,202 @@
    "group": "Multi-market"
   },
   {
+   "key": "vinted_cz",
+   "name": "Vinted",
+   "domain": "vinted.cz",
+   "home": "https://www.vinted.cz/",
+   "countries": [
+    "cz"
+   ],
+   "languages": [
+    "cs"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.cz/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10266027012-bluza-adidas-firebird-2026"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:15+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_de",
+   "name": "Vinted",
+   "domain": "vinted.de",
+   "home": "https://www.vinted.de/",
+   "countries": [
+    "de"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.de/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10081260631-adidas-hoodie-m-gelb-kapuze-schwarz",
+    "/items/10184487632-adidas-originals-hoodie-colorblock-rotblauweiss-gr-s-vintage",
+    "/items/10292627943-adidas-spezial-handball-38"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:08+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_dk",
+   "name": "Vinted",
+   "domain": "vinted.dk",
+   "home": "https://www.vinted.dk/",
+   "countries": [
+    "dk"
+   ],
+   "languages": [
+    "da"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.dk/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10018484630-adidas-hoodie",
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m"
+   ],
+   "links": 95,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:17+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_es",
+   "name": "Vinted",
+   "domain": "vinted.es",
+   "home": "https://www.vinted.es/",
+   "countries": [
+    "es"
+   ],
+   "languages": [
+    "es"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.es/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10728794843-chaqueta-cortavientos-adidas-azul-marino",
+    "/items/10736798593-adidas-vintage-pants-three-stripes-navy-bluecream-jogging-old-school",
+    "/items/10745834725-adidas-samba-chica"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:12+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "vinted_fi",
    "name": "Vinted",
    "domain": "vinted.fi",
@@ -28268,11 +31976,11 @@
    "method": "get",
    "template_via": "known",
    "free_fetch": true,
-   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*/?(?:$|\\?)",
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
    "sample": [
+    "/items/10018484630-adidas-hoodie",
     "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
-    "/items/10264868197-adidas-performance-handball-spezial",
-    "/items/10305073897-bluza-adidas-originals-reveal-essentials-logo-hoodie-chalky-brown"
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m"
    ],
    "links": 96,
    "prices": 192,
@@ -28288,7 +31996,695 @@
    "test_query": "adidas",
    "tried": 1,
    "contextdev": false,
-   "checked_at": "2026-11-14T12:07:43+00:00",
+   "checked_at": "2026-11-14T12:34:07+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_fr",
+   "name": "Vinted",
+   "domain": "vinted.fr",
+   "home": "https://www.vinted.fr/",
+   "countries": [
+    "fr"
+   ],
+   "languages": [
+    "fr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.fr/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10651562950-basket",
+    "/items/10753932693-sweat-a-capuche-zippe-adidas-essentials-3-stripes-noir-taille-m-neuf-sans-etiquette",
+    "/items/10766098926-adidas-originals-handball-spezial"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:08+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_gr",
+   "name": "Vinted",
+   "domain": "vinted.gr",
+   "home": "https://www.vinted.gr/",
+   "countries": [
+    "gr"
+   ],
+   "languages": [
+    "el"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.gr/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10087909524-tenisice-adidas-originals-zx-700-hd-j",
+    "/items/10121009865-thrifted-vintage-adidas-windbreaker-pink-colour-size-xl",
+    "/items/10184727374-prsluk-adidas"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:22+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_hr",
+   "name": "Vinted",
+   "domain": "vinted.hr",
+   "home": "https://www.vinted.hr/",
+   "countries": [
+    "hr"
+   ],
+   "languages": [
+    "hr"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.hr/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10266027012-bluza-adidas-firebird-2026"
+   ],
+   "links": 95,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:24+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_hu",
+   "name": "Vinted",
+   "domain": "vinted.hu",
+   "home": "https://www.vinted.hu/",
+   "countries": [
+    "hu"
+   ],
+   "languages": [
+    "hu"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.hu/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10266027012-bluza-adidas-firebird-2026"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:20+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_ie",
+   "name": "Vinted",
+   "domain": "vinted.ie",
+   "home": "https://www.vinted.ie/",
+   "countries": [
+    "ie"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.ie/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10064034306-basket-adidas-ozweego",
+    "/items/10093104808-ensemble-adidas-38",
+    "/items/10198397684-adidas-jumper"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:19+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_it",
+   "name": "Vinted",
+   "domain": "vinted.it",
+   "home": "https://www.vinted.it/",
+   "countries": [
+    "it"
+   ],
+   "languages": [
+    "it"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.it/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10543733077-adidas-schoenen-maat-23",
+    "/items/10639569491-giacca-adidas",
+    "/items/10697922714-adidas-samba-38"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:13+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_lt",
+   "name": "Vinted",
+   "domain": "vinted.lt",
+   "home": "https://www.vinted.lt/",
+   "countries": [
+    "lt"
+   ],
+   "languages": [
+    "lt"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.lt/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10092567976-adudas-batukai"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:18+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_lu",
+   "name": "Vinted",
+   "domain": "vinted.lu",
+   "home": "https://www.vinted.lu/",
+   "countries": [
+    "lu"
+   ],
+   "languages": [
+    "fr",
+    "de",
+    "lb"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.lu/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10487041557-scarpe-adidas",
+    "/items/10710036284-adidas-track-jacket-bomber-edition-y2k-style-premium-tactical-ninja-vintage-old-90s",
+    "/items/10736798593-adidas-vintage-pants-three-stripes-navy-bluecream-jogging-old-school"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:24+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_nl",
+   "name": "Vinted",
+   "domain": "vinted.nl",
+   "home": "https://www.vinted.nl/",
+   "countries": [
+    "nl"
+   ],
+   "languages": [
+    "nl"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.nl/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10608002217-adidas-wide-leg-broekje",
+    "/items/10632823672-adidas-samba-lt-w-black-white-gum-eu-38",
+    "/items/10710036284-adidas-track-jacket-bomber-edition-y2k-style-premium-tactical-ninja-vintage-old-90s"
+   ],
+   "links": 95,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:09+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_pl",
+   "name": "Vinted",
+   "domain": "vinted.pl",
+   "home": "https://www.vinted.pl/",
+   "countries": [
+    "pl"
+   ],
+   "languages": [
+    "pl"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.pl/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10300561826-tenisky-adidas"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:12+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_pt",
+   "name": "Vinted",
+   "domain": "vinted.pt",
+   "home": "https://www.vinted.pt/",
+   "countries": [
+    "pt"
+   ],
+   "languages": [
+    "pt"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.pt/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10487041557-scarpe-adidas",
+    "/items/10710036284-adidas-track-jacket-bomber-edition-y2k-style-premium-tactical-ninja-vintage-old-90s",
+    "/items/10736798593-adidas-vintage-pants-three-stripes-navy-bluecream-jogging-old-school"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:18+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_ro",
+   "name": "Vinted",
+   "domain": "vinted.ro",
+   "home": "https://www.vinted.ro/",
+   "countries": [
+    "ro"
+   ],
+   "languages": [
+    "ro"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.ro/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10266027012-bluza-adidas-firebird-2026"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.898,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:21+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_se",
+   "name": "Vinted",
+   "domain": "vinted.se",
+   "home": "https://www.vinted.se/",
+   "countries": [
+    "se"
+   ],
+   "languages": [
+    "sv"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.se/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10018484630-adidas-hoodie",
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:10+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "vinted_sk",
+   "name": "Vinted",
+   "domain": "vinted.sk",
+   "home": "https://www.vinted.sk/",
+   "countries": [
+    "sk"
+   ],
+   "languages": [
+    "sk"
+   ],
+   "lanes": [
+    "used"
+   ],
+   "categories": [
+    "fashion",
+    "kids",
+    "home"
+   ],
+   "kind": "classifieds",
+   "status": "verified_free",
+   "reason": null,
+   "template": "https://www.vinted.sk/catalog?search_text={q}",
+   "method": "get",
+   "template_via": "known",
+   "free_fetch": true,
+   "listing": "^/items/[^/?#]*\\d{3,}[^/?#]*(?:[/?#]|$)",
+   "sample": [
+    "/items/10039076196-czarna-bluza-adidas-z-brokatowym-nadrukiem-2016",
+    "/items/10082796194-bluzy-adidas-2szt-rozmiar-m",
+    "/items/10205276971-nove-znackove-original-teplaky-nohavice-adidas"
+   ],
+   "links": 96,
+   "prices": 192,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {
+    "param": "page"
+   },
+   "yield": 0.9,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 1,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:34:22+00:00",
    "seed": "extra"
   },
   {
@@ -29462,26 +33858,25 @@
     "gardening_services"
    ],
    "kind": "service",
-   "status": "verified_free",
-   "reason": null,
+   "status": "search_found_unverified",
+   "reason": "results page not clearly listings of the query (re-check)",
    "template": "https://www.yepstr.com/se/search?query={q}",
    "method": "get",
    "template_via": "pattern",
-   "free_fetch": true,
-   "listing": "^/se/blog/artikel/[^/?#]+(?:[/?#]|$)",
+   "free_fetch": false,
+   "listing": "^/se/support/artiklar/[^/?#]+(?:[/?#]|$)",
    "sample": [
-    "/se/blog/artikel/de-alskade-sitt-hus",
-    "/se/blog/artikel/extrapersonal-pa-timme",
-    "/se/blog/artikel/fa-bort-spindlar-utomhus"
+    "/se/support/artiklar/bestallare-kan-jag-fa-stadhjalp",
+    "/se/support/artiklar/ungdom-loneforhandling"
    ],
-   "links": 5,
+   "links": 2,
    "prices": 2,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
    "pagination": {},
-   "yield": 0.24,
+   "yield": 0.15,
    "robots_disallowed": [],
    "test_query": "städning",
    "tried": 7,
@@ -29793,6 +34188,93 @@
    "seed": "extra"
   },
   {
+   "key": "zalando_at",
+   "name": "Zalando",
+   "domain": "zalando.at",
+   "home": "https://www.zalando.at/",
+   "countries": [
+    "at"
+   ],
+   "languages": [
+    "de"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "fashion",
+    "shoes"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.zalando.at/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 2,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:49+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "zalando_be",
+   "name": "Zalando",
+   "domain": "zalando.be",
+   "home": "https://www.zalando.be/",
+   "countries": [
+    "be"
+   ],
+   "languages": [
+    "nl",
+    "fr"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "fashion",
+    "shoes"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.zalando.be/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": "^/dameskleding/?\\?(?:.*&)?assortment_area=",
+   "sample": [
+    "/dameskleding?assortment_area=zwangerschapsmode"
+   ],
+   "links": 1,
+   "prices": 2,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.125,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:53+00:00",
+   "seed": "extra"
+  },
+  {
    "key": "zalando_ch",
    "name": "Zalando",
    "domain": "zalando.ch",
@@ -29836,6 +34318,90 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:22:25+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "zalando_co_uk",
+   "name": "Zalando",
+   "domain": "zalando.co.uk",
+   "home": "https://www.zalando.co.uk/",
+   "countries": [
+    "gb"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "fashion",
+    "shoes"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.zalando.co.uk/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 1,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:56+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "zalando_cz",
+   "name": "Zalando",
+   "domain": "zalando.cz",
+   "home": "https://www.zalando.cz/",
+   "countries": [
+    "cz"
+   ],
+   "languages": [
+    "cs"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "fashion",
+    "shoes"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.zalando.cz/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 2,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:33:00+00:00",
    "seed": "extra"
   },
   {
@@ -30055,6 +34621,48 @@
    "tried": 8,
    "contextdev": false,
    "checked_at": "2026-11-14T12:25:14+00:00",
+   "seed": "extra"
+  },
+  {
+   "key": "zalando_ie",
+   "name": "Zalando",
+   "domain": "zalando.ie",
+   "home": "https://www.zalando.ie/",
+   "countries": [
+    "ie"
+   ],
+   "languages": [
+    "en"
+   ],
+   "lanes": [
+    "new"
+   ],
+   "categories": [
+    "fashion",
+    "shoes"
+   ],
+   "kind": "retailer",
+   "status": "search_found_unverified",
+   "reason": "results page without listing links for a plain fetch",
+   "template": "https://www.zalando.ie/?q={q}",
+   "method": "get",
+   "template_via": "form",
+   "free_fetch": false,
+   "listing": null,
+   "sample": [],
+   "links": 0,
+   "prices": 1,
+   "itemlist": false,
+   "jsonld_products": 0,
+   "embedded_prices": 0,
+   "next_data": false,
+   "pagination": {},
+   "yield": 0.0,
+   "robots_disallowed": [],
+   "test_query": "adidas",
+   "tried": 8,
+   "contextdev": false,
+   "checked_at": "2026-11-14T12:32:57+00:00",
    "seed": "extra"
   },
   {
@@ -30480,14 +35088,12 @@
     "/shop/katzen/katzenfutter_dose/royal_canin_katzenfutter/royal_canin_adult/1184337"
    ],
    "links": 10,
-   "prices": 542,
+   "prices": 520,
    "itemlist": false,
    "jsonld_products": 0,
    "embedded_prices": 0,
    "next_data": false,
-   "pagination": {
-    "param": "p"
-   },
+   "pagination": {},
    "yield": 0.5,
    "robots_disallowed": [],
    "test_query": "royal canin",

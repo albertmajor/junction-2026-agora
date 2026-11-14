@@ -239,14 +239,18 @@ def known_for(rec: dict, known: dict[str, dict]) -> dict | None:
 
 # --------------------------------------------------------------------------- paid checks (Context.dev)
 
-async def contextdev_pass(reg: dict[str, dict], n: int) -> int:
+async def contextdev_pass(reg: dict[str, dict], n: int, keys: set[str] | None = None) -> int:
     from agora import reader
     n = min(n, 20)
     order = {d: i for i, d in enumerate(IMPORTANT)}
     pool = [s for s in reg.values() if s["status"] in ("blocked", "search_found_unverified") and s.get("template")
-            and s.get("method") == "get" and not s.get("contextdev_checked")]
+            and s.get("method") == "get" and s.get("template_via") != "pattern" and not s.get("contextdev_checked")]
     pool.sort(key=lambda s: (order.get(s["domain"], order.get(D.root_domain(s["domain"]), 999)), -len(s["lanes"])))
-    pool = [s for s in pool if (s["domain"] in order or D.root_domain(s["domain"]) in order)][:n]
+    pool = [s for s in pool if (s["domain"] in order or D.root_domain(s["domain"]) in order)
+            and s.get("reason") != "robots.txt disallows the search path"]      # robots: not even paid
+    if keys:
+        pool = [s for s in pool if s["key"] in keys]
+    pool = pool[:n]
     spent = 0
     for i, s in enumerate(pool):
         if i:
@@ -264,13 +268,7 @@ async def contextdev_pass(reg: dict[str, dict], n: int) -> int:
         hp = CACHE / s["key"] / "home.html"
         if hp.exists():
             home = hp.read_text()
-        ev = D.evaluate(page, url, s.get("test_query", ""), home)
-        if ev["links"] < 5 and md:
-            mdlinks = D.evaluate("".join(f'<a href="{u}">x</a>' for u in _md_links(md)), url, "", home)
-            if mdlinks["links"] > ev["links"]:
-                ev.update({k: mdlinks[k] for k in ("links", "listing", "sample")})
-                ev["prices"] = len(D.PRICE.findall(md))
-                ev["verified"] = ev["links"] >= 5 and ev["prices"] >= 3
+        ev = cd_evaluate(md, page, url, s.get("test_query", ""), home)
         s["contextdev_checked"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
         s["contextdev"] = True
         print(f"  contextdev {s['key']}: links={ev['links']} prices={ev['prices']} verified={ev['verified']}")
@@ -283,9 +281,68 @@ async def contextdev_pass(reg: dict[str, dict], n: int) -> int:
     return spent
 
 
+def cd_evaluate(md: str, page: str, url: str, q: str, home: str) -> dict:
+    """A Context.dev scrape: the listing shape from its html, rows and prices from its markdown."""
+    ev = D.evaluate(page, url, q, home)
+    if not ev["verified"] and ev.get("listing"):
+        mv = D.evaluate_markdown(md, url, q, ev["listing"])
+        if mv["verified"]:
+            ev.update(verified=True, priced_rows=mv["priced_rows"], on_topic=mv["on_topic"])
+            ev["yield"] = round(min(1.0, mv["links"] / 20) * 0.5 + min(1.0, mv["priced_rows"] / 20) * 0.3
+                                + 0.1 * min(1.0, mv["on_topic"] / max(1, mv["links"])), 3)
+    return ev
+
+
+def rescore_contextdev(reg: dict[str, dict]) -> None:
+    """Re-score sources already checked through Context.dev from its disk cache (no request, no credit)."""
+    cache = {}
+    for f in (ROOT / ".cache" / "contextdev").glob("*.json"):
+        try:
+            d = json.loads(f.read_text())
+        except ValueError:
+            continue
+        if d.get("endpoint") == "/web/scrape":
+            cache[(d.get("body") or {}).get("url")] = d.get("response") or {}
+    for s in reg.values():
+        if not s.get("contextdev"):
+            continue
+        url = S.build_url(s, s.get("test_query") or S.test_query(s))
+        r = cache.get(url)
+        if not r:
+            continue
+        md = (r.get("markdown") or {}).get("data") or ""
+        page = (r.get("html") or {}).get("data") or ""
+        hp = CACHE / s["key"] / "home.html"
+        ev = cd_evaluate(md, page, url, s.get("test_query", ""), hp.read_text() if hp.exists() else "")
+        print(f"  rescore {s['key']}: links={ev['links']} verified={ev['verified']}")
+        if ev["verified"]:
+            s.update({"status": "verified_contextdev", "listing": ev["listing"], "sample": ev["sample"],
+                      "links": ev["links"], "prices": ev["prices"], "yield": ev["yield"],
+                      "reason": "plain fetch blocked or JS; Context.dev scrape works"})
+
+
 def _md_links(md: str) -> list[str]:
     import re
     return [m.group(1) for m in re.finditer(r"\]\((https?://[^\s)]+)", md)]
+
+
+def reevaluate(reg: dict[str, dict]) -> None:
+    """Re-score each verified_free source from its cached results page (no network) with the current rules."""
+    for s in reg.values():
+        if s.get("status") != "verified_free":
+            continue
+        rp, hp = CACHE / s["key"] / "results.html", CACHE / s["key"] / "home.html"
+        if not rp.exists():
+            continue
+        url = S.build_url(s, s["test_query"])
+        svc = "service" in s["lanes"] and not set(s["lanes"]) & {"new", "used", "refurb"}
+        ev = D.evaluate(rp.read_text(), url, s["test_query"], hp.read_text() if hp.exists() else "", service=svc)
+        s.update({k: ev[k] for k in ("listing", "sample", "links", "prices", "itemlist", "jsonld_products",
+                                     "embedded_prices", "next_data", "pagination", "yield")})
+        if not ev["verified"]:
+            s["status"], s["free_fetch"] = "search_found_unverified", False
+            s["reason"] = "results page not clearly listings of the query (re-check)"
+            print("  downgraded", s["key"], ev["links"], ev["on_topic"])
 
 
 # --------------------------------------------------------------------------- registry io
@@ -346,6 +403,7 @@ async def main() -> None:
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--contextdev", type=int, default=0)
     ap.add_argument("--report", action="store_true")
+    ap.add_argument("--reeval", action="store_true", help="re-score verified_free sources from cached pages (offline)")
     ap.add_argument("--retry", default="", help="re-check sources with these statuses (comma separated)")
     a = ap.parse_args()
     data = read_registry()
@@ -355,6 +413,12 @@ async def main() -> None:
     if a.report:
         report(reg, meta)
         return
+    if a.reeval:
+        reevaluate(reg)
+        rescore_contextdev(reg)
+        write_registry(reg, meta)
+        report(reg, meta)
+        return
     for k, r in seeds.items():                       # seed fields (lanes, cats ...) always follow the seed files
         if k in reg:
             reg[k].update({f: r[f] for f in ("name", "countries", "languages", "lanes", "categories", "kind", "home")})
@@ -362,6 +426,8 @@ async def main() -> None:
     retry = {x.strip() for x in a.retry.split(",") if x.strip()}
     todo = [r for k, r in seeds.items() if (k in only if only else (a.force or k not in reg
                                                                  or reg[k].get("status") in retry))]
+    if a.contextdev and not a.force and not retry:
+        todo = []                                     # a paid pass alone: no plain re-check
     if a.limit:
         todo = todo[: a.limit]
     known = known_templates()
@@ -393,7 +459,7 @@ async def main() -> None:
         meta["requests"] = meta.get("requests", 0) + f.requests
     meta["seconds_last_run"] = round(time.time() - t0)
     if a.contextdev:
-        meta["contextdev_requests"] = meta.get("contextdev_requests", 0) + await contextdev_pass(reg, a.contextdev)
+        meta["contextdev_requests"] = meta.get("contextdev_requests", 0) + await contextdev_pass(reg, a.contextdev, only or None)
     write_registry(reg, meta)
     report(reg, meta)
 

@@ -482,7 +482,7 @@ class Tree:
             return None
         if parent in cands:
             return parent
-        kids = [c for c in cands if self.nodes[c]["parent"] == parent]
+        kids = sorted(c for c in cands if self.nodes[c]["parent"] == parent)
         if kids:
             return kids[0]
         if generic:
@@ -939,7 +939,9 @@ def _tok_eq(x: str, y: str) -> bool:
     c = 0
     while c < m and x[c] == y[c]:
         c += 1
-    return c >= max(5, int(0.8 * m))
+    # same word, other inflection: a long shared prefix AND only a short tail on the longer word
+    # ('astianpesukone' ~ 'astianpesukoneet', but not 'antikt' ~ 'antikalkpatron')
+    return c >= max(5, int(0.8 * m)) and max(len(x), len(y)) - c <= 4
 
 
 def _sim(a: list[str], b: list[str]) -> float:
@@ -1030,7 +1032,7 @@ class TokenIndex:
         """The node this label is a narrower case of: every token of the node label is in the menu label
         and the menu label says more ('Mikrowellen mit Grill' -> 'Mikrowellen'). Most specific wins."""
         a = [x for x in tokens(label, lang) if x not in GENERIC]
-        if len(a) < 2:
+        if len(a) < 2 or LIST_LABEL.search(label):     # 'Modelling paste, clay and sand' is not 'Sand'
             return None
         best, best_n = None, 0
         for nid in self.ranked(label, lang, n=25):
@@ -1064,6 +1066,9 @@ class TokenIndex:
         tot = sum(1.0 / (1 + len(self.idx.get(x, ()))) ** 0.5 for x in toks)
         best = max(score, key=lambda k: (score[k], -self.t.depth(k)))
         return best, score[best] / tot if tot else 0.0
+
+
+LIST_LABEL = re.compile(r",|&|\+|\b(and|ja|und|en|och|és|es|og|et|i|y|e|sowie|samt)\b", re.I)
 
 
 def roots_for(spec) -> list[str]:

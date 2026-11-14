@@ -322,7 +322,10 @@ NAV_FIRST = {"search", "s", "suche", "haku", "recherche", "zoeken", "sok", "help
              "kategorie", "kategoria", "kategori", "c", "cat", "stores", "store-locator", "cms", "info", "about",
              "contact", "kontakt", "faq", "service", "customer-service", "my", "user", "wishlist", "compare",
              "auth", "register", "static", "assets", "cdn-cgi", "legal", "privacy", "terms", "magazin",
-             "magazine", "inspiration", "ratgeber", "jobs", "careers", "press"}
+             "magazine", "inspiration", "ratgeber", "jobs", "careers", "press", "page", "pages", "artikel",
+             "article", "articles", "artikkeli", "nieuws", "aktuelles", "guide", "guides", "tips"}
+EDITORIAL = {"blog", "artikel", "article", "articles", "news", "nieuws", "magazin", "magazine", "guide", "guides",
+             "page", "verhalen", "stories", "ratgeber", "inspiration", "tips"}
 _EXT = re.compile(r"\.(html?|php|aspx?|jsp)$", re.I)
 _ASSET = re.compile(r"\.(jpe?g|png|gif|webp|svg|css|js|pdf|ico|xml|json)$", re.I)
 
@@ -425,6 +428,8 @@ def infer_listing(page: str, url: str, home: str = "", query: str = "") -> dict:
         first = next((t[1:] for t in shape if t.startswith("=")), None)
         if shape and shape[0].startswith("=") and shape[0][1:] in NAV_FIRST:
             continue
+        if any(t.startswith("=") and t[1:] in EDITORIAL for t in shape):
+            continue
         if first in ("search",):
             continue
         if key_path in home_paths and not shape[-1].startswith("?"):
@@ -432,11 +437,26 @@ def infer_listing(page: str, url: str, home: str = "", query: str = "") -> dict:
         groups[shape].add(key_path + ("?" + p.query if shape[-1].startswith("?") else ""))
     if not groups:
         return {"count": 0}
+    # /ad/jeux_jouets/123 + /ad/collection/456 + ...: one listing shape whose middle word varies (the category)
+    merged: dict[tuple[str, ...], set[str]] = defaultdict(set)
+    n_lit: dict[tuple[str, ...], set[str]] = defaultdict(set)
+    for shape, paths in groups.items():
+        for i in range(len(shape)):
+            if shape[i].startswith("=") and any(t in ("#", "slug#", "@") for t in shape[i + 1:]):
+                wild = shape[:i] + ("slug",) + shape[i + 1:]
+                merged[wild] |= paths
+                n_lit[wild].add(shape[i])
+    for wild, paths in merged.items():
+        if len(n_lit[wild]) >= 3 and len(paths) > len(groups.get(wild, ())):
+            groups[wild] = paths
     def rank(item):
         shape, paths = item
         bonus = 1.2 if any(t in ("#", "slug#", "@") for t in shape) else 0.8 if shape[-1].startswith("?") else 1.0
         return len(paths) * bonus
     shape, paths = max(groups.items(), key=rank)
+    for wild, ps in groups.items():                    # prefer the merged shape when it holds everything
+        if wild != shape and len(wild) == len(shape) and ps >= paths and len(ps) > len(paths) * 1.5:
+            shape, paths = wild, ps
     rx = shape_regex(shape)
     try:
         cre = re.compile(rx)
@@ -522,9 +542,42 @@ def evaluate(page: str, url: str, query: str, home: str = "", service: bool = Fa
     on_topic = sum(1 for r in rows if w and fold(w) in fold(r["title"] + " " + r["text"] + " " + r["url"]))
     relevant = bool(rows) and (on_topic >= max(2, 0.3 * len(rows)) or st["jsonld_products"] >= 3)
     priced = priced_rows >= 3 or st["jsonld_products"] >= 3 or st["itemlist"]
-    verified = links >= 5 and ((priced and relevant) or (service and (relevant or not w)))
+    verified = links >= 5 and ((priced and relevant) or (service and relevant))
     y = min(1.0, links / 20) * 0.5 + min(1.0, max(priced_rows, st["jsonld_products"]) / 20) * 0.3 \
         + (0.1 if st["itemlist"] else 0.0) + (0.1 * min(1.0, on_topic / max(1, len(rows))))
     return {"verified": verified, "links": links, "listing": lst.get("regex"), "sample": lst.get("sample", []),
             "prices": prices, "priced_rows": priced_rows, "on_topic": on_topic, **st, "echo": query_echo(page, query),
             "pagination": detect_pagination(page, url), "yield": round(y, 3)}
+
+
+_MD_LINK = re.compile(r"\[((?:[^\[\]\\]|\\.)*)\]\((https?://[^\s)]+)[^)]*\)")
+
+
+def evaluate_markdown(md: str, url: str, query: str, listing: str | None) -> dict:
+    """Score a scraped page's markdown (Context.dev) with a listing regex: rows run from one listing link to the
+    next; a row is priced when its text holds a price. Same thresholds as `evaluate`."""
+    if not listing or not md:
+        return {"verified": False, "links": 0, "priced_rows": 0, "on_topic": 0}
+    pat = re.compile(listing)
+    hits = []
+    for m in _MD_LINK.finditer(md):
+        u = m.group(2)
+        p = urlsplit(u)
+        if same_site(u, url) and pat.search(p.path + ("?" + p.query if p.query else "")):
+            hits.append((m.start(), u.split("#")[0]))
+    starts: dict[str, int] = {}
+    order = []
+    for pos, u in hits:
+        if u not in starts:
+            starts[u] = pos
+            order.append(u)
+    w = next((x.lower() for x in query.split() if len(x) > 2), "")
+    priced = on_topic = 0
+    for i, u in enumerate(order):
+        end = starts[order[i + 1]] if i + 1 < len(order) else starts[u] + 1500
+        seg = md[starts[u]:end]
+        priced += bool(PRICE.search(seg))
+        on_topic += bool(w and w in seg.lower())
+    n = len(order)
+    ok = n >= 5 and priced >= 3 and on_topic >= max(2, 0.3 * n)
+    return {"verified": ok, "links": n, "priced_rows": priced, "on_topic": on_topic, "prices": len(PRICE.findall(md))}

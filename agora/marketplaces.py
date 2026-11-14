@@ -562,7 +562,7 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
         if lane != "used" and not (pages > 1 and lane == "refurbished"):
             return
         floor_next = NEXT_PAGE_MIN_TOKENS if pages == 1 else DEEP_NEXT_PAGE_MIN_TOKENS
-        for n in range(2, max(2, pages + 1) + 1):
+        for n in range(2, min(3, pages + 1) + 1):      # depth 1: page 2; 'Compare more': pages 2-3
             for d in [d for d in out if d.paid and d.page == 1 and not d.extra and d.site.verified
                       and page_url(d.site, d.url, n) and not any(x.url == page_url(d.site, d.url, n) for x in out)]:
                 if n_paid >= max_paid + 2 or left < floor_next:
@@ -579,8 +579,10 @@ def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens
             for k in eu_keys:
                 add(k, True)
     else:
-        for k in eu_keys:
+        for i, k in enumerate(eu_keys):
             add(k, False)
+            if pages > 1 and i == 1:
+                next_pages()          # 'Compare more': deeper pages of the best sites before the 3rd+ EU site
         next_pages()                  # then page 2 of the paid pages while tokens are left over
     return out
 

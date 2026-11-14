@@ -610,6 +610,8 @@ def valid_plan_name(name: str | None) -> bool:
         return False
     if NAME_SKIP.match(n) or BUTTON.match(n) or NOT_A_NAME.match(n) or NAME_TAIL.search(n) or COMPARISON.search(n):
         return False
+    if any(unicodedata.category(ch) == "So" for ch in n) or re.search(r"\(\d|\d{1,2}[-–:]\d{2}", n):
+        return False          # '❇️ Support during (09-21)': opening hours / decoration, not a plan
     return not re.search(r"[.?!,;]$|[.?!]\s", n)
 
 
@@ -757,6 +759,8 @@ def normalize_plans(plans: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
         if price <= 0 or per not in ("month", "year", "hour", "job"):
             continue
         name = str(p.get("name") or "").strip()
+        if COMPARISON.search(name):
+            continue          # 'In-house designer $8,400': a price quoted to compare (also in older registry rows)
         if not valid_plan_name(name) or len(name) > 60:
             name = f"Plan {len(out) + 1}"
         out.append({"name": name[:60], "price": price,
@@ -1169,6 +1173,8 @@ class _Lane:
                                          category=self.cat.get("id"))
                 for o in offers:
                     o.raw["registry_plans_at"] = p.get("plans_at")
+                    # what the registry knows the provider for (it was matched by this category / these terms)
+                    o.raw["description"] = " ".join(str(x) for x in [p.get("category") or "", *(p.get("terms") or [])])
                     await self.put(o)
                 self.strong.append((dom, p.get("home_url") or f"https://{dom}/"))
                 await asyncio.to_thread(self.store.save_provider, dom, terms=self.terms)
