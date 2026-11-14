@@ -36,6 +36,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from agora.taxonomy import curated  # noqa: E402
 from agora.taxonomy import SOURCES  # noqa: E402
+from agora.taxonomy import browse  # noqa: E402
 
 CACHE = ROOT / ".cache" / "taxonomy"
 RAW, HTTP, MENUS = CACHE / "raw", CACHE / "http", CACHE / "menus"
@@ -1888,6 +1889,51 @@ def shorten_official_labels(t: Tree) -> int:
     return n_
 
 
+
+# ------------------------------------------------------------------ 6f. category pages: plain names, no empty umbrellas
+
+def tidy_categories(t: Tree) -> dict:
+    """Owner, 14 Nov: 'like wtf even is a lifestyle service'. Plain names for vague labels (old ones stay as
+    synonyms), misplaced imports moved to the root a shopper would open, and empty umbrellas ('Lifestyle
+    Services', 'Accessories', 'Other personal services') merged into their parent (ids become aliases)."""
+    out = {"renamed": 0, "moved": 0, "folded": 0}
+    for nid, new_parent in curated.MOVES.items():
+        if nid in t.nodes and new_parent in t.nodes and t.nodes[nid]["parent"] != new_parent \
+                and not t.in_subtree(new_parent, nid) and t.depth(new_parent) + t.height(nid) <= MAX_DEPTH:
+            t.move(nid, new_parent)
+            out["moved"] += 1
+    for nid, spec in curated.RENAMES.items():
+        if nid not in t.nodes:
+            continue
+        n = t.nodes[nid]
+        for lang, lab in zip(("en", "fi", "de", "nl", "sv"), spec.split("|")):
+            lab = lab.strip()
+            old = n["labels"].get(lang)
+            if not lab or lab == old:
+                continue
+            if old and old not in n["syn"]:
+                n["syn"].insert(0, old)
+            n["labels"][lang] = lab
+        out["renamed"] += 1
+    # Shopify PRODUCT categories merged into a service node (yoga mats under 'Yoga & pilates', golf balls under
+    # 'Sports clubs & venues') stay products: hunting them runs shop lanes, not a provider search
+    for nid, n in t.nodes.items():
+        if nid.startswith("sp:") and not nid.startswith("sp:se") and not n["kind"] and n["root"] in SERVICE_ROOTS:
+            n["kind"] = "product"
+            out["kind_fixed"] = out.get("kind_fixed", 0) + 1
+    fold = set(curated.FOLD_UP)
+    for nid in sorted(t.nodes, key=lambda x: -t.depth(x)):
+        n = t.nodes.get(nid)
+        if not n or not n["parent"]:
+            continue
+        en = n["labels"].get("en") or ""
+        auto = ":" in nid and en and browse.should_fold(en, depth=n["depth"], n_children=len(n["children"]))
+        if nid in fold or auto:
+            t.absorb(nid, n["parent"], same=False)
+            out["folded"] += 1
+    print(f"category pages: {out}")
+    return out
+
 # ------------------------------------------------------------------ 7. synonyms, kinds, sizes
 
 def apply_synonyms(t: Tree) -> None:
@@ -1930,6 +1976,10 @@ ROOT_SIZE = {"furniture": "large", "appliances": "medium", "vehicles": "pickup",
 
 def assign_kinds_sizes(t: Tree) -> None:
     order = sorted(t.nodes, key=lambda n: t.depth(n))
+    n_desc: dict[str, int] = {}
+    for nid in reversed(order):
+        n_desc[nid] = sum(n_desc[c] + 1 for c in t.nodes[nid]["children"])
+    browse_only = collections.Counter()
     for nid in order:
         n = t.nodes[nid]
         par = t.nodes[n["parent"]] if n["parent"] else None
@@ -1989,6 +2039,10 @@ def export(t: Tree, menu_stats: dict, cleanup: dict | None = None) -> pathlib.Pa
         walk(r)
     index = {nid: i for i, nid in enumerate(order)}
     rows = []
+    n_desc: dict[str, int] = {}
+    for nid in reversed(order):
+        n_desc[nid] = sum(n_desc[c] + 1 for c in t.nodes[nid]["children"])
+    browse_only = collections.Counter()
     for nid in order:
         n = t.nodes[nid]
         par = t.nodes[n["parent"]] if n["parent"] else None
@@ -2006,6 +2060,17 @@ def export(t: Tree, menu_stats: dict, cleanup: dict | None = None) -> pathlib.Pa
             row["c"] = n["codes"]
         if n["where"]:
             row["w"] = n["where"]
+        # huntable (absent) vs browse-only ("h": 0 + "b": reason): only concrete things start a hunt
+        en = n["labels"].get("en") or next(iter(n["labels"].values()), "")
+        ok, why = browse.assess(nid, en, depth=n["depth"], n_children=len(n["children"]), n_desc=n_desc[nid],
+                                kind=n["kind"] or "product")
+        if nid in curated.HUNTABLE:
+            ok, why = curated.HUNTABLE[nid], (None if curated.HUNTABLE[nid] else (why or "group"))
+        if not ok:
+            row["h"], row["b"] = 0, why
+            browse_only[why] += 1
+        if nid in curated.ABOUT:
+            row["a"] = curated.ABOUT[nid]
         rows.append(row)
     def live(x: str | None) -> str | None:
         seen = set()
@@ -2046,6 +2111,24 @@ def export(t: Tree, menu_stats: dict, cleanup: dict | None = None) -> pathlib.Pa
         "aliases": aliases,             # ids that were merged away -> the node that holds them now
         "nodes": rows,
     }
+    doc["stats"]["browse_only"] = dict(browse_only)
+    doc["stats"]["huntable"] = len(rows) - sum(browse_only.values())
+    # "Popular:" chips per root: the curated words, each pinned to its best node inside that root
+    from agora.taxonomy import Taxonomy
+    tax = Taxonomy(doc)
+    for root, words in curated.POPULAR.items():
+        if root not in index:
+            continue
+        pop = []
+        for spec in words:
+            w, _, pin = spec.partition("=>")       # 'bed=>sp:fr-2' pins the node by hand
+            if pin and tax.resolve(pin):
+                pop.append([w, tax.resolve(pin)])
+                continue
+            hits = tax.search(w, root=root, limit=1)
+            pop.append([w, hits[0]["id"] if hits and hits[0]["score"] >= 0.6 else None])
+        rows[index[root]]["pop"] = pop
+    print(f"huntable {doc['stats']['huntable']}, browse-only {sum(browse_only.values())} {dict(browse_only)}")
     raw = json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode()
     plain, gz = OUT_DIR / "tree.json", OUT_DIR / "tree.json.gz"
     if len(raw) > 15_000_000:
@@ -2074,6 +2157,7 @@ def build() -> pathlib.Path:
     regroup_services(t)
     cleanup["trades_bucket_grouped"] = regroup_trades_bucket(t)
     cleanup["official_names_shortened"] = shorten_official_labels(t)
+    cleanup["category_pages"] = tidy_categories(t)
     assign_kinds_sizes(t)
     return export(t, menu_stats, cleanup)
 

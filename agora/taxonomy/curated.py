@@ -818,3 +818,173 @@ TRADE_BUCKET_RULES: list[tuple[str, str]] = [
     (r"merchant|supplier|retailer|showroom", "trades.merchants-trade-suppliers"),
     (r"handyman|odd jobs|assembly|mounting|shelves", "home-services.handyman"),
 ]
+
+
+# ------------------------------------------------------------------ category pages (owner, 14 Nov)
+# "noone would want to see something like this for 'lifestyle services' ... like wtf even is a lifestyle service".
+# Broad nodes open a category page (agora/taxonomy/browse.py decides which); these make the menu read like a shop's.
+
+# Plain names for vague or bureaucratic labels: id -> "en|fi|de|nl|sv" (empty parts keep the old label in that
+# language). The old labels become search synonyms, so typing them still finds the node.
+RENAMES: dict[str, str] = {
+    "personal-services": "Care, Family & Everyday Help|Hoiva, perhe ja arjen apu|Pflege, Familie & Alltagshilfe|"
+                         "Zorg, gezin & hulp in het dagelijks leven|Omsorg, familj & vardagshjälp",
+    "beauty-wellness": "Hair, Beauty & Wellness|Kampaamot, kauneus ja hyvinvointi|Friseur, Beauty & Wellness|"
+                       "Kapper, beauty & wellness|Frisör, skönhet & välmående",
+    "health-services": "Doctors, Dentists & Health|Lääkärit, hammaslääkärit ja terveys|Ärzte, Zahnärzte & Gesundheit|"
+                       "Artsen, tandartsen & gezondheid|Läkare, tandläkare & hälsa",
+    "home-services": "Cleaning, Moving & Home Help|Siivous, muutto ja kotiapu|Reinigung, Umzug & Haushaltshilfe|"
+                     "Schoonmaak, verhuizen & hulp in huis|Städning, flytt & hemhjälp",
+    "auto-services": "Car Repair, Tyres & Car Care|Autokorjaamot, renkaat ja autonhoito|Kfz-Werkstatt, Reifen & Autopflege|"
+                     "Garage, banden & autoverzorging|Bilverkstad, däck & bilvård",
+    "professional": "Lawyers, Accountants & Business Help|Juristit, kirjanpitäjät ja yrityspalvelut|"
+                    "Anwälte, Steuerberater & Business-Service|Advocaten, boekhouders & zakelijke hulp|"
+                    "Jurister, redovisning & företagshjälp",
+    "digital-services": "Freelancers: Web, Design & Writing|Freelancerit: verkko, suunnittelu ja kirjoitus|"
+                        "Freelancer: Web, Design & Texte|Freelancers: web, design & tekst|Frilansare: webb, design & text",
+    "utilities": "Electricity, Internet & Phone Plans|Sähkö, netti ja puhelinliittymät|Strom, Internet & Handyverträge|"
+                 "Energie, internet & telefoonabonnementen|El, internet & mobilabonnemang",
+    "transport": "Taxis, Couriers & Transport|Taksit, kuriirit ja kuljetus|Taxi, Kurier & Transport|"
+                 "Taxi, koeriers & vervoer|Taxi, bud & transport",
+    # second level: the umbrellas a shop would never print
+    "m:fiverr:lifestyle-ce77d6": "Online coaching, wellness & hobbies|Verkkovalmennus, hyvinvointi ja harrastukset|"
+                                 "Online-Coaching, Wellness & Hobbys|Online coaching, wellness & hobby's|"
+                                 "Onlinecoachning, välmående & hobbyer",
+    "sp:se-6-3": "Clinics & hospitals|Klinikat ja sairaalat|Kliniken & Krankenhäuser|Klinieken & ziekenhuizen|"
+                 "Kliniker & sjukhus",
+    "sp:se-4": "Kids' & indoor activities|Lasten ja sisäaktiviteetit|Kinder- & Indoor-Aktivitäten|"
+               "Kinder- & binnenactiviteiten|Barn- & inomhusaktiviteter",
+    "sp:se-5": "Home improvement|Kodin parannus|Heimwerker-Service|Woningverbetering|Hemförbättring",
+    "cpv:39": "Furniture & household goods (EU list)|||",
+    "pets.pet-services": "Pet care, grooming & vets|Lemmikkien hoito, trimmaus ja eläinlääkärit|"
+                         "Tierbetreuung, Hundesalon & Tierarzt|Dierenoppas, trimsalon & dierenarts|"
+                         "Djurpassning, trimning & veterinär",
+}
+
+# Nodes in the wrong root (an import put them where a shopper would never look): id -> new parent id.
+MOVES: dict[str, str] = {
+    "sp:se-6-3": "health-services",          # 'Healthcare Services' sat under Education
+    "sp:se-6": "personal-services",           # 'Personal Services' sat under Recruitment & HR (then folds up)
+    "yelp:airductcleaning": "home-services.cleaning",
+    "yelp:bike_repair_maintenance": "home-services.appliance-electronics-repair.bicycle-repair",
+    "yelp:jewelryrepair": "home-services.appliance-electronics-repair.watch-jewellery-repair",
+    "yelp:sewingalterations": "home-services.appliance-electronics-repair.clothing-alterations-tailoring",
+    "yelp:junkremovalandhauling": "home-services.moving-removals",
+    "yelp:childcare": "personal-services.childcare-babysitting",
+    "yelp:biohazardcleanup": "home-services.cleaning",
+    "yelp:carpetdyeing": "home-services.cleaning",
+    "yelp:wildlifecontrol": "home-services.pest-control",
+    "yelp:hydrojetting": "trades.plumbing.drain-unblocking",
+    "yelp:septicservices": "trades.plumbing",
+    "yelp:stonemasons": "trades.masonry-bricklaying",
+    "yelp:welldrilling": "trades.groundwork-excavation",
+    "yelp:reupholstery": "trades.restoration-specialist-crafts",
+    "yelp:craneservices": "trades.tool-equipment-hire",
+    "yelp:generatorinstallrepair": "trades.electrical-work",
+    "yelp:shipping_centers": "transport.parcel-courier-delivery",
+    "yelp:mailboxcenters": "transport.parcel-courier-delivery",
+    "yelp:busrental": "transport",
+    "yelp:3dprinting": "professional",
+    "yelp:screenprinting": "professional.printing-copying",
+    "yelp:screen_printing_tshirt_printing": "professional.printing-copying",
+}
+
+# Empty umbrellas to merge into their parent even when the words look concrete (the rules in browse.py catch
+# the rest: 'Lifestyle Services', 'Accessories', 'Other personal services' ...).
+FOLD_UP: list[str] = [
+    "sp:se-6-4",       # Lifestyle Services (Beauty & Wellness): nothing in it
+    "sp:se-6-1",       # Beauty & Personal Care (a leaf under Beauty & Wellness): the root itself
+    "sp:se-6",         # Personal Services: its two children go to the care root, its name becomes a synonym there
+]
+
+# Hand verdicts where the rules guess wrong: id -> True (huntable) | False (browse-only).
+HUNTABLE: dict[str, bool] = {
+    "trades.plumbing": True, "trades.electrical-work": True, "trades.roofing": True, "trades.tiling": True,
+    "trades.flooring": True, "trades.painting-decorating": True, "home-services.pest-control": True,
+    "home-services.handyman": True, "beauty-wellness.massage": True, "beauty-wellness.nails": True,
+    "home-services.cleaning": False, "home-services.garden-outdoor": False,
+}
+
+# One plain line per root for its category page ("what's inside").
+ABOUT: dict[str, str] = {
+    "electronics": "Phones, laptops, TVs, cameras, headphones, gaming and everything that plugs in.",
+    "appliances": "Washing machines, fridges, dishwashers, vacuums, coffee machines and kitchen gadgets.",
+    "fashion": "Clothes, shoes, bags, jewellery and watches, new or second hand.",
+    "home-garden": "Decor, kitchenware, bedding, lighting, plants and everything for the garden.",
+    "furniture": "Sofas, beds, tables, chairs, shelves and wardrobes, for every room and the office.",
+    "diy": "Power tools, hand tools, paint, building materials, plumbing and electrical parts.",
+    "health-beauty": "Skin care, make-up, hair care, vitamins, medicines and personal hygiene.",
+    "baby-kids": "Prams, car seats, cots, nappies, baby clothes and toys for little ones.",
+    "toys-games": "Toys, board games, puzzles, LEGO, video games and outdoor play.",
+    "sports-outdoors": "Bikes, fitness gear, running, camping, fishing, skiing and team sports.",
+    "hobbies": "Musical instruments, art and craft supplies, collectibles and party things.",
+    "media": "Books, e-books, films, music, vinyl and magazines.",
+    "food-drink": "Groceries, drinks, food delivery, restaurants and catering.",
+    "pets": "Pet food, beds, toys and supplies, pets for adoption and pet care.",
+    "office": "Paper, pens, printer ink, desks, filing and school supplies.",
+    "vehicles": "Cars, motorbikes, vans, boats, caravans, and parts and tyres for them.",
+    "business": "Machinery, shop and restaurant equipment, lab and medical gear, workwear and bulk supplies.",
+    "software": "Apps, software licences, streaming and cloud subscriptions, games and gift cards.",
+    "property": "Flats and houses to rent or buy, holiday homes, garages and land.",
+    "home-services": "Cleaners, movers, gardeners, handymen, repair shops and pest control.",
+    "trades": "Plumbers, electricians, painters, roofers, builders and other tradespeople.",
+    "auto-services": "Car servicing and repairs, tyre changes, inspections, car washes and towing.",
+    "beauty-wellness": "Haircuts, barbers, massage, nails, facials, spas and personal trainers.",
+    "health-services": "GPs, dentists, physiotherapists, psychologists, opticians and lab tests.",
+    "education": "Tutors, language and music lessons, driving schools and online courses.",
+    "events-leisure": "Concert tickets, weddings, photographers, DJs, venues and things to do.",
+    "travel": "Flights, hotels, holiday cottages, package holidays, car rental and tours.",
+    "transport": "Taxis, parcel delivery, couriers, van hire, freight and public transport.",
+    "professional": "Lawyers, accountants, translators, consultants, marketing and printing.",
+    "digital-services": "Freelance web developers, designers, writers, video editors and marketers.",
+    "finance-insurance": "Insurance, loans, mortgages, bank accounts, credit cards and investing.",
+    "utilities": "Electricity and gas contracts, home internet, mobile plans, water and waste.",
+    "personal-services": "Babysitters, elderly care, pet sitters, funerals, personal assistants and other everyday help.",
+}
+
+# "Popular:" chips on a root's category page: plain words a person would type. The build finds each one's node
+# inside the root (tree.json "pop": [[words, id]]); a chip hunts its words in that node.
+POPULAR: dict[str, list[str]] = {
+    "electronics": ["iPhone", "laptop", "TV", "headphones=>sp:el-2-2-7", "camera", "PS5", "tablet", "e-reader=>sp:el-6-4-2"],
+    "appliances": ["washing machine", "fridge", "dishwasher", "vacuum cleaner", "coffee machine", "air fryer"],
+    "fashion": ["winter jacket", "sneakers", "jeans", "handbag", "watch=>sp:aa-6-11", "dress=>sp:aa-1-4"],
+    "home-garden": ["lamp", "rug", "bedding", "lawn mower", "garden hose", "pots and pans=>sp:hg-11-2-3"],
+    "furniture": ["sofa", "bed=>sp:fr-2", "desk", "office chair", "dining table", "wardrobe", "bookcase"],
+    "diy": ["drill", "ladder", "paint", "toolbox=>sp:ha-6-24-4", "pressure washer=>sp:hg-12-3-12"],
+    "health-beauty": ["sunscreen", "shampoo", "electric toothbrush=>sp:hb-3-12-17-1", "perfume",
+                      "vitamins=>sp:hb-1-9-6", "hair dryer"],
+    "baby-kids": ["stroller", "car seat=>sp:bt-6-1", "crib=>sp:fr-1-6", "baby carrier", "high chair=>sp:fr-1-8",
+                  "diapers"],
+    "toys-games": ["LEGO=>sp:tg-5-7", "board games", "puzzle", "dolls", "remote control car", "trampoline"],
+    "sports-outdoors": ["city bike", "running shoes=>sp:aa-8-1", "tent", "skis", "dumbbells", "kayak"],
+    "hobbies": ["guitar", "digital piano", "sewing machine", "drone=>sp:tg-5-12-2", "drawing supplies"],
+    "media": ["books", "vinyl records", "audiobooks", "magazines"],
+    "food-drink": ["coffee beans", "wine", "food delivery", "catering", "protein powder=>sp:hb-1-9-6-8", "tea"],
+    "pets": ["dog food", "cat litter", "aquarium", "cat tree", "pet sitter=>yelp:pet_sitting"],
+    "office": ["printer paper", "printer ink=>sp:el-13-3-1-7", "notebooks=>sp:os-4-9-9", "pens",
+               "desk lamp=>sp:hg-13-5-2", "shredder"],
+    "vehicles": ["used car", "car tyres", "motorbike", "electric scooter", "car battery=>m:emag:auto-akkumulatorok-54d5f1"],
+    "business": ["cash register", "forklift", "workwear=>m:marktplaats:werkkleding-b65fc7",
+                 "label printer=>m:marktplaats:labelprinters-38a347"],
+    "software": ["Microsoft Office=>m:marktplaats:office-software-912ca3", "antivirus", "VPN", "cloud storage",
+                 "streaming subscription", "video games"],
+    "property": ["apartment for rent", "house for sale", "summer cottage=>property.holiday-homes-cottages-for-sale",
+                 "parking space", "room to rent"],
+    "home-services": ["house cleaning", "movers", "window cleaning", "gardener", "furniture assembly", "pest control"],
+    "trades": ["plumber", "electrician", "painter", "roofer", "bathroom renovation", "heat pump installation"],
+    "auto-services": ["car service=>auto-services.car-repair-servicing", "tyre change", "car wash", "MOT inspection",
+                      "windscreen repair", "towing"],
+    "beauty-wellness": ["haircut", "massage", "manicure", "personal trainer", "barber", "facial", "eyelash extensions"],
+    "health-services": ["dentist", "GP appointment", "physiotherapist", "psychologist", "eye test", "blood test"],
+    "education": ["English lessons", "maths tutor", "piano lessons", "driving lessons", "swimming lessons", "coding course"],
+    "events-leisure": ["concert tickets", "wedding photographer", "DJ", "party venue=>events-leisure.event-venues",
+                       "escape room=>yelp:escapegames", "catering"],
+    "travel": ["flights", "hotel", "holiday cottage", "car rental", "package holiday", "ferry"],
+    "transport": ["taxi", "parcel delivery", "van hire", "courier", "airport transfer=>travel.airport-transfers-parking",
+                  "city bike rental"],
+    "professional": ["lawyer", "accountant", "translator", "tax return help", "business cards", "private investigator"],
+    "digital-services": ["website", "logo design", "SEO", "video editing", "copywriting", "app development"],
+    "finance-insurance": ["car insurance", "home insurance", "mortgage", "personal loan", "credit card", "travel insurance"],
+    "utilities": ["electricity contract", "home broadband", "mobile plan", "solar panels", "district heating", "waste collection"],
+    "personal-services": ["babysitter", "elderly care", "dog walker", "pet sitter", "funeral", "personal assistant"],
+}

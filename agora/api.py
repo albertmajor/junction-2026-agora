@@ -210,9 +210,10 @@ def api_index() -> dict[str, Any]:
             "GET /hunt?q=&replay=<slug>&speed=2": "replay a recorded hunt at its real pace (no credits)",
             "GET /recordings": "slugs of recorded hunts",
             "GET /api/categories?parent=&lang=": "one level of the tree of everything you can buy (products + services): id, label, count, kind, icon",
-            "GET /api/categories/search?q=&lang=": "categories matching a few words (type-ahead), each with its full path",
+            "GET /api/categories/search?q=&lang=&within=": "categories matching a few words (type-ahead), each with its full path (within=<id>: only inside that category)",
             "GET /api/categories/classify?q=&lang=": "a need in plain words -> best category, path, confidence",
             "GET /api/categories/nodes?ids=a,b&lang=": "a few categories by id, each with its full path",
+            "GET /api/categories/page?id=&lang=": "a category page: plain title, about, subcategory cards with examples, concrete things, popular chips; huntable=false nodes open this instead of a hunt",
             "GET /reviews?hunt_id=&domains=": "SSE: seller reviews after a hunt (review events, then done)",
             "GET|POST /demo/story/refusal?pause=1.5": "SSE: watcher skips, buys, refuses a hidden fee, catches a tampered log",
             "GET|POST /demo/buy?pause=1.2": "SSE: lie detector, haggle counter-offer, auto-buy under open->closed mandates, proof",
@@ -785,7 +786,53 @@ def _cat_warm() -> None:
 def _cat_item(T: Any, desc: list[int], i: int, lang: str) -> dict[str, Any]:
     root = T.path_idx(i)[0]
     return {"id": T.ids[i], "label": T.label(i, lang), "count": desc[i], "n": len(T.children_of[i]),
-            "kind": T.kind[i], "icon": T.ids[root], "leaf": not T.children_of[i]}
+            "kind": T.kind[i], "icon": T.ids[root], "leaf": not T.children_of[i],
+            # only a concrete thing or service starts a hunt; the rest open their category page
+            "huntable": bool(T.hunt_ok[i]), "browse_reason": T.why[i]}
+
+
+def _cat_official(T: Any, i: int, lang: str) -> bool:
+    from agora.taxonomy import browse
+    return browse.is_official(T.ids[i], T.label(i, "en")) or T.why[i] == "official"
+
+
+@functools.lru_cache(maxsize=2048)
+def _cat_page(nid: str, lang: str) -> dict[str, Any]:
+    """Everything a category page shows: plain title, one line about it, its subcategories as cards (with 'e.g.'
+    examples), the concrete things directly in it, 'Popular:' chips, and the official headings folded away."""
+    T, desc = _cat_tree()
+    try:
+        i = T._i(nid)
+    except KeyError:
+        raise HTTPException(404, f"no category {nid!r}") from None
+    crumbs = [{"id": T.ids[j], "label": T.label(j, lang)} for j in T.path_idx(i)]
+    groups, items, official = [], [], []
+    for c in T.children_of[i]:
+        if _cat_official(T, c, lang):
+            official.append(_cat_item(T, desc, c, lang))
+        elif T.children_of[c]:
+            g = _cat_item(T, desc, c, lang)
+            g["examples"] = [T.label(x, lang) for x in T.concrete_under(c, 3, lang=lang)]
+            g["curated"] = ":" not in T.ids[c]
+            groups.append(g)
+        else:
+            items.append(_cat_item(T, desc, c, lang))
+    # a shop menu: hand-made groups first, then by size; concrete things A-Z
+    groups.sort(key=lambda g: (not g["curated"], -g["count"], g["label"].casefold()))
+    items.sort(key=lambda x: x["label"].casefold())
+    official.sort(key=lambda x: (-x["count"], x["label"].casefold()))
+    popular = []
+    if i in T.pop:
+        for words, pid in T.pop[i]:
+            popular.append({"q": words, "id": pid, "label": T.label(T._i(pid), lang) if pid else words})
+    else:
+        for x in T.concrete_under(i, 8, lang=lang):
+            popular.append({"q": T.label(x, lang), "id": T.ids[x], "label": T.label(x, lang)})
+    from agora.taxonomy import browse
+    return {"lang": lang, **_cat_item(T, desc, i, lang), "path": crumbs,
+            "about": T.about.get(i) if lang == "en" else None,
+            "why": browse.REASONS.get(T.why[i] or "", None),
+            "groups": groups, "items": items, "official": official, "popular": popular}
 
 
 @functools.lru_cache(maxsize=4096)
@@ -867,14 +914,56 @@ def categories(response: Response, parent: str | None = Query(None, description=
 
 @app.get("/api/categories/search")
 def categories_search(response: Response, q: str = Query("", max_length=120), lang: str = Query("en"),
-                      limit: int = Query(8, ge=1, le=30)) -> dict[str, Any]:
+                      limit: int = Query(8, ge=1, le=30),
+                      within: str | None = Query(None, max_length=120,
+                                                 description="node id: only categories inside it")) -> dict[str, Any]:
     """Categories matching a few words in any of the tree's languages, each with its full path (type-ahead:
-    the last word may be unfinished)."""
+    the last word may be unfinished). within=<id> keeps the hits inside that category (its page's search box)."""
     q = re.sub(r"\s+", " ", q).lstrip()
     response.headers["Cache-Control"] = "public, max-age=600"
     if len(q.strip()) < 2:
         return {"q": q, "lang": _cat_lang(lang), "items": []}
+    if within:
+        T, _ = _cat_tree()
+        top = T.resolve(within)
+        if top is None:
+            raise HTTPException(404, f"no category {within!r}")
+        got = _cat_search(q.lower(), _cat_lang(lang), 30)
+        inside = [h for h in got["items"] if top in h["path_ids"] and h["id"] != top]
+        if len(inside) < limit:          # the tree-wide top 30 may miss small corners: search deeper
+            deep = _cat_search_within(q.lower(), _cat_lang(lang), top)
+            have = {h["id"] for h in inside}
+            inside += [h for h in deep if h["id"] not in have]
+        return {"q": q, "lang": _cat_lang(lang), "within": top, "items": inside[:limit]}
     return _cat_search(q.lower(), _cat_lang(lang), limit)
+
+
+@functools.lru_cache(maxsize=1024)
+def _cat_search_within(q: str, lang: str, top: str) -> list[dict[str, Any]]:
+    T, desc = _cat_tree()
+    hits = T.search(q, limit=400, lang=lang)
+    out = []
+    for h in hits:
+        i = T._i(h["id"])
+        if h["id"] != top and top in [T.ids[j] for j in T.path_idx(i)]:
+            out.append(_cat_hit(T, desc, h["id"], lang, h["score"]))
+            if len(out) >= 30:
+                break
+    return out
+
+
+@app.get("/api/categories/page")
+def categories_page(response: Response, id: str = Query(..., max_length=120), lang: str = Query("en")) -> dict[str, Any]:
+    """A category page: {id, label, path [{id, label}], about, huntable, why, groups [{..., examples}], items
+    (concrete things directly in it), official (classification headings), popular [{q, id, label}]}. Old ids
+    resolve to the node they were merged into."""
+    T, _ = _cat_tree()
+    cur = T.resolve(id)
+    if cur is None:
+        raise HTTPException(404, f"no category {id!r}")
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    out = _cat_page(cur, _cat_lang(lang))
+    return {**out, "asked": id} if cur != id else out
 
 
 @app.get("/api/categories/nodes")
@@ -885,8 +974,10 @@ def categories_nodes(response: Response, ids: str = Query(..., max_length=2000),
     response.headers["Cache-Control"] = "public, max-age=3600"
     items = []
     for nid in [x.strip() for x in ids.split(",") if x.strip()][:40]:
-        if nid in T.by_id:
-            items.append(_cat_hit(T, desc, nid, lang, 1.0))
+        cur = T.resolve(nid)                # an old id (merged away) answers with the node that holds it now
+        if cur is not None:
+            items.append(_cat_hit(T, desc, cur, lang, 1.0) if cur == nid
+                         else {**_cat_hit(T, desc, cur, lang, 1.0), "asked": nid})
     return {"lang": lang, "items": items}
 
 
@@ -899,9 +990,27 @@ def categories_classify(q: str = Query(..., min_length=2, max_length=200), lang:
     if not hit:
         return {"q": q, "lang": lang, "match": None}
     i = T._i(hit["id"])
-    return {"q": q, "lang": lang, "match": {
+    from agora import taxonomy
+    # 'exact': the words name this node itself (its label or a synonym), not something inside it. A typed
+    # 'lifestyle services' that lands on a browse-only node opens its category page; 'massage in tampere' hunts.
+    asked = " ".join(taxonomy.tokens(hit.get("query") or q))
+    names = [T.label(i, l) for l in T.labels[i]] + list(T.syn[i])
+    exact = bool(asked) and any(" ".join(taxonomy.tokens(x)) == asked for x in names)
+    match = {
         **_cat_item(T, desc, i, lang), "path": hit["path"], "path_ids": hit["path_ids"],
         "confidence": hit["confidence"], "lanes": hit.get("lanes", []), "size": hit.get("size"),
-        "place": hit.get("place"),
+        "place": hit.get("place"), "exact": exact,
         "alternatives": [{"id": a["id"], "path": [T.label(j, lang) for j in T.path_idx(T._i(a["id"]))]}
-                         for a in hit.get("alternatives", [])[:3]]}}
+                         for a in hit.get("alternatives", [])[:3]]}
+    # the words are exactly the name of a browse-only node ('electronics', 'home services', 'lifestyle services'):
+    # that node's page is the answer, even when the best-scoring hit is some small leaf of the same name
+    T._build_index()
+    named = [j for j in T._exact.get(asked, ()) if not T.hunt_ok[j]]
+    if named:
+        j = min(named, key=lambda x: (T.depth[x], x))
+        match["browse"] = {"id": T.ids[j], "label": T.label(j, lang),
+                           "path": [T.label(k, lang) for k in T.path_idx(j)]}
+    if not T.hunt_ok[i]:
+        # browse-only: concrete things to offer instead ("Did you mean ...")
+        match["choices"] = [{"id": T.ids[x], "label": T.label(x, lang)} for x in T.concrete_under(i, 6, lang=lang)]
+    return {"q": q, "lang": lang, "match": match}

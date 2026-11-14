@@ -125,6 +125,24 @@ class Taxonomy:
                                                       else None))
             self.depth.append(1 if p < 0 else self.depth[p] + 1)
         self.roots = [i for i, p in enumerate(self.parent) if p < 0]
+        # category pages (agora/taxonomy/browse.py): huntable = a concrete thing or service; the rest browse only
+        self.about: dict[int, str] = {i: r["a"] for i, r in enumerate(rows) if r.get("a")}
+        self.pop: dict[int, list] = {i: r["pop"] for i, r in enumerate(rows) if r.get("pop")}
+        self.desc = [0] * len(rows)
+        for i in range(len(rows) - 1, -1, -1):      # parents come before children in the export
+            p = self.parent[i]
+            if p >= 0:
+                self.desc[p] += self.desc[i] + 1
+        if any("h" in r for r in rows) or "huntable" in (doc.get("stats") or {}):
+            self.hunt_ok = [r.get("h", 1) != 0 for r in rows]
+            self.why: list[str | None] = [r.get("b") if r.get("h", 1) == 0 else None for r in rows]
+        else:                                        # an older tree.json: the same rules, worked out here
+            from agora.taxonomy import browse
+            verdicts = [browse.assess(self.ids[i], self.label(i), depth=self.depth[i],
+                                      n_children=len(self.children_of[i]), n_desc=self.desc[i], kind=self.kind[i])
+                        for i in range(len(rows))]
+            self.hunt_ok = [v[0] for v in verdicts]
+            self.why = [v[1] for v in verdicts]
         self._index_lock = threading.Lock()
         self._post: dict[str, list[tuple[int, float]]] | None = None
         self._vocab: list[str] = []
@@ -187,8 +205,52 @@ class Taxonomy:
             "depth": self.depth[i], "kind": self.kind[i], "size": size, "bulky": size in ("large", "pickup"),
             "synonyms": list(self.syn[i]), "codes": dict(self.codes[i]),
             "children": [self.ids[c] for c in self.children_of[i]], "where": self.where(i),
-            "lanes": self.lanes(i),
+            "lanes": self.lanes(i), "huntable": self.hunt_ok[i], "browse_reason": self.why[i],
         }
+
+    def huntable(self, nid: str | int) -> bool:
+        """True when the node is a concrete thing or service a hunt can price; False for groupings that open a
+        category page instead ('Lifestyle Services', a whole department, an 'Other ...' bucket)."""
+        return self.hunt_ok[self._i(nid)]
+
+    def browse_reason(self, nid: str | int) -> str | None:
+        return self.why[self._i(nid)]
+
+    def concrete_under(self, nid: str | int, limit: int = 8, *, lang: str = "en") -> list[int]:
+        """The most typical concrete (huntable) nodes inside nid, for "Popular:" chips and "e.g." lines.
+        No sales data: hand-made and shop-menu nodes first (a shop prints them), then the big product
+        taxonomy, then directory lists, official procurement wording last; short plain names win."""
+        i0 = self._i(nid)
+        want_kind = self.kind[i0]
+        best: list[tuple[float, int]] = []
+        stack = [(c, 1) for c in self.children_of[i0]]
+        while stack:
+            i, d = stack.pop()
+            if d < 4:
+                stack.extend((c, d + 1) for c in self.children_of[i])
+            if not self.hunt_ok[i]:
+                continue
+            nid_i = self.ids[i]
+            src = (3.0 if ":" not in nid_i else 2.0 if nid_i.startswith("sp:") else 1.8 if nid_i.startswith("m:")
+                   and not nid_i.startswith(("m:checkatrade", "m:fiverr")) else 1.2 if nid_i.startswith(("yelp:", "m:"))
+                   else 0.3)
+            lab = self.label(i, lang)
+            words = len(lab.split())
+            score = src - 0.35 * max(0, words - 2) - 0.25 * (d - 1) + 0.05 * min(len(self.syn[i]), 10) \
+                - (0.8 if "," in lab or "(" in lab else 0) - (0.4 if not self.children_of[i] and d > 2 else 0) \
+                - (1.5 if self.kind[i] != want_kind else 0)        # yoga mats are not a yoga class
+            best.append((score, i))
+        best.sort(key=lambda x: (-x[0], self.label(x[1], lang)))
+        out, seen = [], set()
+        for _, i in best:
+            k = " ".join(_tokens(self.label(i, lang)))
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(i)
+            if len(out) >= limit:
+                break
+        return out
 
     def lanes(self, nid: str | int) -> list[str]:
         i = self._i(nid)
@@ -203,7 +265,7 @@ class Taxonomy:
     def children(self, nid: str | int | None = None, lang: str = "en") -> list[dict[str, Any]]:
         idx = self.roots if nid is None else self.children_of[self._i(nid)]
         return [{"id": self.ids[c], "label": self.label(c, lang), "kind": self.kind[c],
-                 "n_children": len(self.children_of[c])} for c in idx]
+                 "n_children": len(self.children_of[c]), "huntable": self.hunt_ok[c]} for c in idx]
 
     # ---------------------------------------------------------------- search
     def _build_index(self) -> None:
