@@ -251,38 +251,14 @@ button { cursor: pointer; }
 #how:hover { color: var(--ink); }
 /* #reading is the live log (livelog.js + livelog.css); hidden on the start screen */
 [data-phase="start"] #reading { display: none; }
-/* while the live log runs, it carries the narration on desktop; the ticker line stays the aria-live line on phones */
-@media (min-width: 641px) { #app[data-log="on"] #ticker .tick-text { display: none; } }
-.rd {
-  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 4px;
-  border: 1px solid var(--hair); border-radius: var(--r-pill); background: var(--receipt);
-  font: 400 12px/1 var(--sans); color: var(--ink-2); white-space: nowrap;
-  animation: fade var(--t-ui) var(--ease) both;
-}
-.rd img, .rd i {
-  width: 18px; height: 18px; border-radius: 50%; object-fit: contain; background: var(--paper);
-  display: inline-grid; place-items: center; font: normal 400 11px/1 var(--serif); color: var(--ink-2);
-}
-.rd-d { color: var(--ink); }
-.rd-s { font: 400 11px/1 var(--mono); color: var(--ink-3); }
-.rd[data-s="reading"] .rd-s { animation: v-breathe 1.4s var(--ease) infinite; }
-.rd[data-s="done"] .rd-s { color: var(--ok); }
-.rd[data-s="skip"] { opacity: .55; }
-.rd.more { padding: 0 10px; color: var(--ink-3); background: none; }
+/* (kept for screen readers as the aria-live line; the log's summary already says the same on screen) */
+#app[data-log="on"] #ticker { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; padding: 0; }
 .chip.thing { border: 0; background: none; padding-left: 0; color: var(--ink-3); }
 .chip.thing b { font-weight: 500; color: var(--ink-2); }
 @media (max-width: 1000px) { #chips, #ticker { margin-left: 0; } }
 @media (max-width: 640px) {
-  /* phone: legacy reading pills (main.js until livelog.js replaces them) */
-  .rd.more { display: none; }
-  .rd { flex: none; width: 26px; height: 26px; padding: 0; justify-content: center; }
-  .rd-d, .rd-s { display: none; }
-  .rd[data-s="reading"] { animation: breathe 1.4s var(--ease) infinite; }
-  .rd[data-s="done"] { border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
   #ticker { padding-top: 6px; }
   .tk-sk { display: none; }
-  /* no logo: a quiet dot, not a lonely letter */
-  .rd i.rd-l { width: 8px; height: 8px; font-size: 0; background: var(--ink-3); opacity: .45; }
 }
 @media (max-width: 640px) {
   #chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 10px var(--gutter) 0; }
@@ -316,7 +292,6 @@ button { cursor: pointer; }
 #app:not([data-phase="start"]) #main { padding-top: 28px; }
 @media (max-width: 640px) { #app:not([data-phase="start"]) #main { padding-top: 14px; } }
 /* verdict.js: the lowest-tag contrast gets a line of its own, balanced, a shade darker */
-.v-cheap { display: block; margin-top: 2px; color: var(--ink); text-wrap: balance; }
 
 /* ---------- footer rule ---------- */
 #rule {
@@ -371,15 +346,6 @@ button { cursor: pointer; }
 #lab .note { color: var(--ink-3); margin-top: 6px; }
 #lab a { color: var(--ink-2); }
 
-/* ---------- reading row -> line: a logo flying down (main.js) ---------- */
-.rd-fly {
-  position: fixed; z-index: 55; pointer-events: none; margin: 0;
-  border-radius: 50%; object-fit: contain; background: var(--paper);
-  box-shadow: 0 0 0 1px var(--hair), 0 2px 6px rgba(0,0,0,.08);
-  display: inline-grid; place-items: center; font: normal 400 11px/1 var(--serif); color: var(--ink-2);
-  will-change: transform, opacity;
-}
-
 /* ---------- guided tour (?stage=1): one serif sentence per beat ---------- */
 #stagebar {
   position: fixed; z-index: 65; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
@@ -419,3 +385,6 @@ html.staging #rule { padding-bottom: 104px; }
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
   .tick-text > span { transition: opacity 120ms linear !important; }
 }
+
+/* the landing carries its own "Powered by Context.dev" band: the footer does not repeat it there */
+#app[data-phase="start"] #rule .foot-links .cd-mark { display: none; }

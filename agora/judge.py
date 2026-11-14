@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import functools
 import re
 import statistics
 import time
@@ -183,9 +184,15 @@ def _list_offer(o: Offer) -> bool:
     """A search/category page read as one offer (tori.fi/search?q=...): never a market data point."""
     if o.raw.get("list_page"):
         return True
+    return _list_url(o.url)
+
+
+@functools.lru_cache(maxsize=20000)
+def _list_url(url: str) -> bool:
+    """discover.is_list_page, cached: market_prices asks it for every offer, many times per judge."""
     try:
         from agora.discover import is_list_page
-        return bool(is_list_page(o.url))
+        return bool(is_list_page(url))
     except Exception:
         return False
 
@@ -864,7 +871,8 @@ def estimate_true_cost(
     cat = category or category_for(o.title)
     imports = import_lines(o)
     vat = round(sum(v for _, v in imports), 2)
-    extras = (o.shipping_eur or 0.0) + vat
+    fee = buyer_fee(o)
+    extras = (o.shipping_eur or 0.0) + vat + fee
     years = months / 12
     fxn = fx_note(o)
 
@@ -906,9 +914,13 @@ def estimate_true_cost(
         basis += f"; resale capped at {RESALE_CAP:.0%} of what you pay"
     total = p + extras - resale
     receipt = [("sticker", round(p, 2))]
+    if fee:
+        receipt.append(("buyer protection fee (platform)", round(fee, 2)))
     if o.shipping_eur:
-        receipt.append(("shipping / fees", round(o.shipping_eur, 2)))
+        receipt.append((_shipping_line(o), round(o.shipping_eur, 2)))
     receipt += imports
+    if o.raw.get("shipping_est"):
+        basis += f"; shipping is an estimate ({o.raw['shipping_est'].get('basis')})"
     if imports:
         basis += f"; priced in {o.currency}: shop outside the EU, import VAT added"
     if not o.shipping_eur and o.shipping_eur is None and o.condition != "service":
@@ -1213,7 +1225,7 @@ def _landed(o: Offer) -> float:
     tc = o.true_cost
     if tc is not None:
         return tc.sticker_eur + tc.extras_eur
-    return (o.price_eur or 0) + (o.shipping_eur or 0) + import_fee(o)
+    return (o.price_eur or 0) + (o.shipping_eur or 0) + import_fee(o) + buyer_fee(o)
 
 
 def measured_category(cat: Category, depreciation: dict[str, Any] | None) -> Category:
@@ -1222,6 +1234,51 @@ def measured_category(cat: Category, depreciation: dict[str, Any] | None) -> Cat
         return cat
     return dataclasses.replace(cat, rate=float(depreciation["rate"]),
                                name=f"{cat.name}, {depreciation.get('basis') or 'measured'}")
+
+
+def _home() -> str | None:
+    try:
+        from agora.discover import home_country
+        return home_country()
+    except Exception:
+        return "fi"
+
+
+def _shipping_flags(o: Offer, need: Need) -> None:
+    """agora.shipping: delivery (pickup / ships), estimated cross-border shipping into shipping_eur, flags."""
+    try:
+        from agora import shipping
+    except ImportError:
+        return
+    home = _home()
+    shipping.apply(o, home, need.thing)
+    raw = o.raw
+    est = raw.get("shipping_est") or {}
+    if raw.get("pickup_abroad"):
+        cc = (shipping.offer_country(o) or "").upper()
+        o.flags.append(f"pickup only, abroad ({cc}): the seller does not ship to "
+                       f"{'Finland' if (home or '').lower() == 'fi' else (home or '').upper()}")
+    elif raw.get("abroad") and est:
+        o.flags.append(f"abroad ({est.get('src')}): shipping {est.get('text')} estimated, not quoted"
+                       + ("; the listing does not say it ships, ask the seller" if shipping.shippable_abroad_unknown(o)
+                          else ""))
+    elif not raw.get("abroad") and raw.get("delivery") == "pickup" and o.location:
+        o.flags.append(f"pickup in {o.location}")
+
+
+def buyer_fee(o: Offer) -> float:
+    """Platform buyer fee (vinted's buyer protection), from agora.shipping.apply."""
+    try:
+        return float(o.raw.get("buyer_fee_eur") or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _shipping_line(o: Offer) -> str:
+    est = o.raw.get("shipping_est") or {}
+    if est:
+        return f"shipping {est.get('src')}→{est.get('dst')}, est. {est.get('text')} ({est.get('how')})"
+    return "shipping / fees"
 
 
 def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
@@ -1251,6 +1308,8 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
             o.flags.append("recurring-contract price (no one-time price on the page)")
         if (n := seen.get(o.source, 0)) >= 2:
             o.flags.append(f"seen before in {n} hunts")
+        if need.kind != "service":
+            _shipping_flags(o, need)
     for o in t.offers:
         if need.kind == "service":
             o.true_cost = service_cost(o, need)
@@ -1302,7 +1361,15 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     if not priced:
         return Verdict("No priced offers yet. Set a watch and Agora keeps looking.", None, None, None,
                        [f"{len(all_offers)} offers found, none with a readable price"])
-    good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False] or priced
+    good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False
+            and not o.raw.get("pickup_abroad")] or [o for o in priced if not o.raw.get("pickup_abroad")] or priced
+    # bulky things: the home country is the pickable set; listings abroad are shown as "also in the EU"
+    eu_extra: list[Offer] = []
+    if need.kind != "service" and _bulky(need):
+        home_set = [o for o in good if not o.raw.get("abroad")]
+        if home_set:
+            eu_extra = [o for o in good if o.raw.get("abroad")]
+            good = home_set
     eu = [o for o in good if not outside_eu(o)]
 
     cheapest = min(good, key=_landed)
@@ -1368,6 +1435,17 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
         headline = all_in_headline(good, best_all, lines)
         if best_all is not cheapest and not surely_buyable(cheapest):
             lines.append(f"{cheapest.source} is cheaper ({fmt(_landed(cheapest))} all in) but does not say it ships to Finland")
+        if eu_extra:
+            ex = min(eu_extra, key=_landed)
+            est = ex.raw.get("shipping_est") or {}
+            lines.append(f"also in the EU: {fmt(_landed(ex))} all in at {ex.source} ({fmt(ex.price_eur or 0)}"
+                         f" + est. shipping {est.get('text', '')}); bulky, so we pick near you")
+        pickups = [o for o in priced if o.raw.get("pickup_abroad")]
+        if pickups:
+            lines.append(f"{len(pickups)} listing{'s' * (len(pickups) != 1)} abroad are pickup only: shown, never the pick")
+        if best_all.raw.get("shipping_est") and best_all.raw.get("abroad"):
+            lines.append(f"{best_all.source}: shipping {best_all.raw['shipping_est'].get('text')} is an estimate, "
+                         "not the seller's quote")
         if best_all.true_cost is not None and best_all.true_cost.resale_eur:
             btc = best_all.true_cost
             lines.append(f"if you resell it after {months} mo for ~{fmt(btc.resale_eur)}, it costs you about "
@@ -1415,6 +1493,14 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
                      + (f" ({vband['badges'][0]})" if vband["badges"] else ""))
         vband = {**vband, "url": which.url, "thing_id": which.thing_id}
     return Verdict(headline, best_link.url, best_tc.url if best_tc else None, buy_or_wait, lines, price_band=vband)
+
+
+def _bulky(need: Need) -> bool:
+    try:
+        from agora import marketplaces
+        return marketplaces.is_bulky(need.thing)
+    except ImportError:
+        return False
 
 
 def _is_grey(o: Offer) -> bool:

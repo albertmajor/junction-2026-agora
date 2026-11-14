@@ -11,7 +11,7 @@
 //
 // Buy follows the pick: the "Watch at €X" button in the sheet sends {eur, from:'sheet', url}; the
 // watch remembers that offer (S.watch.url, S.watch.cond) and "see it buy" passes it to the finale.
-import { S, on, emit, eur, isSetAside, domainOf, condLetter } from './core.js';
+import { S, on, emit, eur, isSetAside, domainOf, condLetter, BRAND } from './core.js';
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)');
 const NARROW = matchMedia('(max-width: 640px)');
@@ -419,8 +419,8 @@ function tickClock() {
     const since = Math.max(0, Math.round((Date.now() - (st.checkedAt || st.armedAt)) / 1000));
     const ago = since < 60 ? `${since} s ago` : `${Math.round(since / 60)} min ago`;
     // the recorded night tells its own hours: 23:40 → 02:14 → 06:58
-    ui.guardT.textContent = st.clock ? `Agora is guarding ${eur(g)} · ${st.clock}`
-      : `Agora is guarding ${eur(g)} · ${st.checkedAt ? 'checked' : 'set'} ${ago}`;
+    ui.guardT.textContent = st.clock ? `${BRAND} is guarding ${eur(g)} · ${st.clock}`
+      : `${BRAND} is guarding ${eur(g)} · ${st.checkedAt ? 'checked' : 'set'} ${ago}`;
   };
   draw();
   clock = setInterval(draw, 1000);

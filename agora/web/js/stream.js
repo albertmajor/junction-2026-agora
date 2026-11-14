@@ -175,9 +175,10 @@ function handle(ev, my) {
       S.phase = 'hunting';
       emit('need', S.need);
       break;
-    case 'lane': S.lanes.push(d); emit('lane', d); break;
-    case 'source': S.sources.push(d); emit('source', d); break;
+    case 'lane': d._t = ev.t_ms; S.lanes.push(d); emit('lane', d); break;
+    case 'source': d._t = ev.t_ms; S.sources.push(d); emit('source', d); break;
     case 'skip': {
+      d._t = ev.t_ms;
       S.skips.push(d); emit('skip', d);
       // a page that was shown as an offer and then failed the final check leaves the line
       const it = d.rejected ? itemFor(d.url) : null;
@@ -189,11 +190,15 @@ function handle(ev, my) {
       }
       break;
     }
-    case 'budget': S.budget = d; emit('budget', d); break;
+    case 'budget': d._t = ev.t_ms; S.budget = d; emit('budget', d); break;
     case 'depreciation': S.depreciation = d; emit('depreciation', d); break;
     case 'thing': S.things = (S.things || []).concat(d); emit('thing', d); break;
     case 'offer': {
       const o = d.offer; if (!o || !o.url) break;
+      // a shop's JSON-LD can give its photo as a path ("/image/…"): resolve it against the listing, not our origin
+      if (o.image && typeof o.image === 'string' && !/^(https?:|data:)/i.test(o.image)) {
+        try { o.image = new URL(o.image, o.url).href; } catch { o.image = null; }
+      }
       let it = itemFor(o.url);
       if (it) { it.offer = Object.assign({}, it.offer, o); }
       else {
@@ -201,6 +206,7 @@ function handle(ev, my) {
                arrived: performance.now(), late: S.turned };
         S.offers.set(o.url, it);
       }
+      it._t = ev.t_ms;
       emit('offer', it);
       break;
     }

@@ -1,28 +1,13 @@
 // Live log: "what Context.dev is reading right now" (docs/UI_ROUND_A.md section 2, owner item A2).
 // Replaces the old #reading pill row. Listens to the core.js bus itself; nothing else calls into it.
 //
-// Integrator hooks (UI_ROUND_A.md section 7) - exact changes outside this file:
-//   main.js
-//     - delete the reading-row block: `brands` fetch, `reads`, `bare`, `readPage`, `readOffer`, `RM`/`flying`/
-//       `flyNext`, `lineTarget`, `flyToLine`, `readSkip`, `readDone`, `readReset`, `drawReads`, and the calls
-//       readReset() (on 'reset'), readPage(...) (on 'source'), readOffer(d) (on 'offer'), readSkip(...) (on 'skip'),
-//       readDone() (on 'done'); drop `readingEl` from the $() list.
-//     - in mountAll(), right after mountLine:
-//         const ll = await load('livelog');
-//         if (ll && ll.mountLivelog) { try { ll.mountLivelog($('reading'), line); } catch (e) { console.warn('[agora] mountLivelog failed', e); } }
-//     - the tick clock: this panel has its own clock (reset -> done). Keep clockStart/clockStop for phones only
-//       (e.g. `if (matchMedia('(max-width: 640px)').matches) clockStart()`), or drop them.
-//   stream.js handle(): set the recorded time before emit, for lane, source, skip, budget: `d._t = ev.t_ms;`
-//     and for offer: `it._t = ev.t_ms;` (tolerated when absent).
-//   index.html: `<section id="reading" class="livelog" aria-label="Live log" hidden></section>` (an <ol> also works:
-//     it is swapped for a <section> with the same id) and `<link rel="stylesheet" href="/web/css/livelog.css">`.
-//   base.css: the old `.rd*` / `.rd-fly` rules are dead and can go; `#app[data-log="on"]` hides the desktop ticker text.
+// Wired by main.js mountAll() (mountLivelog($('reading'), line)); stream.js stamps d._t / it._t = ev.t_ms.
 import * as core from './core.js';
 
 const { S, on } = core;
 const RM = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: true };
 const PHONE = typeof matchMedia === 'function' ? matchMedia('(max-width: 640px)') : { matches: false };
-const MAX_ROWS = 6, MAX_THUMBS = 4, DRIP_MS = 70, FLY_MS = 450, MAX_FLY = 4;
+const MAX_ROWS = 7, MAX_THUMBS = 4, DRIP_MS = 70, FLY_MS = 450, MAX_FLY = 4;
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const bare = d => String(d || '').toLowerCase().replace(/^www\./, '');
@@ -145,6 +130,7 @@ function build(el) {
     </div>
     <div class="ll-sum" hidden>
       <span class="ll-sum-text"></span>
+      <span class="ll-reel" role="img"></span>
       <button type="button" class="ll-toggle" aria-expanded="false">show log <span aria-hidden="true">▾</span></button>
       <span class="ll-cd">${cdMark()}</span>
     </div>
@@ -152,7 +138,7 @@ function build(el) {
   els = {
     panel: el.querySelector('.ll-panel'), head: el.querySelector('.ll-head'), title: el.querySelector('.ll-title'),
     list: el.querySelector('.ll-rows'), sum: el.querySelector('.ll-sum'), sumText: el.querySelector('.ll-sum-text'),
-    toggle: el.querySelector('.ll-toggle'), log: el.querySelector('.ll-log'),
+    toggle: el.querySelector('.ll-toggle'), log: el.querySelector('.ll-log'), reel: el.querySelector('.ll-reel'),
     c: { pages: el.querySelector('[data-c=pages]'), offers: el.querySelector('[data-c=offers]'), secs: el.querySelector('[data-c=secs]') },
     w: { pages: el.querySelector('[data-w=pages]'), offers: el.querySelector('[data-w=offers]') },
   };
@@ -237,7 +223,8 @@ function promote(row) {
     const gone = rows.get(vis.pop());
     if (gone && gone.el) { gone.el.remove(); gone.el = null; }
   }
-  for (const [li, top] of before) {
+  // phones show three rows: no slide (a leaving row must never sit on a live one), only the new row fades in
+  for (const [li, top] of PHONE.matches ? [] : before) {
     if (!li.isConnected || li === row.el) continue;
     const dy = top - li.getBoundingClientRect().top;
     if (dy && !RM.matches && li.animate) li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.7,.2,1)' });
@@ -272,14 +259,20 @@ function addThumb(row, it) {
 }
 function thumbNode(it) {
   const src = thumbSrc(it);
+  // no usable photo (or it fails): the shop's own brand mark, quieter, never an empty box
+  const dom = bare((it && it.offer && it.offer.source) || domainOf(it && it.url));
+  const logo = dom ? (brandLogo(dom) || favicon(dom)) : null;
   let th;
-  if (src) {
+  if (src || logo) {
     th = document.createElement('img');
     th.alt = ''; th.loading = 'eager'; th.decoding = 'async'; th.referrerPolicy = 'no-referrer';
-    th.onerror = () => { const x = document.createElement('i'); x.className = 'll-ti ll-ti-x'; th.replaceWith(x); };
-    th.src = src;
+    th.onerror = () => {
+      if (logo && th.src !== logo && !th.classList.contains('is-logo')) { th.classList.add('is-logo'); th.src = logo; return; }
+      const x = document.createElement('i'); x.className = 'll-ti ll-ti-x'; x.dataset.u = th.dataset.u || ''; th.replaceWith(x);
+    };
+    th.src = src || logo;
   } else th = document.createElement('i');
-  th.className = 'll-ti' + (src ? '' : ' ll-ti-x');
+  th.className = 'll-ti' + (src ? '' : logo ? ' is-logo' : ' ll-ti-x');
   if (it && it.setAside) th.classList.add('aside');
   th.dataset.u = (it && it.url) || '';
   return th;
@@ -484,23 +477,57 @@ function viaCounts() {
 }
 function summary() {
   const sites = [...rows.values()].filter(r => !r.lane && r.pages).length;
-  const offers = S.offers ? S.offers.size : 0;
+  const all = S.offers ? [...S.offers.values()] : [];
+  const offers = all.length;
+  const aside = all.filter(it => it.tc && core.isSetAside(it)).length;
   const { ctx, free } = viaCounts();
   const secs = endS != null ? endS.toFixed(1) : secsNow().toFixed(1);
   const lead = stopped ? 'Stopped after reading' : '✓ Read';
-  const via = (ctx || free) ? `<span class="ll-s-long">: <b class="ll-cd-n">${ctx} via Context.dev</b>, ${free} free from JSON-LD</span>` : '';
+  // the same numbers as the list under the line: found, ranked, and the ones set aside as "not counted"
+  const found = aside ? `<b>${plural(offers, 'offer')}</b> found, ${offers - aside} ranked` : `<b>${plural(offers, 'offer')}</b>`;
+  const via = (ctx || free) ? `<span class="ll-s-long"> · <b class="ll-cd-n">${ctx} read by Context.dev</b>, ${free} free from JSON-LD</span>` : '';
   els.sumText.innerHTML =
     (replay ? '<span class="ll-s-rec">Recorded live hunt · </span>' : '') +
-    `<span class="ll-ok">${lead}</span> <b>${plural(pages, 'page')}</b><span class="ll-s-long"> on ${plural(sites, 'site')}</span> in <b>${secs} s</b> · <b>${plural(offers, 'offer')}</b>${via}`;
+    `<span class="ll-ok">${lead}</span> <b>${plural(pages, 'page')}</b><span class="ll-s-long"> on ${plural(sites, 'site')}</span> in <b>${secs} s</b> · ${found}${via}`;
+  reel();
+  const reads = pages + skips.length;
+  els.toggle.firstChild.textContent = logOpen ? 'hide log ' : `show all ${reads} reads `;
   root.dataset.cut = stopped ? '1' : '0';
   if (logOpen) drawLog();
+}
+// After the hunt: the sites we read stay on screen as a row of brand marks (Context.dev brand logos), each
+// with what it gave: an offer count, or a quiet dot. So the work is still visible once the panel folds.
+function reel() {
+  if (!els.reel) return;
+  const list = [...rows.values()].filter(r => !r.lane && r.pages)
+    .sort((a, b) => (b.n - a.n) || (a.via && a.via[1] ? -1 : 1));
+  const max = PHONE.matches ? 9 : 20;
+  els.reel.replaceChildren(...list.slice(0, max).map(r => {
+    const s = document.createElement('span');
+    s.className = 'll-rm' + (r.n ? ' got' : '');
+    const words = r.n ? `${plural(r.n, 'offer')}` : (r.state === 'skip' ? `skipped · ${r.reason}` : 'no offer');
+    s.title = `${r.domain}: ${words}${r.via ? (r.via[1] ? ` · read by Context.dev (${r.via[0]})` : ' · free JSON-LD') : ''}`;
+    s.append(markEl(r));
+    const b = document.createElement('i');
+    b.className = 'll-rb';
+    b.textContent = r.n ? String(r.n) : '';
+    if (r.via && r.via[1]) s.dataset.cd = '1';
+    s.append(b);
+    return s;
+  }));
+  if (list.length > max) {
+    const more = document.createElement('span');
+    more.className = 'll-rmore'; more.textContent = `+${list.length - max}`;
+    els.reel.append(more);
+  }
+  els.reel.setAttribute('aria-label', `${plural(list.length, 'site')} read`);
 }
 
 // ---------- the full log (after done): offers first, then searches, then reads with no offer, then skips by reason ----------
 function setLog(open) {
   logOpen = !!open;
   els.toggle.setAttribute('aria-expanded', String(logOpen));
-  els.toggle.firstChild.textContent = logOpen ? 'hide log ' : 'show log ';
+  els.toggle.firstChild.textContent = logOpen ? 'hide log ' : `show all ${pages + skips.length} reads `;
   els.toggle.lastElementChild.textContent = logOpen ? '▴' : '▾';
   if (logOpen) drawLog();
   els.log.hidden = !logOpen;
@@ -526,7 +553,7 @@ function drawLog() {
     return li;
   };
   const parts = [
-    group('Gave offers', all.filter(r => !r.lane && r.n), full),
+    group('Sites that gave offers', all.filter(r => !r.lane && r.n), full),
     group('Searches', all.filter(r => r.lane), full),
     group('Read, no offer', all.filter(r => !r.lane && !r.n && r.state !== 'skip'), full),
   ];

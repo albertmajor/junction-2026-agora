@@ -1,6 +1,10 @@
 // Agora web core: event bus, shared store, small helpers.
 // This file is the contract between the modules (see DESIGN.md, "The contract").
 
+// The product name: data-brand on <html> in index.html is the one edit point. main.js writes it into
+// <title> and the logo at boot; the static text there is only the no-JS fallback.
+export const BRAND = (typeof document !== 'undefined' && document.documentElement && document.documentElement.dataset.brand) || 'Agora';
+
 export const bus = new EventTarget();
 export function emit(type, detail) { bus.dispatchEvent(new CustomEvent(type, { detail })); }
 export function on(type, fn) { bus.addEventListener(type, e => fn(e.detail)); }
@@ -149,11 +153,21 @@ export function trustMark(item) {
   }
   const stars = typeof r.rating === 'number' && r.count ? `★ ${r.rating.toFixed(1)} · ${fmtCount(r.count)}`
     : (r.count ? `${fmtCount(r.count)} reviews` : '');
-  const pre = r.platform ? 'platform ' : '';      // a marketplace: the platform is rated, not the seller
+  const pre = r.platform ? 'platform · ' : '';      // a marketplace: the platform is rated, not the seller
   if (r.status === 'none' || (!stars && r.label === 'unknown')) return { state: 'none', label: 'unknown', text: pre + 'no reviews found', short: 'no reviews' };
   const word = r.label === 'unknown' ? 'few reviews' : r.label;
   const short = (typeof r.rating === 'number' ? `★ ${r.rating.toFixed(1)} ` : '') + word;   // phones
   return { state: 'done', label: r.label, text: pre + [stars, word].filter(Boolean).join(' · '), short };
+}
+/** Why an offer is unsure, in two or three words (ledger, verdict); '' when it is sure. */
+export function unsureWhy(item) {
+  const fl = flagsOf(item);
+  if (fl.some(f => /does not ship/i.test(f))) return 'no shipping to FI';
+  if (reviewWatchOut(item)) return 'reviews: red flags';
+  if (fl.some(f => /out of stock/i.test(f))) return 'out of stock';
+  if (fl.some(f => /from-price/i.test(f))) return 'a “from” price';
+  if (fl.some(f => /shipping to Finland unconfirmed/i.test(f))) return 'ships to FI?';
+  return '';
 }
 /** Abroad and the shop does not confirm shipping to you: its all-in figure is "+ shipping". */
 export function shipsUnconfirmed(item) { return flagsOf(item).some(f => /shipping to Finland unconfirmed/i.test(f)); }

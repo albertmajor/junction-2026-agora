@@ -66,6 +66,9 @@ ACCESSORY_WORDS = {
     "logic board", "flex cable", "joy-con", "joycon", "joy con", "thumbstick", "battery door", "brush head",
     "brush bar", "brushroll", "filter head", "wall mount", "charging case only", "left earbud", "right earbud",
     "korvatyynyt", "varaosa", "näyttö", "latauskotelo", "ladecase", "ladeetui",
+    # bike parts sold on their own (live: a €25 'Kaupunkipyörä ohjaustanko' handlebar won 'city bike')
+    "ohjaustanko", "sisärengas", "cykelslang", "slang", "fahrradschlauch", "schlauch", "montageständer",
+    "kaasukahva", "binnenband", "dętka",
 }
 # words that name a part of the item: an accessory when they come *before* the item's name
 # ("OLED Display for Nintendo Switch OLED"), not after ("MacBook Air with 15.3" display")
@@ -101,7 +104,10 @@ SYNONYMS: dict[str, set[str]] = {
     "dishwasher": {"astianpesukone", "geschirrspuler", "diskmaskin"},
     "fridge": {"jaakaappi", "kuhlschrank", "kylskap", "refrigerator"},
     "vacuum": {"imuri", "staubsauger", "dammsugare", "hoover"},
-    "bike": {"bicycle", "polkupyora", "pyora", "fahrrad", "cykel"},
+    "bike": {"bicycle", "polkupyora", "pyora", "fahrrad", "cykel", "fiets", "rower", "velo", "sykkel", "citybike",
+             "cityrad", "damenrad", "herrenrad"},
+    "city": {"kaupunki", "stads", "citybike", "cityrad", "miejski", "ville", "bysykkel"},
+    "shelf": {"hylly", "regal", "hylla", "hylle", "reol", "kast", "etagere"},
     "sofa": {"sohva", "couch", "soffa"},
     "laptop": {"notebook", "kannettava", "lappari"},
     "phone": {"puhelin", "smartphone", "handy"},

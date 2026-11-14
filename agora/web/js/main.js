@@ -1,10 +1,10 @@
 // Boot, start screen, header, need chips, ticker, URL state, keys, lab panel, stage script (B1).
-import { S, bus, emit, on, eur, domainOf, resetStore, allIn, isJobItem, pickUrl, shipsUnconfirmed } from './core.js';
+import { S, bus, emit, on, eur, domainOf, resetStore, allIn, isJobItem, pickUrl, shipsUnconfirmed, BRAND } from './core.js';
 import * as stream from './stream.js';
 
 const $ = id => document.getElementById(id);
 const app = $('app'), bar = $('bar'), ask = $('ask'), qIn = $('q'), start = $('start'), h1 = start.querySelector('h1');
-const chipsEl = $('chips'), ticker = $('ticker'), readingEl = $('reading'), statusEl = $('status'), labEl = $('lab');
+const chipsEl = $('chips'), ticker = $('ticker'), statusEl = $('status'), labEl = $('lab');
 const params = new URLSearchParams(location.search);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -37,6 +37,10 @@ async function mountAll() {
     try { lineMod.mountLine($('line')); line = lineMod.line || null; }
     catch (e) { console.warn('[agora] mountLine failed', e); }
   }
+  const ll = await load('livelog');
+  if (ll && ll.mountLivelog) { try { ll.mountLivelog($('reading'), line); } catch (e) { console.warn('[agora] mountLivelog failed', e); } }
+  const lm = await load('landing');
+  if (lm && lm.mountLanding) { try { lm.mountLanding($('landing')); } catch (e) { console.warn('[agora] mountLanding failed', e); } }
   const plan = [
     ['verdict', 'mountVerdict', 'verdict'], ['sheet', 'mountSheet', 'sheet'], ['drawer', 'mountDrawer', 'drawer'],
     ['agent', 'mountAgent', 'agent'], ['tag', 'mountTag', 'tag', true], ['finale', 'mountFinale', 'finale', true],
@@ -93,9 +97,11 @@ function goHome({ push = true } = {}) {
   clearChips(); tickerOff(); setStatus(null);
   setPhase('start');
   emit('reset', { q: '' });
-  document.title = 'Agora';
+  document.title = BRAND;
 }
 ask.addEventListener('submit', e => { e.preventDefault(); run(qIn.value); });
+// a landing card (or 'what an agent sees') asks for a search: back to the top, then run it
+on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q); });
 bar.querySelector('.logo').addEventListener('click', e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault(); goHome();
@@ -203,6 +209,8 @@ function flushTick() {
 }
 // a live hunt reads for about 20 s (the engine's budget): a quiet clock shows how far along it is
 const LIVE_BUDGET_S = 20;
+const PHONE = matchMedia('(max-width: 640px)');
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
 let clockT0 = 0, clockTimer = 0;
 function clockEl() {
   let c = ticker.querySelector('.tick-clock');
@@ -243,103 +251,6 @@ function counts() {
 let lastDomain = '';
 $('how-top').addEventListener('click', e => { e.preventDefault(); emit('drawer', { open: true }); });
 
-// ---------- reading row: the pages being read right now, live (up to 6, brand logos when we have them) ----------
-let brands = null, reads = new Map(), readHide = 0;
-fetch('/web/assets/brands.json').then(r => r.ok ? r.json() : {}).then(j => {
-  brands = {};
-  for (const b of Object.values(j || {})) if (b && b.domain) brands[b.domain.replace(/^www\./, '')] = b;
-}).catch(() => { brands = {}; });
-const bare = d => String(d || '').replace(/^www\./, '');
-function readPage(d) {
-  d = bare(d); if (!d) return;
-  clearTimeout(readHide);
-  if (!reads.has(d)) reads.set(d, { s: 'reading', n: 0 });
-  drawReads();
-}
-function readOffer(d) {
-  d = bare(d); const r = reads.get(d); if (!r) return;
-  const first = !r.n;
-  r.n++; r.s = 'done'; drawReads();
-  if (first) flyToLine(d);
-}
-
-// a page that gave offers sends its logo down into the line (450 ms), so the row reads as the line's source
-const RM = matchMedia('(prefers-reduced-motion: reduce)');
-let flying = 0, flyNext = 0;
-function lineTarget(d) {
-  const lineEl = $('line');
-  if (!lineEl || lineEl.offsetParent === null) return null;
-  const toPt = t => {
-    if (!t) return null;
-    if (t instanceof Element) t = t.getBoundingClientRect();
-    if (typeof t.width === 'number' && typeof t.left === 'number') return { x: t.left + t.width / 2, y: t.top + t.height / 2 };
-    if (isFinite(t.x) && isFinite(t.y)) return { x: t.x, y: t.y };
-    return null;
-  };
-  let pt = null;
-  try { if (line && typeof line.readingDot === 'function') pt = toPt(line.readingDot(d)); } catch { pt = null; }
-  if (!pt) {
-    const lr = lineEl.getBoundingClientRect();
-    const st = lineEl.querySelector('.ln-stage') || lineEl;
-    let ay = null;
-    try { ay = line && typeof line.axisY === 'function' ? line.axisY() : null; } catch { ay = null; }
-    const y = (ay != null && isFinite(ay)) ? st.getBoundingClientRect().top + (ay - st.offsetTop) : lr.top + Math.min(lr.height / 2, 200);
-    pt = { x: lr.right - 24, y };
-  }
-  return (pt.y < 0 || pt.y > innerHeight || pt.x < 0 || pt.x > innerWidth) ? null : pt;
-}
-function flyToLine(d) {
-  if (RM.matches || flying >= 4 || readingEl.hidden || readingEl.classList.contains('gone')) return;
-  const li = [...readingEl.querySelectorAll('.rd')].find(x => x.dataset.d === d);
-  const src = li && li.querySelector('img, i');
-  if (!src) return;
-  const now = performance.now();
-  const delay = Math.max(0, flyNext - now);
-  flyNext = now + delay + 90;
-  flying++;
-  setTimeout(() => {
-    const to = lineTarget(d);
-    const a = src.isConnected ? src.getBoundingClientRect() : null;
-    if (!to || !a || !a.width) { flying--; return; }
-    const ghost = src.cloneNode(true);
-    ghost.classList.add('rd-fly');
-    ghost.setAttribute('aria-hidden', 'true');
-    Object.assign(ghost.style, { left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px' });
-    document.body.appendChild(ghost);
-    const dx = to.x - (a.left + a.width / 2), dy = to.y - (a.top + a.height / 2);
-    const anim = ghost.animate([
-      { transform: 'translate(0,0) scale(1)', opacity: 1 },
-      { transform: `translate(${dx * 0.55}px, ${dy * 0.35}px) scale(.9)`, opacity: 1, offset: 0.55 },
-      { transform: `translate(${dx}px, ${dy}px) scale(.45)`, opacity: 0 },
-    ], { duration: 450, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards' });
-    const end = () => { ghost.remove(); flying--; };
-    anim.finished.then(end, end);
-  }, delay);
-}
-function readSkip(d) {
-  d = bare(d); const r = reads.get(d); if (!r || r.n) return;
-  r.s = 'skip'; drawReads();
-}
-function readDone() {
-  for (const r of reads.values()) if (r.s === 'reading') r.s = r.n ? 'done' : 'skip';
-  drawReads();
-  // fade, but keep the row's height while results are on screen: collapsing it would jump the line up
-  readHide = setTimeout(() => { readingEl.classList.add('gone'); }, 2400);
-}
-function readReset() { clearTimeout(readHide); reads = new Map(); readingEl.innerHTML = ''; readingEl.hidden = true; readingEl.classList.remove('gone'); }
-function drawReads() {
-  // newest six: reading first, then the ones that gave offers
-  const all = [...reads.entries()];
-  const show = all.slice(-5);
-  readingEl.innerHTML = show.map(([d, r]) => {
-    const b = brands && brands[d];
-    const logo = b && b.logo ? `<img alt="" src="${esc(b.logo)}" loading="lazy">` : `<i aria-hidden="true" class="rd-l">${esc(d[0].toUpperCase())}</i>`;
-    const st = r.s === 'reading' ? 'reading…' : r.s === 'skip' ? 'skipped' : `✓ ${r.n} offer${r.n === 1 ? '' : 's'}`;
-    return `<li class="rd" data-s="${r.s}" data-d="${esc(d)}">${logo}<span class="rd-d">${esc(d)}</span><span class="rd-s">${st}</span></li>`;
-  }).join('') + (all.length > 5 ? `<li class="rd more">+${all.length - 5} more</li>` : '');
-  readingEl.hidden = !all.length;
-}
-
 // ---------- agent door ----------
 let agentOn = false;
 on('agent', d => { agentOn = !!(d && d.on); });
@@ -350,11 +261,10 @@ $('agent-top').addEventListener('click', toAgent);
 on('reset', d => {
   lastDomain = '';
   clearChips();
-  readReset();
-  if (d && d.q && !d.empty && !d.replay) clockStart(); else clockStop(true);
+  if (d && d.q && !d.empty && !d.replay && PHONE.matches) clockStart(); else clockStop(true);
   if (!d || !d.q) return;
   qIn.value = d.q;
-  document.title = `${d.q} · Agora`;
+  document.title = `${d.q} · ${BRAND}`;
   if (!d.empty) {
     setPhase('hunting');
     if (!d.keepError) setStatus('hunt', d.replay ? 'hunting… (recorded hunt)' : 'hunting… live');
@@ -370,9 +280,9 @@ on('need', need => {
   tick(`looking for <b>${esc(need && need.thing)}</b>`);
 });
 on('lane', l => tick(`searching ${esc(l.lane)} · ${esc((l.queries || [])[0] || '')}`));
-on('source', s => { lastDomain = s.domain || domainOf(s.url); tick(`reading <b>${esc(lastDomain)}</b> · ${counts()}`); readPage(lastDomain); });
-on('offer', it => { const d = domainOf(it.url) || it.offer.source; tick(`<b>${esc(it.offer.source || d)}</b> ${eur(it.offer.price_eur)} · ${counts()}`); readOffer(d); });
-on('skip', sk => { if (lastDomain) tick(`reading <b>${esc(lastDomain)}</b> · ${counts()}<span class="tk-sk"> · ${S.skips.length} skipped</span>`); readSkip(sk && (sk.domain || domainOf(sk.url))); });
+on('source', s => { lastDomain = s.domain || domainOf(s.url); tick(`reading <b>${esc(lastDomain)}</b> · ${counts()}`); });
+on('offer', it => { const d = domainOf(it.url) || it.offer.source; tick(`<b>${esc(it.offer.source || d)}</b> ${eur(it.offer.price_eur)} · ${counts()}`); });
+on('skip', sk => { if (lastDomain) tick(`reading <b>${esc(lastDomain)}</b> · ${counts()}<span class="tk-sk"> · ${S.skips.length} skipped</span>`); });
 on('verdict', v => {
   if (!statusEl.classList.contains('err')) setStatus(null);
   if (v && v.provisional && v.pending_reads) tick(`first answer · checking ${v.pending_reads} more shop${v.pending_reads === 1 ? '' : 's'} · ${counts()}`);
@@ -384,7 +294,6 @@ on('done', d => {
   const secs = d && d.ms != null ? ` · ${(d.ms / 1000).toFixed(1)} s` : '';
   const n = S.offers.size;
   tick(`${d && d.cut ? 'stopped ·' : '✓'} ${n} offer${n === 1 ? '' : 's'} from ${S.sources.length} page${S.sources.length === 1 ? '' : 's'}${secs}`);
-  readDone();
   clockStop(false);
   if (statusEl.classList.contains('err')) return;
   setStatus(null);
@@ -637,7 +546,7 @@ async function stage() {
     await hold(500);
     emit('tag', { eur: price, from: 'stage', url });
     await hold(3200);
-    caption(6, 'Agora watches overnight.');
+    caption(6, `${BRAND} watches overnight.`);
     const bought = beat('finale:bought', 34000);
     emit('finale:start', { from: 'stage', url, eur: price });
     const got = await bought;
@@ -673,6 +582,10 @@ addEventListener('keydown', e => { if (staging && e.key === 'Escape') { e.preven
 
 // ---------- boot ----------
 async function boot() {
+  // the product name: one edit point (data-brand on <html>, read into BRAND by core.js); the static
+  // <title> and .brand text in index.html are only the no-JS fallback
+  if (!params.get('q')) document.title = BRAND;
+  document.querySelectorAll('.brand').forEach(b => { b.textContent = BRAND; });
   app.dataset.phase = 'start';
   placeBox();
   const narrowPh = matchMedia('(max-width: 480px)');

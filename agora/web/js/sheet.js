@@ -161,7 +161,8 @@ function render(url) {
   if (t && all != null) {
     if (per === 'job') total = `<p class="total">You pay<br><b>${m2(all)} for one job</b></p>`;
     else total = `<p class="total">You pay, all in<br><b>${all >= 100 ? eur(Math.round(all), { dp: 0 }) : m2(all)}${shipsUnconfirmed(it) ? ' + shipping' : ''}</b></p>`;
-    total += `<p class="conf">${esc(t.confidence ? t.confidence + ' confidence' : '')}</p>`;
+    const conf = t.confidence ? t.confidence + ' confidence' + (per !== 'job' && shippingUnknown(it) ? ', if picked up or shipped free' : '') : '';
+    total += `<p class="conf">${esc(conf)}</p>`;
   } else {
     total = `<p class="total muted">Not costed</p><p class="conf">${aside ? 'Set aside: the price does not add up, so we did not rank it.' : 'Waiting for shipping and import costs on this one.'}</p>`;
   }
@@ -203,7 +204,7 @@ function render(url) {
   let beatNote = '';
   if (beat != null && !isLead && bw.gap > 0) beatNote = `<p class="beat">It would win at ${eur(beat, { dp: 0 })} on the tag, ${eur(bw.gap, { dp: 0 })} less than today.</p>`;
   else if (beat != null && !isLead && bw.gap === 0) beatNote = `<p class="beat">Cheaper all in, but we cannot say you can surely buy it at this price.</p>`;
-  else if (isLead) beatNote = `<p class="beat lead">This is the one we would buy: the lowest price all in.</p>`;
+  else if (isLead) beatNote = `<p class="beat lead">This is the one we would buy: the lowest all-in price we can be sure of${per === 'job' ? '' : ' (it ships to Finland, or you can pick it up)'}.</p>`;
   else if (beat == null && t && !aside) beatNote = `<p class="beat">It cannot win at any price today.</p>`;
   // the pick is watched at its own tag price; any other offer at the price where it would win
   const watchAt = isLead && o.price_eur != null && isFinite(o.price_eur) ? Math.round(o.price_eur) : (beat != null && isFinite(beat) && bw.gap > 0 ? Math.round(beat) : null);
@@ -229,7 +230,7 @@ function render(url) {
         ${img || o.image ? `<img alt="${esc(o.title || dom)}" src="${esc(img || o.image)}" data-fallback="${esc(o.image || '')}" decoding="async">` : ''}
       </figure>
       <h2 class="s-title" id="sheet-title">${esc(o.title || dom)}</h2>
-      <p class="s-meta">${cc ? flagHtml(it, { size: 14, origin: org, noFi: true }) : ''}<span>${esc([cname, org && org.city, dom, cond].filter(Boolean).join(' · '))}${o.unit ? ` · priced per ${esc(o.unit)}` : ''}</span></p>
+      <p class="s-meta">${flagHtml(it, { size: 14, origin: org, noFi: true, unknown: true })}<span>${esc([cname, org && org.city, dom, cond].filter(Boolean).join(' · '))}${o.unit ? ` · priced per ${esc(o.unit)}` : ''}</span></p>
       ${bandHtml}
       <ol class="receipt">${rows}</ol>
       <div class="sum">${total}</div>

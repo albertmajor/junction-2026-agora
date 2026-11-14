@@ -2,7 +2,7 @@
 // a used pick (the Sony hunt's tori.fi body) runs GET /demo/buy?variant=used&target=<your price>,
 // a new one the recorded new-body story. We turn three story lines into typed captions, move the
 // pick's object across your tag, drop a torn receipt and let you break the log on purpose.
-import { S, on, emit, eur, cutSrc, condLetter, domainOf, allIn, isJobItem, pickUrl as corePick } from './core.js';
+import { S, on, emit, eur, cutSrc, condLetter, domainOf, allIn, isJobItem, pickUrl as corePick, BRAND } from './core.js';
 import { setTag, checked, pulse, railExtra, clearGhosts, nightClock } from './tag.js';
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)');
@@ -189,7 +189,7 @@ function receipt({ paid, target, asked, mandateId, rows, chainOk, watchId, order
       <span class="fn-stamp" aria-hidden="true">bought</span>
       <div class="fn-verify">
         <button type="button" class="fn-vbtn">verify →</button>
-        <span class="fn-vnote">edit one row behind Agora's back, then check</span>
+        <span class="fn-vnote">edit one row behind ${BRAND}'s back, then check</span>
       </div>
       <div class="fn-ledger" hidden></div>
     </article>`;
@@ -297,7 +297,7 @@ async function plan(d = {}) {
     let note = null;
     // a used listing has one price: Agora never pays more than the pick was listed at
     if (isFinite(listed) && listed > 0 && target > listed) {
-      note = `the pick was listed at ${eur(listed)} on ${seller} · Agora holds your price there`;
+      note = `the pick was listed at ${eur(listed)} on ${seller} · ${BRAND} holds your price there`;
       target = listed;
     }
     return { variant: 'used', target, seller, img: cutSrc(url), url, label: `${seller} · used`,

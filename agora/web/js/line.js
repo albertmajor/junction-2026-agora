@@ -2,7 +2,7 @@
 // Start: a log-scale shelf of real cutouts. Hunt: offers fly in from the ticker and land at their
 // tag price. The Turn: every object slides once to what you actually pay, all in (or per job).
 // See DESIGN.md sections 1, 2, 3 and 6. Shelf idea and cutouts: our teammate rpaszekdev.
-import { S, on, emit, cutSrc, isSetAside, eur, condLetter, domainOf, CUT_MIN_PX, allIn, pickUrl, shipsUnconfirmed, shipNote, trustMark } from './core.js';
+import { S, on, emit, cutSrc, isSetAside, eur, condLetter, domainOf, CUT_MIN_PX, allIn, pickUrl, shipsUnconfirmed, shipNote, trustMark, isUnsure } from './core.js';
 import { flagHtml, originFor, countryName } from './flags.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -93,7 +93,8 @@ function fmtVal(v, mode = vmode, o) {
   if (mode === 'true') {
     if (unitJob()) return eur(v, { dp: v < 100 && Math.abs(v % 1) > 0.004 ? 2 : 0 }) + ' a job';
     // whole euros, paid once; a shop abroad that does not confirm shipping says so
-    return eur(Math.round(v), { dp: 0 }) + (o && o.item ? shipNote(o.item) : '');
+    const sn = o && o.item ? shipNote(o.item) : '';
+    return eur(Math.round(v), { dp: 0 }) + (vertical ? sn.replace(' · no shipping to FI', ' · not to FI') : sn);
   }
   const u = o && o.item && o.item.offer && o.item.offer.unit;
   return eur(v, { dp: v < 10 && v % 1 ? 2 : 0 }) + (u === 'hour' ? '/h' : '');
@@ -552,7 +553,8 @@ function label(o) {
     const tag = turned && vmode === 'true' && o.item && tagOf(o) != null ? (hourly ? fmtVal(tagOf(o), 'tag', o) + ' listed' : 'tag ' + eur(tagOf(o), { dp: 0 })) : '';
     // a late row says so in a word: in a live hunt most rows come after the first answer
     // the shop's trust mark, short, right after the condition ("used · ★ 4.1 solid · tag €229")
-    const tm = o.item ? trustMark(o.item) : null;
+    const tm0 = o.item ? trustMark(o.item) : null;
+    const tm = tm0 && tm0.state !== 'none' ? tm0 : null;   // "no reviews" is noise on a phone row (the receipt says it)
     x.textContent = cw === 'service' ? '' : cw;
     if (tm) {
       const t = document.createElement('span');
@@ -878,7 +880,10 @@ function flyIn(o, to) {
 let listH = 0;
 // vertical (phones): ruler down the left, cheapest on top, full rows 76 px, dot rows 44 px
 function layoutVertical({ dur, stagger, list, rm }) {
-  list.sort((a, b) => valOf(a) - valOf(b));
+  // all in, the phone's list reads like the ledger: offers you can surely buy first (the pick on top),
+  // then the cheaper-maybe ones whose shipping to Finland is not confirmed
+  const un = o => (turned && vmode === 'true' && o.item && o.item.tc && isUnsure(o.item)) ? 1 : 0;
+  list.sort((a, b) => un(a) - un(b) || valOf(a) - valOf(b));
   // a phone shows the cheapest 8; the rest wait behind "+N dearer"
   const cut = phase === 'hunt' && !expanded && list.length > 10 ? 8 : list.length;
   const hidden = list.splice(cut);
@@ -952,9 +957,9 @@ function drawAxis(vh) {
 }
 function axisText() {
   if (phase === 'start') return 'your results land on this line · cheaper ← → dearer';
-  if (!turned) return vmode === 'true' ? '' : 'price on the tag, as the shops list it';
-  if (vmode === 'true') return unitJob() ? '€ for the whole job, every fee in' : '€ you pay, all in: tag + shipping + import VAT + fees';
-  return unitJob() ? '€ as the shops list it' : '€ on the tag, before shipping and import VAT';
+  if (!turned) return vmode === 'true' ? '' : 'tags for now, as the shops list them · all in once each offer is costed';
+  if (vmode === 'true') return unitJob() ? 'For the whole job, every fee in' : 'You pay, all in: tag + shipping + import VAT + fees';
+  return unitJob() ? 'As the shops list it' : 'On the tag, before shipping and import VAT';
 }
 function syncSwitch() {
   if (!sw) return;

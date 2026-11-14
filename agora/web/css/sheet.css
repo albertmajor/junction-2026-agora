@@ -43,9 +43,13 @@
 @keyframes v-breathe { 50% { opacity: .25; } }
 
 /* the facts: label column 120 px, value 15 px, one seam per row */
-.v-facts { grid-column: 1 / -1; grid-row: 4; margin: 16px 0 0; padding: 0; max-width: 720px; display: grid; }
+.v-facts {
+  grid-column: 1 / -1; grid-row: 4; margin: 16px 0 0; padding: 0; max-width: 760px;
+  display: grid; grid-template-columns: minmax(120px, max-content) minmax(0, 1fr); column-gap: 20px;
+}
 .v-facts[hidden] { display: none; }
-.v-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); column-gap: 16px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--hair); }
+.v-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--hair); }
+.v-row dt { white-space: nowrap; }
 .v-row:first-child { border-top: 0; padding-top: 0; }
 .v-row dt { font: 400 13px/1.45 var(--sans); color: var(--ink-3); }
 .v-row dd { margin: 0; font: 400 15px/1.45 var(--sans); color: var(--ink-2); text-wrap: pretty; font-variant-numeric: tabular-nums; }
@@ -92,6 +96,18 @@
     grid-template-columns: 112px minmax(0, 1fr);
   }
 }
+/* 900–1099: two columns still (summary | a 300 px pick card with a smaller photo), no half-empty row */
+@media (min-width: 900px) and (max-width: 1099px) {
+  #verdict { grid-template-columns: minmax(0, 1fr) 300px; }
+  #verdict .v-text { grid-column: 1; }
+  #verdict .v-pick { grid-column: 2; grid-row: 1; margin: 6px 0 0; max-width: none; grid-template-columns: 84px minmax(0, 1fr); column-gap: 12px; }
+  #verdict .vp-pic { width: 84px; height: 84px; }
+  .v-big { font-size: 34px; }
+}
+/* while we read: the leader so far stands where the answer will land, plainly a tag price */
+#verdict[data-state="hunting"] .v-big:not(:empty) ~ .v-small { grid-row: 2; margin: 10px 0 0; font-size: 14px; color: var(--ink-3); }
+.v-num.is-tag { font-weight: 400; color: var(--ink-2); text-decoration: underline dotted var(--ink-3); text-decoration-thickness: 1px; text-underline-offset: 6px; }
+@media (min-width: 900px) { #app[data-phase="hunting"] #verdict { min-height: 132px; } }
 
 /* ================= shared sheet + drawer shell ================= */
 .sheet, .drawer { position: fixed; inset: 0; z-index: 60; }
@@ -124,7 +140,7 @@
 .sheet .close svg, .drawer .icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 .sheet .close { flex: none; background: transparent; }
 /* the sheet's own top bar: the close button sits inside the sheet, 12 px from its corner */
-.s-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 0 20px; }
+.s-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px 2px 22px; }
 .s-bar-k { font: 500 12px/1 var(--sans); color: var(--ink-3); }
 
 /* ================= receipt sheet ================= */
@@ -367,7 +383,7 @@ html.agent-on #line, html.agent-on #tag, html.agent-on #finale { opacity: 0; poi
   }
   .grab { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--ink-3); opacity: .5; margin: 8px auto 0; flex: none; }
   .sheet .body { padding: 8px 16px calc(32px + env(safe-area-inset-bottom)); }
-  .s-bar { padding: 4px 8px 0 16px; }
+  .s-bar { padding: 4px 12px 0 16px; }
   .stage { height: 180px; }
   .stage img { max-height: 150px; }
   .drawer .body { padding: 4px 16px 32px; }
@@ -442,7 +458,20 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   font: 500 10px/14px var(--mono); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair); background: var(--receipt);
 }
 /* a guess: softer, a dotted underline, a tiny "?"; the tooltip says "guess" in words */
-.flag[data-sure="0"] img { opacity: .7; }
+.flag[data-tip] { cursor: help; }
+.flag[data-tip]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
+/* origin not stated: a neutral chip, so the gap reads as unknown, not as an oversight */
+.flag.is-unknown svg { display: block; fill: none; stroke: var(--ink-3); stroke-width: 1; stroke-linecap: round; }
+.flag.is-unknown[data-size="18"] svg { width: 18px; height: 13px; }
+/* the flag tip (flags.js): basis + whether it ships to Finland */
+.flag-tip {
+  position: fixed; z-index: 90; max-width: 280px; padding: 8px 10px; border-radius: 8px;
+  background: var(--ink); color: var(--paper); font: 400 12px/1.45 var(--sans); pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0,0,0,.18); opacity: 0; transform: translateY(2px);
+  transition: opacity 120ms linear, transform 120ms var(--ease, ease);
+}
+.flag-tip.on { opacity: 1; transform: none; }
+.flag-tip[hidden] { display: none; }
 .flag[data-sure="0"]::after { content: ""; position: absolute; left: 0; bottom: -3px; width: 14px; border-bottom: 1px dotted var(--ink-3); }
 .flag[data-sure="0"][data-size="18"]::after { width: 18px; }
 .flag[data-sure="0"].noimg::after { width: 100%; }
@@ -477,13 +506,20 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 /* ================= verdict, narrow screens ================= */
 @media (max-width: 640px) {
   .v-big { font-size: 30px; line-height: 1.08; }
-  .v-row { grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; padding: 6px 0; }
-  .v-row dt { font-size: 12px; }
+  .v-facts { grid-template-columns: 92px minmax(0, 1fr); column-gap: 12px; }
+  .v-row { padding: 6px 0; }
+  .v-row dt { font-size: 12px; white-space: normal; }
   .v-row dd { font-size: 13.5px; }
   .v-facts { margin-top: 12px; }
   /* phone: the line's own row shows the photo; the card keeps shop, trust and the two buttons */
   .v-pick { grid-template-columns: minmax(0, 1fr); padding: 12px; margin-top: 14px; }
   .vp-pic { display: none; }
+  .vp-body { grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; }
+  .vp-k, .vp-acts { grid-column: 1 / -1; }
+  .vp-shop { grid-column: 1; }
+  .vp-sub { grid-column: 2; grid-row: 2; align-self: center; }
+  .vp-trust { grid-column: 1 / -1; }
+  .vp-acts { margin-top: 6px; }
   .vp-acts .btn { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .v-pick { animation: none; } }

@@ -101,8 +101,31 @@
   display: block; width: 18px; height: 18px; border-radius: 4px; object-fit: cover;
   background: var(--receipt); box-shadow: 0 0 0 1px var(--hair);
 }
-#reading .ll-ti-x { background: color-mix(in srgb, var(--ink-3) 25%, var(--receipt)); }
+/* an offer with no usable photo: a small dot (it still flies to the line) */
+#reading .ll-ti-x, .ll-fly.ll-ti-x {
+  width: 8px; height: 8px; margin: 5px; border-radius: 50%; box-shadow: none;
+  background: color-mix(in srgb, var(--ink-2) 55%, transparent);
+}
 #reading .ll-ti.aside { opacity: .35; }
+#reading .ll-ti.is-logo { object-fit: contain; padding: 2px; opacity: .6; background: var(--receipt); }
+
+/* after the hunt: the reel of sites we read (brand marks via Context.dev), each with its offer count */
+#reading .ll-reel { display: inline-flex; align-items: center; gap: 7px; flex: 0 1 auto; min-width: 0; overflow: hidden; padding: 3px 4px 3px 0; }
+#reading .ll-reel:empty { display: none; }
+#reading .ll-rm { position: relative; flex: none; transition: transform 160ms var(--ease); }
+#reading .ll-rm .ll-mark { width: 22px; height: 22px; box-shadow: 0 0 0 1.5px var(--ll-bg), inset 0 0 0 1px var(--hair); }
+#reading .ll-rm .ll-mark img { inset: 2px; width: 18px; height: 18px; }
+#reading .ll-rm:not(.got) .ll-mark { opacity: .45; filter: grayscale(1); }
+#reading .ll-rm .ll-rb {
+  position: absolute; right: -5px; top: -4px; min-width: 12px; height: 12px; padding: 0 3px; border-radius: 6px;
+  background: var(--ok); color: #fff; font: 600 8px/12px var(--mono); font-style: normal; text-align: center;
+  box-shadow: 0 0 0 1.5px var(--ll-bg);
+}
+#reading .ll-rm .ll-rb:empty { display: none; }
+#reading .ll-rm[data-cd="1"] .ll-rb { background: var(--ll-blue); }
+#reading .ll-rm:hover { transform: translateY(-2px); z-index: 2; }
+#reading .ll-rmore { margin-left: 6px; font: 400 11px/1 var(--mono); color: var(--ink-3); }
+#reading .ll-sum-text { flex: 1 1 320px; }
 #reading .ll-more { color: var(--ink-3); }
 #reading .ll-more:empty { display: none; }
 
@@ -122,6 +145,7 @@
 }
 #reading .ll-sum[hidden], #reading .ll-panel[hidden], #reading .ll-log[hidden] { display: none; }
 #reading .ll-sum-text { flex: 1 1 auto; min-width: 0; color: var(--ink-2); }
+#reading .ll-toggle { text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
 #reading .ll-sum-text b { font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
 #reading .ll-sum-text b.ll-cd-n { color: var(--ll-blue); }
 #reading .ll-ok { color: var(--ok); font-weight: 500; }
@@ -175,5 +199,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   #reading .ll-dot { animation: none; }
-  #reading .ll-bar::after { animation: none; width: 100%; opacity: .5; }
+  #reading .ll-bar::after { animation: ll-breathe 1.6s linear infinite; width: 100%; transform: none; }
 }

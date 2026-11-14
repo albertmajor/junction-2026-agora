@@ -1,7 +1,7 @@
 // verdict.js (B3): the one sentence above the line, the facts under it, and the pick card beside it.
 // hunting… → provisional answer + "checking N more shops" → final answer + "✓ checked".
-import { S, on, emit, eur, cutSrc, goHref, domainOf, isSetAside, isProductPhoto, allIn, pickUrl, cheapestByCondition, shippingUnknown, shipsUnconfirmed, shipNote, trustMark } from './core.js';
-import { flagHtml, originFor } from './flags.js';
+import { S, on, emit, eur, cutSrc, goHref, domainOf, isSetAside, isProductPhoto, allIn, pickUrl, cheapestByCondition, shippingUnknown, shipsUnconfirmed, shipNote, trustMark, isUnsure, unsureWhy } from './core.js';
+import { flagHtml, originFor, countryName } from './flags.js';
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -72,6 +72,28 @@ export function cheapestTagUrl() {
   return c ? c.url : null;
 }
 
+// The cheapest costed offer whose all-in figure is below the pick's but that we cannot be sure of.
+function cheaperUnsure(lead) {
+  const a = allIn(lead);
+  let best = null;
+  for (const it of S.offers.values()) {
+    if (!costed(it) || it.url === lead.url || !isUnsure(it)) continue;
+    const v = allIn(it);
+    if (v < a - 0.5 && (!best || v < allIn(best))) best = it;
+  }
+  return best;
+}
+// "is before shipping, and the shop doesn't say it ships to Finland" — the reason in a sentence
+function whyWords(it) {
+  const w = unsureWhy(it);
+  if (/ships to FI\?/.test(w)) return 'is before shipping, and the shop doesn’t say it ships to Finland';
+  if (/no shipping/.test(w)) return 'but the shop doesn’t ship to Finland';
+  if (/out of stock/.test(w)) return 'but it is out of stock';
+  if (/from/.test(w)) return 'is a “from” price, not this exact one';
+  if (/reviews/.test(w)) return 'but its reviews show red flags';
+  return 'but we can’t be sure of that price';
+}
+
 // "€795 + shipping" when the shop abroad does not confirm shipping to you
 export function allInText(it, per) {
   const a = allIn(it);
@@ -99,7 +121,10 @@ function factRows(lead) {
     const mine = String(lead.offer.condition || '').toLowerCase().replace(/^refurb.*/, 'refurbished');
     ['new', 'refurbished', 'used'].filter(c => c !== mine && byC[c]).slice(0, 2).forEach(c => {
       const it = byC[c].it;
-      rows.push({ k: `Cheapest ${c}`, pre: `${allInText(it)} at `, shop: shopOf(it), url: it.url, item: it, post: '', key: 'c-' + c });
+      // a cheaper one that cannot be the pick says why, right here
+      const why = isUnsure(it) && allIn(it) < allIn(lead) - 0.5
+        ? (shipsUnconfirmed(it) ? '; the shop doesn’t say it ships to Finland.' : `; ${whyWords(it).replace(/^(but |is )/, '')}.`) : '';
+      rows.push({ k: `Cheapest ${c}`, pre: `${allInText(it)} at `, shop: shopOf(it), url: it.url, item: it, post: why, key: 'c-' + c, cheap: !!why });
     });
   }
   if (lead && per === 'job') {
@@ -110,13 +135,23 @@ function factRows(lead) {
     if (m) rows.push({ k: 'The job', v: `${m[1]} an hour × ${m[2]} h${m[3] ? ' for ' + m[3].trim() : ''}.`, key: 'job' });
     if (ded) rows.push({ k: 'After deduction', v: `About ${ded[1]} after the household deduction.`, key: 'ded' });
   }
+  // why the pick is not the cheapest figure on the list: the cheapest offer below it that we cannot be sure of
+  const shown = new Set(rows.filter(r => r.url).map(r => r.url));
+  const below = lead && per !== 'job' ? cheaperUnsure(lead) : null;
+  if (below && !shown.has(below.url)) {
+    const org = originFor(below), cc = org && org.country_code;
+    const where = cc && String(cc).toUpperCase() !== 'FI' ? ` (${String(cc).toUpperCase() === 'US' ? 'US' : countryName(cc)})` : '';
+    rows.push({ k: 'Why not cheaper?', pre: `${money(allIn(below), 'job')} at `, shop: shopOf(below), url: below.url, item: below,
+      post: `${where} ${whyWords(below)}.${extrasOf(below) > 0.5 ? ` Its ${money(tagOf(below), 'job')} tag becomes ${money(allIn(below), 'job')} with ${addedPhrase(below)}.` : ''}`, key: 'why', cheap: true });
+    shown.add(below.url);
+  }
   const cheapest = cheapestTag(lead);
-  if (cheapest) {
+  if (cheapest && !shown.has(cheapest.url)) {
     const ex = extrasOf(cheapest);
-    const after = ex > 0.5 ? `is ${money(allIn(cheapest), 'job')} after ${addedPhrase(cheapest)}` : `is ${money(allIn(cheapest), 'job')}`;
-    const ship = shipsUnconfirmed(cheapest) ? ', plus shipping it does not confirm to Finland' : '';
+    const after = ex > 0.5 ? ` becomes ${money(allIn(cheapest), 'job')} with ${addedPhrase(cheapest)}` : ` is ${money(allIn(cheapest), 'job')} all in`;
+    const ship = shipsUnconfirmed(cheapest) ? ', before shipping, and the shop doesn’t say it ships to Finland' : '';
     rows.push({ k: 'Lowest tag', pre: `${money(tagOf(cheapest), 'job')} at `, shop: shopOf(cheapest), url: cheapest.url, item: cheapest,
-      post: ` ${after}${ship}.`, key: 'cheap', cheap: true });
+      post: `${after}${ship}.`, key: 'cheap', cheap: true });
   }
   const rc = S.recheck && lead && S.recheck.to === lead.url ? S.recheck : null;
   if (rc) {
@@ -146,7 +181,8 @@ function setPick(lead) {
   if (!lead) { el.hidden = true; el.dataset.k = ''; return; }
   const o = lead.offer || {};
   const org = originFor(lead);
-  const tm = trustMark(lead);
+  const tm0 = trustMark(lead);
+  const tm = tm0 && tm0.state !== 'none' ? tm0 : null;   // "no reviews found" says nothing on the pick (the receipt keeps it)
   const city = (org && org.city) || '';
   const sub = [condWord(o.condition).toLowerCase(), city].filter(Boolean).join(' · ');
   const key = [lead.url, sub, tm && tm.text, flagHtml(lead, { size: 18 })].join('|');
@@ -186,7 +222,7 @@ function bigParts(lead) {
   if (t.per === 'job') return { n: allIn(lead), fmt: 'job2', rest: ` for one job at ${dom}.` };
   const cw = condWord(lead.offer.condition);
   if (S.mode === 'true') {
-    const tail = shipsUnconfirmed(lead) ? ' + shipping.' : ' all in.';
+    const tail = shipsUnconfirmed(lead) ? ' + shipping.' : shippingUnknown(lead) ? ' all in, if you pick it up.' : ' all in.';
     return { n: allIn(lead), fmt: 'job', rest: `${tail} ${cw ? cw + ', ' : ''}${dom}.` };
   }
   return { n: tagOf(lead), fmt: 'job', rest: ` ${cw ? cw.toLowerCase() + ' ' : ''}at ${dom}.` };
@@ -202,15 +238,15 @@ function setBig(lead) {
   const num = money(p.n, p.fmt);
   const text = num + p.rest;
   if (els.big.textContent === text && els.big.querySelector('.v-num')) return;
-  const prevNum = els.big.dataset.n;
+  const prevSig = els.big.dataset.n, sig = num + '|' + S.mode;
   els.big.innerHTML = `<span class="v-num">${esc(num)}</span>${esc(p.rest)}`;
-  els.big.dataset.n = num;
+  els.big.dataset.n = sig;
   els.big.classList.remove('lock'); void els.big.offsetWidth; els.big.classList.add('lock');
   // count up once per new figure, from the cheapest tag on the line to what you pay; reduced motion: none
   cancelAnimationFrame(countRaf);
   const from = lowestTag();
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || prevNum === num || S.mode !== 'true' || from == null || p.n == null || Math.abs(p.n - from) < 1) return;
+  if (reduce || prevSig === sig || (S.mode !== 'true' && p.fmt !== 'job2') || from == null || p.n == null || Math.abs(p.n - from) < 1) return;
   const span = els.big.querySelector('.v-num');
   span.classList.add('counting');
   const t0 = performance.now(), D = 600;
@@ -276,9 +312,23 @@ function render() {
     root.dataset.state = 'hunting';
     const r = S.rank && S.rank.reason;
     cancelAnimationFrame(countRaf);
-    els.big.textContent = ''; els.big.dataset.n = '';
-    els.small.textContent = finished ? endNote()
-      : r ? captionFromRank(r) : (S.need ? `Looking for ${S.need.thing || S.need.raw || S.q} in every shop we can read.` : '');
+    // while we read: the leader so far, in the headline's place and size, plainly a tag price (all in comes
+    // once shipping and import VAT are costed), so the result lands where this sentence stands
+    const ld = !finished && S.leader ? S.offers.get(S.leader) : null;
+    const lt = ld ? tagOf(ld) : null;
+    if (lt != null) {
+      const cw = condWord(ld.offer.condition);
+      const txt = `${money(lt, 'job')} on the tag so far. ${cw ? cw + ', ' : ''}${shopOf(ld)}.`;
+      if (els.big.textContent !== txt) {
+        els.big.innerHTML = `<span class="v-num is-tag">${esc(money(lt, 'job'))}</span> on the tag so far. ${esc(cw ? cw + ', ' : '')}${esc(shopOf(ld))}.`;
+        els.big.dataset.n = '';
+      }
+      els.small.textContent = 'Shipping, import VAT and fees get added next: the answer is what you pay, all in.';
+    } else {
+      els.big.textContent = ''; els.big.dataset.n = '';
+      els.small.textContent = finished ? endNote()
+        : r ? captionFromRank(r) : (S.need ? `Looking for ${S.need.thing || S.need.raw || S.q} in every shop we can read.` : '');
+    }
     setFacts([]); setPick(null);
     els.fig.hidden = true;
   }

@@ -3,6 +3,7 @@
 // main.js calls mountLanding($('landing')) and listens for the bus event 'ask' {q}.
 import * as core from './core.js';
 import { recordings, labelFor, queryFor } from './stream.js';
+import { flagSrc } from './flags.js';
 
 const brand = () => core.BRAND || document.documentElement.dataset.brand || 'Agora';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -12,7 +13,7 @@ const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-r
 const RECORDED = {
   'sony-a7-iii-body': { img: '/web/assets/shelf/kamera-0.png', meta: '24 pages · 17 offers' },
   'iphone-15-128gb-used': { img: '/web/assets/shelf/iphone-15-0.png', meta: '11 pages · 6 offers' },
-  'home-cleaning-helsinki-60m2': { mono: 'clean', meta: '13 pages · 10 offers' },
+  'home-cleaning-helsinki-60m2': { svg: 'clean', meta: '13 pages · 10 offers', wide: true },
 };
 const REC_ORDER = Object.keys(RECORDED);
 
@@ -44,7 +45,7 @@ function flag(cc) {
   if (!cc || !/^[A-Za-z]{2}$/.test(cc)) return '';
   const c = cc.toUpperCase(), name = COUNTRY[c] || c;
   const t = `Listed in ${name}, from the marketplace the listing is on.`;
-  return `<span class="ld-flag" title="${esc(t)}" aria-label="${esc(t)}"><img src="https://flagcdn.com/${c.toLowerCase()}.svg" alt="" width="12" height="9" loading="lazy"><span class="ld-cc">${c}</span></span>`;
+  return `<span class="ld-flag" title="${esc(t)}" aria-label="${esc(t)}"><img src="${flagSrc(c)}" alt="" width="12" height="9" loading="lazy"><span class="ld-cc">${c}</span></span>`;
 }
 const cdMark = () => `<a class="cd-mark" href="https://context.dev" target="_blank" rel="noopener">Powered by <img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="14" height="14" data-fb="sq"> <b>Context.dev</b></a>`;
 const head = (n, kicker, h, id) => `<p class="ld-kicker"><span class="ld-n">${n}</span>${esc(kicker)}</p><h2 class="ld-h" id="${id}">${h}</h2>`;
@@ -64,6 +65,7 @@ function browseHtml() {
         ${head('01', 'Browse', 'Or start from something real.', 'ld-browse-h')}
         <p class="ld-sub">Real listings our hunts have read, at the price on their tag. Pick one and we hunt it across Europe, all in.</p>
       </header>
+      <p class="ld-note" role="status" hidden>This demo server runs offline, so it replays the three recorded live hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki). The other searches run live when a Context.dev key is set.</p>
       <ul class="ld-grid" role="list"></ul>
     </div>
   </section>`;
@@ -76,7 +78,7 @@ function howHtml() {
   ];
   return `<section class="ld-band alt" id="ld-how" aria-labelledby="ld-how-h">
     <div class="ld-in">
-      <header class="ld-head ld-rv">${head('02', 'How it works', 'One question. Every shop. One line.', 'ld-how-h')}</header>
+      <header class="ld-head ld-rv">${head('03', 'How it works', 'One question. Every shop. One line.', 'ld-how-h')}</header>
       <ol class="ld-steps" role="list">
         ${steps.map(([k, t, b], i) => `<li class="ld-step ld-rv" style="--d:${i * 80}ms">${SVG[k]}<h3><span class="ld-n">${i + 1}</span>${esc(t)}</h3><p>${esc(b)}</p></li>`).join('')}
       </ol>
@@ -88,27 +90,30 @@ function sourcesHtml() {
   return `<section class="ld-band" id="ld-sources" aria-labelledby="ld-sources-h">
     <div class="ld-in">
       <header class="ld-head ld-rv">
-        ${head('03', 'Sources', 'Where we look.', 'ld-sources-h')}
+        ${head('04', 'Sources', 'Where we look.', 'ld-sources-h')}
         <p class="ld-sub">Second-hand marketplaces, refurbishers and big shops across Europe, plus any shop the search turns up.</p>
       </header>
       <div class="ld-wall"></div>
-      <p class="ld-foot ld-rv">193 second-hand sources in our registry · free JSON-LD first, Context.dev where it matters.</p>
+      <p class="ld-foot ld-rv">Brand marks fetched by the Context.dev brand API · 193 second-hand sources in our registry · free JSON-LD first, Context.dev where it matters.</p>
     </div>
   </section>`;
 }
 function codeLine(kind, origin) {
   if (kind === 'mcp') {
+    // runs as written from the repo folder (uv reads the project's lockfile); no machine-specific path
     const name = brand().toLowerCase().replace(/[^a-z0-9-]+/g, '-');
-    return { text: `claude mcp add ${name} -- /path/to/Junction/.venv/bin/python -m agora.mcp_server`,
-      html: `<span class="tk-p">$</span> <span class="tk-k">claude</span> mcp add ${esc(name)} <span class="tk-s">--</span> /path/to/Junction/.venv/bin/python <span class="tk-k">-m</span> agora.mcp_server` };
+    return { text: `claude mcp add ${name} -- uv run python -m agora.mcp_server`,
+      html: `<span class="tk-p">$</span> <span class="tk-k">claude</span> mcp add ${esc(name)} <span class="tk-s">--</span> uv run python <span class="tk-k">-m</span> agora.mcp_server` };
   }
   const url = `${origin}/api/offers?q=sony+a7+iii+body&limit=3`;
   return { text: `curl "${url}"`,
     html: `<span class="tk-p">$</span> <span class="tk-k">curl</span> <span class="tk-s">"</span>${esc(origin)}/api/offers?<span class="tk-k">q</span>=sony+a7+iii+body&amp;<span class="tk-k">limit</span>=3<span class="tk-s">"</span>` };
 }
 function agentsHtml() {
-  const origin = (typeof location !== 'undefined' && location.origin && location.origin !== 'null') ? location.origin : 'http://localhost:8000';
+  // the curl line is this server, as you see it (no port on 80/443: location.origin already drops it)
+  const origin = (typeof location !== 'undefined' && /^https?:/.test(location.protocol || '')) ? location.origin : '';
   const block = (kind, label) => {
+    if (kind === 'http' && !origin) return '';
     const c = codeLine(kind, origin);
     return `<figure class="ld-code ld-rv"><figcaption>${esc(label)}</figcaption>
       <pre><code>${c.html}</code></pre>
@@ -117,11 +122,11 @@ function agentsHtml() {
   return `<section class="ld-band alt" id="ld-agents" aria-labelledby="ld-agents-h">
     <div class="ld-in">
       <header class="ld-head ld-rv">
-        ${head('04', 'For agents', 'Same line, for your agent.', 'ld-agents-h')}
+        ${head('05', 'For agents', 'Same line, for your agent.', 'ld-agents-h')}
         <p class="ld-sub">Agents get the same offers in the same order, ranked by all-in price, over MCP or plain JSON. Read-only: ${esc(brand())} never buys for an agent.</p>
       </header>
       <div class="ld-codes">
-        ${block('mcp', 'MCP, for Claude Code')}
+        ${block('mcp', 'MCP, for Claude Code · run it in the repo folder')}
         ${block('http', 'Plain JSON over HTTP')}
       </div>
       <div class="ld-tools ld-rv" role="table" aria-label="MCP tools">
@@ -136,10 +141,11 @@ function cdHtml() {
   return `<section class="ld-band ink" id="ld-cd" aria-labelledby="ld-cd-h">
     <div class="ld-in">
       <header class="ld-head ld-rv">
-        <p class="ld-kicker"><span class="ld-n">05</span><span class="ld-pulse" aria-hidden="true"></span>The engine</p>
+        <p class="ld-kicker"><span class="ld-n">02</span><span class="ld-pulse" aria-hidden="true"></span>The engine</p>
         <h2 class="ld-h" id="ld-cd-h">Powered by <span class="ld-cd-name"><img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="28" height="28" data-fb="sq">Context.dev</span>.</h2>
         <p class="ld-sub">Every page ${esc(brand())} reads goes through Context.dev: web search to find the shops, product extraction, structured JSON from listing pages, markdown scrapes of marketplace search results, and the brand logos you see in the live log. We spend it carefully: free JSON-LD first, paid reads where they matter.</p>
       </header>
+      <p class="ld-count ld-rv" aria-live="polite"><b>48</b> pages on <b>35</b> sites, read live in the three recorded hunts above: Context.dev where it pays, free JSON-LD where a shop already publishes it.</p>
       <ul class="ld-facts" role="list">
         ${CD_FACTS.map(([k, v], i) => `<li class="ld-rv" style="--d:${i * 60}ms"><b>${k}</b><span>${esc(v)}</span></li>`).join('')}
       </ul>
@@ -149,13 +155,26 @@ function cdHtml() {
 }
 
 // ---------- browse cards ----------
+// a cleaning job has no product photo: a drawn spray bottle and bucket, in the same muted cut-out look
+const CLEAN_SVG = `<svg class="ld-draw" viewBox="0 0 220 120" aria-hidden="true">
+  <ellipse cx="110" cy="110" rx="78" ry="5" class="sh"/>
+  <path d="M58 44h22l6 10v52a4 4 0 0 1-4 4H56a4 4 0 0 1-4-4V58z" class="b1"/>
+  <path d="M56 70h28v24H56z" class="lb"/><path d="M61 78h18M61 84h12" class="ln"/>
+  <path d="M60 30h18v14H60z" class="b2"/><path d="M60 30h-14l-4 6h18z" class="b3"/>
+  <path d="M74 44c4 6 6 10 4 16" class="ln"/>
+  <circle cx="36" cy="32" r="1.6" class="mist"/><circle cx="30" cy="27" r="1.2" class="mist"/><circle cx="29" cy="36" r="1.1" class="mist"/>
+  <path d="M112 62h64l-7 44a5 5 0 0 1-5 4h-40a5 5 0 0 1-5-4z" class="b2"/>
+  <path d="M112 62c0-26 64-26 64 0" class="hd"/>
+  <path d="M108 62h72" class="rim"/>
+  <path d="M150 52c6-12 18-12 22-4" class="sp"/><path d="M146 54c2-8 10-10 14-6" class="sp2"/>
+</svg>`;
 function cardHtml(c, i) {
-  const plate = c.img
-    ? `<img src="${esc(c.img)}" alt="" loading="lazy" decoding="async">`
+  const plate = c.svg === 'clean' ? CLEAN_SVG
+    : c.img ? `<img src="${esc(c.img)}" alt="" loading="lazy" decoding="async">`
     : `<span class="ld-mono" aria-hidden="true">${esc(c.mono || '')}</span>`;
   const label = c.label ? `<span class="ld-label${c.recorded ? ' rec' : ''}">${esc(c.label)}</span>` : '';
-  return `<li class="ld-item ld-rv" style="--d:${(i % 6) * 40}ms">
-    <button type="button" class="ld-card" data-q="${esc(c.q)}" aria-label="${esc(`Hunt for ${c.title}`)}">
+  return `<li class="ld-item ld-rv${c.wide ? ' wide' : ''}${i === 0 ? ' first' : ''}" style="--d:${(i % 6) * 40}ms">
+    <button type="button" class="ld-card" data-q="${esc(c.q)}" data-ok="${c.ok ? 1 : 0}" aria-label="${esc(`Hunt for ${c.title}`)}">
       <span class="ld-plate">${plate}${label}</span>
       <span class="ld-title">${esc(c.title)}</span>
       <span class="ld-meta">${c.cc ? flag(c.cc) : ''}<span>${esc(c.meta)}</span></span>
@@ -176,7 +195,7 @@ async function cards() {
   for (const slug of [...REC_ORDER.filter(s => have.has(s)), ...[...have].filter(s => !REC_ORDER.includes(s))]) {
     const r = RECORDED[slug] || { mono: labelFor(slug).slice(0, 5).toLowerCase(), meta: 'recorded live hunt' };
     if (r.img) used.add(r.img);
-    out.push({ title: labelFor(slug), q: queryFor(slug), img: r.img, mono: r.mono, meta: r.meta, recorded: true, label: 'recorded hunt' });
+    out.push({ title: labelFor(slug), q: queryFor(slug), img: r.img, mono: r.mono, svg: r.svg, wide: r.wide, meta: r.meta, recorded: true, ok: true, label: 'instant replay' });
   }
   const items = (Array.isArray(shelf) ? shelf : []).filter(s => s && s.title && s.query && !used.has(s.img))
     .sort((a, b) => (a.price_eur || 0) - (b.price_eur || 0));
@@ -184,8 +203,9 @@ async function cards() {
     const rec = s.recording && have.has(s.recording);
     out.push({
       title: s.title, q: rec ? queryFor(s.recording) : s.query, img: s.img, cc: s.country,
-      meta: [core.eur(s.price_eur, { dp: 0 }), s.site, s.condition].filter(Boolean).join(' · '),
-      recorded: rec, label: rec ? 'recorded hunt' : (live ? '' : 'live only'),
+      // the price as listed is a tag, and says so (the main number everywhere else is all in)
+      meta: [s.price_eur ? 'tag ' + core.eur(s.price_eur, { dp: 0 }) : '', s.site, s.condition].filter(Boolean).join(' · '),
+      recorded: rec, ok: rec || live, label: rec ? 'instant replay' : '',
     });
   }
   return out;
@@ -236,7 +256,13 @@ function fallbacks(root) {
   });
 }
 
-let io = null;
+let io = null, sweepOn = false;
+// anything at or above the fold's bottom edge is shown: a jump (End key, anchor, fast fling) never leaves blank bands
+function sweep() {
+  for (const e of document.querySelectorAll('.ld-rv:not(.in)')) {
+    if (e.getBoundingClientRect().top < innerHeight) { e.classList.add('in'); if (io) io.unobserve(e); }
+  }
+}
 function reveal(root) {
   const els = [...root.querySelectorAll('.ld-rv:not(.in)')];
   if (!('IntersectionObserver' in window)) { els.forEach(e => e.classList.add('in')); return; }
@@ -244,6 +270,11 @@ function reveal(root) {
     for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }, { rootMargin: '0px', threshold: 0.01 });
   els.forEach(e => io.observe(e));
+  if (!sweepOn) {
+    sweepOn = true;
+    let raf = 0;
+    addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; sweep(); }); }, { passive: true });
+  }
 }
 
 export function mountLanding(el) {
@@ -251,7 +282,7 @@ export function mountLanding(el) {
   el.dataset.mounted = '1';
   el.classList.add('ld-js');
   const cue = el.querySelector('.scroll-cue');
-  el.insertAdjacentHTML('beforeend', browseHtml() + howHtml() + sourcesHtml() + agentsHtml() + cdHtml());
+  el.insertAdjacentHTML('beforeend', browseHtml() + cdHtml() + howHtml() + sourcesHtml() + agentsHtml());
   if (cue) el.prepend(cue);
 
   const grid = el.querySelector('.ld-grid');
@@ -267,7 +298,15 @@ export function mountLanding(el) {
 
   el.addEventListener('click', e => {
     const card = e.target.closest('.ld-card');
-    if (card) { ask(card.dataset.q); return; }
+    if (card) {
+      if (card.dataset.ok === '1') { ask(card.dataset.q); return; }
+      const note = el.querySelector('.ld-note');
+      if (note) {
+        note.hidden = false; note.classList.remove('flash'); void note.offsetWidth; note.classList.add('flash');
+        note.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'nearest' });
+      }
+      return;
+    }
     const cp = e.target.closest('.ld-copy');
     if (cp) {
       const done = ok => { cp.textContent = ok ? 'copied' : 'select to copy'; cp.classList.toggle('ok', ok); setTimeout(() => { cp.textContent = 'copy'; cp.classList.remove('ok'); }, 1600); };

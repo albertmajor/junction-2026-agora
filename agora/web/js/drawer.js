@@ -50,7 +50,7 @@ function whyLines(v) {
     for (const c of ['new', 'refurbished', 'used']) {
       const e = byC[c]; if (!e) continue;
       const tag = e.it.offer.price_eur, a = allIn(e.it);
-      lines.push(`${c}: ${money(e.it)} all in at ${shop(e.it)}${Math.abs(a - tag) > 0.5 ? ` (tag ${eur(Math.round(tag), { dp: 0 })})` : ''}${shipsUnconfirmed(e.it) ? ', plus shipping it does not confirm to Finland' : e.sure ? '' : ', not surely buyable'}`);
+      lines.push(`${c}: ${money(e.it)} all in at ${shop(e.it)}${Math.abs(a - tag) > 0.5 ? ` (tag ${eur(Math.round(tag), { dp: 0 })})` : ''}${shipsUnconfirmed(e.it) ? '; shipping to Finland not confirmed' : e.sure ? '' : ', not surely buyable'}`);
     }
     const cheaper = [...S.offers.values()].filter(it => it !== pk && !isSetAside(it) && isUnsure(it) && allIn(it) != null && allIn(it) < allIn(pk));
     if (cheaper.length) lines.push(`${cheaper.length} offer${cheaper.length === 1 ? ' is' : 's are'} cheaper all in but not the pick: abroad without confirmed shipping to Finland, out of stock or a "from" price.`);

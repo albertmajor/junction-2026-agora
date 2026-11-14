@@ -41,8 +41,39 @@
 /* ---------- 3.1 browse grid ---------- */
 .ld-grid {
   list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px 24px;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 32px 24px; grid-auto-flow: row dense;
 }
+/* 13 objects + the cleaning job across two cells = 15 cells: full rows at 5 and 3 columns */
+.ld-item.wide { grid-column: span 2; }
+.ld-item.wide .ld-card { height: 100%; }
+.ld-item.wide .ld-plate { aspect-ratio: auto; flex: 1 1 auto; min-height: 120px; }
+@media (max-width: 999px) { .ld-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* the drawn cleaning set: same muted greys as the photos, colour on hover */
+.ld-draw { width: 74%; height: 70%; position: relative; z-index: 1; overflow: visible; transition: transform 400ms var(--ease); }
+.ld-draw * { stroke: #5d5a53; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; transition: fill 400ms var(--ease); }
+.ld-draw .sh { fill: rgba(28,27,24,.10); stroke: none; }
+.ld-draw .b1 { fill: #d9d5cc; } .ld-draw .b2 { fill: #c9c4b9; } .ld-draw .b3 { fill: #a9a398; }
+.ld-draw .lb { fill: #f1eee7; } .ld-draw .ln, .ld-draw .hd, .ld-draw .sp, .ld-draw .sp2 { fill: none; }
+.ld-draw .rim { fill: none; stroke-width: 2.2; }
+.ld-draw .sp { stroke: #b9b3a6; stroke-width: 6; } .ld-draw .sp2 { stroke: #d6d1c6; stroke-width: 5; }
+.ld-draw .mist { fill: #a9a398; stroke: none; }
+.ld-card:hover .ld-draw, .ld-card:focus-visible .ld-draw { transform: translateY(-3px); }
+.ld-card:hover .ld-draw .b1 { fill: #cfe3ea; } .ld-card:hover .ld-draw .b2 { fill: #f2d65a; } .ld-card:hover .ld-draw .b3 { fill: #2f6f8f; }
+.ld-card:hover .ld-draw .sp { stroke: #8fb3c6; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-draw { opacity: .85; } :root:not([data-theme="light"]) .ld-draw .lb { fill: #d9d5cc; } }
+:root[data-theme="dark"] .ld-draw { opacity: .85; }
+/* offline: a card that needs a live search says so here instead of starting a hunt that cannot run */
+.ld-note { margin: -12px 0 24px; padding: 10px 14px; max-width: 720px; border-radius: 10px; background: var(--receipt);
+  box-shadow: inset 0 0 0 1px var(--hair); font: 400 14px/1.5 var(--sans); color: var(--ink-2); }
+.ld-note[hidden] { display: none; }
+.ld-note.flash { animation: ld-note 900ms var(--ease) both; }
+@keyframes ld-note { 0% { box-shadow: inset 0 0 0 1px var(--hair), 0 0 0 4px color-mix(in srgb, var(--accent) 70%, transparent); } 100% { box-shadow: inset 0 0 0 1px var(--hair), 0 0 0 0 transparent; } }
+/* the engine band: a live count of what the recorded hunts read */
+.ld-count { margin: 0 0 28px; max-width: 720px; font: 400 15px/1.55 var(--sans); color: color-mix(in srgb, var(--paper) 72%, transparent); }
+.ld-count b { font: 500 22px/1 var(--serif); color: var(--paper); margin-right: 2px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-count { color: var(--ink-2); } :root:not([data-theme="light"]) .ld-count b { color: var(--ink); } }
+:root[data-theme="dark"] .ld-count { color: var(--ink-2); }
+:root[data-theme="dark"] .ld-count b { color: var(--ink); }
 .ld-item { min-width: 0; }
 .ld-card {
   display: flex; flex-direction: column; align-items: stretch; gap: 0; width: 100%;
@@ -132,15 +163,16 @@
   display: grid; place-items: center; height: 40px; min-width: 40px; max-width: 96px;
 }
 .ld-logo img {
-  display: block; max-width: 96px; max-height: 28px; width: 28px; height: 28px; object-fit: contain; border-radius: 7px;
-  filter: grayscale(1) opacity(.7); transition: filter 300ms var(--ease), transform 300ms var(--ease);
+  display: block; max-width: 96px; max-height: 32px; width: 32px; height: 32px; object-fit: contain; border-radius: 8px;
+  filter: grayscale(.15) opacity(.95); transition: filter 300ms var(--ease), transform 300ms var(--ease);
 }
 .ld-logo i {
-  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px;
-  font: italic 400 16px/1 var(--serif); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair);
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px;
+  font: italic 400 17px/1 var(--serif); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair);
 }
 .ld-group li:hover .ld-logo img { filter: none; transform: translateY(-1px); }
 .ld-bn { font: 400 12px/1 var(--sans); color: var(--ink-2); white-space: nowrap; }
+.ld-band.ink .ld-head { margin-bottom: 24px; }
 .ld-foot { margin: 36px 0 0; font: 400 12px/1.5 var(--mono); color: var(--ink-2); }
 
 /* ---------- 3.4 for agents ---------- */
@@ -245,6 +277,8 @@
   .ld-band.ink .ld-h { font-size: 34px; }
   .ld-cd-name img, .ld-cd-name .cd-sq { width: 26px; height: 26px; }
   .ld-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
+  .ld-item.first { grid-column: span 2; }   /* 2 columns: the first recorded hunt goes wide too, so rows stay full */
+  .ld-item.first .ld-plate { aspect-ratio: 2 / 1; }
   .ld-title { font-size: 13px; }
   .ld-meta { font-size: 11px; }
   .ld-label { left: 8px; top: 8px; }

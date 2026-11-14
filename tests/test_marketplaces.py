@@ -83,7 +83,12 @@ def test_site_query(thing, site, want):
 
 def test_plan_home_marketplace_free_then_big_eu_ones_while_tokens_last():
     full = m.direct_pages("airpods pro 2", "used", None, "fi", tokens=10)
-    assert [(d.site.key, d.paid) for d in full] == [("tori", False), ("kleinanzeigen", True), ("vinted_fi", True)]
+    assert [(d.site.key, d.paid, d.page) for d in full][:6] == [
+        ("tori", False, 1), ("vinted_fi", True, 1), ("kleinanzeigen", True, 1), ("marktplaats", True, 1),
+        ("blocket", True, 1), ("olx_pl", True, 1)]                      # small thing: EU-wide
+    assert sum(d.paid for d in full) <= m.MAX_PAID_DIRECT + 2 and not any(d.extra for d in full)
+    assert [d.site.key for d in m.direct_pages("airpods pro 2", "used", None, "fi", tokens=3)] == [
+        "tori", "vinted_fi", "kleinanzeigen"]
     dry = m.direct_pages("airpods pro 2", "used", None, "fi", tokens=0)
     assert [d.site.key for d in dry] == ["tori"]              # tori's ItemList read is free: always
     assert [d.site.key for d in m.direct_pages("airpods pro 2", "refurbished", None, "fi", 10)] == ["backmarket"]
@@ -91,10 +96,16 @@ def test_plan_home_marketplace_free_then_big_eu_ones_while_tokens_last():
 
 
 def test_plan_bulky_things_only_at_home():
-    assert [d.site.key for d in m.direct_pages("ikea kallax shelf", "used", None, "fi", 10)] == ["tori"]
+    assert [d.site.key for d in m.direct_pages("ikea kallax shelf", "used", None, "fi", 4)] == ["tori"]
+    spare = m.direct_pages("city bike", "used", None, "fi", 10)       # tokens to spare: 'also in the EU' set
+    assert spare[0].site.key == "tori" and not spare[0].extra
+    assert spare[1:] and all(d.extra and d.page == 1 for d in spare[1:])
+    assert not any(d.site.key.startswith("vinted") for d in spare)
     assert m.direct_pages("ikea kallax shelf", "new", None, "fi", 10) == []
     koln = m.direct_pages("kallax", "used", "de", None, 10)
-    assert [d.site.key for d in koln] == ["kleinanzeigen"] and koln[0].url.endswith("/s-kallax/k0")
+    assert koln[0].site.key == "kleinanzeigen" and koln[0].url.endswith("/s-kallax/k0") and not koln[0].extra
+    assert koln[1].page == 2 and koln[1].url.endswith("/s-seite:2/kallax/k0")    # home depth before abroad
+    assert all(d.extra for d in koln[2:])
 
 
 def test_discover_emits_direct_pages_first_and_drops_the_eu_used_search(monkeypatch):
@@ -109,7 +120,9 @@ def test_discover_emits_direct_pages_first_and_drops_the_eu_used_search(monkeypa
         return [e async for e in dv.discover(AIRPODS, tokens=10, settle_s=0.05)]
     events = asyncio.run(run())
     used = next(e.data for e in events if e.type == "lane" and e.data["lane"] == "used")
-    assert [d["site"] for d in used["direct"]] == ["tori", "kleinanzeigen", "vinted_fi"]
+    assert [d["site"] for d in used["direct"]][:3] == ["tori", "vinted_fi", "kleinanzeigen"]
+    scope = next(e.data for e in events if e.type == "scope")
+    assert scope["scope"] == "eu" and scope["eu_included"] and scope["country"] == "FI"
     assert not any("kleinanzeigen OR vinted" in q for q in calls)     # read directly instead of searched
     srcs = [e.data for e in events if e.type == "source"]
     assert srcs[0]["url"].startswith("https://www.tori.fi/recommerce/forsale/search?q=airpods")
@@ -142,7 +155,7 @@ def test_first_price_skips_monthly_and_prefers_bold():
 def test_split_kleinanzeigen_page():
     url, text = md("kleinanzeigen_airpods-pro-2")
     rows = m.split_rows(text, "", m.SITES["kleinanzeigen"])
-    assert len(rows) == m.MAX_ROWS
+    assert len(rows) == 25                                           # every row on the page, no cap
     assert all(r["url"].startswith("https://www.kleinanzeigen.de/s-anzeige/") and r["currency"] == "EUR" for r in rows)
     one = next(r for r in rows if r["url"].endswith("/3570916187-172-1697"))
     assert one["title"] == "AirPods Pro 2" and one["price"] == 39.0
@@ -152,7 +165,7 @@ def test_split_kleinanzeigen_page():
 def test_split_vinted_page_cleans_titles_and_keeps_the_buyer_fee():
     _, text = md("vinted_fi_airpods-pro-2")
     rows = m.split_rows(text, "", m.SITES["vinted_fi"])
-    assert len(rows) == m.MAX_ROWS
+    assert len(rows) == 96                                           # every row (was cut at 25)
     first = rows[0]
     assert first["title"] == "lewy airpod pro 2 gen lightning"            # ', Tuotemerkki: Apple, ...' cut
     assert first["price"] == 41.34 and first["price_with_fee"] == 44.11

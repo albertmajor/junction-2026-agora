@@ -102,6 +102,7 @@
   font: 400 16px/1.1 var(--serif); text-align: center; padding: 0 6px; overflow-wrap: anywhere;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
+.ln-o.mono .ln-pic .wm.long { font-size: 11.5px; padding: 0 4px; letter-spacing: -.01em; }
 .ln-o.dot.mono .ln-pic { border-radius: 50%; }
 .ln-o.dot.mono .ln-pic .l { display: none; }
 /* a bead with no photo and no known logo: a quiet dot, never a lonely letter */
@@ -336,7 +337,9 @@
 .ln-v .ln-cap .p { display: block; }
 .ln-v .ln-cap .d, .ln-v .ln-cap .x { display: inline; }
 .ln-v .ln-cap .d + .x::before { content: " · "; }
-.ln-v .ln-cap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln-v .ln-cap { white-space: normal; overflow: hidden; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.ln-v .ln-cap .p { white-space: nowrap; }
+.ln-v .ln-o.dot .ln-cap { transform: translateY(-50%) !important; }
 .ln-o.ln-gone { visibility: hidden; pointer-events: none; }
 .ln-v .ln-o .ln-cap, .ln-v .ln-o.dot .ln-cap, .ln-v .ln-shelfo .ln-cap { display: block; }
 .ln-v .ln-cap .x:empty { display: none; }
@@ -460,7 +463,7 @@
 .lg-l li { border-bottom: 1px solid var(--hair); }
 /* # · photo · shop · title · condition · tag · all in · note */
 .lg-r {
-  display: grid; grid-template-columns: 28px 44px minmax(170px, 230px) minmax(0, 1fr) 88px 80px 112px 120px;
+  display: grid; grid-template-columns: 28px 44px minmax(170px, 230px) minmax(0, 1fr) 88px 72px 96px 172px;
   align-items: center; column-gap: 12px; width: 100%; min-height: 52px; padding: 6px 8px 6px 4px; margin: 0;
   border: 0; background: none; color: var(--ink-2); font: 400 13px/1.3 var(--sans); text-align: left; cursor: pointer;
   transition: background var(--t-ui) var(--ease);
@@ -486,6 +489,16 @@
 .lg-tc { font: 500 13px var(--mono); color: var(--ink); }
 .lg-x { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lg-x i { font-style: normal; color: var(--flag); }
+/* the second group: cheaper maybe, but we cannot be sure of the price (never the pick) */
+.lg-l .lg-sep {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 18px 8px 8px 44px;
+  border-bottom: 1px solid var(--hair); font: 400 12px/1.4 var(--sans); color: var(--ink-3);
+}
+.lg-sep b { font-weight: 500; color: var(--ink-2); }
+.lg-sep + li .lg-r, .lg-sep ~ li .lg-r { color: var(--ink-3); }
+.lg-sep ~ li .lg-tc { color: var(--ink-2); font-weight: 400; }
+/* flags in the list: no fade-in (rows re-render), full strength; the dotted rule alone marks a guess */
+.lg-s .flag img { animation: none; opacity: 1 !important; }
 .lg-x b { font-weight: 500; color: var(--ink); background: linear-gradient(transparent 55%, var(--accent) 55%); }
 .lg-r.unsure .lg-tc { color: var(--ink-2); }
 .lg-more {
@@ -494,7 +507,7 @@
 }
 .lg-more:hover { color: var(--ink); }
 @media (max-width: 1023px) {
-  .lg-r { grid-template-columns: 24px 40px minmax(150px, 1fr) 80px 72px 104px 112px; column-gap: 10px; }
+  .lg-r { grid-template-columns: 24px 40px minmax(150px, 1fr) 76px 64px 92px 150px; column-gap: 10px; }
   .lg-ti { display: none; }
   .lg-head > span:nth-child(4) { display: none; }
 }
@@ -517,6 +530,8 @@ html.agent-on #ledger { opacity: 0; pointer-events: none; }
 #line:not(.ln-v) .ln-switch { grid-column: 1; grid-row: 1; }
 #line:not(.ln-v) .ln-labs { grid-column: 2; grid-row: 1; overflow: hidden; }
 #line:not(.ln-v) .ln-lab { right: 0; overflow: hidden; text-overflow: ellipsis; }
+/* start screen: the caption is centred under the whole line (no right edge, or the box spans half and the text sits left) */
+#line[data-ln-phase="start"]:not(.ln-v) .ln-lab { right: auto; }
 #line:not(.ln-v) .ln-trayc { grid-column: 3; grid-row: 1; }
 .ln-dearer[hidden] { display: none; }
 .ln-dearer-t { font: 400 12px var(--sans); fill: var(--ink-3); }
@@ -558,3 +573,20 @@ html.agent-on #ledger { opacity: 0; pointer-events: none; }
 .ln-v .ln-cap .f:not(:empty) { display: inline; margin-right: 5px; }
 .ln-v .ln-cap .f .flag { vertical-align: -1px; }
 .ln-v .ln-cap .f + .d { display: inline; }
+/* phones: switch and the "your price" pill share one row; the tray chip sits under the axis words */
+.ln-v .ln-axislab { column-gap: 8px; }
+.ln-v .ln-switch button { padding: 0 10px; }
+.ln-v .ln-trayc { margin-top: 6px; }
+
+/* the start line's objects: muted like the browse grid below (one family), colour comes back on hover */
+.ln-shelfo .ln-pic img { filter: grayscale(1) sepia(.12) contrast(1.02) brightness(1.04); transition: filter 400ms var(--ease); }
+.ln-shelfo:hover .ln-pic img, .ln-shelfo:focus-visible .ln-pic img { filter: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ln-shelfo .ln-pic img { filter: grayscale(1) sepia(.12) drop-shadow(0 0 1px rgba(255, 248, 235, .45)) drop-shadow(0 0 8px rgba(255, 248, 235, .10)); }
+  :root:not([data-theme="light"]) .ln-shelfo:hover .ln-pic img { filter: drop-shadow(0 0 1px rgba(255, 248, 235, .45)); }
+}
+:root[data-theme="dark"] .ln-shelfo .ln-pic img { filter: grayscale(1) sepia(.12) drop-shadow(0 0 1px rgba(255, 248, 235, .45)) drop-shadow(0 0 8px rgba(255, 248, 235, .10)); }
+:root[data-theme="dark"] .ln-shelfo:hover .ln-pic img { filter: drop-shadow(0 0 1px rgba(255, 248, 235, .45)); }
+.ln-v .ln-o.dot .ln-cap { -webkit-line-clamp: 2; }
+/* while hunting, the verdict headline already says who leads (in the answer's place): no second, faint copy */
+#app[data-phase="hunting"] #line .ln-caption { visibility: hidden; }

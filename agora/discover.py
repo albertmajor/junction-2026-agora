@@ -680,6 +680,16 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
     directs = plan_direct(need, lanes, float(tokens or 0), n_search) if depth is None else {}
     if any(d.paid and d.site.key.split("_")[0] in EU_USED_SITES for d in directs.get("used", [])):
         plans["used"] = [x for x in plans["used"] if not eu_used(x)]   # read them directly instead
+    if need.kind == "product" and depth is None and direct_enabled():
+        from agora import marketplaces
+        planned = [d for ds in directs.values() for d in ds]
+        for d in planned:
+            if d.extra:
+                marketplaces.EXTRA_PAGES.add(d.url)
+        # why the hunt looks where it looks (bulky: near you first; small: the big EU marketplaces too)
+        yield ev("scope", **marketplaces.scope_for(_thing_q(need), cc, home if cc is None else None,
+                                                   eu_included=any(d.site.country != (cc or home)
+                                                                   for d in planned)))
     for lane in lanes:
         qp = plans[lane]
         extra: dict[str, Any] = {}
@@ -689,7 +699,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
             extra["sites"] = [d for x in qp if len(x) > 2 for d in x[2]]
         if directs.get(lane):
             extra["direct"] = [{"site": d.site.key, "domain": d.site.domain, "url": d.url, "query": d.query,
-                                "paid": d.paid} for d in directs[lane]]
+                                "paid": d.paid, "page": d.page, "extra": d.extra} for d in directs[lane]]
         yield ev("lane", lane=lane, queries=[x[0] for x in qp], country=cc, **extra)
         for q, c, *rest in qp:
             # the first variant is filtered to the asked-for country, local used to home, the rest open;
@@ -721,10 +731,11 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
             lists[dom] = lists.get(dom, 0) + 1
             per_lane[lane] += 1
             emitted += 1
-            title = f"{dom} search: {d.query}"
+            title = f"{dom} search: {d.query}" + (f" (page {d.page})" if d.page > 1 else "")
             remember_source(d.url, lane, title, "")
             yield ev("source", url=d.url, domain=dom, lane=lane, title=title, query=d.query, snippet="",
-                     eu=True, score=9.0, list_page=True, direct=True, site=d.site.key, paid=d.paid)
+                     eu=True, score=9.0, list_page=True, direct=True, site=d.site.key, paid=d.paid,
+                     page=d.page, extra=d.extra, country=d.site.country.upper())
     tasks = {asyncio.ensure_future(_run_query(lane, q, c, lane == "service", inc)) for lane, q, c, inc in plan}
 
     def _yield_of(r: dict[str, Any]) -> float:

@@ -254,6 +254,18 @@ WORDS: dict[str, dict[str, str]] = {
              "pl": "rower", "fr": "vélo", "es": "bicicleta", "it": "bicicletta", "cs": "kolo"},
     "bicycle": {"fi": "polkupyörä", "sv": "cykel", "no": "sykkel", "da": "cykel", "de": "fahrrad", "nl": "fiets",
                 "pl": "rower", "fr": "vélo", "es": "bicicleta", "it": "bicicletta", "cs": "kolo"},
+    "city bike": {"fi": "kaupunkipyörä", "sv": "stadscykel", "no": "bysykkel", "da": "citybike", "de": "citybike",
+                  "nl": "stadsfiets", "pl": "rower miejski", "fr": "vélo de ville", "es": "bicicleta de paseo",
+                  "it": "bici da città", "cs": "městské kolo"},
+    "mountain bike": {"fi": "maastopyörä", "sv": "mountainbike", "no": "terrengsykkel", "da": "mountainbike",
+                      "de": "mountainbike", "nl": "mountainbike", "pl": "rower górski", "fr": "vtt",
+                      "es": "bicicleta de montaña", "it": "mountain bike", "cs": "horské kolo"},
+    "kids bike": {"fi": "lasten polkupyörä", "sv": "barncykel", "no": "barnesykkel", "da": "børnecykel",
+                  "de": "kinderfahrrad", "nl": "kinderfiets", "pl": "rower dziecięcy", "fr": "vélo enfant",
+                  "es": "bicicleta infantil", "it": "bici bambino", "cs": "dětské kolo"},
+    "cargo bike": {"fi": "tavarapyörä", "sv": "lådcykel", "no": "lastesykkel", "da": "ladcykel", "de": "lastenrad",
+                   "nl": "bakfiets", "pl": "rower cargo", "fr": "vélo cargo", "es": "bicicleta de carga",
+                   "it": "cargo bike", "cs": "nákladní kolo"},
     "road bike": {"fi": "maantiepyörä", "sv": "racercykel", "no": "landeveissykkel", "da": "racercykel",
                   "de": "rennrad", "nl": "racefiets", "pl": "rower szosowy", "fr": "vélo de route",
                   "es": "bicicleta de carretera", "it": "bici da corsa", "cs": "silniční kolo"},
@@ -332,6 +344,11 @@ WORDS: dict[str, dict[str, str]] = {
 FILLER = re.compile(r"\b(?:used|second[- ]hand|secondhand|pre[- ]owned|refurbished|refurb|new|brand new|cheap|"
                     r"cheapest|buy|for sale|deal|best price|käytetty|gebraucht|neu|begagnad|brukt|brugt|"
                     r"tweedehands|occasion|usato|usado|używany)\b", re.I)
+# words that describe but do not name a thing: 'city bike with basket' minus 'bike' is not a search for 'city'
+DESCRIPTORS = re.compile(r"\b(?:city|urban|kids?|children'?s?|women'?s?|men'?s?|ladies|lady|girls?|boys?|electric|"
+                         r"mountain|road|gaming|office|wooden|wood|white|black|grey|gray|red|blue|green|small|large|"
+                         r"big|mini|old|vintage|retro|good|nice|with|without|and|or|for|a|an|the|in|on|of|basket|"
+                         r"cheap|best)\b", re.I)
 _PHRASES = sorted(WORDS, key=len, reverse=True)
 _GENERIC_RE = re.compile(r"\b(" + "|".join(re.escape(p) for p in _PHRASES) + r")s?\b", re.I)
 
@@ -343,10 +360,12 @@ def site_query(thing: str, site: Site) -> str:
     q = FILLER.sub(" ", thing or "")
     q = re.sub(r"[^\w\s.+&'-]", " ", q)
     rest = _GENERIC_RE.sub(" ", q)
-    if re.search(r"[a-zà-ÿ0-9]{2,}", rest, re.I):
+    if re.search(r"[a-zà-ÿ0-9]{2,}", DESCRIPTORS.sub(" ", rest), re.I):
         q = rest
-    elif site.lang != "en":
-        q = _GENERIC_RE.sub(lambda m: WORDS[m.group(1).lower()].get(site.lang, m.group(1)), q)
+    elif _GENERIC_RE.search(q):
+        # only descriptors besides the noun ('city bike with basket'): the noun phrase, translated
+        m = _GENERIC_RE.search(q)
+        q = WORDS[m.group(1).lower()].get(site.lang, m.group(1)) if site.lang != "en" else m.group(0)
     return re.sub(r"\s+", " ", q).strip().lower() or (thing or "").strip().lower()
 
 
@@ -359,63 +378,246 @@ class Direct:
     query: str
     url: str
     paid: bool          # needs a Context.dev read (one rate-limit token)
+    page: int = 1       # results page (2, 3: a paid site's next page when the bucket has tokens to spare)
+    extra: bool = False  # bulky thing, marketplace abroad: shown as "also in the EU (+ shipping est.)", not the pick
 
 
 BULKY = re.compile(
     r"\b(shelf|shelves|shelving|hylly\w*|kallax|billy|hemnes|malm|pax|sofa|couch|sohva|table|pöytä|chair|tuoli|"
     r"desk|bed|sänky|wardrobe|dresser|lipasto|cabinet|kaappi|fridge|freezer|washing machine|dishwasher|"
-    r"piano|treadmill|bookcase|cupboard|mattress)\b", re.I)
+    r"piano|treadmill|bookcase|cupboard|mattress|bike|bicycle|e-bike|ebike|polkupyörä|pyörä|fahrrad|cykel|"
+    r"stroller|pram|rattaat|kinderwagen|lawn ?mower|cooker|oven|stove)s?\b", re.I)
 
 # a paid direct page is planned only while the bucket has this many tokens left for searches and item reads
-PAID_DIRECT_MIN_TOKENS = {"used": 3.0, "refurbished": 4.0, "new": 5.0}
+PAID_DIRECT_MIN_TOKENS = {"used": 2.0, "refurbished": 3.0, "new": 4.0}
+MAX_PAID_DIRECT = 5          # paid marketplace pages per hunt (each 1 credit, 1 token of the shared 10/min)
+NEXT_PAGE_MIN_TOKENS = 5.0   # a paid site's page 2 only when this many tokens are left after every page 1
+BULKY_EU_MIN_TOKENS = 5.0    # bulky: marketplaces abroad only with tokens to spare after the home country
+# big EU marketplaces read for everybody (small things), best yield first; vinted = the home country's host
+EU_WIDE_USED = ("vinted", "kleinanzeigen", "marktplaats", "blocket", "olx_pl", "dba", "finn", "leboncoin")
+BULKY_EU_USED = ("kleinanzeigen", "blocket", "marktplaats")
+NAMES = {"fi": "Finland", "se": "Sweden", "no": "Norway", "dk": "Denmark", "de": "Germany", "at": "Austria",
+         "nl": "the Netherlands", "be": "Belgium", "pl": "Poland", "fr": "France", "es": "Spain", "it": "Italy",
+         "gb": "the UK", "cz": "Czechia", "ee": "Estonia", "ch": "Switzerland", "ie": "Ireland", "pt": "Portugal"}
+
+
+EXTRA_PAGES: set[str] = set()   # planned page URLs that are the bulky 'also in the EU' set (reader.note_market)
+
+
+def is_bulky(thing: str) -> bool:
+    return bool(BULKY.search(thing or ""))
+
+
+def scope_for(thing: str, cc: str | None, home: str | None, eu_included: bool | None = None) -> dict:
+    """Why the hunt searched where it did, in words the UI can show verbatim:
+    {scope: home|eu, country: 'FI', reason, eu_included, bulky, size}."""
+    from agora import shipping
+    where = cc or home
+    bulky = is_bulky(thing)
+    size = shipping.size_class(thing)
+    name = NAMES.get(where or "", (where or "your country").upper())
+    if bulky:
+        est = shipping.estimate(size, "de", where or "fi")
+        cost = f"; shipping a {shipping.SIZE_WORD.get(size, size)} from abroad costs ≈{est['text']}" if est else ""
+        reason = f"bulky item: searched near you in {name} first{cost}"
+        if eu_included:
+            reason += ". Big EU marketplaces shown separately, with shipping estimated"
+        return {"scope": "home", "country": (where or "").upper() or None, "reason": reason,
+                "eu_included": bool(eu_included), "bulky": True, "size": size}
+    asked = f"asked for {name}" if cc else f"home: {name}"
+    return {"scope": "eu", "country": (where or "").upper() or None,
+            "reason": f"small enough to ship: searched {name} and the big EU marketplaces ({asked}); "
+                      "foreign prices include estimated shipping",
+            "eu_included": True if eu_included is None else bool(eu_included), "bulky": False, "size": size}
 
 
 def direct_pages(thing: str, lane: str, cc: str | None, home: str | None, tokens: float,
-                 max_paid: int = 2) -> list[Direct]:
-    """Marketplace search pages to read directly for one lane: the asked-for (else home) country's own
-    marketplaces first, then 1-2 big EU ones. Bulky things (furniture, white goods) only at home: nobody
-    collects a Kallax from Germany. A page that needs a paid read is planned only while `tokens` (the shared
-    Context.dev bucket, minus what is already planned) allows it; tori's ItemList read is free."""
+                 max_paid: int = MAX_PAID_DIRECT) -> list[Direct]:
+    """Marketplace search pages to read directly for one lane.
+    Small things: the asked-for (else home) country's marketplaces, then the big EU ones (vinted, kleinanzeigen,
+    marktplaats, blocket, olx, dba, finn, leboncoin) while the shared bucket allows; then page 2 of the first
+    paid ones. Bulky things (bikes, furniture, white goods): the home country gets the depth (tori paginates
+    for free); marketplaces abroad only with tokens to spare, marked `extra` (shown apart, never the pick when
+    pickup only). tori's ItemList read is free (it paginates inside the read)."""
     where = cc or home
-    bulky = bool(BULKY.search(thing or ""))
-    keys: list[str] = []
+    bulky = is_bulky(thing)
+    home_keys: list[str] = []
+    eu_keys: list[str] = []
     if lane == "used":
-        keys += list(HOME_USED.get(where or "", ()))
-        if not bulky:
-            for k in EU_USED:
-                if k == "vinted":
-                    v = vinted_for(where)
-                    if v is not None:
-                        keys.append(v.key)
-                elif k not in keys:
-                    keys.append(k)
+        home_keys += list(HOME_USED.get(where or "", ()))
+        for k in (BULKY_EU_USED if bulky else EU_WIDE_USED):
+            if k == "vinted":
+                v = vinted_for(where)
+                if v is not None:
+                    eu_keys.append(v.key)
+            elif k not in home_keys and SITES[k].country != where:
+                eu_keys.append(k)
     elif lane == "refurbished" and not bulky:
-        keys += list(EU_REFURB)
+        home_keys += list(EU_REFURB)
     elif lane == "new" and not bulky:         # verkkokauppa sells no Kallax
-        keys += list(HOME_NEW.get(where or "", ()))[:1]
+        home_keys += list(HOME_NEW.get(where or "", ()))[:1]
     out: list[Direct] = []
     left = tokens
     n_paid = 0
-    for k in keys:
+    floor = PAID_DIRECT_MIN_TOKENS.get(lane, 99.0)
+
+    def add(k: str, extra: bool) -> None:
+        nonlocal left, n_paid
         s = SITES.get(k)
         if s is None or s.listing is None and not s.itemlist:
-            continue
+            return
         if bulky and not s.bulky_ok:
-            continue
+            return
         paid = not s.itemlist
         if paid:
-            if n_paid >= max_paid or left < PAID_DIRECT_MIN_TOKENS.get(lane, 99.0):
-                continue
+            if n_paid >= max_paid or left < floor:
+                return
             n_paid += 1
             left -= 1
         q = site_query(thing, s)
-        out.append(Direct(s, lane, q, build_url(s, q), paid))
+        out.append(Direct(s, lane, q, build_url(s, q), paid, 1, extra))
+
+    def next_pages() -> None:
+        nonlocal left, n_paid
+        if lane != "used":
+            return
+        for d in [d for d in out if d.paid and d.page == 1 and not d.extra and d.site.verified
+                  and page_url(d.site, d.url, 2) and not any(x.url == page_url(d.site, d.url, 2) for x in out)]:
+            if n_paid >= max_paid + 2 or left < NEXT_PAGE_MIN_TOKENS:
+                break
+            n_paid += 1
+            left -= 1
+            out.append(Direct(d.site, lane, d.query, page_url(d.site, d.url, 2) or d.url, True, 2, False))
+
+    for k in home_keys:
+        add(k, False)
+    if bulky:
+        next_pages()                  # the home country gets the depth first
+        if left >= BULKY_EU_MIN_TOKENS:
+            for k in eu_keys:
+                add(k, True)
+    else:
+        for k in eu_keys:
+            add(k, False)
+        next_pages()                  # then page 2 of the paid pages while tokens are left over
     return out
+
+
+# --------------------------------------------------------------------------- pages, market size, delivery
+
+def page_url(site: Site, url: str, n: int) -> str | None:
+    """Results page n of this site's search URL (None = unknown scheme). Page 1 = the URL itself."""
+    if n <= 1:
+        return url
+    parts = urlsplit(url)
+    path, query = parts.path, parts.query
+    if site.key == "kleinanzeigen":               # /s-<q>/k0 -> /s-seite:2/<q>/k0
+        if not path.startswith("/s-"):
+            return None
+        path = re.sub(r"^/s-(?:seite:\d+/)?", f"/s-seite:{n}/", path)
+    elif site.key in ("marktplaats", "2dehands"):  # /q/<q>/ -> /q/<q>/p/2/
+        path = re.sub(r"/p/\d+/?$", "/", path.rstrip("/") + "/") + f"p/{n}/"
+    elif site.key in ("amazon_de", "verkkokauppa", "power_fi", "cdiscount", "idealo", "pricerunner"):
+        return None
+    else:                                          # ?page=2 (Schibsted, vinted, olx, leboncoin, gumtree ...)
+        query = re.sub(r"(?:^|&)page=\d+", "", query)
+        query = (query + "&" if query else "") + f"page={n}"
+    return urlunsplit((parts.scheme, parts.netloc, path, query, ""))
+
+
+_COUNT_NUM = r"(\d{1,3}(?:[ .,\u00a0\u202f]\d{3})+|\d+)"
+COUNT_PATTERNS = [
+    re.compile(rf"\bvon\s+{_COUNT_NUM}\s+Ergebnis", re.I),                  # kleinanzeigen '1 - 25 von 1.742 Ergebnissen'
+    re.compile(rf"löydät\s+{_COUNT_NUM}\s+ilmoitus", re.I),                  # tori meta 'Torista löydät 117 ilmoitusta'
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:ilmoitusta|tulosta|osumaa)", re.I),
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:Ergebnisse|Anzeigen|Treffer)\b", re.I),
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:resultaten|advertenties|zoekresultaten)\b", re.I),
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:annonser|annoncer|träffar|resultater|resultat)\b", re.I),
+    re.compile(rf"(?:Znaleźliśmy|Znaleziono)\s+(?:ponad\s+)?{_COUNT_NUM}", re.I),
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:ogłosze\w*|wyników)", re.I),
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:annonces|résultats)\b", re.I),
+    re.compile(rf"{_COUNT_NUM}(\+)?\s+(?:results|listings|ads|items)\b", re.I),
+]
+
+
+def market_total(text: str) -> tuple[int, bool] | None:
+    """How many listings the site says the search has: (count, at_least). '500+ tulosta' -> (500, True).
+    Facet counts ('Versand möglich1.224') are not totals: patterns need the word after the number."""
+    for pat in COUNT_PATTERNS:
+        for m in pat.finditer(text or ""):
+            raw = m.group(1)
+            n = int(re.sub(r"\D", "", raw))
+            if n <= 0 or n > 5_000_000:
+                continue
+            plus = bool(m.lastindex and m.lastindex >= 2 and m.group(2)) or "ponad" in m.group(0).lower()
+            return n, plus
+    return None
+
+
+PICKUP = re.compile(
+    r"\b(?:nur\s+(?:selbst)?abholung|nur\s+abholen|nur\s+an\s+selbstabholer|selbstabholung|alleen\s+ophalen|"
+    r"ophalen\s+only|enkel\s+ophalen|endast\s+(?:avhämtning|upphämtning|hämtas)|kun\s+afhentning|"
+    r"kun\s+(?:henting|hentes)|pick[- ]?up\s+only|collection\s+only|collect\s+only|vain\s+nouto|"
+    r"noudettava|haettava|odbiór\s+osobisty|tylko\s+odbiór|remise\s+en\s+main\s+propre\s+uniquement|"
+    r"retrait\s+uniquement|solo\s+ritiro|ritiro\s+a\s+mano|solo\s+recogida)\b", re.I)
+SHIPS = re.compile(
+    r"\b(?:versand\s+möglich|versand\b|verzenden|kan\s+verzonden|verzending|frakt\b|kan\s+skickas|skickas|"
+    r"sendes|kan\s+sendes|forsendelse|wysyłka|livraison\s+possible|envío|spedizione|toimitus|postitus|"
+    r"shipping\s+available|can\s+ship|ships\b|delivery\s+available|direkt\s+kaufen|tori\s+diili)\b", re.I)
+
+
+def delivery_of(text: str, site_key: str = "") -> str | None:
+    """'pickup' (the seller hands it over in person only), 'ships', or None (not stated).
+    vinted always ships (its own shipping labels)."""
+    if site_key.startswith("vinted"):
+        return "ships"
+    if PICKUP.search(text or ""):
+        return "pickup"
+    if site_key in ("marktplaats", "2dehands") and re.search(r"\bOphalen\b(?!\s+of\s+verzenden)", text or "", re.I) \
+            and not re.search(r"\bverzenden\b", text or "", re.I):
+        return "pickup"           # marktplaats rows say 'Ophalen' (pickup) or 'Verzenden' / 'Ophalen of Verzenden'
+    if SHIPS.search(text or ""):
+        return "ships"
+    if site_key == "kleinanzeigen":
+        return "pickup"           # kleinanzeigen rows say 'Versand möglich' when the seller ships; else pickup only
+    return None
+
+
+_PLZ = re.compile(r"^\s*(\d{4,5})\s+([A-ZÄÖÜa-zäöüß][^\n]{1,40}?)\s*$", re.M)
+
+
+def row_location(text: str) -> str | None:
+    """The seller's place in a result row: kleinanzeigen '53773 Hennef (Sieg)', marktplaats/2dehands 'Utrecht'."""
+    m = _PLZ.search(text or "")
+    if m:
+        return f"{m.group(1)} {m.group(2).strip()}"
+    return None
+
+
+def market_summary(pages: list[dict]) -> dict:
+    """Per-page market records (reader.MARKET values) -> the hunt's `market` event body:
+    {sources: [{domain, country, total, at_least, read, pages, extra}], total, read}. One record per domain
+    (pages of the same site add up their rows; the site's total is the largest stated)."""
+    by: dict[str, dict] = {}
+    for p in pages:
+        if not p:
+            continue
+        d = by.setdefault(p["domain"], {"domain": p["domain"], "country": (p.get("country") or "").upper() or None,
+                                        "total": None, "at_least": False, "read": 0, "pages": 0,
+                                        "extra": bool(p.get("extra"))})
+        d["read"] += int(p.get("read") or 0)
+        d["pages"] += int(p.get("pages") or 1)
+        if p.get("total") is not None and (d["total"] is None or p["total"] > d["total"]):
+            d["total"], d["at_least"] = int(p["total"]), bool(p.get("at_least"))
+    sources = sorted(by.values(), key=lambda d: (d["extra"], -(d["total"] or d["read"])))
+    total = sum((d["total"] if d["total"] is not None else d["read"]) for d in sources)
+    return {"sources": sources, "total": total, "read": sum(d["read"] for d in sources),
+            "at_least": any(d["at_least"] or d["total"] is None for d in sources)}
 
 
 # --------------------------------------------------------------------------- the splitter (Robert's split_rows)
 
-MAX_ROWS = 25
+MAX_ROWS: int | None = None     # every row on the page (resolve/judge filter); was 25
 LINK = re.compile(r"\[((?:[^\[\]\\]|\\.)*)\]\((https?://[^\s)]+)[^)]*\)")   # [text](url "title")
 _NUM = r"\d{1,3}(?:[ .,  ]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?"
 PRICE = re.compile(rf"(?<![\d.,])(?:(?:[€£]|EUR\b|CHF\b)\s*({_NUM})|({_NUM})\s*(?:€|EUR\b|kr\b|kr\.|zł|PLN\b|SEK\b|"
@@ -512,21 +714,24 @@ def listing_links(md: str, site: Site) -> list[tuple[re.Match[str], str]]:
     return out
 
 
-def split_rows(md: str, page_html: str, site: Site, max_rows: int = MAX_ROWS) -> list[dict]:
+def split_rows(md: str, page_html: str, site: Site, max_rows: int | None = MAX_ROWS) -> list[dict]:
     """Cut one search page into listings with code, no model:
-    [{title, price, currency, url, text, image}] (Robert's split_rows, per-site patterns)."""
+    [{title, price, currency, url, text, image, delivery, location}] (Robert's split_rows, per-site patterns).
+    delivery: 'pickup' / 'ships' / None from the row's own words ('Nur Abholung', 'Versand möglich')."""
     links = listing_links(md, site)
     rows: list[dict] = []
     seen: set[str] = set()
 
     def add(title: str, price: float | None, url: str, text: str, label: str = "") -> None:
         title = _clean_title(title)
+        loc = row_location(LINK.sub(lambda x: x.group(1), text))
         text = re.sub(r"[\\#*]+", " ", text)
         if price and len(title) >= 6 and url not in seen:
             seen.add(url)
+            flat = " ".join(LINK.sub(lambda x: x.group(1), text).split())
             row = {"title": title, "price": price, "currency": site.currency, "url": url,
-                   "text": " ".join(LINK.sub(lambda x: x.group(1), text).split())[:200],
-                   "image": find_image(page_html, url)}
+                   "text": flat[:200], "image": find_image(page_html, url),
+                   "delivery": delivery_of(f"{title} {flat}", site.key), "location": loc}
             if site.key.startswith("vinted"):
                 # vinted's link label: 'title, brand: x, condition: y, 41.34 €, 44.11 €' = price, price + buyer fee
                 both = [to_number(a or b) for a, b in PRICE.findall(label)]
@@ -546,7 +751,7 @@ def split_rows(md: str, page_html: str, site: Site, max_rows: int = MAX_ROWS) ->
             elif after and after[0].start() - h.end() < 600:
                 add(heading, first_price(md[before:h.start()], last=True), after[1],
                     md[h.end():after[0].start()])
-        return rows[:max_rows]
+        return rows[:max_rows] if max_rows else rows
     firsts = [(m, key) for i, (m, key) in enumerate(links) if key not in {k for _, k in links[:i]}]
     for n, (m, key) in enumerate(firsts):
         end = min(firsts[n + 1][0].start() if n + 1 < len(firsts) else len(md), m.start() + 3000)
@@ -559,4 +764,4 @@ def split_rows(md: str, page_html: str, site: Site, max_rows: int = MAX_ROWS) ->
             title = max(parts, key=lambda p: (len(slug & set(re.findall(r"[a-z0-9]+", p.lower()))), -parts.index(p)))
             price = first_price(m.group(1), last=True) if site.price_last else first_price(seg)
             add(title, price, key, seg.replace(title, ""), m.group(1))
-    return rows[:max_rows]
+    return rows[:max_rows] if max_rows else rows

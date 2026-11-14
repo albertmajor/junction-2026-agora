@@ -127,20 +127,34 @@ export function originTitle(origin) {
   return `${lead} ${where}, ${String(o.basis_text || '').trim() || 'as the listing says'}. ${ships}`;
 }
 
-/** The flag markup for an item, or '' when the origin is unknown. While an offer is still being costed
- *  and nothing is known, a blank slot keeps the width so nothing moves when the flag arrives. */
-export function flagHtml(item, { size = 14, noFi = false, origin = null } = {}) {
+/** The flag markup for an item. Unknown origin: '' (or, with `unknown: true`, a neutral globe chip that says
+ *  "origin not stated", so a gap reads as unknown, not as an oversight). While an offer is still being costed
+ *  and nothing is known, a blank slot keeps the width so nothing moves when the flag arrives.
+ *  A guess is marked by a dotted rule under the flag; the tip (hover, focus or tap) says what it is based on. */
+export function flagHtml(item, { size = 14, noFi = false, origin = null, unknown = false } = {}) {
   const o = origin || originFor(item);
   const cc = ccOf(o);
   const w = size >= 18 ? 18 : size, h = size >= 18 ? 13 : 10;
-  if (!cc) return item && !item.tc && !origin ? `<span class="flag is-pending" data-size="${w}" aria-hidden="true"></span>` : '';
+  if (!cc) {
+    if (item && !item.tc && !origin) return `<span class="flag is-pending" data-size="${w}" aria-hidden="true"></span>`;
+    if (!unknown) return '';
+    const t = originTitle(o);
+    return `<span class="flag is-unknown" data-size="${w}" data-tip="${esc(t)}" tabindex="0" role="img" aria-label="${esc(t)}"><svg viewBox="0 0 14 10" width="${w}" height="${h}" aria-hidden="true"><rect x=".5" y=".5" width="13" height="9" rx="2"/><path d="M7 2.2c1.2 0 2 .7 2 1.6 0 1.2-1.5 1.3-1.5 2.3M7.5 7.7v.1"/></svg></span>`;
+  }
   const sure = o.confident === false ? '0' : '1';
   const fi = o.ships_to_fi === true ? 'yes' : o.ships_to_fi === false ? 'no' : 'unknown';
   const title = originTitle(o);
-  return `<span class="flag" data-size="${w}" data-sure="${sure}" data-fi="${fi}" data-cc="${esc(cc)}" role="img" title="${esc(title)}" aria-label="${esc(title)}">` +
-    `<img src="https://flagcdn.com/${esc(cc.toLowerCase())}.svg" alt="" width="${w}" height="${h}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` +
-    `<span class="flag-cc">${esc(cc)}</span>${sure === '0' ? '<sup class="flag-q" aria-hidden="true">?</sup>' : ''}` +
+  return `<span class="flag" data-size="${w}" data-sure="${sure}" data-fi="${fi}" data-cc="${esc(cc)}" role="img" tabindex="0" data-tip="${esc(title)}" aria-label="${esc(title)}">` +
+    `<img src="${flagSrc(cc)}" alt="" width="${w}" height="${h}" decoding="async" referrerpolicy="no-referrer">` +
+    `<span class="flag-cc">${esc(cc)}</span>` +
     `${noFi && fi === 'no' ? '<span class="flag-nofi" aria-hidden="true">no FI</span>' : ''}</span>`;
+}
+
+// flags are served from this app (web/assets/flags/xx.svg) when we ship that country; else flagcdn
+const LOCAL_FLAGS = new Set('fi se no dk de nl be fr it pt pl at ch ie gb ee lv lt cz sk hu gr us ca au jp za cn lu si ro bg'.split(' '));
+export function flagSrc(cc) {
+  const c = String(cc || '').toLowerCase();
+  return LOCAL_FLAGS.has(c) ? `/web/assets/flags/${c}.svg` : `https://flagcdn.com/${encodeURIComponent(c)}.svg`;
 }
 
 /** Same as flagHtml, as an element (for modules that build DOM). */
@@ -150,6 +164,40 @@ export function flagEl(item, opts) {
   const t = document.createElement('template');
   t.innerHTML = html;
   return t.content.firstElementChild;
+}
+
+// ---------- the flag tip: hover or focus on desktop, tap on touch (a native title is slow, and dead on touch) ----------
+let tip = null, tipFor = null, lastPt = 'mouse';
+function showTip(el) {
+  if (!el || !el.dataset.tip) return;
+  if (!tip) { tip = document.createElement('div'); tip.className = 'flag-tip'; tip.setAttribute('role', 'tooltip'); document.body.appendChild(tip); }
+  tipFor = el;
+  tip.textContent = el.dataset.tip;
+  tip.hidden = false;
+  const r = el.getBoundingClientRect(), W = Math.min(280, innerWidth - 24);
+  tip.style.maxWidth = W + 'px';
+  const tw = Math.min(W, tip.offsetWidth || W);
+  const left = Math.max(12, Math.min(innerWidth - tw - 12, r.left + r.width / 2 - tw / 2));
+  const below = r.bottom + 8 + tip.offsetHeight < innerHeight;
+  tip.style.left = left + 'px';
+  tip.style.top = (below ? r.bottom + 8 : r.top - 8 - tip.offsetHeight) + 'px';
+  tip.classList.add('on');
+}
+function hideTip() { if (tip) { tip.classList.remove('on'); tip.hidden = true; } tipFor = null; }
+if (typeof document !== 'undefined') {
+  document.addEventListener('mouseover', e => { const f = e.target.closest && e.target.closest('.flag[data-tip]'); if (f) showTip(f); else if (tipFor) hideTip(); }, { passive: true });
+  document.addEventListener('focusin', e => { const f = e.target.closest && e.target.closest('.flag[data-tip]'); if (f) showTip(f); });
+  document.addEventListener('focusout', e => { if (e.target === tipFor) hideTip(); });
+  document.addEventListener('pointerdown', e => { lastPt = e.pointerType || 'mouse'; }, { capture: true, passive: true });
+  // a tap on a flag explains the flag (and does not open the row under it); a mouse already has the hover tip
+  document.addEventListener('click', e => {
+    const f = e.target.closest && e.target.closest('.flag[data-tip]');
+    if (!f) { if (tipFor && lastPt !== 'mouse') hideTip(); return; }
+    if (lastPt === 'mouse') return;
+    e.preventDefault(); e.stopPropagation();
+    if (tipFor === f && tip && tip.classList.contains('on')) hideTip(); else showTip(f);
+  }, true);
+  addEventListener('scroll', () => { if (tipFor) hideTip(); }, { passive: true, capture: true });
 }
 
 // a flag image that does not load (offline, blocked) becomes its two-letter code in a small pill

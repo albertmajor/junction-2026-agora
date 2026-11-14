@@ -1187,7 +1187,35 @@ def offers_from_itemlist(data: dict[str, Any], page_url: str, need: Need, hint: 
 # ported in agora/marketplaces.py. ~20 offers for 1 credit / 1 rate-limit token, where the JSON list read gave
 # 8 for ~5 credits. Unknown list pages keep the JSON list read.
 
-MAX_SPLIT_OFFERS = 20        # listings kept per known marketplace search page
+MAX_SPLIT_OFFERS = 400       # listings kept per known marketplace search read (all rows; resolve/judge filter)
+FREE_PAGES = 8               # free ItemList pages read per search (tori: 53 listings each), 3 at a time
+FREE_PAGE_CONCURRENCY = 3
+FREE_PAGE_MIN_MATCH = 0.2    # stop paginating when fewer than this share of a batch's titles match the need
+# page url -> {domain, country, site, total, at_least, read, pages, extra}: how big the market is (hunt `market`)
+MARKET: dict[str, dict[str, Any]] = {}
+
+
+def note_market(page_url: str, site: Any, text: str, read: int, pages: int = 1) -> dict[str, Any]:
+    """Remember how many listings the site says the search has (marketplaces.market_total) and how many
+    rows we read; tagged on every offer of the page as raw['market'] too."""
+    from agora import marketplaces
+    tot = marketplaces.market_total(text)
+    rec = {"domain": domain_of(page_url), "country": getattr(site, "country", None),
+           "site": getattr(site, "key", None), "total": tot[0] if tot else None,
+           "at_least": bool(tot and tot[1]), "read": read, "pages": pages,
+           "extra": page_url in marketplaces.EXTRA_PAGES}
+    if tot and not tot[1] and tot[0] < read:
+        rec["total"] = read            # a stated count lower than what we read is a facet, not the total
+    if len(MARKET) > 2000:
+        MARKET.clear()
+    MARKET[page_url] = rec
+    return rec
+
+
+def market_for(urls: Any) -> dict[str, Any]:
+    """The hunt's `market` body for these source URLs (pages not read / not marketplaces are skipped)."""
+    from agora import marketplaces
+    return marketplaces.market_summary([MARKET[u] for u in urls if u in MARKET])
 SPLIT_MAX_AGE_MS = 30 * 60 * 1000     # a search page older than 30 min is read again
 
 
@@ -1226,7 +1254,9 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
     from agora import marketplaces
     out: list[Offer] = []
     said = {"refurbished": "refurbished", "new": "new"}.get(site.lane)
-    for row in marketplaces.split_rows(md, page_html, site):
+    rows = marketplaces.split_rows(md, page_html, site)
+    market = note_market(page_url, site, md[:20000], len(rows))
+    for row in rows:
         url = listing_url(row["url"], page_url)
         title = fence.clean_field(str(row.get("title") or "")[:160]) or ""
         amount, cur = parse_price(row.get("price"), row.get("currency"), domain_of(page_url))
@@ -1236,12 +1266,73 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
                         image=_abs_image(row.get("image"), page_url), location=None,
                         via="contextdev_markdown_split", step="markdown_split")
         o.raw["site"] = site.key
+        if row.get("delivery"):
+            o.raw["delivery"] = row["delivery"]
+        if row.get("location"):
+            o.location = fence.clean_field(str(row["location"]))[:80] or None
         if row.get("price_with_fee"):
             o.raw["price_with_buyer_fee"] = row["price_with_fee"]     # vinted's buyer protection, as shown
         if row.get("text"):
             o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
+        o.raw["market"] = market
         out.append(o)
     return _keep_best(out, need, MAX_SPLIT_OFFERS)
+
+
+async def more_itemlist_pages(page_url: str, site: Any, need: Need, hint: str | None, first: list[Offer],
+                              html: str) -> tuple[list[Offer], int]:
+    """A free ItemList site (tori): read pages 2..FREE_PAGES politely (3 at a time, plain fetch, no tokens).
+    Stops when the site's stated total is covered, a page has no listings, or a batch stops matching the need.
+    Returns (offers of the extra pages, pages read in all)."""
+    from agora import marketplaces
+    tot = marketplaces.market_total(html[:400000])
+    per = max(1, len(first))
+    last = FREE_PAGES if tot is None else min(FREE_PAGES, -(-tot[0] // per))
+    out: list[Offer] = []
+    pages = 1
+    n = 2
+    sem = asyncio.Semaphore(FREE_PAGE_CONCURRENCY)
+
+    async def one(k: int) -> list[Offer]:
+        u = marketplaces.page_url(site, page_url, k)
+        if not u:
+            return []
+        async with sem:
+            status, h = await fetch_html(u)
+        if status != 200 or not h or looks_blocked(status, h):
+            return []
+        data = await asyncio.to_thread(_extruct, h, u)
+        items = offers_from_itemlist(data, page_url, need, hint, MAX_SPLIT_OFFERS)
+        for o in items:
+            o.raw["page"] = k
+        return items
+
+    while n <= last:
+        batch = list(range(n, min(last, n + FREE_PAGE_CONCURRENCY - 1) + 1))
+        got = await asyncio.gather(*(one(k) for k in batch), return_exceptions=True)
+        stop = False
+        for items in got:
+            if isinstance(items, BaseException) or not items:
+                stop = True
+                continue
+            pages += 1
+            out += items
+            match = sum(1 for o in items if _score(o, need) >= 0.5) / len(items)
+            if match < FREE_PAGE_MIN_MATCH:
+                stop = True
+        if stop:
+            break
+        n = batch[-1] + 1
+    return out, pages
+
+
+def marketplaces_page(site: Any) -> bool:
+    """A free ItemList marketplace whose next pages we know how to ask for."""
+    try:
+        from agora import marketplaces
+        return bool(site.itemlist and marketplaces.page_url(site, "https://x/s?q=x", 2))
+    except ImportError:
+        return False
 
 
 def _finish_list(offers: list[Offer], need: Need) -> list[Offer]:
@@ -1304,6 +1395,15 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
             items = offers_from_itemlist(data, url, need, lane, MAX_SPLIT_OFFERS if site is not None else None)
             if items:
                 contextdev.note_free_read()
+                if site is not None:
+                    pages = 1
+                    if expand_lists and marketplaces_page(site):
+                        more, pages = await more_itemlist_pages(url, site, need, lane, items, html)
+                        items = _keep_best(items + more, need, MAX_SPLIT_OFFERS)
+                    market = note_market(url, site, html[:400000], len(items), pages)
+                    for o in items:
+                        o.raw["site"] = site.key
+                        o.raw["market"] = market
                 return listed(items, "jsonld")
         # a list page we can cut with a paid read: its first Product is just some item on it
         offer = None if (list_read and paid) else offer_from_structured(data, url, need, lane)
