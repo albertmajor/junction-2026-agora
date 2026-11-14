@@ -378,7 +378,8 @@ export async function startHunt(q, opts = {}) {
   plan = opts && opts.send ? { send: String(opts.send), cat: opts.cat || null, intent: opts.intent || null } : null;
   await liveReady;
   const list = await recordings();
-  const slug = slugify(plan ? plan.send : q);
+  // a planned send (category intent) can differ from the words typed; a recording of either still replays offline
+  const slug = [plan ? slugify(plan.send) : null, slugify(q)].find(x => x && list.includes(x)) || slugify(plan ? plan.send : q);
   const has = list.includes(slug);
   if (cfg.mode === 'live' && live) { open(q, null); return { live: true }; }
   if (cfg.mode === 'replay') {
@@ -392,7 +393,7 @@ export async function startHunt(q, opts = {}) {
   S.phase = 'start';
   emit('reset', { q, slug: null, replay: false, empty: true });
   const order = nearest(q, list).map(r => r.slug);
-  emit('error', { kind: '404', message: `Offline we have ${list.length} recorded searches. Try one of these.`,
+  emit('error', { kind: '404', message: 'Offline we can replay recorded searches only. Try one of these.',
                   suggestions: order });
   return { error: '404', suggestions: order };
 }
