@@ -63,19 +63,19 @@
 .ld-band.t-ink {
   --ld-bg: var(--ld-ink);
   --ink: #EEEAE1; --ink-2: #B5AFA4; --ink-3: #8A8478; --hair: rgba(238,234,225,.14);
-  --receipt: #23211D; --paper-2: #24221E; --ink-blue: #9DB8E8; --live: #FF7A45;
+  --receipt: #23211D; --paper-2: #24221E; --ink-blue: #D9B98C; --live: #FF7A45;
   border-block: 1px solid var(--hair);
 }
 /* dark mode: the banner is a light slab on the dark page, so its tokens flip back to light ink */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .ld-band.t-ink {
     --ink: #1C1B18; --ink-2: #4A463F; --ink-3: #6E685E; --hair: rgba(28,27,24,.14);
-    --receipt: #F6F1E6; --paper-2: #E4DCCB; --ink-blue: #23406B; --live: #D9480F;
+    --receipt: #F6F1E6; --paper-2: #E4DCCB; --ink-blue: #6B4A1E; --live: #D9480F;
   }
 }
 :root[data-theme="dark"] .ld-band.t-ink {
   --ink: #1C1B18; --ink-2: #4A463F; --ink-3: #6E685E; --hair: rgba(28,27,24,.14);
-  --receipt: #F6F1E6; --paper-2: #E4DCCB; --ink-blue: #23406B; --live: #D9480F;
+  --receipt: #F6F1E6; --paper-2: #E4DCCB; --ink-blue: #6B4A1E; --live: #D9480F;
 }
 .ld-in { position: relative; }
 
