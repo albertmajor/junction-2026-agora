@@ -464,9 +464,24 @@ def price_words(need: Need, lang: str | None) -> str:
     return UNIT_PHRASE[unit].get(lang or "en", UNIT_PHRASE[unit]["en"])
 
 
+def with_audience_word(need: Need, words: str, lang: str | None) -> str:
+    """Who the service is for stays in the local query: 'women haircut helsinki' -> 'naisten parturi'
+    (QUALITY_REPORT: 'women', 'naisten', 'Damen' were dropped from local queries)."""
+    try:
+        from agora.need import AUDIENCE_RE, audience, audience_word
+    except ImportError:
+        return words
+    who = audience(need)
+    iso = ISO_OF_LOCAL.get(lang or "", lang or "en")
+    word = audience_word(who, iso) if who else None
+    if not word or not words or AUDIENCE_RE.search(words) or word.lower() in words.lower():
+        return words
+    return f"{words} {word}" if iso in _AUDIENCE_AFTER else f"{word} {words}"
+
+
 def local_service_query(need: Need, lang: str) -> str:
     """'home cleaning' in Tilburg -> 'schoonmaker Tilburg prijs per uur'."""
-    words = local_words(need, lang) or _thing_q(need)
+    words = with_audience_word(need, local_words(need, lang) or _thing_q(need), lang)
     return re.sub(r"\s+", " ", f"{words} {need.where or ''} {price_words(need, lang)}").strip()
 
 
@@ -480,7 +495,7 @@ def category_sites(need: Need, cc: str | None) -> list[str]:
         if not dom or d.get("lane") not in ("service", None):
             continue
         if d.get("from") == cat.get("id") or (cc and tld(dom) == cc.lower()):
-            if cat.get("intent") or market_fits(dom, need, cc):
+            if (cat.get("intent") and serves_country(dom, cc)) or market_fits(dom, need, cc):
                 out.append(dom)     # a picked meaning's own where-to-look sites always; the rest when they fit
     return out
 
@@ -499,7 +514,7 @@ def service_market_query(need: Need, cc: str | None) -> tuple[str, str | None, l
     if not domains:
         return None
     lang = lang_of(need, cc) or (_lang(cc) if not need.where else None)
-    words = local_words(need, lang) or _thing_q(need)
+    words = with_audience_word(need, local_words(need, lang) or _thing_q(need), lang)
     q = re.sub(r"\s+", " ", f"{words} {need.where or ''}").strip()
     return q, cc, domains
 
@@ -581,11 +596,28 @@ def expected_yield(url: str, kind: str, lane: str, title: str = "", snippet: str
     return 1.0
 
 
-def paid_priority(url: str, kind: str, lane: str, title: str = "", snippet: str = "") -> int:
+def paid_priority(url: str, kind: str, lane: str, title: str = "", snippet: str = "",
+                  need: Need | None = None) -> int:
     """Order of the paid Context.dev reads (lower first): the reads that yield the most offers per token.
-    Services: price lists / stated rates, then directories, then the rest."""
+    Services: price lists / stated rates, then directories, then the rest. With the need (a service hunt), the
+    best local pages go first inside the hunt budget: a page naming the job and the asked city moves up one
+    step, a page that names neither the job nor the city, or a provider abroad, moves down (eval r4 plumber
+    berlin: three Berlin price lists timed out while networx.com 'Berlin Center OH' was read)."""
     y = expected_yield(url, kind, lane, title, snippet)
-    return 0 if y >= 3 else (1 if y >= 2 else (2 if y >= 1 else 3))
+    prio = 0 if y >= 3 else (1 if y >= 2 else (2 if y >= 1 else 3))
+    if need is None or kind not in ("service", "digital") or not is_service(need):
+        return prio
+    try:
+        fit = service_fit(need, url, title)
+    except Exception:
+        return prio
+    if fit >= 1.8:                       # names the job and the city
+        return max(-1, prio - 1)
+    if fit < 0:                          # abroad / a namesake
+        return prio + 2
+    if fit < 1.0 and need.where:         # names neither the job nor the city
+        return prio + 1
+    return prio
 
 
 def lanes_for(need: Need) -> list[str]:
@@ -761,6 +793,7 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
             # no place asked: the job in the home country's language, there ('aseseppä hinta' in Finland)
             words = local_words(need, lang_h)
             if words:
+                words = with_audience_word(need, words, lang_h)
                 out_s.append((re.sub(r"\s+", " ", f"{words} {price_words(need, lang_h)}").strip(), home))
         market = service_market_query(need, cc or home)
         if market is not None and avail >= MARKET_MIN_TOKENS:
@@ -1514,29 +1547,118 @@ _FAMILY_WORDS = (("food", r"lunch|lounas|restaurant|ravintol|catering|ateri|food
                  ("events", r"wedding|photograph|event|party|juhla|hää"))
 
 
-def service_family(need: Need) -> str | None:
-    """The kind of work asked for ('trades', 'cleaning', 'food' ...), None = unknown (only general sites fit)."""
-    name = service_name(need)
-    if name in SERVICE_FAMILY:
+# round 5: more kinds of work, so a trade the hand list does not name still gets its family (a gunsmith is
+# 'craft': no general goods marketplace, no care site)
+_FAMILY_WORDS += (("craft", r"gunsmith|asesep|büchsenmach|wapensmid|vapensmed|armurier|tailor|räätäl|"
+                            r"schneider|kleermaker|cobbler|suutar|schuhmach|locksmith|lukkosep|schlüsseldienst"),
+                  ("moving", r"\bmov(?:ing|ers?)\b|removal|muutto|umzug|verhuis|flytt"),
+                  ("lessons", r"tutor|lesson|nachhilfe|bijles|yksityisopet|läxhjälp|teacher|opettaja"),
+                  ("health", r"physio|fysio|dentist|hammaslääk|zahnarzt|tandarts|doctor|lääkäri|therap"),
+                  ("business", r"bookkeep|accounting|kirjanpi|tilitoimi|buchhalt|boekhoud|lawyer|legal|"
+                               r"asianaja|anwalt|advocaat|tax\s+advi"),
+                  ("auto", r"car\s+wash|autopesu|tyre|tire|rengas|reifen|car\s+repair|autokorjaam"))
+# the source registry's categories -> the families above ('general' lists any work)
+_REGISTRY_FAMILY = {"trades": "trades", "renovation": "trades", "handyman": "trades", "cleaning": "cleaning",
+                    "moving": "moving", "childcare": "care", "eldercare": "care", "petcare": "pets",
+                    "beauty_services": "beauty", "health": "health", "tutoring": "lessons", "lessons": "lessons",
+                    "events": "events", "photography": "events", "food": "food", "auto": "auto"}
+REGISTRY_FAMILIES: dict[str, frozenset[str]] = {}
+
+
+def _registry_families() -> None:
+    """Families of the registry's service platforms the hand list (DOMAIN_FAMILIES) does not cover:
+    charlycares.com is childcare, superprof tutoring, treatwell beauty (eval r4: charlycares.com was searched
+    for home cleaning in Tilburg; rover.com sat in Germany's list for a plumber)."""
+    try:
+        from agora import sources as _src
+        recs = _src.load()
+    except Exception:
+        return
+    for rec in recs:
+        if rec.get("kind") != "service" or "service" not in rec.get("lanes", []):
+            continue
+        cats = [str(c) for c in rec.get("categories") or []]
+        if not cats or "general" in cats:
+            continue
+        fams = frozenset(_REGISTRY_FAMILY[c] for c in cats if c in _REGISTRY_FAMILY)
+        if fams:
+            dom = rec["domain"]
+            REGISTRY_FAMILIES[dom] = REGISTRY_FAMILIES.get(dom, frozenset()) | fams
+
+
+_registry_families()
+# the kinds of work a goods marketplace's service section really lists (tori.fi 'Palvelut', finn.no, olx.pl):
+# never a gunsmith, a lunch or a bookkeeper (eval r4: tori.fi returned 'Iittala helsinki astiat' for a gunsmith)
+HOUSEHOLD_FAMILIES = frozenset({"trades", "cleaning", "moving", "care", "pets", "lessons"})
+
+
+# lead-gen directories that list every kind of work, whatever the registry's sample categories say
+# (bark.com is in the registry as trades/cleaning/tutoring but lists wedding photographers too)
+GENERAL_DIRECTORIES = ("bark.com", "yelp.", "thumbtack.com", "trustpilot.com")
+
+
+def families_of(dom: str) -> frozenset[str] | None:
+    """The kinds of work a service site lists; None = unknown (a general directory, or not a platform)."""
+    if any(dom_match(dom, d) for d in GENERAL_DIRECTORIES):
+        return None
+    fams = next((f for d, f in DOMAIN_FAMILIES.items() if dom_match(dom, d)), None)
+    if fams is None:
+        fams = next((f for d, f in REGISTRY_FAMILIES.items() if dom_match(dom, d)), None)
+    return fams
+
+
+def family_fits(dom: str, family: str | None) -> bool | None:
+    """True / False when the site's kinds of work are known (it lists / does not list `family`), else None."""
+    fams = families_of(dom)
+    if fams is None:
+        return None
+    return family in fams
+
+
+def family_of_words(name: str | None, hay: str) -> str | None:
+    """The family of a trade's canonical name ('plumbing' -> 'trades'), else the first family its words name."""
+    if name and name in SERVICE_FAMILY:
         return SERVICE_FAMILY[name]
-    cat = need.category or {}
-    hay = " ".join([need.thing or "", str(cat.get("label") or ""), " ".join(str(p) for p in cat.get("path_ids") or [])])
     for fam, rx in _FAMILY_WORDS:
-        if re.search(rx, hay, re.I):
+        if re.search(rx, hay or "", re.I):
             return fam
     return None
 
 
+def service_family(need: Need) -> str | None:
+    """The kind of work asked for ('trades', 'cleaning', 'food' ...), None = unknown (only general sites fit)."""
+    cat = need.category or {}
+    hay = " ".join([need.thing or "", str(cat.get("label") or ""), " ".join(str(p) for p in cat.get("path_ids") or [])])
+    return family_of_words(service_name(need), hay)
+
+
+_GENERIC_TLDS = frozenset({"com", "net", "org", "io", "co", "eu", "info", "app", "biz"})
+
+
+def serves_country(dom: str, cc: str | None) -> bool:
+    """The site serves the searched country: no checkatrade.com (British) for Berlin, no marktplaats.nl for
+    Helsinki (eval r4 electrician-helsinki searched marktplaats.nl)."""
+    if not cc:
+        return True
+    owners = {c for c, ds in SERVICE_MARKETS.items() if any(dom_match(dom, d) for d in ds)}
+    t = tld(dom)
+    if owners:
+        return cc in owners or t == cc
+    if t in _GENERIC_TLDS:
+        return True
+    return t == cc or (t == "uk" and cc == "gb")
+
+
 def market_fits(dom: str, need: Need, cc: str | None) -> bool:
     """A service marketplace fits the job: it lists that kind of work (no pet-sitters for a gunsmith, no
-    cleaners for a plumber) and serves the searched country (no checkatrade.com for Berlin)."""
-    fams = next((f for d, f in DOMAIN_FAMILIES.items() if dom_match(dom, d)), None)
-    if fams is not None and service_family(need) not in fams:
+    cleaners for a plumber) and serves the searched country (no checkatrade.com for Berlin). A goods
+    marketplace (tori.fi, finn.no, olx.pl) fits household trades only."""
+    fam = service_family(need)
+    if family_fits(dom, fam) is False:
         return False
-    owners = {c for c, ds in SERVICE_MARKETS.items() if any(dom_match(dom, d) for d in ds)}
-    if owners and cc and cc not in owners and tld(dom) != cc:
+    if families_of(dom) is None and is_marketplace(dom) and fam not in HOUSEHOLD_FAMILIES:
         return False
-    return True
+    return serves_country(dom, cc)
 
 
 def _stems(words: str) -> set[str]:
@@ -1591,16 +1713,61 @@ def place_hit(need: Need, url: str, title: str) -> bool:
     return any(places.same_area(need.where, c) for c, _cc in places.cities_in(hay))
 
 
+def site_of(dom: str) -> str:
+    """The registrable site of a host: 'm.lounaat.info' -> 'lounaat.info', 'www.foo.co.uk' -> 'foo.co.uk'."""
+    parts = dom.lower().split(".")
+    if len(parts) >= 3 and len(parts[-1]) == 2 and parts[-2] in ("co", "com", "org", "net", "ac", "gov"):
+        return ".".join(parts[-3:])
+    return ".".join(parts[-2:]) if len(parts) >= 2 else dom
+
+
+def city_in_path(need: Need, url: str) -> bool:
+    """The page's own address names the asked city ('lounaat.info/helsinki', '/lounas/klubi/helsinki'), not
+    only its title: a whole-city page, where 'lounaat.info/itis' (Lounas Helsinki, Itäkeskus) is one district."""
+    if not need.where:
+        return False
+    city = need.where.split(",")[0].strip().lower()
+    if not city:
+        return False
+    from agora import places
+    segs = [x for x in re.split(r"[/?#&=]+", urlsplit(url).path.lower()) if x]
+    for seg in segs:
+        words = re.sub(r"[-_.+]", " ", seg)
+        if city in words.split() or any(places.same_area(city, c) and c == city for c, _ in places.cities_in(words)):
+            return True
+    return False
+
+
+def us_namesake(need: Need, url: str, title: str) -> str | None:
+    """A page about the American namesake of the asked European city ('Berlin Center OH Plumbers', '/ct/berlin/'):
+    the state's code, else None. Asked for the US one ('plumber berlin ct'), nothing is a namesake."""
+    if not need.where or country_of(need) in (None, "us"):
+        return None
+    from agora import places
+    parts = urlsplit(url)
+    city = need.where.split(",")[0].strip().lower()
+    path_words = re.sub(r"[-_/.?=&+]", " ", parts.path).lower()
+    if city not in path_words.split() and city not in (title or "").lower():
+        return None
+    return places.us_state_of(parts.path) or places.us_state_of(title or "")
+
+
 def service_fit(need: Need, url: str, title: str) -> float:
-    """Read-order bonus for a service page: it names the job (+1), the asked city (+0.8); a provider abroad
-    for a local job comes after the local ones (-1.5)."""
+    """Read-order bonus for a service page: it names the job (+1), the asked city (+0.8, +0.4 more when its
+    own address does: the city page before a district page of the same site); a provider abroad for a local
+    job comes after the local ones (-1.5)."""
     s = 0.0
-    if trade_hit(need, url, title):
+    trade = trade_hit(need, url, title)
+    if trade:
         s += 1.0
     if place_hit(need, url, title):
         s += 0.8
+        if trade and city_in_path(need, url):
+            s += 0.4
     elif _local_service(need) and _foreign_generic(domain_of(url)):
         s -= 1.5
+    if us_namesake(need, url, title):
+        s -= 3.0                         # its city and trade words count for nothing: another Berlin
     return s
 
 
@@ -1626,6 +1793,15 @@ def service_skip(need: Need, url: str, title: str) -> str | None:
         return "a cost guide from abroad (foreign prices), not a provider near you"
     if city := other_city(need, url, title):
         return f"another city ({city}), not {need.where}"
+    if state := us_namesake(need, url, title):
+        from agora import places
+        where = places.COUNTRY_DISPLAY.get(country_of(need) or "", "")
+        return (f"another {need.where.split(',')[0].strip()} ({state}, US), not {need.where}"
+                + (f", {where}" if where else ""))
+    if is_marketplace(dom) and _local_service(need) and not trade_hit(need, url, title) \
+            and not english_hit(need, url, title):
+        # a goods marketplace's search for a gunsmith returned 'Iittala helsinki astiat' (eval r4)
+        return "a marketplace page that does not name the job"
     if _local_service(need) and need.where and _foreign_generic(dom) and english_hit(need, url, title) \
             and not place_hit(need, url, title) and not local_hit(need, url, title) \
             and not any(dom_match(dom, d) for d in SERVICE_DIRECTORIES):
@@ -1854,14 +2030,28 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
         return expected_yield(r["url"], need.kind, "service", r.get("title") or "",
                               contextdev.highlight_text(r) or r.get("description") or "")
 
+    service_hunt = is_service(need)
+    city_pages: set[str] = set()        # sites (service hunts) whose page for the asked city was emitted
+
+    def cap_key(dom: str) -> str:
+        """Service hunts count a site once: m.lounaat.info is lounaat.info (eval r4 lunch: a third page)."""
+        return site_of(dom) if service_hunt else dom
+
     def refuse(url: str, dom: str) -> str | None:
         """Why this page may not be emitted now (per-domain caps), else None."""
-        if is_service(need) and any(dom_match(dom, d) for d in SERVICE_DIRECTORIES):
-            # one provider's profile on a directory is its own offer (urakkamaailma /urakoitsija/<firm>)
-            cap = DIRECTORY_PROFILES if PROFILE_PATH.search(urlsplit(url).path) else PER_DOMAIN
-            if items.get(dom, 0) + lists.get(dom, 0) >= cap:
-                return f"already {cap} pages from {dom}"
-            return None
+        if service_hunt:
+            key = cap_key(dom)
+            cap = PER_DOMAIN
+            if any(dom_match(dom, d) for d in SERVICE_DIRECTORIES) and PROFILE_PATH.search(urlsplit(url).path):
+                cap = DIRECTORY_PROFILES   # one provider's profile on a directory is its own offer
+            used = items.get(key, 0) + lists.get(key, 0)
+            if used < cap:
+                return None
+            if used < cap + 1 and key not in city_pages and city_in_path(need, url):
+                # the site's page for the asked city came after two district pages (eval r3/r4 lunch:
+                # lounaat.info/itis + /itakeskus took the cap, /helsinki was 'already 2 pages'): it still goes
+                return None
+            return f"already {cap} pages from {key}"
         if is_list_page(url):
             # a marketplace search page is kept even when item pages were found: it is up to 8 listings in one
             # read (free from tori's ItemList), an item page is one
@@ -1911,7 +2101,10 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                         out.append(ev("skip", url=url, reason=why, lane=lane))
                         continue
                     listy = is_list_page(url)
-                    (lists if listy else items)[dom] = (lists if listy else items).get(dom, 0) + 1
+                    ck = cap_key(dom)
+                    (lists if listy else items)[ck] = (lists if listy else items).get(ck, 0) + 1
+                    if service_hunt and city_in_path(need, url):
+                        city_pages.add(ck)
                     per_lane[lane] += 1
                     emitted += 1
                     progress = True

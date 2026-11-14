@@ -945,7 +945,11 @@ async def hunt(
         if getattr(dv, "paid_priority", None) is not None:
             h = getattr(_module("reader"), "_HINTS", {}).get(url) or {}
             try:
-                prio = dv.paid_priority(url, need.kind, lane_of.get(url, ""), h.get("title", ""), h.get("snippet", ""))
+                pp = dv.paid_priority
+                args = (url, need.kind, lane_of.get(url, ""), h.get("title", ""), h.get("snippet", ""))
+                # a service hunt: the best local pages (the job + the asked city) get the paid slots first,
+                # so they are read inside the hunt budget
+                prio = pp(*args, need=need) if _accepts(pp, "need") else pp(*args)
             except Exception:
                 prio = None
         if prio is not None and abroad_last(url):

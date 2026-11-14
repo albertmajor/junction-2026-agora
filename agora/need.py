@@ -292,6 +292,11 @@ def detect_place(text: str) -> tuple[str | None, list[tuple[int, int]]]:
     """City (Finnish case forms, then the European gazetteer in agora.places) before country names.
     'home cleaning tilburg 24m2' -> Tilburg; 'plumber in eindhoven' -> Eindhoven; 'used bike germany' -> Germany."""
     from agora import places
+    if us := places.us_place(text):
+        # 'plumber berlin ct' / 'Berlin, Connecticut': the user named the US namesake (a bare 'berlin' is Germany)
+        name, (a, b) = us
+        pre = _PLACE_PREP.search(text[:a])
+        return name, [((pre.start() if pre else a), b)]
     for vocab in (CITIES, None, COUNTRIES):
         if vocab is None:
             found = places.find_place(text)
@@ -325,6 +330,56 @@ def detect_must_have(text: str) -> tuple[list[str], list[tuple[int, int]]]:
             out.append(phrase.lower())
             spans.append(m.span())
     return out, spans
+
+
+# 'no X / without X / ei X / ilman X / ohne X / kein X / zonder X / utan X / uten X / sans X' -> need.must_not
+# (the judges' 'PS5 no GTA bundle'). Product names that start with 'no' are not exclusions.
+_NOT_WORD = r"(?:no|without|w/o|ei|ilman|ohne|keine?n?|zonder|geen|utan|uten|uden|sans|senza|bez)"
+_NOT_STOP = (r"(?=\s*$|\s*[,;(]|\s+(?:and|or|with|incl\w*|under|below|max|near|in|for|budget|ja|tai|und|oder|"
+             r"en|och|og|et|alle|unter|enintään|max\w*|bis|tot|till|but|mutta|aber|maar)\b|\s+[<€$£]|\s+\d)")
+NOT_RE = re.compile(rf"(?<![\w-])({_NOT_WORD})\s+((?:[^\W\d][\w'\-+.]*)(?:\s+[^\W\d][\w'\-+.]*){{0,2}}?){_NOT_STOP}",
+                    re.I)
+# 'no frost' fridges, 'No Man's Sky', 'No Time to Die', a 'no name' brand, 'ei-' compounds handled by (?<!-)
+_NOT_PRODUCT_NAME = re.compile(r"^(?:frost|name|man'?s?|time|country|mercy|limits?|strings|doubt|sleep|game|"
+                               r"one|more|way|exit|escape|logo|fear|regrets?)\b", re.I)
+
+
+def detect_must_not(text: str) -> tuple[list[str], list[tuple[int, int]]]:
+    """What the thing must not be or come with: (phrases lower-cased, spans to cut from the thing)."""
+    out: list[str] = []
+    spans: list[tuple[int, int]] = []
+    for m in NOT_RE.finditer(text):
+        word, phrase = m.group(1).lower(), m.group(2).strip(" .").lower()
+        if not phrase or (word == "no" and _NOT_PRODUCT_NAME.match(phrase)):
+            continue
+        if phrase not in out:
+            out.append(phrase)
+        spans.append(m.span())
+    # never cut the whole text away ('no frost' is caught above; 'ohne' alone is not a need)
+    if spans and not _cut(text, spans).strip(" ,;"):
+        return [], []
+    return out, spans
+
+
+def _not_stem(w: str) -> str:
+    """A word start that survives inflection: 'spiele' -> 'spiel', 'cushions' -> 'cushio', Finnish partitive
+    plurals keep only the root ('pelejä' -> 'pel', so 'peliä' / 'pelit' hit)."""
+    if len(w) >= 5 and re.search(r"(?:jä|ja|iä|ia|tä|ta|ä)$", w):
+        return w[:3]
+    return w if len(w) <= 4 else w[:max(4, len(w) - 2)]
+
+
+def must_not_hit(need: Need, text: str) -> str | None:
+    """The must-not phrase a title / page text names, else None. Every word of the phrase must appear (as a word
+    or a word start: 'gta' hits 'GTA V', 'pelejä' needs 'peli'); for agora.resolve's relevance check."""
+    hay = (text or "").lower()
+    if not hay:
+        return None
+    for phrase in getattr(need, "must_not", None) or []:
+        words = [w for w in re.findall(r"[^\W_][\w'+]*", phrase.lower()) if len(w) >= 2]
+        if words and all(re.search(rf"(?<![^\W_]){re.escape(_not_stem(w))}", hay) for w in words):
+            return phrase
+    return None
 
 
 # ---------------------------------------------------------------- kind: product | service | digital
@@ -632,15 +687,57 @@ AUDIENCE_WORDS: dict[str, dict[str, str]] = {
 }
 
 
+# words that are also something else in a service ('barn painting', 'dam repair', 'Herr Müller'): products only
+_SERVICE_NOT_AUDIENCE = frozenset({"barn", "dam", "herr", "child", "female", "male", "girl", "boy", "girls", "boys"})
+# children's clothing brands: 'reima talvihaalari' is a kids' snowsuit (QUALITY_REPORT: Reima, 150 cm)
+KIDS_BRANDS = re.compile(r"\b(?:reima|lassie|molo|polarn\s*o\.?\s*pyret|ticket\s+to\s+heaven|mini\s+rodini|"
+                         r"kuling|color\s+kids|name\s+it|joha|metsola\s+kids|tutta|gugguu)\b", re.I)
+# clothing sizes in cm (50-170) or a size label: kids' sizes ('talvitakki 150 cm', 'koko 110', 'size 128')
+_KIDS_SIZE = re.compile(r"\b(?:(?:koko|size|gr\.?|größe|grösse|str\.?|storlek|maat|taille)\s*)?"
+                        r"(5[0-9]|6[0-9]|[7-9][0-9]|1[0-6][0-9]|170)(?:\s*/\s*\d{2,3})?\s*(cm)?\b", re.I)
+_SIZE_LABEL = re.compile(r"\b(?:koko|size|gr\.?|größe|grösse|str\.?|storlek|maat|taille)\s*\d", re.I)
+
+
+def _kids_by_size(text: str) -> bool:
+    """A garment with a children's size: '150 cm' or 'koko 110' next to clothing words (a '150 cm' table is no
+    kids' table: the garment check comes first)."""
+    try:
+        from agora.resolve import APPAREL_NEED
+    except Exception:
+        return False
+    if not APPAREL_NEED.search(text):
+        return False
+    for m in _KIDS_SIZE.finditer(text):
+        if m.group(2) or _SIZE_LABEL.match(text, m.start()):
+            return True
+    return False
+
+
 def audience(need: Need) -> str | None:
     """'women' | 'men' | 'kids' when the words say who the thing is for ('winter jacket women', 'naisten
-    talvitakki', 'Damen Winterjacke'), else None. Never for a vehicle or a service."""
-    if need.kind != "product" or vehicle_need(need.thing or ""):
+    talvitakki', 'Damen Winterjacke', 'reima talvihaalari', 'talvitakki 150 cm'; services: 'naisten parturi'),
+    else None. Never for a vehicle."""
+    if need.kind not in ("product", "service") or vehicle_need(need.thing or ""):
         return None
-    m = AUDIENCE_RE.search(f"{need.raw} {need.thing}")
-    if not m:
-        return None
-    return "women" if m.group(1) else "men" if m.group(2) else "kids"
+    raw = _cut(need.raw, detect_must_not(need.raw)[1]) if getattr(need, "must_not", None) else need.raw
+    text = f"{raw} {need.thing} {' '.join(need.must_have)}"
+    for m in AUDIENCE_RE.finditer(text):
+        if need.kind == "service" and m.group(0).lower() in _SERVICE_NOT_AUDIENCE:
+            continue
+        if re.search(r"\bno\s+$", text[:m.start()], re.I):       # 'No Man's Sky' is a game, not men's wear
+            continue
+        return "women" if m.group(1) else "men" if m.group(2) else "kids"
+    if need.kind == "product" and (KIDS_BRANDS.search(text) or _kids_by_size(text)):
+        return "kids"
+    return None
+
+
+def keep_audience(need: Need) -> None:
+    """Who it is for stays in need.must_have ('women', 'men', 'kids'): every lane and the relevance check see it
+    (QUALITY_REPORT: 'women', 'naisten', 'Damen' were dropped)."""
+    who = audience(need)
+    if who and who not in need.must_have:
+        need.must_have.append(who)
 
 
 def audience_word(who: str | None, lang: str | None) -> str | None:
@@ -722,7 +819,9 @@ def parse_need_rules(text: str) -> Need:
     work = raw
     budget, currency, bspan = parse_budget(work)
     spans: list[tuple[int, int]] = [bspan] if bspan else []
-    conds, cspans = detect_conditions(work)
+    must_not, nspans = detect_must_not(_cut(work, spans))
+    spans += nspans
+    conds, cspans = detect_conditions(_cut(work, nspans))
     service, sspans = detect_service(work)
     where, wspans = detect_place(work)
     from agora import places
@@ -731,7 +830,8 @@ def parse_need_rules(text: str) -> Need:
     must, mspans = detect_must_have(_cut(work, spans + wspans))
     spans += cspans + wspans + mspans
     thing = clean_thing(_cut(work, spans))
-    need = Need(raw=raw, thing=thing or raw.lower(), budget=budget, currency=currency or "EUR", where=where, must_have=must)
+    need = Need(raw=raw, thing=thing or raw.lower(), budget=budget, currency=currency or "EUR", where=where,
+                must_have=must, must_not=must_not)
     if service:
         need.kind = "service"
         need.conditions = ["service"]
@@ -749,7 +849,18 @@ def parse_need_rules(text: str) -> Need:
         need.must_have += [a for a in attrs if a not in need.must_have]
         if "refurbished" in need.conditions and len(need.conditions) > 1:
             need.conditions = [c for c in need.conditions if c != "refurbished"]
+    _drop_unwanted_conditions(need)
+    keep_audience(need)
     return need
+
+
+def _drop_unwanted_conditions(need: Need) -> None:
+    """'iphone 13 no refurbished' / 'ohne gebraucht': a lane named in must_not is not searched (when another
+    lane is left)."""
+    for phrase in need.must_not:
+        for c in detect_conditions(phrase)[0]:
+            if c in need.conditions and len(need.conditions) > 1 and c != "service":
+                need.conditions = [x for x in need.conditions if x != c]
 
 
 def _kind_rules(need: Need, raw: str, conds: list[Condition]) -> None:
@@ -810,11 +921,37 @@ def own_domains(node: dict[str, Any]) -> list[dict[str, Any]]:
     lippu.fi / ticketmaster / eventim from 'Events, Tickets & Leisure')."""
     doms = [w for w in node.get("where") or [] if w.get("lane") != "comparison"]
     path = list(node.get("path_ids") or [])
-    if node.get("kind") not in ("service", "digital") or len(path) < 3:
+    if node.get("kind") not in ("service", "digital"):
         return doms
-    root = path[0]
-    near = [w for w in doms if w.get("from") not in (None, root)]
-    return near if near else doms
+    if len(path) >= 3 and any(w.get("from") not in (None, path[0]) for w in doms):
+        # the node or a nearer parent has its own sites: the root's are too broad, even when the nearer ones
+        # turn out not to fit the trade (School catering: checkatrade.com is trades -> no ticket sellers back)
+        doms = [w for w in doms if w.get("from") not in (None, path[0])]
+    return _fitting_inherited(node, doms)
+
+
+def _fitting_inherited(node: dict[str, Any], doms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sites a service node inherits from a parent must list its kind of work (QUALITY_REPORT: 'Gunsmith' under
+    'Care, Family & Everyday Help' inherited care.com, yoopies and rover). The node's own sites always stay; an
+    inherited site whose work is known (agora.discover.DOMAIN_FAMILIES / the source registry) stays only when that
+    work is the node's."""
+    try:
+        from agora.discover import family_fits, family_of_words
+    except Exception:
+        return doms
+    words = " ".join([str(node.get("label") or ""), " ".join(str(v) for v in (node.get("labels") or {}).values()),
+                      " ".join(str(p) for p in node.get("path_ids") or [])[-60:]])
+    fam = family_of_words(str(node.get("label") or ""), words)
+    out = []
+    for w in doms:
+        if w.get("from") in (None, node.get("id")):
+            out.append(w)
+            continue
+        fits = family_fits(str(w.get("domain") or ""), fam)
+        if fits is False:
+            continue
+        out.append(w)
+    return out
 
 
 def category_info(node_id: str, *, source: str = "tree", confidence: float = 1.0) -> dict[str, Any] | None:
@@ -846,12 +983,14 @@ def apply_category(need: Need, cat: dict[str, Any]) -> Need:
         svc = cat.get("service")
         if svc and svc not in need.must_have and svc not in need.thing:
             need.must_have.insert(0, svc)
+        keep_audience(need)
         return need
     need.kind = "product"
     lanes = [c for c in (cat.get("lanes") or []) if c in ("new", "used", "refurbished", "rental")]
     asked = [c for c in need.conditions if c != "service"]
     if not asked or asked == ["new", "refurbished", "used"] or asked == ["service"]:
         need.conditions = lanes or ["new", "refurbished", "used"]   # type: ignore[assignment]
+    keep_audience(need)
     return need
 
 
@@ -913,7 +1052,8 @@ def categorize(need: Need, category: str | None = None) -> dict[str, Any] | None
         if node_kind == "product":
             return None                 # the rules' words beat a weak product guess
         need.category = cat
-        if not need.must_have and cat.get("service") and cat["service"] not in need.thing:
+        if not [m for m in need.must_have if m not in AUDIENCE_WORDS] and cat.get("service") \
+                and cat["service"] not in need.thing:
             need.must_have.insert(0, cat["service"])
         return _cat_event(cat)
     if node_kind == "product":
@@ -1015,8 +1155,11 @@ def _merge(rules: Need, llm: dict[str, Any]) -> Need:
     if conds and rules.conditions == ["new", "refurbished", "used"] and rules.kind == "product":
         rules.conditions = conds
     for m in llm.get("must_have") or []:
-        if isinstance(m, str) and m.lower() not in rules.must_have:
+        if isinstance(m, str) and m.lower() not in rules.must_have and m.lower() not in rules.must_not:
             rules.must_have.append(m.lower())
+    if rules.must_not:      # the LLM's thing may still say 'ps5 no gta bundle'
+        cut = clean_thing(_cut(rules.thing, detect_must_not(rules.thing)[1]))
+        rules.thing = cut or rules.thing
     return rules
 
 

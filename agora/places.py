@@ -251,6 +251,10 @@ def country_for(where: str | None) -> str | None:
         return "gb" if w == "uk" else w
     if w in CITY_CC:
         return CITY_CC[w]
+    if re.search(r",\s*(?:[a-z]{2}|usa)$", w) and us_state_of(where.split(",", 1)[1].strip().upper()):
+        return "us"                      # 'Berlin, CT' (agora.need keeps a US state the user typed)
+    if w in CITY_CC:
+        return CITY_CC[w]
     if w in COUNTRY_NAMES:
         return COUNTRY_NAMES[w]
     # 'Tilburg, Netherlands' (an LLM's where): the country part wins, else any city in it
@@ -301,3 +305,73 @@ def same_area(city: str, other: str) -> bool:
     if a == b:
         return True
     return b in METRO.get(a, frozenset()) or a in METRO.get(b, frozenset())
+
+
+# ---------------------------------------------------------------- namesakes in the US ('Berlin, CT')
+# eval r4 'plumber berlin': 'Berlin Center OH Plumbers - Networx' was read as a Berlin plumber. A European city name
+# with a US state next to it is the American namesake. Europe is preferred unless the words name the state.
+US_STATES: dict[str, str] = {
+    "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR", "california": "CA", "colorado": "CO",
+    "connecticut": "CT", "delaware": "DE", "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID",
+    "illinois": "IL", "indiana": "IN", "iowa": "IA", "kansas": "KS", "kentucky": "KY", "louisiana": "LA",
+    "maine": "ME", "maryland": "MD", "massachusetts": "MA", "michigan": "MI", "minnesota": "MN",
+    "mississippi": "MS", "missouri": "MO", "montana": "MT", "nebraska": "NE", "nevada": "NV",
+    "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY", "north carolina": "NC",
+    "north dakota": "ND", "ohio": "OH", "oklahoma": "OK", "oregon": "OR", "pennsylvania": "PA",
+    "rhode island": "RI", "south carolina": "SC", "south dakota": "SD", "tennessee": "TN", "texas": "TX",
+    "utah": "UT", "vermont": "VT", "virginia": "VA", "washington": "WA", "west virginia": "WV",
+    "wisconsin": "WI", "wyoming": "WY",
+}
+# state codes that are also European country / language codes or common words ('berlin de' is Germany,
+# '/it/' a language): never a state on their own
+_AMBIGUOUS_STATE = frozenset({"de", "in", "or", "me", "ok", "hi", "la", "co", "al", "id", "mt", "ga", "ma", "pa",
+                              "ca", "ar", "va", "ne", "sc", "nl", "fi", "se", "no", "dk", "it", "es", "fr", "at",
+                              "be", "ch", "ie", "pt", "pl", "cz", "sk", "hu", "ro", "bg", "gr", "hr", "si", "ee",
+                              "lv", "lt", "mi", "mn", "ms", "ri", "ia", "ks", "ky", "md", "mo"})
+_STATE_CODES = frozenset(v.lower() for v in US_STATES.values()) - _AMBIGUOUS_STATE
+_STATE_NAME_RX = "|".join(sorted((re.escape(k).replace(r"\ ", r"[\s_-]+") for k in US_STATES), key=len, reverse=True))
+_US_WORDS = re.compile(r"(?<![\w])(?:usa|u\.s\.a?\.?|united[\s_-]+states)(?![\w])", re.I)
+
+
+def us_state_of(text: str) -> str | None:
+    """The US state a text or URL path names ('Berlin, CT', 'Berlin Center OH', '/plumbers/oh/berlin-center',
+    'Berlin, Connecticut') as its code, else None. Two-letter codes that are also European codes or words
+    ('de', 'it', 'in', 'or') never count alone; a code counts in upper case in prose, or as a URL path segment."""
+    if not text:
+        return None
+    m = re.search(rf"(?<![\w])({_STATE_NAME_RX})(?![\w])", text, re.I)
+    if m:
+        return US_STATES[re.sub(r"[\s_-]+", " ", m.group(1).lower())]
+    for seg in re.split(r"[/?#&=]", text):
+        if seg.lower() in _STATE_CODES and len(seg) == 2 and ("/" in text):
+            return seg.upper()
+    for m in re.finditer(r"(?<![\w])([A-Z]{2})(?![\w])", text):
+        if m.group(1).lower() in _STATE_CODES:
+            return m.group(1)
+    if _US_WORDS.search(text):
+        return "US"
+    return None
+
+
+def us_place(text: str) -> tuple[str, tuple[int, int]] | None:
+    """A city named with its US state in typed words ('plumber berlin ct', 'Berlin, Connecticut', 'berlin usa')
+    -> ('Berlin, CT', span of city + state). A bare 'berlin' is Berlin, Germany (None here)."""
+    if not text:
+        return None
+    low = _fold(text)
+    for key, a, b in sorted(_hits(text, CITY_CC), key=lambda h: h[1]):
+        tail = low[b:b + 40]
+        m = re.match(rf"[\s,]+(?:({_STATE_NAME_RX})|([a-z]{{2}}))(?![\w])(?:[\s,]+(?:usa|us|u\.s\.?))?", tail, re.I)
+        code = None
+        if m and m.group(1):
+            code = US_STATES[re.sub(r"[\s_-]+", " ", m.group(1).lower())]
+        elif m and m.group(2) and (m.group(2) in _STATE_CODES or (
+                m.group(2) not in COUNTRY_NAMES and m.group(2).upper() in US_STATES.values()
+                and re.match(r"[\s,]+[a-z]{2}[\s,]+(?:usa|us|u\.s)", tail))):
+            code = m.group(2).upper()
+        if code:
+            return f"{_display(key)}, {code}", (a, b + m.end())
+        m2 = re.match(r"[\s,]+(?:usa|u\.s\.a?\.?|united states)(?![\w])", tail)
+        if m2:
+            return f"{_display(key)}, USA", (a, b + m2.end())
+    return None

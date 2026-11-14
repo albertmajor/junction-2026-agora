@@ -68,8 +68,10 @@ def test_service_lane_searches_locally_without_marketplace_product_lanes(monkeyp
     queries = [p[0] for p in plan]
     assert any("aseseppä" in q for q in queries)              # the job in Finnish, searched in Finland
     assert any(p[1] == "fi" for p in plan)
-    market = [p for p in plan if len(p) > 2]
-    assert market and "tori.fi" in market[0][2] and "care.com" not in market[0][2]
+    # round 5: a goods marketplace's service section never lists a gunsmith (eval r4: tori.fi returned
+    # 'Iittala helsinki astiat'), and the parent's care sites are not the trade's
+    sites = {d for p in plan if len(p) > 2 for d in p[2]}
+    assert not {"tori.fi", "care.com", "yoopies.de", "rover.com"} & sites
 
 
 def test_free_text_local_words_classify_as_gunsmith():
