@@ -169,8 +169,10 @@ button { cursor: pointer; }
 @media (max-width: 1000px) { .start-monkey { display: none; } }
 /* one monkey at a time: the found-nothing one replaces him */
 #start:has(#status.none) .start-monkey { display: none; }
+/* the start screen's big question only: its own line height (owner, pricemonkey-fonts (7).json) */
+:root { --hero-lh: 1.68; }
 #start h1 {
-  font: var(--display-weight) var(--display-size)/var(--display-lh) var(--serif); letter-spacing: calc(var(--display-tracking) + 0.003em); margin: 0 0 32px;
+  font: var(--display-weight) var(--display-size)/var(--hero-lh) var(--serif); letter-spacing: calc(var(--display-tracking) + 0.003em); margin: 0 0 32px;
   font-variation-settings: var(--display-vs);
   text-wrap: balance;
   animation: rise 700ms var(--ease) both;
