@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "tool": "PriceMonkey dev type panel",
+  "exported": "2026-11-14T17:54:58.957Z",
+  "units": {
+    "size": "px",
+    "letterSpacing": "em",
+    "lineHeight": "unitless",
+    "ratio": "modular scale ratio (sizes = size * (css px / old size) ^ (ln ratio / ln old ratio))"
+  },
+  "roles": {
+    "main": {
+      "family": "Instrument Sans",
+      "fallback": "system-ui, -apple-system, \"Segoe UI\", sans-serif",
+      "weight": 400,
+      "weights": [
+        400,
+        500
+      ],
+      "axes": {},
+      "size": 15,
+      "ratio": 1.25,
+      "letterSpacing": 0,
+      "lineHeight": 1.5,
+      "features": "\"tnum\" 1, \"ss01\" 1",
+      "labels": {
+        "transform": "none",
+        "letterSpacing": 0,
+        "maxSize": 12
+      }
+    },
+    "display": {
+      "family": "Fraunces",
+      "fallback": "\"Iowan Old Style\", Georgia, serif",
+      "weight": 340,
+      "weights": [
+        400,
+        500
+      ],
+      "axes": {
+        "opsz": 102,
+        "SOFT": 76,
+        "WONK": 1
+      },
+      "size": 85.5,
+      "ratio": 1.339,
+      "letterSpacing": -0.017,
+      "lineHeight": 0.97,
+      "features": "normal"
+    },
+    "mono": {
+      "family": "IBM Plex Mono",
+      "fallback": "ui-monospace, SFMono-Regular, Menlo, monospace",
+      "weight": 400,
+      "weights": [
+        400,
+        500
+      ],
+      "axes": {},
+      "size": 12,
+      "ratio": 1.25,
+      "letterSpacing": 0,
+      "lineHeight": 1.5,
+      "features": "normal"
+    }
+  },
+  "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+}

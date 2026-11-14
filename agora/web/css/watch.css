@@ -221,7 +221,7 @@
 }
 #finale .fn-receipt.is-in { opacity: 1; transform: none; }
 #finale .fn-head { margin: 0 0 16px; font: 400 13px/1.4 var(--sans); color: var(--ink-2); }
-#finale .fn-big { margin: 0 0 4px; font: 400 44px/1.05 var(--serif); letter-spacing: -.01em; }
+#finale .fn-big { margin: 0 0 4px; font: 340 52.37px/0.999 var(--serif); letter-spacing: -0.007em; }
 #finale .fn-big span { display: block; font: 400 13px/1.4 var(--sans); color: var(--ink-2); letter-spacing: 0; }
 #finale .fn-rows { margin: 0; font: 400 12px/1.5 var(--mono); }
 #finale .fn-rows div { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
@@ -232,9 +232,9 @@
 
 #finale .fn-stamp {
   position: absolute; top: 18px; right: 20px; transform: rotate(-6deg);
-  font: italic 400 22px/1 var(--serif); color: var(--ok);
+  font: italic 340 21.15px/0.951 var(--serif); color: var(--ok);
   border: 1.5px solid var(--ok); border-radius: 6px; padding: 4px 12px 5px;
-  opacity: 0; transition: opacity 200ms var(--ease) 350ms;
+  opacity: 0; transition: opacity 200ms var(--ease) 350ms; letter-spacing: 0.003em;
 }
 #finale .fn-receipt.is-in .fn-stamp { opacity: .85; animation: fn-stamp 380ms var(--ease) 350ms 1 backwards; }
 @keyframes fn-stamp { from { transform: rotate(-6deg) scale(1.25); opacity: 0; } to { transform: rotate(-6deg) scale(1); opacity: .85; } }
@@ -283,7 +283,7 @@
   #tag .tg-hint { display: none; }
   #tag .tg-sentence { font-size: 14px; }
   #finale .fn-receipt { max-width: none; padding: 18px 18px calc(22px + var(--tooth)); }
-  #finale .fn-big { font-size: 38px; }
+  #finale .fn-big { font-size: 43.23px; }
   .fn-lines .fn-line { font-size: 13px; }
 }
 

@@ -163,3 +163,32 @@ export function mountMascot() {
   }
   refresh();
 }
+
+/** Keep the start-screen monkey beside the search box and clear of the title, whatever the fonts:
+ *  feet level with the box's bottom, just right of it; dropped below the title if they would touch. */
+export function placeStartMonkey() {
+  if (typeof document === 'undefined') return;
+  const m = document.querySelector('#start .start-monkey');
+  const start = document.getElementById('start');
+  const ask = document.getElementById('ask');
+  const h1 = document.getElementById('ask-title');
+  if (!m || !start || !ask || !h1 || !m.offsetParent) return;
+  const s = start.getBoundingClientRect(), a = ask.getBoundingClientRect(), t = h1.getBoundingClientRect();
+  const img = m.querySelector('img');
+  const h = (img && img.getBoundingClientRect().height) || m.getBoundingClientRect().height || 131;
+  let top = a.bottom - s.top - h;
+  const left = a.right - s.left + 22;
+  // the title's text box: measure the text itself, not the full-width block
+  const range = document.createRange(); range.selectNodeContents(h1);
+  const tr = range.getBoundingClientRect();
+  const overlapsX = left + s.left < tr.right + 12;
+  if (overlapsX && top + s.top < tr.bottom + 10) top = tr.bottom - s.top + 10;
+  m.style.left = `${Math.round(left)}px`; m.style.top = `${Math.round(top)}px`;
+}
+if (typeof window !== 'undefined') {
+  const go = () => requestAnimationFrame(placeStartMonkey);
+  window.addEventListener('resize', go);
+  window.addEventListener('load', go);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(go);
+  setTimeout(go, 50); setTimeout(go, 600);
+}

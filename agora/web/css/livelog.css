@@ -66,8 +66,8 @@
   display: grid; place-items: center; overflow: hidden;
 }
 #reading .ll-mark::before {
-  content: attr(data-l); font: normal 400 13px/1 var(--serif); color: var(--ink-2);
-  font-variation-settings: "opsz" 24, "SOFT" 100;
+  content: attr(data-l); font: normal 340 10.63px/0.951 var(--serif); color: var(--ink-2);
+  font-variation-settings: "opsz" 24, "SOFT" 100; letter-spacing: 0.003em;
 }
 #reading .ll-mark img {
   position: absolute; inset: 2px; width: 20px; height: 20px; border-radius: 50%;

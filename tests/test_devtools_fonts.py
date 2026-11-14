@@ -49,7 +49,8 @@ def test_base_css_type_tokens_keep_todays_look():
     css = (WEB / "css" / "base.css").read_text()
     t = apply_fonts.root_vars(css)
     assert t["--sans-size"] == "15px" and t["--sans-lh"] == "1.5" and t["--sans-weight"] == "400"
-    assert t["--display-size"] == "64px" and t["--display-lh"] == "1.02" and t["--display-tracking"] == "-.02em"
+    # the owner's applied type (docs/pricemonkey-fonts.json)
+    assert t["--display-size"] == "85.5px" and t["--display-lh"] == "0.97" and t["--display-tracking"] == "-0.017em"
     assert t["--mono-size"] == "12px"
     assert "font: var(--sans-weight) var(--sans-size)/var(--sans-lh) var(--sans);" in css
 

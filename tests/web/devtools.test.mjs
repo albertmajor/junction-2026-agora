@@ -27,9 +27,10 @@ test('baseline is read from the base.css tokens', () => {
   assert.equal(BASE.main.family, 'Instrument Sans');
   assert.equal(BASE.display.family, 'Fraunces');
   assert.equal(BASE.mono.family, 'IBM Plex Mono');
-  assert.equal(BASE.main.size, 15); assert.equal(BASE.display.size, 64); assert.equal(BASE.mono.size, 12);
-  assert.equal(BASE.display.letterSpacing, -0.02);
-  assert.deepEqual(BASE.display.axes, { opsz: 96, SOFT: 50, WONK: 0 });
+  // the owner's applied type (docs/pricemonkey-fonts.json)
+  assert.equal(BASE.main.size, 15); assert.equal(BASE.display.size, 85.5); assert.equal(BASE.mono.size, 12);
+  assert.equal(BASE.display.letterSpacing, -0.017);
+  assert.deepEqual(BASE.display.axes, { opsz: 102, SOFT: 76, WONK: 1 });
   assert.equal(BASE.main.features, '"tnum" 1, "ss01" 1');
 });
 
@@ -50,12 +51,16 @@ test('the baseline URL loads the three current families from fonts.googleapis.co
 });
 
 test('sizes follow the role scale, weights/tracking shift, display picks up its own tracking', () => {
-  const s = dt.clone(BASE);
+  // a fixed baseline (the original type), so this test does not move when the owner applies new type
+  const B0 = dt.clone(BASE);
+  Object.assign(B0.main, { size: 15, weight: 400, ratio: 1.25, letterSpacing: 0, lineHeight: 1.5 });
+  Object.assign(B0.display, { size: 64, weight: 400, ratio: 1.25, letterSpacing: -0.02, lineHeight: 1.02 });
+  const s = dt.clone(B0);
   s.main.size = 16; s.main.weight = 450; s.main.letterSpacing = 0.01;
   s.display.size = 72; s.display.ratio = 1.25; s.display.letterSpacing = -0.03;
   const css = `.a { font: 500 13px/18px var(--sans); }\n.b { font: 400 32px/1.1 var(--serif); letter-spacing: -.01em; }\n` +
     `.c { font-size: 15px; }\n@media (max-width: 640px) { .b { font-size: 24px; } }\n.d { font: 400 20px/1 var(--serif); }`;
-  const out = dt.transformCss(css, dt.makePlan(BASE, s));
+  const out = dt.transformCss(css, dt.makePlan(B0, s));
   assert.ok(out.includes('.a { font: 550 13.87px/19.2px var(--sans); }'), out);
   assert.ok(out.includes('.b { font: 400 36px/1.1 var(--serif); letter-spacing: -0.02em; }'), out);
   assert.ok(out.includes('.c { font-size: 16px; }'), out);
