@@ -204,6 +204,8 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .start-banana { animation: none; } }
 @media (max-width: 1000px) { .start-monkey, .start-banana { display: none; } }
 #start:has(#status.none) .start-banana { display: none; }
+/* above the search bar, but never above the open category menu */
+body:has(#catnav.open) .start-banana { z-index: 1; }
 /* one monkey at a time: the found-nothing one replaces him */
 #start:has(#status.none) .start-monkey { display: none; }
 /* the start screen's big question only: its own line height (owner, pricemonkey-fonts (7).json) */

@@ -527,5 +527,6 @@
    paper, then a warm step off paper, then paper again … so each band differs from the one before it,
    but the page reads as one pattern instead of ten colours. Accents follow the same two tones. */
 #landing > section.ld-band { --ld-bg: var(--paper); --ld-acc: var(--ld-acc-sand); }
-#landing > section.ld-band:nth-of-type(even) { --ld-bg: color-mix(in srgb, var(--paper) 92%, var(--brown) 8%); }
-#landing > section.ld-band#ld-close { --ld-bg: color-mix(in srgb, var(--paper) 82%, var(--accent) 18%); --ld-acc: var(--ld-acc-sun); }
+#landing > section.ld-band:nth-of-type(even) { --ld-bg: color-mix(in srgb, var(--paper) 95%, var(--ink) 5%); }
+/* the closing band just continues the two-tone rhythm (owner: no olive/banana slab) */
+#landing > section.ld-band#ld-close { --ld-acc: var(--ld-acc-sun); }
