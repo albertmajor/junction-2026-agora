@@ -17,11 +17,12 @@ const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
 
 test('baseline = the logo as it is in base.css (40px mark, 8px gap, 26.31px wordmark, x-height centring)', () => {
-  assert.equal(BASE.markWidth, 40); assert.equal(BASE.gap, 8); assert.equal(BASE.size, 26.31);
-  assert.equal(BASE.weight, 400); assert.equal(BASE.hoverWeight, 500); assert.equal(BASE.tracking, -0.007);
-  assert.equal(BASE.case, 'lowercase'); assert.equal(BASE.priceItalic, true); assert.equal(BASE.monkeyItalic, true);
-  assert.equal(BASE.center, L.CENTERS.x); assert.equal(BASE.nudge, 0); assert.equal(BASE.nudgeUnit, 'px');
-  assert.equal(BASE.wiggle, true); assert.equal(BASE.hoverTilt, -7); assert.equal(BASE.tilt, 0);
+  // the owner's applied logo (docs/pricemonkey-logo.json)
+  assert.equal(BASE.markWidth, 48.5); assert.equal(BASE.gap, 8.75); assert.equal(BASE.size, 28.47);
+  assert.equal(BASE.weight, 379); assert.equal(BASE.hoverWeight, 407); assert.equal(BASE.tracking, 0.03);
+  assert.equal(BASE.case, 'none'); assert.equal(BASE.priceItalic, false); assert.equal(BASE.monkeyItalic, true);
+  assert.equal(BASE.center, L.CENTERS.x); assert.equal(BASE.nudge, 0.25); assert.equal(BASE.nudgeUnit, 'px');
+  assert.equal(BASE.hoverTilt, 5.5); assert.equal(BASE.tilt, -7.5);
   assert.deepEqual(BASE.colors, { light: { price: 'var(--ink)', monkey: '#4E3818' }, dark: { price: 'var(--ink)', monkey: '#D9B98C' } });
   assert.equal(BASE.footerWidth, 19);
 });
@@ -45,7 +46,7 @@ test('export -> import is lossless', () => {
 
 test('import clamps numbers, ignores junk and keeps the base for anything missing', () => {
   const s = L.importJson({ logo: { size: 500, weight: 'heavy', gap: null, case: 'shouty', colors: { light: { monkey: 'red; }' }, dark: { monkey: '#abc' } } } }, BASE);
-  assert.equal(s.size, 72); assert.equal(s.weight, 400); assert.equal(s.gap, 8); assert.equal(s.case, 'lowercase');
+  assert.equal(s.size, 72); assert.equal(s.weight, BASE.weight); assert.equal(s.gap, BASE.gap); assert.equal(s.case, BASE.case);
   assert.equal(s.colors.light.monkey, '#4E3818'); assert.equal(s.colors.dark.monkey, '#abc');
   assert.throws(() => L.importJson({ roles: {} }, BASE), /no "logo"/);
 });

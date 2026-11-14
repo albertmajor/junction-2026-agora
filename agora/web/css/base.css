@@ -36,9 +36,9 @@
      only) and scripts/apply_logo.py read and write; the family stays --serif. --logo-center is the wordmark's optical
      middle above its baseline: half of Fraunces' x-height (0.2325em, measured on the italic at opsz 48) or half its
      cap-height (0.35em). The mark's middle sits on it; --logo-nudge (+ = text lower) is the fine adjustment. */
-  --logo-mark-w: 40px; --logo-gap: 8px; --logo-size: 26.31px; --logo-weight: 400; --logo-hover-weight: 500;
-  --logo-tracking: -0.007em; --logo-case: lowercase; --logo-price-style: italic; --logo-monkey-style: italic;
-  --logo-center: 0.2325em; --logo-nudge: 0px; --logo-tilt: 0deg; --logo-hover-tilt: -7deg;
+  --logo-mark-w: 48.5px; --logo-gap: 8.75px; --logo-size: 28.47px; --logo-weight: 379; --logo-hover-weight: 407;
+  --logo-tracking: 0.03em; --logo-case: none; --logo-price-style: normal; --logo-monkey-style: italic;
+  --logo-center: 0.2325em; --logo-nudge: 0.25px; --logo-tilt: -7.5deg; --logo-hover-tilt: 5.5deg;
   --logo-price-light: var(--ink); --logo-monkey-light: #4E3818; --logo-price-dark: var(--ink); --logo-monkey-dark: #D9B98C;
   --logo-foot-w: 19px; --logo-foot-nudge: 0px;
   --logo-price: var(--logo-price-light); --logo-monkey: var(--logo-monkey-light);

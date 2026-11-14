@@ -39,8 +39,9 @@ def test_logo_markup_and_todays_tokens():
     # no whitespace between the mark and the wordmark: the gap is --logo-gap only
     assert '<img class="logo-mark" src="/web/assets/brand/logo.svg" width="40" height="34" alt=""><span class="brand">' in html
     t = apply_logo.root_vars((WEB / "css" / "base.css").read_text())
-    assert t["--logo-mark-w"] == "40px" and t["--logo-gap"] == "8px" and t["--logo-size"] == "26.31px"
-    assert t["--logo-center"] == "0.2325em" and t["--logo-nudge"] == "0px" and t["--logo-hover-tilt"] == "-7deg"
+    # the owner's applied logo (docs/pricemonkey-logo.json)
+    assert t["--logo-mark-w"] == "48.5px" and t["--logo-gap"] == "8.75px" and t["--logo-size"] == "28.47px"
+    assert t["--logo-center"] == "0.2325em" and t["--logo-nudge"] == "0.25px" and t["--logo-hover-tilt"] == "5.5deg"
     assert t["--logo-monkey-light"] == "#4E3818" and t["--logo-monkey-dark"] == "#D9B98C"
 
 
@@ -77,7 +78,7 @@ def test_apply_writes_tokens_idempotently_and_dry_run_writes_nothing(tmp_path, c
     assert apply_logo.apply(json.dumps(EXPORT), css_path, dry_run=True)
     assert css_path.read_text() == original
     changed = apply_logo.apply(json.dumps(EXPORT), css_path)
-    assert "--logo-mark-w: 40px -> 46px" in changed and "--logo-monkey-style: italic -> normal" in changed
+    assert "--logo-mark-w: 48.5px -> 46px" in changed and "--logo-monkey-style: italic -> normal" in changed
     after = css_path.read_text()
     t = apply_logo.root_vars(after)
     assert t["--logo-size"] == "29.4px" and t["--logo-center"] == "0.35em" and t["--logo-hover-tilt"] == "-9deg"
