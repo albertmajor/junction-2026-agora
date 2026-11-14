@@ -135,6 +135,12 @@ def _norm(text: str) -> str:
 def need_text(need: Need) -> str:
     """What the shopper asked for, without place or budget (those are personal and the rules handle them)."""
     text = _clean(need.thing, 200)
+    if getattr(need, "for_platform", None):
+        # 'gta 6 ps5': the model must judge 'the GTA 6 game for PS5', never 'gta 6' alone nor a PS5
+        from agora import platforms
+        text = _clean(platforms.item_title(need.thing, need.for_platform) + " (the game, not the console)"
+                      if need.item_kind == "game" else
+                      f"{need.thing} for {platforms.device_title(need.for_platform)} (not the device itself)", 200)
     if need.must_have:
         text += " (must have: " + ", ".join(_clean(m, 40) for m in need.must_have[:6]) + ")"
     return text

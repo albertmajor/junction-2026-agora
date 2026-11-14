@@ -500,9 +500,33 @@ def category_sites(need: Need, cc: str | None) -> list[str]:
     return out
 
 
+def _search_thing(need: Need) -> str:
+    """The item's words for a search: 'gta 6 ps5' (the game AND its platform, agora.need.search_words)."""
+    try:
+        from agora.need import search_words
+        return (search_words(need) or need.thing or "").strip()
+    except Exception:
+        return (need.thing or "").strip()
+
+
+# a game in the local language for the local query ('gta 6 ps5 peli'; used: 'gta 6 ps5 levy', the disc)
+GAME_LOCAL = {"fi": ("peli", "levy"), "de": ("spiel", "disc"), "se": ("spel", "skiva"), "nl": ("game", "disc"),
+              "dk": ("spil", "disc"), "no": ("spill", "plate"), "fr": ("jeu", "disque"), "es": ("juego", "disco"),
+              "it": ("gioco", "disco"), "pl": ("gra", "płyta"), "pt": ("jogo", "disco"), "cz": ("hra", "disk")}
+
+
+def game_words(need: Need, lang: str | None, lane: str | None = None) -> str | None:
+    """'gta 6 ps5 peli' (new) / 'gta 6 ps5 levy' (used, or a disc asked) for a game need; None otherwise."""
+    if getattr(need, "item_kind", None) != "game" or lang not in GAME_LOCAL:
+        return None
+    game, disc = GAME_LOCAL[lang]
+    word = disc if (lane == "used" or "disc" in (need.prefer or [])) else game
+    return f"{_search_thing(need)} {word}"
+
+
 def _thing_q(need: Need) -> str:
     """sizes are for pricing the job, not for finding providers: 'home cleaning 60m2' -> 'home cleaning'"""
-    thing = need.thing.strip()
+    thing = _search_thing(need)
     return re.sub(r"\b\d+(?:[.,]\d+)?\s?(?:m2|m²|sqm|neliö\w*)\b", "", thing, flags=re.I).strip() or thing
 
 
@@ -658,7 +682,7 @@ def query_plan(need: Need, lane: str, depth: int = 2) -> list[tuple[str, str | N
     """1-3 (query, country filter) variants for one lane. depth: 1 = English only, 2 = + local language,
     3 = + EU marketplaces. The first variant is filtered to the asked-for country; with no place in the
     query, the used lane's local-language variant is filtered to the HOME country instead."""
-    thing = need.thing.strip()
+    thing = _search_thing(need)
     # sizes are for pricing the job, not for finding providers: "home cleaning 60m2" -> "home cleaning"
     thing_q = re.sub(r"\b\d+(?:[.,]\d+)?\s?(?:m2|m²|sqm|neliö\w*)\b", "", thing, flags=re.I).strip() or thing
     where = need.where or ""
@@ -815,7 +839,7 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
         lang = _lang(local)
         if lang in LOCAL and avail >= LOCAL_NEW_MIN_TOKENS:
             # the local shops (verkkokauppa, gigantti, bol.com ...) mostly carry JSON-LD: free offers
-            words = market_thing(need, lang)
+            words = market_thing(need, lang, "new")
             plan.append((re.sub(r"\s+", " ", f"{words} {LOCAL[lang]['new']}").strip(), local))
         return plan
     if lane != "used":
@@ -824,7 +848,7 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
     lang = _lang(cc) if cc else _lang(home)
     out: list[tuple[str, str | None]] = []
     if lang in LOCAL:
-        words = market_thing(need, lang)
+        words = market_thing(need, lang, "used")
         used_w = VEHICLE_USED.get(lang, LOCAL[lang]["used"]) if vehicle(need) else LOCAL[lang]["used"]
         out.append((re.sub(r"\s+", " ", f"{words} {used_w}").strip(), cc or home))
         typed = _typed_country(need)
@@ -1008,11 +1032,14 @@ def need_bulky(need: Need) -> bool:
         return False
 
 
-def market_thing(need: Need, lang: str | None) -> str:
+def market_thing(need: Need, lang: str | None, lane: str | None = None) -> str:
     """The words to type into a marketplace for this need: a generic vehicle in that language ('bright red
     car' -> 'punainen auto' on tori), a generic thing typed in another language by its category's label in this
-    one ('kinderwagen' -> 'lastenrattaat' on tori), else the need's own words."""
+    one ('kinderwagen' -> 'lastenrattaat' on tori), a game with its platform and the local word ('gta 6 ps5
+    peli'), else the need's own words."""
     from agora.need import vehicle_words
+    if (g := game_words(need, lang, lane)) is not None:
+        return g
     iso = ISO_OF_LOCAL.get(lang or "", lang)
     if (v := vehicle_words(need, iso)) is not None:
         return v

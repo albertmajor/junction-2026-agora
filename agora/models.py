@@ -24,6 +24,11 @@ class Need:
     # the node of agora.taxonomy this need is about (a hunt started from the category tree, or a confident
     # classification): {id, label, path, kind, lanes, size, domains, words, source, confidence}. None = unknown.
     category: dict[str, Any] | None = None
+    # ITEM + PLATFORM (agora.platforms): 'gta 6 ps5' -> thing 'gta 6', for_platform 'ps5', item_kind 'game';
+    # 'iphone 15 case' -> thing 'case', for_platform 'iphone 15', item_kind 'case'. None = the thing is the device.
+    for_platform: str | None = None
+    item_kind: str | None = None
+    prefer: list[str] = field(default_factory=list)   # soft wishes: 'disc' | 'digital'
 
 
 @dataclass

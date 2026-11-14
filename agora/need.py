@@ -851,7 +851,41 @@ def parse_need_rules(text: str) -> Need:
             need.conditions = [c for c in need.conditions if c != "refurbished"]
     _drop_unwanted_conditions(need)
     keep_audience(need)
+    apply_platform(need)
     return need
+
+
+def apply_platform(need: Need) -> Need:
+    """ITEM + PLATFORM (agora.platforms): 'gta 6 ps5' is the game GTA 6 for a PS5 (thing 'gta 6', for_platform
+    'ps5', item_kind 'game'), 'iphone 15 case' a case for an iPhone 15, 'sony fe 50mm lens' a lens for Sony's
+    E-mount. Format words ('levy', 'disc', 'digital code') become soft wishes in need.prefer. A product need
+    only; the device itself ('ps5', 'ps5 console', 'iphone 15 pro') is left as it is."""
+    if need.kind != "product" or need.for_platform:
+        return need
+    try:
+        from agora import platforms
+        sp = platforms.split(need.thing or "")
+    except Exception:
+        sp = None
+    if sp is None:
+        return need
+    need.thing = sp.item
+    need.for_platform = sp.platform
+    need.item_kind = sp.item_kind
+    need.prefer = list(dict.fromkeys([*need.prefer, *sp.prefer]))
+    if "refurbished" in need.conditions and len(need.conditions) > 1:
+        need.conditions = [c for c in need.conditions if c != "refurbished"]   # nobody refurbishes a disc or a case
+    return need
+
+
+def search_words(need: Need) -> str:
+    """The words a search engine or a marketplace gets: the item AND its platform ('gta 6 ps5', 'iphone 15
+    case'); need.thing alone for any other need."""
+    if not getattr(need, "for_platform", None):
+        return need.thing or ""
+    if need.item_kind == "game":
+        return f"{need.for_platform} games" if need.thing in ("games", "game") else f"{need.thing} {need.for_platform}"
+    return f"{need.for_platform} {need.thing}"
 
 
 def _drop_unwanted_conditions(need: Need) -> None:
@@ -1012,6 +1046,12 @@ def categorize(need: Need, category: str | None = None) -> dict[str, Any] | None
     tax = _taxonomy()
     if tax is None:
         return None
+    if need.for_platform and need.kind == "product":
+        cat = _platform_node(tax, need)       # 'gta 6 ps5': PS5 Games, never Video Game Consoles
+        if cat is None:
+            return None
+        need.category = cat
+        return _cat_event(cat)
     try:
         c = tax.classify(need.raw)
     except Exception:
@@ -1072,6 +1112,38 @@ def categorize(need: Need, category: str | None = None) -> dict[str, Any] | None
         return None
     apply_category(need, cat)
     return _cat_event(cat)
+
+
+_DEVICE_NOUN = {"phone": "phone", "tablet": "tablet", "laptop": "laptop", "mount": "camera"}
+
+
+def _platform_node(tax: Any, need: Need) -> dict[str, Any] | None:
+    """The tree node of an ITEM + PLATFORM need: '<platform> games' (PS5 Games), else Video games; an accessory
+    by its device's kind ('phone cases', 'laptop chargers', 'camera lenses')."""
+    from agora import platforms
+    p = platforms.find(need.for_platform or "")
+    if need.item_kind == "game":
+        queries = [f"{p[0].label} games" if p else "", "video games"]
+    else:
+        noun = _DEVICE_NOUN.get(p[0].kind if p else "", "")
+        word = platforms.kind_word(need.item_kind or "")
+        plural = word + ("es" if word.endswith(("s", "sh", "ch")) else "s")
+        queries = [f"{noun} {plural}".strip(), plural]
+    for q in [x for x in queries if x]:
+        try:
+            hits = tax.search(q, limit=3, kind="product")
+        except Exception:
+            hits = []
+        for h in hits:
+            label = str(h.get("label") or "").lower()
+            if (h.get("score") or 0) < 1.0 or re.search(r"console|controller|konsol", label):
+                continue
+            if need.item_kind == "game" and "game" not in label:
+                continue
+            cat = category_info(h["id"], source="classified", confidence=min(1.0, round(h["score"] / 1.5, 3)))
+            if cat is not None:
+                return cat
+    return None
 
 
 CARS_NODE = "sp:vp-2-2-1"         # Vehicles > Motor Vehicles > Cars, Trucks & Vans
@@ -1137,7 +1209,7 @@ def _gemini(text: str, timeout: float = 6.0) -> dict[str, Any] | None:
 def _merge(rules: Need, llm: dict[str, Any]) -> Need:
     valid_conds = set(get_args(Condition))
     thing = llm.get("thing")
-    if isinstance(thing, str) and 1 < len(thing) < 120:
+    if isinstance(thing, str) and 1 < len(thing) < 120 and not rules.for_platform:
         rules.thing = thing.strip().lower()
     if llm.get("kind") in ("product", "service") and rules.kind == "product" and not product_head(rules.thing):
         rules.kind = llm["kind"]

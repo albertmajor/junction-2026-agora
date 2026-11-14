@@ -1422,8 +1422,8 @@ def _is_generic_text(thing: str, tree: bool) -> bool:
 def is_generic(need: Need) -> bool:
     """A product need for a kind of thing ('puhelin', 'phone', 'baby stroller', 'kitchen table', a hunt from the
     category tree) rather than a product ('iphone 13', 'lego', 'herman miller chair')."""
-    if need.kind != "product":
-        return False
+    if need.kind != "product" or getattr(need, "for_platform", None):
+        return False         # 'iphone 15 case': a case for one phone, not any case
     tree = (need.category or {}).get("source") == "tree"
     return _is_generic_text(need.thing or "", tree)
 
@@ -2039,6 +2039,226 @@ def _product_clash(thing: str, must: str, cat_id: str, cat_label: str, title: st
     return None
 
 
+# ---------------------------------------------------------------- ITEM + PLATFORM ('gta 6 ps5', 'iphone 15 case')
+# Owner, 15 Nov: "gta 6 ps5" wanted the GTA 6 game for a PS5; the hunt kept PS5 consoles and threw the discs out.
+# A need with need.for_platform (agora.platforms) is judged here alone: the item is the game (or the case, the
+# charger, the lens), the platform / device must fit, and the device itself is another kind of thing.
+_GAME_SERVICE = re.compile(
+    r"\b(?:\w*reinigung\w*|cleaning|schoonma\w*|reparatur\w*|repair\w*|reparatie\w*|huolto\w*|korjau\w*|"
+    r"verleih\w*|vermiet\w*|miete|mieten|leihe\w*|rental|vuokra\w*|uthyr\w*|udlej\w*|leasing|"
+    r"flussigmetall\w*|flüssigmetall\w*|liquid\s+metal|warmeleitpaste|wärmeleitpaste|thermal\s+paste)\b", re.I)
+_GAME_ACCOUNT = re.compile(r"\b(?:account|accounts|konto|tili|tunnukset)\b", re.I)
+_GAME_MERCH = re.compile(
+    r"(?<![\w-])(?:\w*holder|\w*halter|\w*hallare|\w*hållare|uchwyt\w*|\w*teline\w*|\w*stander|\w*ständer|"
+    r"aufsteller|ulotk\w*|flyers?|leaflets?|poster\w*|juliste\w*|merch\w*|\w*merchandise|figur\w*|figures?|"
+    r"keychain|avaimenper\w*|schlusselanhanger|t-?shirts?|hoodies?|mugs?|muki|tasse|"
+    r"speicher|ssd|festplatte|soundtrack|artbook|strategy\s+guide|losungsbuch|"
+    r"\w*kontrollhold\w*|skins?|aufkleber|stickers?|tarra\w*|empty\s+case|case\s+only|vain\s+kotelo|leere\s+hulle|nur\s+hulle|"
+    # live, gta 6 ps5: posters, keychains, pad stands, logo inserts, wall art, figures, empty boxes, handmade discs
+    r"plakat\w*|breloc\w*|brelok\w*|stojak\w*|insert|\w*decorati\w*|\w*dekoration|deko|wall\s+art|"
+    r"figuur\w*|beeldje|doos|pusta|handmade|zadrukowan\w*|replik\w*|replica|lamp\w*|lampe|led\s+sign|neon\w*|"
+    r"puzzle|palapeli\w*|kalender|calendar|wallpaper|tapete|teppich|mousepad|hiirimatto)(?![\w-])",
+    re.I)
+# other electronics that only name the game as what they are good for ('LG 55 Zoll 4K TV (PS5/GTA6 etc.)')
+_GAME_GEAR = re.compile(
+    r"(?<![\w-])(?:tv|fernseher|televisio\w*|televisie|monitor\w*|skjerm|scherm|naytto\w*|\d{2}\s?(?:zoll|tuuma\w*|inch)|"
+    r"qled|meta\s+quest|quest\s?\d|vr|vr-?brille|gaming\s?pc|gaming\s+dator|router|laptop|soundbar|"
+    r"lautsprecher|kaiutin\w*|beamer|projektor\w*|projector)(?![\w-])", re.I)
+# the game named as a purpose: 'PS5 perfekt für GTA 6', 'PlayStation 5 (GTA 6 klaar)', 'Perfekt tills GTA6 släpps'
+_FOR_GAME_BEFORE = re.compile(r"(?:\bf(?:u|ü)r|\bfuer|\bvoor|\bfor|\btil|\btill|\btills|\bzu|\bbei|\bvor|\bennen|"
+                              r"\bbefore|\bwegen|\bvarten|\bpod|\bready|\bklaar|\bbereit|\bticket)\W+(?:\w+\W+)?$", re.I)
+_FOR_GAME_AFTER = re.compile(r"^\W*(?:\w+\W+)?(?:klaar|ready(?!\s+(?:to|for)\s+(?:ship|send|post|go|pick))|valmis|bereit|klar|redo|kommt|slapps|release)\b",
+                             re.I)
+# a controller / headset in a game listing: an add-on, unless the console is for sale with it (_CONSOLE_SALE first)
+_GAME_PAD = re.compile(r"(?<![\w-])(?:\w*kontroll\w*|controller\w*|ohjain\w*|headsets?|\w*headset|\w*kuulok\w*|"
+                       r"gamepad|dualsense|joy-?cons?)(?![\w-])", re.I)
+_CONSOLE_SALE = re.compile(
+    r"\b(?:ready|valmis|valmiina|ideal\s+fur|ideal\s+für|perfekt\s+fur|perfekt\s+für|perfect\s+for|bereit\s+f\w+|"
+    r"klar\s+for|klar\s+för|wegen|"
+    r"(?:mit|with|med|met|ja|inkl\w*|incl\w*)\s+(?:\d\s*)?(?:controller\w*|ohjaim\w*|kontroller\w*|handkontroll\w*|pads?)|"
+    r"\b[2-4]\s*(?:x\s*)?(?:controller\w*|ohjain\w*|ohjainta|kontroller\w*)|konsoli\w*|console\w*|konsole\w*|konsol|"
+    r"konsola|spillekonsol|825\s?gb|850\s?gb|1\s?tb|2\s?tb|disc\s+edition|digital\s+edition|disc\s+editie|"
+    r"cfi-?\s?\d{4}\w*|firmware|fw|disklaufwerk|laufwerk|skivlasare|skivläsare|levyasema\w*|disc\s+drive|"
+    r"(?:ps\s?5|playstation\s?5)\s+(?:pro|slim)(?!\s+enhanced))\b"
+    r"|\+\s*(?:\d\s*)?(?:controller\w*|ohjain\w*|kontroller\w*|pad)\b", re.I)
+_LINK = (r"(?:\+|&|\bmit\b|\bwith\b|\bw/|\bja\b|\bund\b|\bmed\b|\bmet\b|\binkl\w*|\bincl\w*|\bsis\w*|\bz\b|"
+         r"\bplus\b|\bog\b|\boch\b|\binklusive\b|\bbundle\b)")
+
+
+def _platform_of(need: Need) -> Any:
+    from agora import platforms
+    got = platforms.find(need.for_platform or "")
+    return got[0] if got else None
+
+
+def _game_bundle(item: str, low: str) -> bool:
+    """'PS5 + GTA 6', 'Verkaufe meine Ps5 mit GTA6', 'GTA 6 & PS5 Pro': the console with the game."""
+    from agora import platforms
+    for p, m in platforms.platforms_in(low):
+        if p.kind != "console":
+            continue
+        after = low[m.end():m.end() + 45]
+        if re.match(rf"\W*(?:slim|pro|digital|disc|edition|\d+\s?(?:gb|tb)|\s)*\W*{_LINK}", after) \
+                and platforms.game_match(item, after)[0]:
+            return True
+        before = low[max(0, m.start() - 45):m.start()]
+        if re.search(rf"{_LINK}\W*(?:sony\s+|microsoft\s+|nintendo\s+)?$", before) \
+                and platforms.game_match(item, before)[0] and not re.search(r"\bfor\b|\bfur\b|\bfür\b|\bvoor\b", before):
+            return True
+    return False
+
+
+def _named_as_purpose(item: str, low: str) -> bool:
+    """The game is only what the thing is FOR ('PS5 perfekt für GTA 6', 'PlayStation 5 (GTA 6 klaar)')."""
+    from agora import platforms
+    if item in ("games", "game"):
+        return False
+    norm = platforms.game_norm(low)
+    it = platforms.game_norm(item)
+    for m in re.finditer(rf"(?<![\w']){re.escape(it)}(?![\w'])", norm):
+        if _FOR_GAME_BEFORE.search(norm[max(0, m.start() - 30):m.start()]) or _FOR_GAME_AFTER.search(norm[m.end():]):
+            return True
+    return False
+
+
+def _platform_only(low: str) -> bool:
+    """The title is a console's name and nothing more ('Ps5', 'PlayStation 5 Disc Versie')."""
+    from agora import platforms
+    rest = low
+    for _p, m in platforms.platforms_in(low):
+        rest = rest.replace(m.group(0), " ")
+    words = [w for w in re.findall(r"[^\W_]+", rest) if w not in _CONSOLE_PRE_OK
+             and not re.fullmatch(r"\d{1,4}(?:gb|tb)?", w)]
+    return len(words) <= 1 and all(w in ("versie", "version", "versio", "versjon", "model", "modell", "white",
+                                         "black", "valkoinen", "musta", "weiss", "wit") for w in words)
+
+
+def platform_fit(need: Need, offer: Offer) -> tuple[float, str | None]:
+    """(relevance, reason it is not the item or None) for an ITEM + PLATFORM need."""
+    from agora import platforms
+    p = _platform_of(need)
+    title = offer.title or ""
+    low = platforms.fold(title)
+    if p is None:
+        return 0.5, None
+    if need.item_kind == "game":
+        return _game_fit(need, offer, p, title, low)
+    return _accessory_fit(need, offer, p, title, low)
+
+
+def _red_reject(need: Need, offer: Offer) -> str | None:
+    bad = [f for f in title_red_flags(offer, need) if f[0] in RED_REJECT]
+    if not bad:
+        return None
+    k, what, phrase = bad[0]
+    return (f"not an offer: {red_flag_text(k, what, phrase)}" if k in ("wanted", "rental")
+            else f"a part, not the whole item: {red_flag_text(k, what, phrase)}")
+
+
+def _game_fit(need: Need, offer: Offer, p: Any, title: str, low: str) -> tuple[float, str | None]:
+    from agora import platforms
+    item = need.thing or "games"
+    name = platforms.item_title(item, need.for_platform or "") if item not in ("games", "game") \
+        else f"a game for {p.label}"
+    game = name.rsplit(" for ", 1)[0] if item not in ("games", "game") else "a game"
+    if (m := _GAME_SERVICE.search(low)):
+        return 0.05, f"a service or rental ({m.group(0).strip()}), not the game"
+    if (m := _GAME_ACCOUNT.search(low)):
+        return 0.05, f"an account ({m.group(0).strip()}), not the game"
+    named, other = platforms.game_match(item, title)
+    console = _CONSOLE_SALE.search(low)
+    merch = _GAME_MERCH.search(low)
+    if merch and (_WITH_WORD_BEFORE.search(low[:merch.start()])
+                  or re.search(rf"\S.*{_LINK}\s*(?:\S+\s+){{0,2}}$", low[:merch.start()])):
+        merch = None              # 'GTA 6 PS5 + steelbook', 'Spider-Man 2 mit Poster': the game with an extra
+    if named and merch:
+        return 0.05, f"an accessory or merch ({merch.group(0).strip()}), not the game"
+    if named and (gear := _GAME_GEAR.search(low)) and not _WITH_WORD_BEFORE.search(low[:gear.start()]):
+        return 0.05, f"other gear ({gear.group(0).strip()}), not the game"
+    if named and _named_as_purpose(item, low):
+        return 0.05, f"another kind of thing (a {p.label} console or gear for {game}), not the game"
+    if named and (console or _game_bundle(item, low)):
+        what = console.group(0).strip() if console else "a bundle"
+        return 0.05, f"another kind of thing (a {p.label} console or bundle: {what}), not the game alone"
+    if not merch and (pad := _GAME_PAD.search(low)) and not _WITH_WORD_BEFORE.search(low[:pad.start()]):
+        merch = pad
+    if named and merch:
+        return 0.05, f"an accessory or merch ({merch.group(0).strip()}), not the game"
+    if not named:
+        if other:
+            return 0.05, f"another game ({other}), not {game}"
+        if merch:
+            return 0.05, f"an accessory or merch ({merch.group(0).strip()}), not the game"
+        if console or _platform_only(low):
+            return 0.05, f"another kind of thing (the {p.label} console, not the game)"
+        return 0.1, f"not the game asked ({name})"
+    names = [q for q, _m in platforms.platforms_in(low) if q.kind in ("console", "pc")]
+    if names and not any(platforms.compatible(p.key, q.key) for q in names):
+        other_p = ", ".join(dict.fromkeys(q.label for q in names))
+        return 0.05, f"another platform ({other_p}), not {p.label}"
+    if why := _red_reject(need, offer):
+        return 0.1, why
+    score = 1.0 if names else 0.7          # no platform named: the shop's / search's own platform, likely
+    digital = bool(platforms.DIGITAL_WORDS.search(low)) and not platforms.DISC_WORDS.search(low)
+    if isinstance(offer.raw, dict):
+        offer.raw["game_format"] = "digital" if digital else ("disc" if platforms.DISC_WORDS.search(low) else None)
+    if "disc" in need.prefer and digital or "digital" in need.prefer and not digital \
+            and platforms.DISC_WORDS.search(low):
+        score = min(score, 0.6)            # a wish, not a rule: the other format stays, behind
+    return score, None
+
+
+def _accessory_fit(need: Need, offer: Offer, p: Any, title: str, low: str) -> tuple[float, str | None]:
+    from agora import platforms
+    kind = need.item_kind or ""
+    word = platforms.kind_word(kind)
+    want = (platforms.device_mentions(need.for_platform or "", p.key) or [(None, None)])[0]
+    asked_dev = platforms.device_title(need.for_platform or "")
+    hit = platforms.kind_hit(kind, title)
+    mine = platforms.device_mentions(title, p.key)
+    others = [q for q, _m in platforms.platforms_in(low) if q.kind == p.kind and q.key != p.key]
+    if hit is None or (_WITH_WORD_BEFORE.search(low[:hit.start()]) and (mine or others)):
+        if mine or others or (p.kind == "mount" and re.search(r"\b(?:body|runko|gehause|kamera|camera|a\d{1,4}\w*|"
+                                                              r"eos\s?r\d*|z\s?\d{1,2}|x-?t\d+)\b", low)):
+            thing = "a camera or other gear" if p.kind == "mount" else f"the {p.kind} itself"
+            return 0.05, f"another kind of thing ({thing}), not a {word}"
+        return 0.1, f"not a {word}"
+    if kind == "lens":
+        asked_f = {(a, b) for a, b in platforms.FOCAL.findall(need.thing or "")}
+        got_f = {(a, b) for a, b in platforms.FOCAL.findall(low)}
+        if asked_f and got_f and not asked_f & got_f:
+            a, b = sorted(got_f)[0]
+            return 0.05, f"another focal length ({a}{'-' + b if b else ''}mm), not {need.thing}"
+    if p.kind == "mount" and others and not mine:
+        return 0.05, f"another mount ({', '.join(dict.fromkeys(q.label for q in others))}), not {p.label}"
+    if mine:
+        if want[0] or want[1]:
+            ok = any((not want[0] or m == want[0]) and (want[1] == t or (not want[0] and not t))
+                     for m, t in mine)
+            if not ok:
+                m, t = next(((m, t) for m, t in mine), (None, None))
+                got = re.sub(r"\s+", " ", f"{p.label} {(m or '').upper() if m and not m.isdigit() else m or ''} "
+                                         f"{(t or '').title()}").strip()
+                return 0.05, f"for another model ({got}), not the {asked_dev}"
+    elif others:
+        return 0.05, f"for another device ({', '.join(dict.fromkeys(q.label for q in others))}), not the {asked_dev}"
+    if why := _red_reject(need, offer):
+        return 0.1, why
+    return (1.0 if mine else 0.6), None
+
+
+def platform_name(need: Need) -> str:
+    """The Thing of an ITEM + PLATFORM hunt: 'GTA 6 for PS5', 'Case for iPhone 15'."""
+    from agora import platforms
+    if need.item_kind == "game":
+        p = _platform_of(need)
+        if (need.thing or "") in ("games", "game"):
+            return f"{p.label if p else need.for_platform} games"
+        return platforms.item_title(need.thing or "", need.for_platform or "")
+    dev = platforms.device_title(need.for_platform or "")
+    return f"{(need.thing or '').capitalize()} for {dev}"
+
+
 STORAGE_RX = re.compile(r"\b(?:ssd|nvme|m\.2|kiintolevy\w*|hårddisk\w*|harddisk\w*|festplatte\w*|hard\s?drive|"
                         r"\w+konsolille|\w+konsoliin)\b", re.I)
 STORAGE_MAKER = re.compile(r"\b(?:corsair|wd_?black|western\s+digital|seagate|crucial|kingston|sabrent|lexar|"
@@ -2197,6 +2417,11 @@ def relevance(need: Need, offer: Offer) -> float:
             return 0.05            # the person said 'no GTA bundle' and this listing is one
     if kind_mismatch(need, offer) or far_provider(need, offer):
         return 0.05            # a gun for a gunsmith hunt, a repair rate for a product hunt, a US gunsmith
+    if getattr(need, "for_platform", None) and need.kind == "product":
+        score = platform_fit(need, offer)[0]      # 'gta 6 ps5': the game for a PS5, never the console
+        if offer.condition not in ("unknown", *need.conditions):
+            score *= 0.8
+        return round(max(0.0, min(1.0, score)), 3)
     ns = signature(need.thing)
     os_ = signature(offer.title or "", offer.brand)
     title_toks = set(tokenize(offer.title or "")) | os_.words | set(os_.models)
@@ -2942,6 +3167,8 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return r, why
     if search_title(need, offer):
         return r, "a shop's search page (its title is the search words), not one listing"
+    if getattr(need, "for_platform", None) and need.kind == "product":
+        return r, platform_fit(need, offer)[1] or "does not match what you asked for"
     if need.kind == "service":
         if why := off_topic_reason(need, offer) or other_place(need, offer):
             return r, why
@@ -3120,8 +3347,8 @@ def resolve(need: Need, offers: list[Offer], threshold: float = 0.5) -> list[Thi
         s = signature(o.title or "", o.brand)
         if is_bundle(o.title or "") and "bundle" not in o.flags:
             o.flags.append("bundle")
-        if need.kind == "service" or not s.models:
-            loose.append(o)
+        if need.kind == "service" or not s.models or getattr(need, "for_platform", None):
+            loose.append(o)          # 'GTA 6 PS5' and 'Grand Theft Auto VI': one game, whatever the titles say
             continue
         # fold brand-less titles into the need's brand so "a7 III" == "Sony a7 III"
         if not s.brand and need_sig.brand:
@@ -3143,6 +3370,8 @@ def resolve(need: Need, offers: list[Offer], threshold: float = 0.5) -> list[Thi
     # its loose listings never join (and are never named after) one model's bucket ('GT3' held 2,579 LEGO sets)
     mixed = generic or (need.kind == "product" and not need_sig.models and not need_sig.family
                         and not need_sig.variants)
+    if getattr(need, "for_platform", None):
+        mixed = need.item_kind != "game"     # one game is one product; cases for a phone are a mixed bag
     if mixed:
         # a kind of thing asked ('road bike', 'puhelin', a tree hunt): a model is a Thing only when the market
         # has it (GENERIC_MIN_THING listings); '3-vaihteinen' x3 or 'Y2K' x2 never set a price band of their own
@@ -3161,7 +3390,8 @@ def resolve(need: Need, offers: list[Offer], threshold: float = 0.5) -> list[Thi
         if things and need.kind != "service" and not mixed:
             max(things, key=lambda t: len(t.offers)).offers.extend(loose)   # vague titles join the main thing
         else:
-            name = need.thing if need.kind == "service" else _generic_name(need) if generic else _need_name(need, need_sig)
+            name = (need.thing if need.kind == "service" else platform_name(need) if getattr(need, "for_platform", None)
+                    else _generic_name(need) if generic else _need_name(need, need_sig))
             things.append(Thing(id="t-" + _slug(name), name=name, offers=loose))
             if mixed:
                 for o in loose:

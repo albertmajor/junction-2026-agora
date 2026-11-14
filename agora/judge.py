@@ -73,6 +73,22 @@ CATEGORIES: list[Category] = [
     Category("luxury watch", 0.03, 0.85, r"rolex|omega|tudor|patek"),
 ]
 DEFAULT_CATEGORY = Category("other", 0.18, 0.60, "")
+# a video game ('gta 6 ps5', agora.platforms): priced as a game, never as the console in its title. A new disc is
+# ~€70-80 at launch (GAME_NEW_EUR); used copies sell for about half.
+GAME_CATEGORY = Category("game", 0.30, 0.55, r"\bgames?\b|\bpeli\b|\bspiel\b")
+GAME_NEW_EUR = 75.0
+GAME_NEW_MAX_EUR = 100.0      # a 'new price' above this for one game is consoles or bundles that slipped through
+
+
+def need_category(need: Need | None, text: str) -> Category:
+    """category_for(text), except for an ITEM + PLATFORM need: a game is a game ('GTA 6 PS5' is no console), an
+    accessory goes by its own word ('50mm lens' -> lens, a case / charger -> other), never by the device's."""
+    kind = getattr(need, "item_kind", None) if need is not None else None
+    if kind == "game":
+        return GAME_CATEGORY
+    if kind:
+        return category_for(kind) if kind == "lens" else DEFAULT_CATEGORY
+    return category_for(text)
 
 # marketplaces / classifieds: a listing there is only as good as its seller, and it can be haggled
 MARKETPLACES = ("ebay.", "tori.fi", "huuto.net", "facebook.", "kleinanzeigen.", "blocket.", "vinted.",
@@ -359,7 +375,7 @@ def _comp_urls(thing_offers: list[Offer], exclude: Offer | None = None) -> list[
 # A used / private 'new' / marketplace listing under REF_FLOOR[category] x that new reference is "too good to be
 # true: probably a part, a single earbud, broken or fake": shown, never priced into a median, never the pick.
 
-REF_FLOOR = {"phone": 0.35, "tablet": 0.35, "laptop": 0.30, "camera": 0.40, "lens": 0.40, "console": 0.35,
+REF_FLOOR = {"game": 0.15, "phone": 0.35, "tablet": 0.35, "laptop": 0.30, "camera": 0.40, "lens": 0.40, "console": 0.35,
              "audio": 0.38, "wearable": 0.33, "tv": 0.25, "luxury watch": 0.50}
 REF_FLOOR_OTHER_MODEL = 0.30   # any other category, when the need names a model ('dyson v15', 'kindle 11')
 REFURB_TO_NEW = 0.85           # a refurbished shop price is ~85% of new: new reference when no shop sells it new
@@ -483,8 +499,13 @@ def reference_price(offers: list[Offer], cat: Category, need: Need | None = None
         new = market_ref / max(cat.used_factor, 0.3)
         basis = (f"no shop price: the upper {UPPER_SHARE:.0%} of {len(market)} marketplace listings (median "
                  f"{fmt(market_ref)}) / the usual used share {cat.used_factor:.0%}")
+    elif cat.name.split(",")[0] == "game":
+        new, basis = GAME_NEW_EUR, f"a new game disc usually costs about {fmt(GAME_NEW_EUR)}"
     else:
         return None
+    if cat.name.split(",")[0] == "game" and new > GAME_NEW_MAX_EUR:
+        # consoles / bundles in the comps: one game is never priced like a PS5
+        new, basis = GAME_NEW_EUR, f"a new game disc usually costs about {fmt(GAME_NEW_EUR)} ({basis} was too high)"
     if market_ref is not None and (shop_new or shop_ref) and new < market_ref:
         # the 'shop' prices are under what private sellers ask: accessories that slipped through, not the item
         new, basis = market_ref / max(cat.used_factor, 0.3), basis + f"; raised to the marketplace level {fmt(market_ref)}"
@@ -2575,7 +2596,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                   depreciation: dict[str, Any] | None = None, *, history: bool = False,
                   photos: dict[int, list[Offer]] | None = None, floor: float = 0.0,
                   everyone: list[Offer] | None = None, ref: Reference | None = None) -> None:
-    cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
+    cat = measured_category(need_category(need, " ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                             depreciation)
     for o in t.offers:
         price_of(o)
@@ -2959,7 +2980,7 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         # never become every smartphone's yardstick
         refs: dict[frozenset[str], Reference | None] = {}
         if not any(o.raw.get("generic_thing") for o in everyone) and not _generic_need(need):
-            refcat = category_for(" ".join([need.thing] + [o.title for o in everyone[:5]]))
+            refcat = need_category(need, " ".join([need.thing] + [o.title for o in everyone[:5]]))
             # one reference per version: a PS5 Pro is never judged against the base PS5's new price, nor sets it
             # (live, ps5: Pro listings made the reference €1,068 and were 'costs more than new (€699)')
             by_tier: dict[frozenset[str], list[Offer]] = {}
@@ -2983,7 +3004,7 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     for t in things:
         _judge_offers(need, t, months, seen, depreciation, history=history, photos=photos, floor=floor,
                       everyone=everyone if not is_service(need) else None, ref=ref)
-        cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
+        cat = measured_category(need_category(need, " ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                                 depreciation)
         bands = price_band(t, history=history)
         for o in t.offers:

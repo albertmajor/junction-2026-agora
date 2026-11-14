@@ -1286,6 +1286,146 @@ def _vehicle_intent(T: Any, core: str, lang: str, cc: str, *, place: str | None,
     return [it]
 
 
+# ---------------------------------------------------------------- ITEM + PLATFORM ('gta 6 ps5', 'ps5 gta')
+# agora.platforms reads 'gta 6 ps5' as the game for a PS5. Bare words ('ps5 gta': no 'game', the console first, no
+# number) may also mean a PS5 sold with GTA: the meanings are the game, the console bundle and a digital code.
+
+_P_LABELS = {
+    "game": "{item} game for {p}|{item} -peli ({p})|{item}-spelet till {p}|{item} Spiel für {p}|{item} game voor {p}",
+    "bundle": "{p} console with {item}|{p}-konsoli ja {item}|{p}-konsol med {item}|{p}-Konsole mit {item}|"
+              "{p}-console met {item}",
+    "digital": "{item} for {p} as a digital code|{item} ({p}) digikoodina|{item} till {p} som digital kod|"
+               "{item} für {p} als Digitalcode|{item} voor {p} als digitale code",
+    "accessory": "{item} for {p}|{item} – {p}|{item} till {p}|{item} für {p}|{item} voor {p}",
+    "device": "The {p} itself|{p} itse|Själva {p}|{p} selbst|De {p} zelf",
+}
+# the plain words of the question card (another agent's UI shows them verbatim)
+_P_OPTIONS = {
+    "game": "Just the game (disc)|Pelkkä peli (levy)|Bara spelet (skiva)|Nur das Spiel (Disc)|Alleen de game (disc)",
+    "bundle": "A {p} with {item} bundled|{p} ja {item} samassa paketissa|En {p} med {item}|Eine {p} mit {item}|"
+              "Een {p} met {item}",
+    "digital": "A digital code|Digitaalinen koodi|En digital kod|Ein Digitalcode|Een digitale code",
+}
+_P_HINTS = {
+    "game": "The game on its own, new or used.|Peli yksinään, uusi tai käytetty.|Spelet ensamt, nytt eller begagnat.|"
+            "Das Spiel allein, neu oder gebraucht.|De game alleen, nieuw of tweedehands.",
+    "bundle": "The console with the game included.|Konsoli, jonka mukana tulee peli.|Konsolen med spelet.|"
+              "Die Konsole mit dem Spiel dabei.|De console met de game erbij.",
+    "digital": "A download code, no disc.|Latauskoodi, ei levyä.|En nedladdningskod, ingen skiva.|"
+               "Ein Download-Code, keine Disc.|Een downloadcode, geen disc.",
+}
+_ASK_PLATFORM = ("{item} for {p}: which do you mean?|{item} ({p}): mitä tarkoitat?|{item} till {p}: vad menar du?|"
+                 "{item} für {p}: was meinst du?|{item} voor {p}: wat bedoel je?")
+_ASK_WORDS = ("What do you mean by “{q}”?|Mitä tarkoitat sanalla ”{q}”?|Vad menar du med ”{q}”?|"
+              "Was meinst du mit „{q}“?|Wat bedoel je met ‘{q}’?")
+_ASK_DEFAULT = ("What are you looking for?|Mitä etsit?|Vad letar du efter?|Wonach suchst du?|Waar ben je naar op zoek?")
+_ASK_RENT = ("Rent it or buy it?|Vuokrata vai ostaa?|Hyra eller köpa?|Mieten oder kaufen?|Huren of kopen?")
+_AS_TYPED = ("Search exactly ‘{q}’|Hae juuri ‘{q}’|Sök exakt ‘{q}’|Genau ‘{q}’ suchen|Zoek precies ‘{q}’")
+_RENT_WORDS = re.compile(r"\b(?:rent|rental|hire|lease|leasing|vuokra\w*|mieten|miete|hyra|hyr|huren|huur|leie|leje)\b",
+                         re.I)
+
+
+def _t(text: str, lang: str, **kw: str) -> str:
+    out = _L(text)[lang]
+    for k, v in kw.items():
+        out = out.replace("{" + k + "}", v)
+    return re.sub(r"\s+", " ", out).strip()
+
+
+def _platform_intents(core: str, lang: str) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """(meanings, the split) for an ITEM + PLATFORM request; ([], None) for anything else."""
+    try:
+        from agora import platforms
+        sp = platforms.split(core)
+    except Exception:
+        return [], None
+    if sp is None:
+        return [], None
+    p = platforms.BY_KEY[sp.key]
+    if sp.item_kind == "game":
+        item = platforms.item_title(sp.item, sp.platform).rsplit(" for ", 1)[0] if sp.item != "games" else "games"
+        if sp.ambiguous:
+            w = {"game": 0.5, "bundle": 0.38, "digital": 0.12}
+        elif "digital" in sp.prefer:
+            w = {"digital": 0.8, "game": 0.12, "bundle": 0.08}
+        elif "disc" in sp.prefer:
+            w = {"game": 0.8, "bundle": 0.1, "digital": 0.1}
+        else:
+            # owner, 15 Nov: 'gta 6 ps5' is most likely the game, but the format / bundle is worth one question
+            w = {"game": 0.55, "bundle": 0.3, "digital": 0.15}
+        hunts = {"game": f"{sp.search} disc" if "disc" in sp.prefer else
+                 (sp.search if not sp.ambiguous else f"{sp.search} game"),
+                 "bundle": f"{sp.platform} {sp.item} bundle", "digital": f"{sp.search} digital code"}
+        why = {"game": "The game itself, for that console.", "bundle": "A console sold with the game.",
+               "digital": "A download code for the game."}
+        out = []
+        for key in ("game", "bundle", "digital"):
+            out.append({"id": f"p:{key}", "label": _t(_P_LABELS[key], lang, item=item, p=p.label),
+                        "kind": "product", "node": None, "node_label": None, "node_path": None, "huntable": True,
+                        "hunt": {"q": hunts[key], "cat": None, "intent": f"p:{key}"},
+                        "queries": {"en": [hunts[key]]}, "lanes": ["new", "used"], "domains": [],
+                        "look": ["shops", "marketplaces"], "why": why[key], "local": False, "travel": "",
+                        "place": None, "source": "platform", "w": w[key],
+                        "option": _t(_P_OPTIONS[key], lang, item=item, p=p.label),
+                        "hint": _t(_P_HINTS[key], lang)})
+        return out, {"item": sp.item, "platform": sp.platform, "label": p.label, "item_kind": "game",
+                     "display": item, "ambiguous": sp.ambiguous}
+    word = platforms.kind_word(sp.item_kind)
+    dev = platforms.device_title(sp.platform)
+    acc = {"id": "p:accessory", "label": _t(_P_LABELS["accessory"], lang, item=sp.item.capitalize(), p=dev),
+           "kind": "product", "node": None, "node_label": None, "node_path": None, "huntable": True,
+           "hunt": {"q": sp.search, "cat": None, "intent": "p:accessory"}, "queries": {"en": [sp.search]},
+           "lanes": ["new", "used"], "domains": [], "look": ["shops", "marketplaces"],
+           "why": f"A {word} made for that {p.kind}.", "local": False, "travel": "", "place": None,
+           "source": "platform", "w": 0.88}
+    device = dict(acc, id="p:device", label=_t(_P_LABELS["device"], lang, p=dev),
+                  hunt={"q": sp.platform, "cat": None, "intent": "p:device"}, queries={"en": [sp.platform]},
+                  why=f"Or the {p.kind} itself.", w=0.12)
+    return ([acc] if p.kind == "mount" else [acc, device]), {"item": sp.item, "platform": sp.platform, "label": p.label, "item_kind": sp.item_kind,
+                           "display": sp.item, "ambiguous": False}
+
+
+def ask_card(out: dict[str, Any], lang: str) -> dict[str, Any]:
+    """The ready-to-show question for the viewer's 'what do you mean?' card: {ask, question, options [{id, label,
+    hint, intent_id, hunt}], as_typed {label, hunt}}. ask = False when one meaning clearly wins."""
+    q = out.get("q") or ""
+    ranked = out.get("intents") or []
+    card: dict[str, Any] = {"ask": False, "question": None, "options": [],
+                            "as_typed": {"label": _t(_AS_TYPED, lang, q=q),
+                                         "hunt": {"q": q, "cat": None, "intent": None}}}
+    plat = out.get("platform")
+    rent = bool(_RENT_WORDS.search(q)) and bool(ranked) and ranked[0]["kind"] in ("product", "vehicle") \
+        and not out.get("concept") and not plat      # 'rent a car' has its own meanings (car rental, leasing)
+    if rent:
+        # renting and buying find different things (prices per month vs a price): only then is it asked
+        bare = re.sub(r"\s+", " ", _RENT_WORDS.sub(" ", q)).strip() or q
+        card.update(ask=True, question=_t(_ASK_RENT, lang), options=[
+            {"id": "rent", "label": {"en": "Rent it", "fi": "Vuokraa", "sv": "Hyr", "de": "Mieten",
+                                     "nl": "Huren"}[lang], "hint": None, "intent_id": None,
+             "hunt": {"q": q, "cat": None, "intent": None}},
+            {"id": "buy", "label": {"en": "Buy it", "fi": "Osta", "sv": "Köp", "de": "Kaufen", "nl": "Kopen"}[lang],
+             "hint": None, "intent_id": None, "hunt": {"q": bare, "cat": None, "intent": None}}])
+        return card
+    if out.get("dominant") or len(ranked) < 2:
+        return card
+    if plat and plat.get("item_kind") == "game":
+        question = _t(_ASK_PLATFORM, lang, item=plat["display"], p=plat["label"])
+    elif out.get("concept"):
+        question = _t(_ASK_WORDS, lang, q=q)
+    else:
+        question = _t(_ASK_DEFAULT, lang)
+    opts = []
+    for it in ranked:
+        hint = it.get("hint")
+        if hint is None:
+            look = [d for d in it.get("domains") or []][:2] or list(it.get("look") or [])[:2]
+            hint = it.get("why") or (", ".join(look) if look else None)
+        opts.append({"id": it["id"], "label": it.get("option") or it["label"], "hint": hint,
+                     "intent_id": it["id"], "hunt": it["hunt"], "confidence": it.get("confidence")})
+    card.update(ask=True, question=question, options=opts)
+    return card
+
+
 def interpret(q: str, country: str | None = None, lang: str | None = None, category: str | None = None, *,
               near: str | None = None, llm: bool = True) -> dict[str, Any]:
     """q -> {q, country, lang, place, concept, dominant, intents: [...2-5], next: [...]}. Intents are ranked,
@@ -1314,6 +1454,10 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
         nb = _node_brief(T, category, lang)
         out["category"] = {"id": nb["id"], "label": nb["label"], "path": nb["path"], "kind": nb["kind"],
                            "huntable": nb["huntable"]} if nb else None
+    if not intents:
+        intents, plat = _platform_intents(core or q, lang)     # 'gta 6 ps5': the game, a bundle, a code
+        if plat:
+            out["platform"] = plat
     if not intents:
         key, phrase, rest = match_concept(core)
         # a concept word buried in a longer specific request ('lunch box with 3 compartments') is not vague:
@@ -1348,7 +1492,7 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
             it["w"] *= 0.6
         if prod_cue and it["kind"] in ("product", "vehicle", "food"):
             it["w"] *= 1.6
-    if llm and not category and intents is not None:
+    if llm and not category and intents is not None and not out.get("platform"):
         g = _gemini(q, cc)
         if g:
             intents = _merge_gemini(T, intents, g, lang, cc, place=place, near=near, typed=q)
@@ -1386,6 +1530,7 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
     out["summary"] = summary(ranked[0], lang) if ranked else None
     # a place the viewer may want remembered as 'near you' (a destination like 'flight to berlin' is not home)
     out["remember"] = place if (place and ranked and ranked[0].get("local")) else None
+    out.update(ask_card(out, lang))
     return out
 
 
@@ -1431,8 +1576,8 @@ def summary(it: dict[str, Any], lang: str = "en") -> str:
 def plan(intent_id: str, q: str = "", *, country: str | None = None, lang: str | None = "en",
          near: str | None = None) -> dict[str, Any] | None:
     """One meaning by id ('c:lunch.places', 'n:<node id>'), rendered for q's place and the country."""
-    if not intent_id:
-        return None
+    if not intent_id or intent_id.startswith("p:"):
+        return None          # ITEM + PLATFORM meanings: their hunt words say it all ('gta 6 ps5 digital code')
     cc, lg = _cc(country), _lang(lang)
     T = _tax()
     place, place_cc, core = find_place(q or "")
