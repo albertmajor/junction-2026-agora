@@ -6,5 +6,12 @@
   "dy": 62,
   "w": 157,
   "flip": false,
-  "rot": 3
+  "rot": 3,
+  "banana": {
+    "dx": -94,
+    "dy": -64,
+    "w": 61,
+    "rot": 0,
+    "flip": false
+  }
 }

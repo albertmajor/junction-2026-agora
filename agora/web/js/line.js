@@ -17,6 +17,7 @@ const TIER = 64;          // full cutouts: collision distance and tier rise
 // stay in view: LIFT px of air between the axis and a plate's bottom (above a dense line's pip columns).
 const LIFT = 46;
 const BEAD = 30;          // dots: stack step
+const CALM_N = 60;                  // more offers than this on the line: no fly-ins, no per-arrival glides
 const RD_ZONE = 44, RD_COLS = 4, RD_STEP = 11, RD_MAX = 8;    // reading dots: reserved zone at the dearer end
 const HOLD_MS = 350;
 const COND_WORD = { n: 'new', r: 'refurb', u: 'used', rent: 'rental', svc: 'service' };
@@ -1377,7 +1378,11 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   // anything not on the line right now (pending a true cost, an extra in the true view) is hidden
   let inList = new Set(list);
   for (const o of objs.values()) if (!o.tray) o.el.classList.toggle('ln-gone', !inList.has(o) && !o.pending);
-  const rm = reduced();
+  // a live search lands hundreds of offers: past CALM_N on the line, new ones appear in place and the rest stop
+  // gliding on every arrival (hundreds of tiny dots in mid-flight read as glitter all over the page)
+  const calm = phase === 'hunt' && !order && list.length > CALM_N;
+  if (calm) dur = 0;
+  const rm = reduced() || calm;
   cheapKey = findCheap(list);
   const wo = objs.get(winner);
   whyCur = phase === 'hunt' && turned && vmode === 'true' && !focusing && wo && inList.has(wo) ? pickWhy(wo) : null;
@@ -1439,6 +1444,7 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
     o.el.style.setProperty('--capx', (o.kind === 'full' && phase === 'hunt' ? (o.capx || 0) : 0) + 'px');
     o.el.classList.toggle('raised', o.kind === 'full' && o.lvl > 0);
     if (o.fly && !rm) { flyIn(o, to); o.fly = false; return; }
+    if (o.fly && calm && !reduced()) oAnim(o, [{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
     o.fly = false; o.flyFrom = null;
     move(o, to, rm ? 0 : dur, stagger * i);
   });

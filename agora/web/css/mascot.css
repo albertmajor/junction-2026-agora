@@ -33,3 +33,8 @@ picture.mk img { display: block; width: 100%; height: auto; }
 @media (prefers-reduced-motion: reduce) {
   #reading .ll-peek, .vp-mk picture.mk { animation: none; }
 }
+
+/* the category bar now sits right above the panel: give the peeking monkey the head-room he needs (wide screens
+   only, where he shows), so the bar and its breadcrumb chip never cover him */
+@media (min-width: 800px) { #reading:has(.ll-peek) { margin-top: 40px; } }
+@media (min-width: 800px) { #reading[data-state="done"]:has(.ll-peek) { margin-top: 14px; } }

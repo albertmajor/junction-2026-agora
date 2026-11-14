@@ -167,7 +167,7 @@ export function mountMascot() {
 /** Where the start-screen monkey stands, relative to the search box (#ask): his left edge `dx` px right of the
  *  box's right edge, his feet `dy` px below the box's bottom; `w` = width in px; `flip` mirrors him; `rot` tilts.
  *  The owner sets these with the monkey devtool (?monkeydev=1 or Ctrl+Shift+M on localhost) and exports JSON. */
-export const MONKEY_PLACE = { dx: 69, dy: 62, w: 157, flip: false, rot: 3, banana: null };
+export const MONKEY_PLACE = { dx: 69, dy: 62, w: 157, flip: false, rot: 3, banana: { dx: -94, dy: -64, w: 61, rot: 0, flip: false } };
 // banana: null = mirror the monkey on the left of the box; or { dx, dy, w, rot, flip } measured from the box's LEFT edge
 // (dx = gap to its left, dy = from the box's bottom to the banana's bottom), set with the monkey devtool.
 const LOCAL = () => typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
