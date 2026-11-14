@@ -66,12 +66,12 @@ function bannerHtml() {
     ['Never blocked, never stalled', 'Every shop builds its pages its own way, and plenty block fast readers. Context.dev handles both, so one stubborn shop never holds up your answer.'],
     ['Finds shops you didn’t know', 'One reader for every kind of page: search finds the shops for your question, product and extract read their pages, scrape turns marketplace searches into rows we can rank.'],
   ];
-  return `<aside class="ld-band t-ink ld-cd" id="ld-cd" aria-labelledby="ld-cd-h">
+  return `<aside class="ld-band t-quiet ld-cd" id="ld-cd" aria-labelledby="ld-cd-h">
     <div class="ld-in">
       <div class="ld-cd-top ld-rv">
         <div>
           <p class="ld-kicker">Powered by <a class="ld-cd-mark" href="https://context.dev" target="_blank" rel="noopener">${fav('context.dev', 22)}Context.dev</a></p>
-          <h2 class="ld-h ld-h-xl" id="ld-cd-h">Every shop, read for you. <span>Context.dev reads the pages so you don’t have to open them.</span></h2>
+          <h2 class="ld-h ld-cd-h" id="ld-cd-h">PriceMonkey runs on Context.dev. <span>It reads every shop’s pages for you, live, while you watch.</span></h2>
         </div>
         <div class="ld-cd-count"><p><b>~${perQ('pages')}</b><span>pages read per question</span></p><p><b>${perQ('sites')}</b><span>sites on average</span></p><p class="ld-cd-live"><span class="ld-pulse" aria-hidden="true"></span>live, while you watch · across our first ${READ.hunts} hunts</p></div>
       </div>
