@@ -99,7 +99,10 @@ def tokens(s: str) -> list[str]:
 
 class Taxonomy:
     def __init__(self, doc: dict[str, Any]) -> None:
-        self.meta = {k: v for k, v in doc.items() if k != "nodes"}
+        self.meta = {k: v for k, v in doc.items() if k not in ("nodes", "aliases", "missing_en")}
+        # ids merged away by a rebuild (a shop-menu node folded into its English equivalent) keep resolving
+        self.aliases: dict[str, str] = dict(doc.get("aliases") or {})
+        self.missing_en: list[str] = list(doc.get("missing_en") or [])
         rows = doc["nodes"]
         self.ids: list[str] = [r["i"] for r in rows]
         self.parent: list[int] = [r["p"] for r in rows]
@@ -132,9 +135,23 @@ class Taxonomy:
         return len(self.ids)
 
     def _i(self, nid: str | int) -> int:
-        return nid if isinstance(nid, int) else self.by_id[nid]
+        if isinstance(nid, int):
+            return nid
+        i = self.by_id.get(nid)
+        if i is None:
+            i = self.by_id[self.aliases[nid]] if nid in self.aliases else self.by_id[nid]
+        return i
+
+    def resolve(self, nid: str) -> str | None:
+        """The current id for nid (itself, or the node an old id was merged into); None if unknown."""
+        try:
+            return self.ids[self._i(nid)]
+        except KeyError:
+            return None
 
     def label(self, i: int, lang: str = "en") -> str:
+        """The label in lang, else English; a foreign label only when the node has nothing else (the build lists
+        those ids in tree.json "missing_en")."""
         lab = self.labels[i]
         return lab.get(lang) or lab.get("en") or next(iter(lab.values()), self.ids[i])
 
@@ -339,6 +356,7 @@ class Taxonomy:
                 "per_root": per_root, "kinds": dict(kinds), "sizes": dict(sizes),
                 "labels_per_lang": dict(lang_cov.most_common()),
                 "with_where": sum(1 for w in self.where_own if w),
+                "missing_en": len(self.missing_en), "aliases": len(self.aliases),
                 "version": self.meta.get("version")}
 
 

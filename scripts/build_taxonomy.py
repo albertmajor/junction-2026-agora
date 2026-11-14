@@ -1170,17 +1170,19 @@ def menu_junk(label: str, site: str) -> str | None:
 class Speller:
     """Puts back letters a URL slug lost: 'Waeschetonne' -> 'Wäschetonne', 'Jarjestelmakamerat' ->
     'Järjestelmäkamerat', 'Fenykepezogepek' -> 'Fényképezőgépek', using the words the tree already has in that
-    language (whole word, else a compound of two known words; German ae/oe/ue as a last resort)."""
+    language (whole word, else a compound of two known words; German ae/oe as a last resort)."""
 
     def __init__(self, t: Tree) -> None:
         forms: dict[str, dict[str, collections.Counter]] = collections.defaultdict(
             lambda: collections.defaultdict(collections.Counter))
         self.ascii_en: set[str] = set()
+        self.exact: dict[str, set[str]] = collections.defaultdict(set)
         for n in t.nodes.values():
             for lang, lab in n["labels"].items():
                 for w in re.findall(r"[^\W\d_]+", lab.lower()):
                     if lang == "en":
                         self.ascii_en.add(w)
+                    self.exact[lang].add(w)
                     forms[lang][fold(w, lang)][w] += 1
         self.forms = {lang: {k: c.most_common(1)[0][0] for k, c in d.items()} for lang, d in forms.items()}
 
@@ -1197,8 +1199,12 @@ class Speller:
                 if b in fm and (a in fm or (a[-1] in "sn" and a[:-1] in fm)):
                     got = (fm.get(a) or fm[a[:-1]] + a[-1]) + fm[b]
                     break
-        if not got and lang == "de" and re.search("ae|oe|ue", low) and low not in self.ascii_en:
-            got = re.sub(r"(?<![aeiouq])ue", "ü", re.sub(r"(?<![aeiou])oe", "ö", re.sub(r"(?<![aeiou])ae", "ä", low)))
+        if not got and lang == "de" and re.search("ae|oe", low) and \
+                not any(low in ws for ws in self.exact.values()) and \
+                not any(low[:i] in self.exact[lang] and low[i:] in self.exact[lang] for i in range(3, len(low) - 2)):
+            # (not for two plain known words: 'Sofaelemente' = 'Sofa' + 'elemente')
+            # ae/oe only: 'ue' is too often a real 'ue' (Blues, Duett); ü words are found through the vocabulary
+            got = re.sub(r"(?<![aeiou])oe", "ö", re.sub(r"(?<![aeiou])ae", "ä", low))
         if not got or got.isascii():
             return w
         return got[:1].upper() + got[1:] if w[:1].isupper() else got
@@ -1238,6 +1244,11 @@ MENU_TOP: dict[str, dict[str, str | None]] = {
 UNPLACED: dict[str, list[tuple]] = collections.defaultdict(list)     # for inspection (not exported)
 SERVICE_WORDS = re.compile(r"dienst|palvelu|tjänst|service|vakmens|handwerk|hantverk|reparat|korjaus|unterricht|"
                            r"lessen|opetus|kurs|cursus|lektion", re.I)
+
+
+def _lane(t: Tree, node: str, lane: str) -> str:
+    """A marketplace's service section ('Diensten en vakmensen') is a service lane, not 'used'."""
+    return "service" if lane in ("new", "used") and t.root_of(node) in SERVICE_ROOTS else lane
 
 
 def build_menus(t: Tree) -> dict[str, dict]:
@@ -1284,7 +1295,7 @@ def build_menus(t: Tree) -> dict[str, dict]:
                 mapped[path] = parent_node
                 if parent_node:
                     t.merge_into(parent_node, {}, list(labels.values()), src=None)
-                    t.add_where(parent_node, domain, lane)
+                    t.add_where(parent_node, domain, _lane(t, parent_node, lane))
                 facets += 1
                 continue
             top = MENU_TOP.get(key_, {})
@@ -1293,7 +1304,7 @@ def build_menus(t: Tree) -> dict[str, dict]:
                 mapped[path] = node
                 if node:
                     t.merge_into(node, {}, [lab0], src="menu:" + key_)
-                    t.add_where(node, domain, lane)
+                    t.add_where(node, domain, _lane(t, node, lane))
                     matched += 1
                 else:
                     dropped.add(path)
@@ -1348,7 +1359,7 @@ def build_menus(t: Tree) -> dict[str, dict]:
                     added += 1
             mapped[path] = node
             if node:
-                t.add_where(node, domain, lane)
+                t.add_where(node, domain, _lane(t, node, lane))
         stats[key_] = {"items": len(items), "matched": matched, "added": added, "unplaced": unplaced,
                        "junk": junk, "facets": facets}
         print(f"menu {key_}: {len(items)} items, {matched} matched, {added} added, {unplaced} unplaced, "
@@ -1367,6 +1378,11 @@ def _rtok(s: str, lang: str = "en") -> set[str]:
 
 
 REGROUP_MIN = 0.55
+# groups made for the trades A-Z list whose words are too general to attract other sources' entries
+REGROUP_SKIP = {"trades.surveys-planning-inspections", "trades.merchants-trade-suppliers",
+                "trades.restoration-specialist-crafts", "trades.energy-renewables", "trades.driveways-paving-fencing",
+                "trades.garden-buildings-structures", "trades.damp-flood-structural-repairs",
+                "trades.kitchens-bedrooms-fitted-furniture", "trades.accessibility-mobility-adaptations"}
 
 
 def regroup_services(t: Tree) -> int:
@@ -1375,7 +1391,7 @@ def regroup_services(t: Tree) -> int:
     -> HVAC), by weighted token overlap with the curated labels and synonyms."""
     idx: dict[str, set[str]] = collections.defaultdict(set)
     for nid, n in t.nodes.items():
-        if "curated" in n["src"] and n["root"] in SERVICE_ROOTS and n["depth"] >= 2:
+        if "curated" in n["src"] and n["root"] in SERVICE_ROOTS and n["depth"] >= 2 and nid not in REGROUP_SKIP:
             for lang, lab in n["labels"].items():
                 if lang not in ("en", "fi", "de", "nl", "sv"):
                     continue
@@ -1432,6 +1448,23 @@ FUNC_WORDS = {
     "fi": {"ja": "&", "tai": "or"}, "hu": {"és": "&", "es": "&", "vagy": "or"},
     "da": {"og": "&", "med": "with", "til": "for"}, "nb": {"og": "&", "med": "with", "til": "for"},
 }
+# A few shop-menu words the parallel labels never show on their own.
+SEED_WORDS = {
+    "de": {"zubehör": "Accessories", "ersatzteile": "Spare parts", "damen": "Women's", "herren": "Men's",
+           "kinder": "Kids'", "mädchen": "Girls'", "jungen": "Boys'", "baby": "Baby", "pflege": "Care",
+           "objektiv": "Lenses", "objektive": "Lenses"},
+    "fi": {"tarvikkeet": "Accessories", "lisätarvikkeet": "Accessories", "varaosat": "Spare parts",
+           "naisten": "Women's", "miesten": "Men's", "lasten": "Children's", "vauvojen": "Baby", "hoito": "Care",
+           "objektiivit": "Lenses"},
+    "sv": {"tillbehör": "Accessories", "reservdelar": "Spare parts", "dam": "Women's", "herr": "Men's",
+           "barn": "Children's", "damkläder": "Women's clothing", "herrkläder": "Men's clothing",
+           "barnkläder": "Children's clothing"},
+    "nl": {"toebehoren": "Accessories", "accessoires": "Accessories", "onderdelen": "Parts", "dames": "Women's",
+           "heren": "Men's", "kinderen": "Children's"},
+    "hu": {"kiegészítők": "Accessories", "tartozékok": "Accessories", "alkatrészek": "Parts", "női": "Women's",
+           "férfi": "Men's", "gyerek": "Children's"},
+}
+MIN_EVIDENCE = 6
 NO_TRANSLATION = {"de": {"ab", "bis", "andere", "weitere"}, "fi": {"muut"}, "sv": {"övriga", "ovriga"},
                   "nl": {"overige"}}
 SMALL_EN = {"with", "without", "for", "of", "in", "from", "or", "and", "&", "the", "a"}
@@ -1464,8 +1497,7 @@ class Translator:
     word must be known, else None (no guessing)."""
 
     def __init__(self, t: Tree) -> None:
-        words: dict[str, dict[str, collections.Counter]] = collections.defaultdict(
-            lambda: collections.defaultdict(collections.Counter))
+        pairs: list[tuple[str, list[str], list[str]]] = []      # (lang, foreign words, English words)
         self.en_vocab: set[str] = set()
         for nid, n in t.nodes.items():
             en = n["labels"].get("en")
@@ -1477,30 +1509,95 @@ class Translator:
                 if lang == "en":
                     continue
                 lp = _parts(lab, lang)
-                if len(lp) != len(ep):
+                if len(lp) == len(ep):
+                    pairs += [(lang, _content(x, lang), _content(e, "en")) for x, e in zip(lp, ep)]
+        # pass 1: one word <-> one word (3 points), one compound <-> 2-3 English words (2 points)
+        words: dict[str, dict[str, collections.Counter]] = collections.defaultdict(
+            lambda: collections.defaultdict(collections.Counter))
+        for lang, xw, ew in pairs:
+            if len(xw) == 1 and len(ew) == 1:
+                words[lang][key(xw[0], lang)][ew[0]] += 3
+            elif len(xw) == 1 and 2 <= len(ew) <= 3:
+                words[lang][key(xw[0], lang)][" ".join(ew)] += 2
+        self.words = self._decide(words)
+        # pass 2: two-word phrases where one word is already known give the other one, in either order
+        # ('Zubehör für Kameras' ~ 'Camera Accessories': kamera = camera, so zubehör = accessories)
+        for lang, xw, ew in pairs:
+            if len(xw) != 2 or len(ew) != 2:
+                continue
+            d = self.words.get(lang, {})
+            for i in (0, 1):
+                known = d.get(key(xw[i], lang))
+                if not known or " " in known:
                     continue
-                for x, e in zip(lp, ep):
-                    xw, ew = _content(x, lang), _content(e, "en")
-                    # evidence: 1 word <-> 1 word = 3, 1 word <-> 2-3 words (a compound) = 2, word pairs of
-                    # equally long phrases = 1. A translation needs 3 points and half of the word's evidence.
-                    if len(xw) == 1 and len(ew) == 1:
-                        words[lang][key(xw[0], lang)][ew[0]] += 3
-                    elif len(xw) == 1 and 2 <= len(ew) <= 3:
-                        words[lang][key(xw[0], lang)][" ".join(ew)] += 2
-                    elif len(xw) == len(ew) <= 3:
-                        for a, b in zip(xw, ew):
-                            words[lang][key(a, lang)][b] += 1
-        self.words = {}
+                for j in (0, 1):
+                    if key(ew[j]) == key(known):
+                        words[lang][key(xw[1 - i], lang)][ew[1 - j]] += 3
+                        break
+        for lang, seed in SEED_WORDS.items():
+            for w, en in seed.items():
+                words[lang][key(w, lang)][en] += 100
+        self.words = self._decide(words)
+        self.sorted_keys = {lang: sorted(d) for lang, d in self.words.items()}
+        self.rev_keys = {lang: sorted(k[::-1] for k in d if " " not in k) for lang, d in self.words.items()}
+
+    @staticmethod
+    def _decide(words: dict) -> dict[str, dict[str, str]]:
+        """A translation needs MIN_EVIDENCE points (two clean alignments) and 60% of the word's evidence."""
+        out = {}
         for lang, d in words.items():
             ok = {}
             for k, c in d.items():
                 best, n_ = c.most_common(1)[0]
-                if k and n_ >= 3 and n_ >= 0.5 * sum(c.values()):
+                if k and n_ >= MIN_EVIDENCE and n_ >= 0.6 * sum(c.values()):
                     ok[k] = best
-            self.words[lang] = ok
+            out[lang] = ok
+        return out
+
+    def _lookup(self, k: str, lang: str) -> str | None:
+        """Exact, else the same word in another inflection ('kylpyhuone' ~ 'kylpyhuoneen')."""
+        d = self.words.get(lang, {})
+        if k in d:
+            return d[k]
+        if len(k) < 6:
+            return None
+        keys_ = self.sorted_keys.get(lang, [])
+        i = bisect.bisect_left(keys_, k[:max(5, int(0.8 * len(k)))])
+        best = None
+        while i < len(keys_) and keys_[i].startswith(k[:max(5, int(0.8 * len(k)))]):
+            if " " not in keys_[i] and _tok_eq(k, keys_[i]) and (best is None or len(keys_[i]) < len(best)):
+                best = keys_[i]
+            i += 1
+        return d[best] if best else None
+
+    def _head(self, k: str, lang: str) -> str | None:
+        """A word only seen as the head of compounds: 'objektiv' from 'kameraobjektiv' = 'Camera Lenses',
+        'teleobjektiv' = 'Telephoto Lenses' -> 'Lenses' (two compounds must agree on the English head)."""
+        if len(k) < 6:
+            return None
+        rk, keys_ = k[::-1], self.rev_keys.get(lang, [])
+        i = bisect.bisect_left(keys_, rk)
+        heads: collections.Counter = collections.Counter()
+        while i < len(keys_) and keys_[i].startswith(rk):
+            full = keys_[i][::-1]
+            if len(full) - len(k) >= 3:
+                en = self.words[lang][full]
+                if " " in en:
+                    heads[en.rsplit(" ", 1)[1]] += 1
+            i += 1
+        if len(heads) == 1 and sum(heads.values()) >= 2:
+            return next(iter(heads))
+        return None
 
     def _word(self, w: str, lang: str) -> str | None:
         low = w.lower()
+        if lang == "nl" and low.endswith("'s") and len(low) > 3:        # Dutch plural "cd's", "pda's"
+            base = self._word(w[:-2], lang)
+            if not base or " " in base or base.lower().endswith("s"):
+                return base
+            if len(base) <= 3 and base.isalpha():
+                return base.upper() + "s"
+            return base[:-1] + "ies" if base.endswith("y") else base + "s"
         fw = FUNC_WORDS.get(lang, {})
         if low in fw:
             return fw[low]
@@ -1510,10 +1607,14 @@ class Translator:
             return w.upper() if len(w) <= 4 and w.isalnum() else w
         d = self.words.get(lang, {})
         k = key(w, lang)
-        if k in d:
-            return d[k]
+        got = self._lookup(k, lang)
+        if got:
+            return got
         if low in self.en_vocab:
             return w
+        head = self._head(k, lang)
+        if head:
+            return head
         if len(k) >= 10:                              # compound of two known words: modifier + head
             for i in range(5, len(k) - 4):
                 a, b = k[:i], k[i:]
@@ -1525,6 +1626,8 @@ class Translator:
     def translate(self, label: str, lang: str, *, title: bool) -> str | None:
         if lang == "en":
             return label
+        if lang == "nl":
+            label = re.sub(r"(\w) s\b", r"\1's", label)        # slug lost the apostrophe: "Cd s" = "Cd's"
         out: list[str] = []
         for w in _WORDS_RX.findall(label):
             if w in ",&+/":
@@ -1538,6 +1641,21 @@ class Translator:
             if out[i] not in ",&/" and out[i].lower() not in SMALL_EN and out[i + 1] not in ",&/" \
                     and out[i + 1].lower() not in SMALL_EN:
                 out[i] = _singular(out[i])
+        if title:                                     # product categories are plural: '4K Cameras', not '4K Camera'
+            after_prep = False                        # 'Fans with Water': only the head before 'with' counts
+            for i in range(len(out)):
+                if out[i] in ",&/":
+                    after_prep = False
+                    continue
+                if out[i].lower() in SMALL_EN:
+                    after_prep = True
+                    continue
+                last = i == len(out) - 1 or out[i + 1] in ",&/" or out[i + 1].lower() in SMALL_EN
+                w_ = out[i].rsplit(" ", 1)[-1]
+                if last and not after_prep and w_.isalpha() and not w_.lower().endswith("s"):
+                    pl = w_[:-1] + "ies" if w_.endswith("y") and w_[-2:-1] not in "aeiou" else w_ + "s"
+                    if pl.lower() in self.en_vocab:
+                        out[i] = out[i][: len(out[i]) - len(w_)] + pl
         text = " ".join(out).replace(" ,", ",").replace(" / ", "/")
         ws: list[str] = []
         for w in text.split():
@@ -1595,11 +1713,36 @@ def _equivalent(t: Tree, nid: str) -> str | None:
     return best[1] if best else None
 
 
+SPEC_FACET = re.compile(r"\d\s*(cm|mm|zoll|tuumaa|inch|gb|tb|hz|w|kg|l)\b|\d{3,}", re.I)
+
+
+def dissolve_wrapper(t: Tree, nid: str) -> bool:
+    """A menu wrapper with no English name ('Ruoanlaitto' > 'Steam Ovens'): its English-named children move up to
+    its parent (merging with a same-named sibling there; a generic 'Accessories' folds into the parent), and the
+    wrapper's labels become synonyms of the parent."""
+    n = t.nodes[nid]
+    par = n["parent"]
+    if par is None or any("en" not in t.nodes[c]["labels"] for c in n["children"]):
+        return False
+    for c in list(n["children"]):
+        k = key(t.nodes[c]["labels"]["en"])
+        sib = sorted(x for x in t.nodes[par]["children"] if x != nid and x != c
+                     and key(t.nodes[x]["labels"].get("en", "")) == k)
+        if is_generic(k) or k == key(t.nodes[par]["labels"].get("en", "")):
+            t.absorb(c, par, same=False)
+        elif sib:
+            t.absorb(c, sib[0], same=True)
+        else:
+            t.move(c, par)
+    t.absorb(nid, par, same=False)
+    return True
+
+
 def localise_menu_nodes(t: Tree) -> dict:
     """Every node a shop menu added gets an English label: merged into the existing node with the same meaning,
     else translated from the tree's multilingual labels. A leaf that still has no English name is a facet of its
-    parent ('Dji kameras', 'Brommers puch'): it folds into the parent as a synonym. Only nodes with children keep
-    a foreign label (listed in tree.json "missing_en")."""
+    parent ('Dji kameras', 'Brommers puch'): it folds into the parent as a synonym; a wrapper without an English
+    name is dissolved into its parent. Whatever still has no English label is listed in tree.json "missing_en"."""
     tr = Translator(t)
     st: collections.Counter = collections.Counter()
     order = sorted((nid for nid in t.nodes if nid.startswith("m:")), key=lambda x: (-t.depth(x), x))
@@ -1616,8 +1759,10 @@ def localise_menu_nodes(t: Tree) -> dict:
             continue
         title = n["kind"] not in ("service",)
         en = next((x for lang, lab in n["labels"].items() if (x := tr.translate(lab, lang, title=title))), None)
-        if en and not n["children"] and not re.search(r"[a-z]{3,}", en):
-            en = None                   # 'HDMI', 'DDR5', '4X': a spec facet of the parent, not a category
+        if en and not n["children"] and (not re.search(r"[a-z]{3,}", en) or SPEC_FACET.search(en) or
+                                         " " not in en.strip() and en == next(iter(n["labels"].values())) and
+                                         not t.keys.get(("en", key(en)))):
+            en = None   # 'HDMI', 'Dishwashers 45cm': a spec facet; 'Smart', 'Alpine': a brand that is no category
         if en:
             k, par = key(en), n["parent"]
             if k == key(t.nodes[par]["labels"].get("en", "")):
@@ -1637,7 +1782,10 @@ def localise_menu_nodes(t: Tree) -> dict:
             t.absorb(nid, n["parent"], same=False)
             st["folded"] += 1
             continue
-        st["kept_foreign"] += 1
+        if dissolve_wrapper(t, nid):
+            st["dissolved"] += 1
+        else:
+            st["kept_foreign"] += 1
     print("localise:", dict(st))
     return dict(st)
 
@@ -1694,9 +1842,10 @@ def shopper_name(label: str) -> str | None:
                flags=re.I)
     m = re.match(rf"^({_ACT})(?:(?:,| and) ({_ACT}))?(?: and associated)?(?: services?| works?)? (?:of|for|on|to|related to)"
                  rf" (?:the )?(.+)$", s, flags=re.I)
-    if m and len(m.group(3).split()) <= 5:
+    if m and len(m.group(3).split()) <= 4 and not re.search(r"\b(relating|related|for|of|to|in|with|on|by)\b",
+                                                           m.group(3), re.I):
         acts = m.group(1).lower() + (" & " + m.group(2).lower() if m.group(2) else "")
-        s = f"{m.group(3)} {acts}"
+        s = f"{_singular(m.group(3))} {acts}"           # 'Microcomputer repair & maintenance'
     m = re.match(r"^services related to (.+)$", s, flags=re.I)
     if m:
         s = m.group(1) + " services"
@@ -1707,8 +1856,12 @@ def shopper_name(label: str) -> str | None:
         last = body.split()[-1].lower()
         if last.endswith(("al", "ic", "ive", "ary", "ory")):
             s = body + " services" if s.lower().endswith("activities") else s
-        elif len(body.split()) >= 2 or last.endswith("ing"):
+        elif re.search(r"(ing|tion|sion|ment|ance|ence|ery|cy|ure|sis|age|care|work|repair|maintenance|advice|design|"
+                       r"support|training|transport|aid|research|hire|rental|education|therapy|surgery|"
+                       r"telecommunications|insurance|accommodation|security)$", last):
             s = body
+        elif s.lower().endswith("activities"):
+            s = body + " services"
     s = re.sub(r"\b(repair|maintenance|installation|construction|insulation|building|demolition) works?$", r"\1", s,
                flags=re.I)
     s = re.sub(r"\s+and\s+", " & ", s)
@@ -1810,6 +1963,20 @@ def assign_kinds_sizes(t: Tree) -> None:
 KIND_CODE = {"product": "p", "service": "s", "digital": "d", "vehicle": "v", "property": "r", "food": "f"}
 
 
+def previous_tree() -> tuple[dict[str, str | None], dict[str, str]]:
+    """(id -> parent id, aliases) of the tree.json currently on disk, if any."""
+    for name in ("tree.json", "tree.json.gz"):
+        p = OUT_DIR / name
+        if p.exists():
+            raw = p.read_bytes()
+            if raw[:2] == b"\x1f\x8b":
+                raw = gzip.decompress(raw)
+            doc = json.loads(raw)
+            rows = doc.get("nodes", [])
+            return ({r["i"]: (rows[r["p"]]["i"] if r["p"] >= 0 else None) for r in rows}, dict(doc.get("aliases") or {}))
+    return {}, {}
+
+
 def export(t: Tree, menu_stats: dict, cleanup: dict | None = None) -> pathlib.Path:
     order: list[str] = []
 
@@ -1840,14 +2007,31 @@ def export(t: Tree, menu_stats: dict, cleanup: dict | None = None) -> pathlib.Pa
         if n["where"]:
             row["w"] = n["where"]
         rows.append(row)
+    def live(x: str | None) -> str | None:
+        seen = set()
+        while x is not None and x not in t.nodes and x in t.aliases and x not in seen:
+            seen.add(x)
+            x = t.aliases[x]
+        return x if x in t.nodes else None
+
     aliases = {}
     for old, new in {**curated.ID_ALIASES, **t.aliases}.items():
-        seen = set()
-        while new not in t.nodes and new in t.aliases and new not in seen:
-            seen.add(new)
-            new = t.aliases[new]
-        if new in t.nodes and old not in t.nodes:
-            aliases[old] = new
+        if old not in t.nodes and live(new):
+            aliases[old] = live(new)
+    # ids the previous tree.json served keep resolving: to what they were merged into, else (a dropped junk page,
+    # a facet folded at menu time) to their nearest surviving ancestor
+    prev_parent, prev_alias = previous_tree()
+    for old in list(prev_parent) + list(prev_alias):
+        if old in t.nodes or old in aliases:
+            continue
+        x, seen = old, set()
+        while x is not None and x not in seen:
+            seen.add(x)
+            got = live(x) or aliases.get(x)
+            if got:
+                aliases[old] = got
+                break
+            x = prev_alias.get(x) or prev_parent.get(x)
     missing_en = [nid for nid in order if "en" not in t.nodes[nid]["labels"]]
     depth = max(t.depth(n) for n in t.nodes)
     lang_cov = {lang: sum(1 for n in t.nodes.values() if lang in n["labels"]) for lang in LANGS}
@@ -1887,8 +2071,8 @@ def build() -> pathlib.Path:
     build_cpv(t)
     menu_stats = build_menus(t)
     cleanup = {"localise": localise_menu_nodes(t)}
-    cleanup["trades_bucket_grouped"] = regroup_trades_bucket(t)
     regroup_services(t)
+    cleanup["trades_bucket_grouped"] = regroup_trades_bucket(t)
     cleanup["official_names_shortened"] = shorten_official_labels(t)
     assign_kinds_sizes(t)
     return export(t, menu_stats, cleanup)

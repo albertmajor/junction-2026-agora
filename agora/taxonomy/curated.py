@@ -711,6 +711,18 @@ ID_ALIASES: dict[str, str] = {
 # these rules spread it over the curated groups. First match wins (lower-case English label, regex search).
 TRADE_BUCKET_RULES: list[tuple[str, str]] = [
     (r"^(emergency )?miscellaneous|^hire services$|^restoration$|^refurbishments$|^glass$|^fault finding$", "-fold"),
+    # not trades at all: other roots
+    (r"chauffeur|minibus taxi|\btaxi", "transport.taxi-ride-hailing"),
+    (r"commercial deliveries", "transport.parcel-courier-delivery"),
+    (r"corporate filming|filming", "events-leisure.photography-video"),
+    (r"mobile disco|\bdj", "events-leisure.djs-entertainers"),
+    (r"events setting|marquee", "events-leisure.party-supplies-rentals"),
+    (r"landlord|commercial agents|letting", "property.property-management"),
+    (r"hot tub|spas?$|swimming pool", "home-services.garden-outdoor.pool-maintenance"),
+    (r"auto glass", "auto-services.windscreen-repair"),
+    (r"diagnostic", "auto-services.car-repair-servicing"),
+    (r"moving transport|umzug", "home-services.moving-removals"),
+    (r"shot blasting|sand blasting", "home-services.cleaning.pressure-washing"),
     # vehicles
     (r"accident repair|dent repair|smart repairs|vehicle paint|alloy wheel|wheel refurb|vehicle wrapping|"
      r"vehicle signwriting|vehicle window tinting", "auto-services.bodywork-paint"),
@@ -745,7 +757,7 @@ TRADE_BUCKET_RULES: list[tuple[str, str]] = [
     (r"heat pump|gshp", "trades.heating-ventilation-air-conditioning.heat-pump-installation"),
     (r"boiler", "trades.heating-ventilation-air-conditioning.boiler-service"),
     (r"air conditioning|refrigeration", "trades.heating-ventilation-air-conditioning.air-conditioning-installation"),
-    (r"radiator|central heating|underfloor|\bufh\b|thermostat|\btrv\b|hive heating|tado|lpg|oil tank|oil central|"
+    (r"radiator|central heating|smart heating|underfloor|\bufh\b|thermostat|\btrv\b|hive heating|tado|lpg|oil tank|oil central|"
      r"storage heating|electric heating|heater repair|power flush|extractor fan|fume extraction|ventilation",
      "trades.heating-ventilation-air-conditioning"),
     (r"electric vehicle|ev charg", "trades.electrical-work.ev-charger-installation"),
@@ -755,10 +767,11 @@ TRADE_BUCKET_RULES: list[tuple[str, str]] = [
      "trades.energy-renewables"),
     (r"rewiring|socket|fuseboard|consumer unit|electric gate|electric shower|ceiling fan|cabling$|^cabling|wiring",
      "trades.electrical-work"),
-    (r"drain|sewer|soakaway|sewage|septic|macerator|soil stack", "trades.plumbing.drain-unblocking"),
-    (r"bath|shower|wet room|toilet|basin|sink", "trades.plumbing.bathroom-renovation"),
+    (r"drain|sewer|soakaway|sewage|septic|macerator|soil stack|blocked loo", "trades.plumbing.drain-unblocking"),
+    (r"bath|shower|wet room|toilet|basin|sink|mastic", "trades.plumbing.bathroom-renovation"),
     (r"immersion|hot water|unvented", "trades.plumbing.water-heater-installation"),
-    (r"pipe|pipework|\btap\b|tap |water|leak detection|moling|plumb|dishwasher draining", "trades.plumbing"),
+    (r"pipe|pipework|\btap\b|tap |water|leak detection|moling|plumb|dishwasher draining|purifier|well pump",
+     "trades.plumbing"),
     # roofs (after conservatories), windows, doors
     (r"roof|fascia|soffit|gutter|lead ?flashing|leadwork|lead roofer|ridge|dry verge|dormer|thatch|slate|plain tiles|"
      r"skylight|velux|felt lap", "trades.roofing"),
@@ -766,17 +779,17 @@ TRADE_BUCKET_RULES: list[tuple[str, str]] = [
      "trades.windows-doors-conservatories"),
     (r"glass|glazing|mirror|splashback", "trades.glaziers"),
     # walls, floors, finishes
-    (r"plaster|render|pebble dash|k rend|monocouche|skim|coving|dry ?lining|drywall|sheetrock|stud|partition|artex|"
-     r"ceiling|screed|tape and jointing|lath|silicone", "trades.plastering-drylining"),
+    (r"plaster|render|pebble dash|k rend|monocouche|skim|coving|dry ?lining|drywall|sheetrock|\bstud\b|partition|artex|"
+     r"ceiling|screed|tape and jointing|\blath|silicone|cladding|ply boarding", "trades.plastering-drylining"),
     (r"brick|repointing|stone|flint|lime mortar|masonry|concret|core drilling|diamond drilling|memorial|gravestone",
      "trades.masonry-bricklaying"),
     (r"tile|tiling|mosaic", "trades.tiling"),
     (r"carpet|floor|laminate|skirting", "trades.flooring"),
     # furniture, joinery, outside
-    (r"kitchen|worktop|wardrobe|bedroom|built in|fitted|media wall|alcove|cupboard|shelving|under stairs|"
+    (r"kitchen|worktop|wardrobe|bedroom|built in|fitted|media wall|alcove|cupboard|shelving|under stairs|bookcase|racking|"
      r"bespoke (dining|living|bedroom|pine|oak|furniture)", "trades.kitchens-bedrooms-fitted-furniture"),
     (r"restor|french polish|antique|refurbish|furniture (painting|spray|strip)|stripper|stripping|leather repair|"
-     r"chair repair|wood turning|stone carving|stained glass", "trades.restoration-specialist-crafts"),
+     r"chair repair|wood turning|stone carving|stained glass|bed frame|surface repair", "trades.restoration-specialist-crafts"),
     (r"shed|summer ?house|log cabin|gazebo|pergola|garden room|garden studio|garden structure|outbuilding|greenhouse|"
      r"polytunnel|car ?port|aviar|stable|workshop builder|concrete garage|play area|sail shade|timber structure|"
      r"oak framing", "trades.garden-buildings-structures"),
@@ -784,7 +797,8 @@ TRADE_BUCKET_RULES: list[tuple[str, str]] = [
     (r"driveway|paving|patio|tarmac|resin|gravel|imprinted|kerb|fenc|gate|railing|trellis|sleepers|road marking|"
      r"surfacing|block paving", "trades.driveways-paving-fencing"),
     (r"joiner|joinery|carpent|stair|handrail|balustrade|architrave|woodwork|roof truss|wood", "trades.carpentry-joinery"),
-    (r"loft|garage conversion|basement|barn conversion|extension|new build|renovation|eco builder|sustainable|"
+    (r"garage demolition", "trades.building-renovation.demolition"),
+    (r"loft|attic|garage conversion|basement|barn conversion|extension|new build|renovation|eco builder|sustainable|"
      r"builders?$|agricultural build|listed building|heritage|property maintenance|dormer|rsj beam",
      "trades.building-renovation"),
     (r"grass|turf|mulch|weed|scarification|stump|crown (reduction|thinning)|grounds maintenance|garden maintenance|"
@@ -795,12 +809,12 @@ TRADE_BUCKET_RULES: list[tuple[str, str]] = [
     (r"dishwasher|fridge|tumble dryer|oven|cooker|vacuum|appliance repair", "home-services.appliance-electronics-repair.home-appliance-repair"),
     (r"video audio", "home-services.appliance-electronics-repair.tv-audio-repair"),
     (r"computer maintenance|hardware consult", "home-services.appliance-electronics-repair.computer-repair"),
-    (r"aerial|satellite|freesat|freeview|television point|telephone|broadband|network|wifi|volp|voip|fixed lines|epos|"
+    (r"aerial|satellite|audio visual|freesat|freeview|television point|telephone|broadband|network|wifi|volp|voip|fixed lines|epos|"
      r"\bit\b", "trades.tv-aerials-telecom-networking"),
     (r"metal|steel|blacksmith|weld|laser cutting", "trades.welding-metalwork"),
     (r"digger|cherry picker|grab hire|hire", "trades.tool-equipment-hire"),
     (r"borehole|groundwork|excavat|agricultural contractor", "trades.groundwork-excavation"),
-    (r"paint|decorat|wallpaper|mural|spray|sign writer|lime wash|coating|door dipping", "trades.painting-decorating"),
+    (r"paint|decorat|wallpaper|mural|spray|sign (writer|maker)|lime wash|coating|door dipping", "trades.painting-decorating"),
     (r"merchant|supplier|retailer|showroom", "trades.merchants-trade-suppliers"),
     (r"handyman|odd jobs|assembly|mounting|shelves", "home-services.handyman"),
 ]

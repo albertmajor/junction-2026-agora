@@ -826,7 +826,7 @@ def _cat_search(q: str, lang: str, limit: int) -> dict[str, Any]:
             lo += 1
         cands.sort(key=lambda v: -len(T._post[v]))
         head = " ".join(words[:-1])
-        for v in cands[:4]:
+        for v in cands[:6]:
             add(T.search(f"{head} {v}".strip(), limit=limit, lang=lang), 0.85)
     import math
     ranked = sorted(best.items(), key=lambda kv: -(kv[1] + 0.03 * math.log1p(desc[T._i(kv[0])])))

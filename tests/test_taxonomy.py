@@ -173,3 +173,72 @@ def test_build_fuzzy_and_specialise():
     assert tix.fuzzy("Astianpesukone", "fi", ["r"]) == "r.dw"
     assert tix.specialize("Mikrowellen mit Grill", "de", ["r"]) == "r.mw"
     assert tix.specialize("Mikrowellen", "de", ["r"]) is None
+
+
+# ------------------------------------------------------------------ cleanliness (what the browse explorer shows)
+
+def test_english_view_has_no_foreign_or_junk_labels(T):
+    assert T.missing_en == [] or len(T.missing_en) < 50
+    labels = {T.label(i) for i in range(len(T))}
+    for junk in ("Beringar test", "Slices test digilife", "Coronainfos", "B2b referenzkunden", "Zubehoer",
+                 "Puhelimet ja kamerat", "Objektiv", "Möbler och inredning", "Black Friday", "Kundenservice"):
+        assert junk not in labels, junk
+    kids = [c["label"] for c in T.children("home-services.appliance-electronics-repair")]
+    assert not any("test" in k.lower() or "b2b" in k.lower() for k in kids)
+
+
+def test_trades_bucket_is_grouped(T):
+    assert len(T.children("trades.other-trades-specialists")) < 60
+    roofing = [c["label"] for c in T.children("trades.roofing")]
+    assert any("Flat Roof" in x for x in roofing)
+    assert T.node("trades.windows-doors-conservatories")["kind"] == "service"
+
+
+def test_old_ids_keep_resolving(T):
+    moved = T.node("trades.carpentry-joinery.doors-windows")          # curated id that moved
+    assert moved and moved["id"] == "trades.windows-doors-conservatories"
+    assert T.resolve("trades.plumbing") == "trades.plumbing"
+    assert T.resolve("no-such-node") is None
+    for old, new in list(T.aliases.items())[:200]:
+        assert new in T.by_id and T.resolve(old) == new
+
+
+def test_official_names_are_shortened_but_kept_as_synonyms(T):
+    b = _build_module()
+    assert b.shopper_name("Repair and maintenance services of microcomputers") == "Microcomputer repair & maintenance"
+    assert b.shopper_name("Satellite telecommunications activities") == "Satellite telecommunications"
+    assert b.shopper_name("Hairdressing services") == "Hairdressing"
+    assert b.shopper_name("Courier services") is None              # no obvious shopper name: unchanged
+    short = [i for i in range(len(T)) if T.ids[i].startswith("cpv:") and T.syn[i]
+             and T.syn[i][0].lower().startswith("repair and maintenance services of")]
+    assert short and all(T.syn[i][0] != T.label(i) for i in short)
+
+
+def test_menu_junk_rules():
+    b = _build_module()
+    for lab in ("Beringar test", "B2b referenzkunden", "Coronainfos", "Black Friday laptop deals", "Klantenservice",
+                "Vacatures marketing communicatie en media", "Lahjat alle 100euro", "Helpling gutschein"):
+        assert b.menu_junk(lab, "x") == "drop", lab
+    for lab in ("Weitere kameras", "Muut tarvikkeet", "Övrig elektronik", "512GB", "Alle 750W", "Smartphones 5 zoll"):
+        assert b.menu_junk(lab, "x") == "fold", lab
+    for lab in ("Assessment penetration test", "Kühlschränke", "Business notebooks", "Gift wrapping"):
+        assert b.menu_junk(lab, "x") is None, lab
+
+
+def test_slug_spelling_and_translation():
+    b = _build_module()
+    t = b.Tree()
+    t.add("r", None, {"en": "Home", "de": "Haus", "fi": "Koti"}, src="test", kind="product")
+    t.add("r.w", "r", {"en": "Laundry", "de": "Wäsche", "fi": "Pyykki"}, src="shopify")
+    t.add("r.b", "r", {"en": "Bins", "de": "Tonnen", "fi": "Astiat"}, src="shopify")
+    t.add("r.c", "r", {"en": "Cameras", "de": "Kameras", "fi": "Kamerat"}, src="shopify")
+    t.add("r.c2", "r", {"en": "Cameras", "de": "Kameras"}, src="cpv")
+    t.add("r.a", "r", {"en": "Batteries", "de": "Akkus"}, src="shopify")
+    t.add("r.a2", "r", {"en": "Batteries", "de": "Akkus"}, src="cpv")
+    sp = b.Speller(t)
+    assert sp.label("Waeschetonne", "de") == "Wäschetonne"
+    assert sp.label("Kameras", "de") == "Kameras"
+    tr = b.Translator(t)
+    assert tr.translate("Kamera Akkus", "de", title=True) == "Camera Batteries"
+    assert tr.translate("Zubehör für Kameras", "de", title=True) == "Accessories for Cameras"
+    assert tr.translate("Dji kameras", "de", title=True) is None           # unknown word: no guessing
