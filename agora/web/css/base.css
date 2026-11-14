@@ -189,7 +189,18 @@ button { cursor: pointer; }
   animation: rise 700ms 180ms var(--ease) both; pointer-events: none;
 }
 /* a banana on the other side of the box, mirroring the monkey (placed by mascot.js placeStartMonkey) */
-.start-banana { position: absolute; width: 72px; height: auto; pointer-events: none; animation: rise 700ms 240ms var(--ease) both; }
+.start-banana { position: absolute; width: 72px; height: auto; pointer-events: none;
+  /* drops in from above onto its spot and bounces (uses `translate`/`rotate`, so mascot.js's own transform stays) */
+  animation: banana-drop 1150ms 450ms both; }
+@keyframes banana-drop {
+  0%   { translate: 0 -75vh; rotate: -30deg; animation-timing-function: cubic-bezier(.55, 0, .9, .45); opacity: 1; }
+  55%  { translate: 0 0;     rotate: 6deg;   animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  70%  { translate: 0 -22px; rotate: -4deg;  animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
+  82%  { translate: 0 0;     rotate: 2deg;   animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  90%  { translate: 0 -6px;  rotate: -1deg;  animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
+  100% { translate: 0 0;     rotate: 0deg; }
+}
+@media (prefers-reduced-motion: reduce) { .start-banana { animation: none; } }
 @media (max-width: 1000px) { .start-monkey, .start-banana { display: none; } }
 #start:has(#status.none) .start-banana { display: none; }
 /* one monkey at a time: the found-nothing one replaces him */
