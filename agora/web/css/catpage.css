@@ -100,6 +100,27 @@
 .cp-item:hover .cp-go, .cp-item:focus-visible .cp-go { opacity: 1; }
 .cp-item.browse .cp-go { opacity: 1; }
 
+/* niche categories: what people usually look for + providers we know (catpage.js, /api/categories/enrich).
+   Calm: below the main content, hairline above, no colour but the chips' hover. */
+.cp-enrich { margin: 6px 0 24px; padding-top: 18px; border-top: 1px solid var(--hair); display: grid; gap: 18px; }
+.cp-enrich[hidden] { display: none; }
+.cp-en-wait { margin: 0; font: 400 13.5px/1.4 var(--sans); color: var(--ink-3); }
+.cp-en-wait::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%;
+  background: var(--ink-3); vertical-align: 2px; animation: cp-pulse 1.2s var(--ease) infinite alternate; }
+@keyframes cp-pulse { from { opacity: .25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cp-en-wait::before { animation: none; } }
+.cp-en-chip { display: inline-flex; align-items: center; gap: 6px; text-align: left; }
+.cp-en-chip .cp-go { opacity: .55; }
+.cp-en-chip:hover .cp-go, .cp-en-chip:focus-visible .cp-go { opacity: 1; }
+.cp-en-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.cp-en-prov { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 2px 18px; font: 400 14px/1.35 var(--sans); }
+.cp-en-prov li { padding: 7px 0; border-bottom: 1px solid var(--hair); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-en-prov a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
+.cp-en-prov a:hover { text-decoration-color: currentColor; }
+.cp-en-name { color: var(--ink-2); }
+.cp-en-why { color: var(--ink-3); font-size: 12.5px; }
+
 /* official headings, folded */
 .cp-off { margin: 8px 0 22px; font: 400 13.5px/1.4 var(--sans); color: var(--ink-2); }
 .cp-off summary { cursor: pointer; color: var(--ink-3); width: fit-content; }

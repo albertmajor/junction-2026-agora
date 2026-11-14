@@ -81,7 +81,8 @@ NOT_A_PHOTO = re.compile(
     r"(^|[/_.-])(logo|logos|og[_-]?image|og[_-]?logo|ogimage|placeholder|no[_-]?image|no[_-]?thumbnail|"
     r"no[_-]?photo|noimage|nophoto|default[_-]?image|fallback[_-]?images?|favicon|sprite|sprites|banner|header|"
     r"lifestyle|icon|icons|avatar|badge|spacer|pixel|blank|transparent|loader|loading|spinner|flag|flags|"
-    r"apple-touch-icon|share[_-]?image|social)([/_.-]|$)|/plp/og|1x1\.", re.I)
+    r"apple-touch-icon|share[_-]?image|social|opengraph|open[_-]graph|og|og[_-]?default|default[_-]?og|"
+    r"social[_-]?share|twitter[_-]?card)([/_.-]|$)|/plp/og|1x1\.", re.I)
 IMG_EXT_BAD = re.compile(r"\.(svg|ico|gif)(\?|$)", re.I)
 
 

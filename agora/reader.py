@@ -1058,9 +1058,52 @@ def _item_price_matches(text: str) -> list[re.Match[str]]:
             and not NOT_PRICE_AFTER.search(text[m.end():m.end() + 16])]
 
 
+# A search result that summarises OTHER shops' prices: a price-comparison page, not a seller.
+# 'the cheapest refurbished X is priced at 16,00 € at Fnac', 'compare prices from 12 shops', 'Preisvergleich'.
+COMPARISON_SNIPPET = re.compile(
+    r"\bthe (?:cheapest|lowest|best) (?:price|offer|deal)?.{0,90}?\bis (?:priced|listed|available|sold) (?:at|for|from)\b|"
+    r"\bcompare (?:the )?(?:prices?|offers|deals)\b|\bprice comparison\b|\bcompare \d+ (?:offers|prices|shops|stores)\b|"
+    r"\b(?:prices?|offers?) (?:from|in|at) \d+ (?:shops|stores|sellers|retailers|merchants)\b|"
+    r"\b\d+ (?:offers|shops|stores|sellers|retailers) (?:from|starting|compared)\b|"
+    r"preisvergleich|preise vergleichen|\bbei \d+ (?:händlern|shops)\b|\b\d+ angebote\b|"
+    r"hintavertailu|vertaa hintoja|"
+    r"prisjämförelse|jämför priser|prissammenligning|sammenlign priser|"
+    r"comparer les prix|comparateur de prix|\ble moins cher .{0,60}? est à\b|"
+    r"prijsvergelijk|vergelijk prijzen|porównaj ceny|porównywarka|confronta (?:i )?prezzi|comparar precios|"
+    r"comparador de precios", re.I)
+
+# words a landing / category page title adds to the bare query: 'lego technic refurbished | Reepeat'
+_TITLE_FILLER = {
+    "buy", "cheap", "cheapest", "best", "price", "prices", "deal", "deals", "sale", "offer", "offers", "online",
+    "shop", "store", "new", "used", "refurbished", "renewed", "second", "hand", "secondhand", "pre", "owned",
+    "kaufen", "günstig", "gunstig", "osta", "edullinen", "halpa", "käytetty", "kunnostettu", "köp", "billig",
+    "begagnad", "acheter", "pas", "cher", "occasion", "reconditionné", "kopen", "goedkoop", "tweedehands",
+    "comprar", "barato", "kup", "tanio", "for", "the", "and", "at", "in", "on", "of", "uk", "eu",
+}
+
+
+def comparison_snippet(text: str) -> bool:
+    """The search result quotes another shop's price (a price-comparison / aggregator page)."""
+    return bool(text) and bool(COMPARISON_SNIPPET.search(text))
+
+
+def bare_query_title(title: str, url: str, need: Need) -> bool:
+    """A title that is only the query (+ condition/shopping words and the site's name): a landing or
+    category page, so a price on it is a 'from' price, not one item's. Only for a generic need (no model
+    number: 'lego technic', 'kitchen table'): 'Sony A7 III body' titled as such is that one product."""
+    want = _tokens(need.thing)
+    if not title or not want or any(ch.isdigit() for t in want for ch in t):
+        return False
+    site = _tokens(domain_of(url))
+    got = _tokens(title) - site - _TITLE_FILLER
+    return want <= _tokens(title) and got <= want
+
+
 def offer_from_snippet(snippet: str, url: str, title: str, need: Need, hint: str | None = None) -> Offer | None:
     """A price in the search snippet/highlights. Unverified: flagged. 'Free shipping over $100',
-    'save €300' and '€29/mo' are not the item's price and are skipped."""
+    'save €300' and '€29/mo' are not the item's price and are skipped. A comparison summary
+    ('the cheapest X is priced at €16 at Fnac') or a title that is only the query (a landing page)
+    gives a 'from' price: kept as a listing, never a pick (raw['from_price'])."""
     matches = _item_price_matches(snippet)
     if not matches:
         return None
@@ -1070,10 +1113,16 @@ def offer_from_snippet(snippet: str, url: str, title: str, need: Need, hint: str
     amount, cur = parse_price(m.group(0), None, domain)
     if amount is None or cur is None:
         return None
+    raw: dict[str, Any] = {"step": "snippet", "snippet": snippet[:300]}
+    flags = ["price_from_snippet"]
+    if comparison_snippet(f"{title} {snippet}"):
+        raw["from_price"] = raw["price_comparison"] = True
+        flags.append("price_comparison")
+    if need.kind == "product" and bare_query_title(title, url, need):
+        raw["from_price"] = raw["bare_query_title"] = True
     return Offer(url=url, source=domain, title=title or snippet[:80], price=amount, currency=cur,
                  price_eur=fx.to_eur(amount, cur), condition=guess_condition(url, title, "", hint, need.kind),
-                 read_via="search_highlight", flags=["price_from_snippet"],
-                 raw={"step": "snippet", "snippet": snippet[:300]})
+                 read_via="search_highlight", flags=flags, raw=raw)
 
 
 def _distinct_prices(text: str) -> list[float]:
@@ -1095,6 +1144,8 @@ def snippet_offer_if_safe(url: str, title: str, snippet: str, need: Need, hint: 
     if not want or not want <= _tokens(title):
         return None
     text = f"{title} {snippet}"
+    if comparison_snippet(text) or bare_query_title(title, url, need):
+        return None                  # another shop's price / a landing page: not safe to price unread
     prices = _distinct_prices(text)
     if not prices:
         return None
@@ -2013,7 +2064,7 @@ async def read_with_reason(url: str, need: Need, *, lane: str | None = None, sni
         offer = (service_snippet_offer(url, title, snippet, need, lenient=True) if is_service(need)
                  else offer_from_snippet(snippet, url, title, need, lane))
         if offer:
-            add_witnesses(offer, "search_highlight")
+            add_witnesses(offer, "search_highlight", search_title=title, snippet=snippet)   # 'from €X' cue
             _annotate(offer, page_html, snippet, title)
             return _finish(offer, need, title), "search_highlight"
     return None, "; ".join(reasons)

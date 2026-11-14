@@ -268,3 +268,36 @@ def language_for(where: str | None, cc: str | None = None) -> str | None:
         return CITY_LANGUAGE[w]
     cc = cc or country_for(where)
     return LANGUAGE.get(cc or "")
+
+
+# ---------------------------------------------------------------- every city in a text, and one city's area
+# eval r2: 'lunch' near Helsinki read lounaat.info's Tampere and Lahti pages first. A page naming another city of
+# the same country (and not the asked one, or a town of its area) is about somewhere else.
+METRO: dict[str, frozenset[str]] = {
+    "helsinki": frozenset({"helsinki", "espoo", "vantaa", "kauniainen", "helsingfors", "esbo", "vanda"}),
+    "espoo": frozenset({"helsinki", "espoo", "vantaa", "kauniainen"}),
+    "vantaa": frozenset({"helsinki", "espoo", "vantaa", "kauniainen"}),
+    "stockholm": frozenset({"stockholm", "solna", "sundbyberg", "nacka", "huddinge", "täby", "lidingö"}),
+    "copenhagen": frozenset({"copenhagen", "københavn", "kobenhavn", "frederiksberg"}),
+    "amsterdam": frozenset({"amsterdam", "amstelveen", "zaandam", "zaanstad", "diemen"}),
+    "berlin": frozenset({"berlin", "potsdam"}),
+    "munich": frozenset({"munich", "münchen", "muenchen"}),
+    "vienna": frozenset({"vienna", "wien"}),
+}
+
+
+def cities_in(text: str) -> list[tuple[str, str]]:
+    """Every European city named in the text -> [(lower-case name, cc)], in order. URL slugs work when their
+    hyphens and slashes are turned into spaces first. Ambiguous names still need a preposition."""
+    if not text:
+        return []
+    hits = [h for h in _hits(text, CITY_CC) if place_ok(text, h[0], h[1], CITY_CC[h[0]])]
+    return [(k, CITY_CC[k]) for k, _a, _b in sorted(hits, key=lambda h: h[1])]
+
+
+def same_area(city: str, other: str) -> bool:
+    """'Helsinki' and 'Vantaa' are one area (a lunch in Vantaa is near Helsinki); a city is its own area."""
+    a, b = _fold(city).strip(), _fold(other).strip()
+    if a == b:
+        return True
+    return b in METRO.get(a, frozenset()) or a in METRO.get(b, frozenset())

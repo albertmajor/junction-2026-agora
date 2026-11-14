@@ -10,7 +10,20 @@ import * as intent from './intent.js';
 
 const { esc, t } = C;
 let el = null;
-const st = { id: null, data: null, typed: '', q: '', hits: null, hi: -1, seq: 0, next: null };
+const st = { id: null, data: null, typed: '', q: '', hits: null, hi: -1, seq: 0, next: null, enr: null };
+
+// "People usually look for" + "Providers we know" on a niche category (GET /api/categories/enrich): past hunts,
+// marketplaces' own subcategories, and at most one web search on the server; calm, below the main content.
+const EN_T = {
+  en: { look: 'People usually look for', finding: 'finding what people look for…', prov: 'Providers we know' },
+  fi: { look: 'Täältä etsitään yleensä', finding: 'katsotaan, mitä täältä yleensä etsitään…', prov: 'Tuntemamme palveluntarjoajat' },
+  sv: { look: 'Det här brukar folk leta efter', finding: 'tar reda på vad folk letar efter…', prov: 'Leverantörer vi känner till' },
+  de: { look: 'Was Leute hier meist suchen', finding: 'finde heraus, was Leute hier suchen…', prov: 'Anbieter, die wir kennen' },
+  nl: { look: 'Wat mensen hier meestal zoeken', finding: 'kijken wat mensen hier zoeken…', prov: 'Aanbieders die we kennen' },
+};
+const et = k => (EN_T[C.getLang()] || EN_T.en)[k] || EN_T.en[k];
+// deep or small: a leaf, or a handful of things under it (the server decides too; this only saves a request)
+const isNiche = d => (d.path || []).length >= 2 && (Number(d.count) || 0) <= 40;
 
 const catOf = (id, ids, path) => ({ id, ids, path });
 const crumbIds = d => (d.path || []).map(p => p.id);
@@ -107,6 +120,7 @@ function render() {
     ${groups.length ? `<ul class="cp-cards" role="list">${groups.map((g, i) => card(g, i, root)).join('')}</ul>` : ''}
     ${items(d)}
     ${!groups.length && !(d.items || []).length ? `<div class="it-slot"><p class="cp-loading">${esc(t('loading'))}</p></div>` : ''}
+    ${isNiche(d) ? `<section class="cp-enrich" aria-live="polite" aria-busy="true">${enrichHtml()}</section>` : ''}
     ${official(d)}
     <p class="cp-note">${esc(t('browseNote'))}</p>
   </div>`;
@@ -125,6 +139,56 @@ async function fillNext(d) {
   if (!now) return;
   st.next = blk;
   now.innerHTML = blk ? blk.html : `<p class="cp-empty">${esc(t('none2'))}</p>`;
+}
+
+function enrichHtml() {
+  const e = st.enr && st.enr.id === st.id ? st.enr.data : null;
+  if (!e) return `<p class="cp-en-wait">${esc(et('finding'))}</p>`;
+  const sug = e.suggestions || [], prov = e.providers || [];
+  const parts = [];
+  if (sug.length) {
+    parts.push(`<div class="cp-en-blk"><h2 class="cp-h2" id="cp-en-h">${esc(et('look'))}</h2>
+      <div class="cp-chips" role="list" aria-labelledby="cp-en-h">${sug.map((x, i) => `<button type="button" role="listitem" class="cp-chip cp-en-chip" data-enr="${i}"
+        title="${esc(x.why || '')}">${esc(x.label)} <span class="cp-go" aria-hidden="true">→</span></button>`).join('')}</div></div>`);
+  }
+  if (e.pending && sug.length < 4) parts.push(`<p class="cp-en-wait">${esc(et('finding'))}</p>`);
+  if (prov.length) {
+    parts.push(`<div class="cp-en-blk"><h2 class="cp-h2">${esc(et('prov'))} <span class="cp-n">${C.num(prov.length)}</span></h2>
+      <ul class="cp-en-prov" role="list">${prov.map(p => `<li><a href="${esc(p.url || ('https://' + p.domain))}" target="_blank" rel="noopener noreferrer">${esc(p.domain)}</a>${
+        p.name && p.name !== p.domain ? ` <span class="cp-en-name">${esc(p.name)}</span>` : ''}${p.why ? ` <span class="cp-en-why">· ${esc(p.why)}</span>` : ''}</li>`).join('')}</ul></div>`);
+  }
+  return parts.join('');
+}
+
+function paintEnrich() {
+  const box = el && el.querySelector('.cp-enrich');
+  if (!box) return;
+  const e = st.enr && st.enr.id === st.id ? st.enr.data : null;
+  box.setAttribute('aria-busy', String(!e || !!e.pending));
+  // nothing to say once it is all in: leave no empty heading behind
+  if (e && !e.pending && !(e.suggestions || []).length && !(e.providers || []).length) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = enrichHtml();
+}
+
+async function fillEnrich(d) {
+  const id = d.id, lang = C.getLang();
+  if (st.enr && st.enr.id === id && st.enr.lang === lang && st.enr.data && !st.enr.data.pending) { paintEnrich(); return; }
+  st.enr = { id, lang, data: null };
+  for (let n = 0; n < 8; n++) {
+    let j = null;
+    try {
+      const r = await fetch(`/api/categories/enrich?${new URLSearchParams({ id, lang })}`, { headers: { accept: 'application/json' } });
+      j = r.ok ? await r.json() : null;
+    } catch { j = null; }
+    if (st.id !== id || !st.enr || st.enr.id !== id) return;          // the person moved on
+    if (!j) { st.enr.data = { suggestions: [], providers: [], pending: false }; paintEnrich(); return; }
+    st.enr.data = j;
+    paintEnrich();
+    if (!j.pending) return;
+    await new Promise(res => setTimeout(res, 2500));
+  }
+  if (st.enr && st.enr.id === id && st.enr.data) { st.enr.data.pending = false; paintEnrich(); }
 }
 
 function hitsHtml() {
@@ -172,6 +236,12 @@ function onClick(e) {
   if (a) { if (e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); C.openCategory(a.dataset.cat); return; }
   if (e.target.closest('[data-home]')) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); core.emit('category:home', {}); return; }
   if (e.target.closest('[data-hunt-self]')) { core.emit('ask', { q: d.label, cat: catOf(d.id, crumbIds(d), crumbLabels(d)) }); return; }
+  const en = e.target.closest('[data-enr]');
+  if (en) {
+    const x = ((st.enr && st.enr.data && st.enr.data.suggestions) || [])[Number(en.dataset.enr)];
+    if (x) core.emit('ask', { q: x.query || x.label, cat: catOf(d.id, crumbIds(d), crumbLabels(d)) });
+    return;
+  }
   const pop = e.target.closest('[data-pop]');
   if (pop) { const p = d.popular[Number(pop.dataset.pop)]; if (p) hunt(p.q, p.id); return; }
   const it = e.target.closest('[data-item]');
@@ -214,6 +284,7 @@ export async function show(id, { typed = '' } = {}) {
   st.next = null;
   render();
   if (!(d.groups || []).length && !(d.items || []).length) fillNext(d);
+  if (isNiche(d)) fillEnrich(d);
   document.title = `${d.label} · ${core.BRAND}`;
   core.emit('catpage:shown', { id: d.id, asked: id, label: d.label });
 }

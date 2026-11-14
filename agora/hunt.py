@@ -459,7 +459,11 @@ def auto_intent_for(need: Need) -> str | None:
     if not top or top.get("as_typed") or (top.get("confidence") or 0) < AUTO_INTENT_MIN_CONF:
         return None
     service_like = top.get("kind") in ("service", "digital")
-    if service_like == is_service(need):
+    # a vague present ('gift for mom') is a thing to buy either way, but hunted literally it matched the token
+    # 'mom' (eval r2: used baby socks were the pick): its meaning hunts the kinds of things people give
+    vague_gift = str(top.get("id") or "").startswith("c:gift.") and top.get("kind") == "product" \
+        and not top.get("node")
+    if service_like == is_service(need) and not vague_gift:
         return None               # the parse already reads it as that kind: nothing to fix
     if need.conditions not in (["new", "refurbished", "used"], ["new"], ["service"]):
         return None               # 'used ...' asked for a thing to buy
@@ -809,14 +813,20 @@ async def hunt(
             reads.add(asyncio.create_task(lookalike_lane(lookalike["anchors"][0])))
     reads: set[asyncio.Task[None]] = set()
     slow = slow_domains if slow_domains is not None else SlowDomains()
+    direct_pages: set[str] = set()     # the marketplaces' own first search pages (discover's direct plan)
 
     async def timed_read(url: str, fn: Read) -> tuple[Any, float, float]:
         """Run one read with a budget of `limit` seconds of PAGE WORK: time spent queued for the shared
         Context.dev rate limit is added back (up to MAX_QUEUE_ALLOWANCE). Returns (result, limit, queued)."""
         queued = [0.0, 0.0]
         waited = getattr(cd, "queued_seconds", lambda q: q[0])
-        limit = slow.timeout_for(_domain(url), read_timeout)
-        wall = getattr(slow, "wall_for", lambda d: None)(_domain(url))
+        if url in direct_pages:
+            # the planned marketplace page (nettiauto for a car) is the lane's main source: it keeps the full
+            # read time even on a domain that timed out before (eval r2: 'timeout after 5s (known slow domain)')
+            limit, wall = read_timeout, None
+        else:
+            limit = slow.timeout_for(_domain(url), read_timeout)
+            wall = getattr(slow, "wall_for", lambda d: None)(_domain(url))
 
         async def run() -> Any:
             if cd is not None and hasattr(cd, "QUEUED"):
@@ -898,8 +908,8 @@ async def hunt(
             except TypeError:             # an injected SlowDomains without timing
                 slow.record(_domain(url), timed_out=False)
         except TimeoutError:
-            was_slow = slow.is_slow(_domain(url))
-            limit = slow.timeout_for(_domain(url), read_timeout)
+            was_slow = slow.is_slow(_domain(url)) and url not in direct_pages
+            limit = read_timeout if url in direct_pages else slow.timeout_for(_domain(url), read_timeout)
             over_budget = deadline is not None and time.monotonic() >= deadline - 0.05
             if not over_budget:           # running out of hunt time says nothing about the domain
                 slow.record(_domain(url), timed_out=True)
@@ -1004,6 +1014,8 @@ async def hunt(
                         continue
                     seen.add(url)
                     lane_of[url] = str(e.data.get("lane") or "")
+                    if e.data.get("direct") and e.data.get("page", 1) in (1, None):
+                        direct_pages.add(url)
                     e.data.setdefault("domain", urlparse(url).netloc.removeprefix("www."))
                     e.t_ms = int((time.monotonic() - t0) * 1000)
                     out.events.append(e)

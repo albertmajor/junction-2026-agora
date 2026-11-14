@@ -243,8 +243,10 @@ def test_directory_provider_profiles_get_more_than_two_reads(monkeypatch):
 def test_lunch_takes_its_likeliest_meaning():
     assert hunt_mod.auto_intent_for(N.parse_need("lunch")) == "c:lunch.places"
     for q in ("iphone 13", "sofa", "kitchen table", "used lunch box", "lunch box with 3 compartments",
-              "bright red car", "puhelin", "gift for mom"):
+              "bright red car", "puhelin"):
         assert hunt_mod.auto_intent_for(N.parse_need(q)) is None, q
+    # eval r2: 'gift for mom' hunted literally matched the token 'mom' (baby socks): it now takes its meaning
+    assert hunt_mod.auto_intent_for(N.parse_need("gift for mom")) == "c:gift.ideas"
 
 
 def test_lunch_hunt_runs_the_service_lane(monkeypatch):

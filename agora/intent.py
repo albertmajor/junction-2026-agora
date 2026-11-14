@@ -330,6 +330,30 @@ CONCEPTS: list[dict[str, Any]] = [
          _I("bags", 0.1, "product", "sp:lb-15", "Laptop bags|Läppärilaukut|Datorväskor|Laptoptaschen|Laptoptassen",
             "laptop bag", look=["shops"], why="Or something to carry it in."),
      ]},
+    {"key": "design-subscription",
+     # eval r2: 'unlimited graphic design subscription' took 'Graphic Design & Illustration Software' as its meaning;
+     # the person wants a studio taking design requests for a flat monthly fee (designjoy, kimp, manypixels)
+     "words": ["design subscription", "design subscriptions", "graphic design subscription", "unlimited design",
+               "unlimited graphic design", "unlimited graphic design subscription", "unlimited design subscription",
+               "design as a service", "design-as-a-service", "unlimited design requests", "productized design",
+               "graafinen suunnittelu kuukausitilaus", "design abo", "grafikdesign abo", "design abonnement"],
+     "nodes": [],
+     "intents": [
+         _I("studio", 0.78, "service", "yelp:graphicdesign",
+            "A design subscription (unlimited requests, flat monthly fee)|Design-palvelu kuukausimaksulla|"
+            "Designprenumeration (fast månadsavgift)|Design-Abo (unbegrenzte Anfragen, Monatspreis)|"
+            "Design-abonnement (vaste maandprijs)",
+            "unlimited graphic design subscription",
+            q={"en": ["unlimited graphic design subscription pricing", "design as a service monthly plans"],
+               "fi": ["graafinen suunnittelu kuukausihinta"], "sv": ["grafisk design prenumeration pris"],
+               "de": ["Grafikdesign Abo Preise pro Monat"], "nl": ["grafisch ontwerp abonnement prijzen"]},
+            domains={"*": ["designjoy.co", "kimp.io", "manypixels.co", "penji.co", "designpickle.com",
+                           "superside.com", "flocksy.com"]},
+            look=["design subscription studios"], why="A studio does your design requests for a flat monthly fee."),
+         _I("software", 0.22, "digital", "sp:so-1-10-3",
+            "Design software to do it yourself|Suunnitteluohjelmat|Designprogram|Designsoftware|Ontwerpsoftware",
+            "graphic design software", look=["software vendors"], why="If you meant the tools (Adobe, Figma, Canva)."),
+     ]},
     {"key": "gift",
      "words": ["gift", "gifts", "present", "presents", "gift idea", "gift ideas", "lahja", "lahjat", "lahjaidea",
                "lahjaideat", "presentide", "presenter", "geschenk", "geschenke", "geschenkidee", "cadeau",
@@ -339,8 +363,9 @@ CONCEPTS: list[dict[str, Any]] = [
          _I("ideas", 0.5, "product", None,
             "Gift ideas{rest}|Lahjaideat{rest}|Presentidéer{rest}|Geschenkideen{rest}|Cadeau-ideeën{rest}",
             "gift ideas",
-            q={"fi": ["lahjaidea{rest}"], "sv": ["present tips{rest}"], "de": ["Geschenkidee{rest}"],
-               "nl": ["cadeau idee{rest}"]},
+            q={"fi": ["lahja{rest}", "lahjaidea{rest}"], "sv": ["present{rest}", "presenttips{rest}"],
+               "de": ["Geschenk{rest}", "Geschenkidee{rest}"], "nl": ["cadeau{rest}", "cadeau idee{rest}"]},
+            lanes=["new"],          # a present is bought new (eval r2: used baby socks were the pick)
             look=["gift shops", "department stores"], why="A thing to give: the hunt compares gift shops."),
          _I("experience", 0.25, "service", "events-leisure.activities-experiences",
             "An experience to give{rest}|Elämyslahja{rest}|Upplevelsepresent{rest}|Erlebnisgeschenk{rest}|"
@@ -741,6 +766,78 @@ def _node_brief(T: Any, nid: str | None, lang: str) -> dict[str, Any] | None:
 
 # ---------------------------------------------------------------- building one intent
 
+# ---------------------------------------------------------------- who a present is for
+# eval r2: 'gift for mom' searched 'lahjaidea for mom' / 'Geschenkidee for mom' (half translated) and matched the
+# token 'mom' (baby socks 'I <3 mom & dad', 'mom shorts'). The recipient is translated, and a vague present fans
+# out into the kinds of things people give (jewellery, gift sets, flowers), each a word the matching stage knows.
+_R = r"^(?:(?:for|to|fur|voor|till|pour)\s+)?(?:my\s+|a\s+|the\s+|mein[e]?\s+|min\s+|mijn\s+)?(?:{w})$"
+RECIPIENTS: list[tuple[re.Pattern[str], dict[str, str], str]] = [
+    (re.compile(_R.format(w="mom|mum|mother|mommy|mummy|mama|mamma|aiti|aidille|mutter|moeder|mam")),
+     {"en": "for mom", "fi": "äidille", "sv": "till mamma", "de": "für Mama", "nl": "voor mama"}, "female"),
+    (re.compile(_R.format(w="dad|father|daddy|papa|pappa|isa|isalle|vater|vader|pap")),
+     {"en": "for dad", "fi": "isälle", "sv": "till pappa", "de": "für Papa", "nl": "voor papa"}, "male"),
+    (re.compile(_R.format(w="wife|vaimo|vaimolle|fru|frau|ehefrau|vrouw")),
+     {"en": "for my wife", "fi": "vaimolle", "sv": "till frun", "de": "für die Frau", "nl": "voor mijn vrouw"},
+     "female"),
+    (re.compile(_R.format(w="husband|aviomies|miehelle|mannen|mann|ehemann|man")),
+     {"en": "for my husband", "fi": "miehelle", "sv": "till mannen", "de": "für den Mann", "nl": "voor mijn man"},
+     "male"),
+    (re.compile(_R.format(w="girlfriend|tyttoystava|tyttoystavalle|flickvan|freundin|vriendin")),
+     {"en": "for my girlfriend", "fi": "tyttöystävälle", "sv": "till flickvännen", "de": "für die Freundin",
+      "nl": "voor mijn vriendin"}, "female"),
+    (re.compile(_R.format(w="boyfriend|poikaystava|poikaystavalle|pojkvan|vriend")),
+     {"en": "for my boyfriend", "fi": "poikaystävälle", "sv": "till pojkvännen", "de": "für den Freund",
+      "nl": "voor mijn vriend"}, "male"),
+    (re.compile(_R.format(w="grandma|grandmother|granny|mummo|mummolle|isoaiti|isoaidille|mormor|farmor|oma")),
+     {"en": "for grandma", "fi": "mummolle", "sv": "till mormor", "de": "für Oma", "nl": "voor oma"}, "female"),
+    (re.compile(_R.format(w="grandpa|grandfather|vaari|vaarille|ukki|ukille|isoisa|isoisalle|morfar|farfar|opa")),
+     {"en": "for grandpa", "fi": "vaarille", "sv": "till morfar", "de": "für Opa", "nl": "voor opa"}, "male"),
+    (re.compile(_R.format(w="kids?|child|children|son|daughter|lapselle|lapsille|pojalle|tytolle|barn|kind|kinder|"
+                            "sohn|tochter|zoon|dochter")),
+     {"en": "for a child", "fi": "lapselle", "sv": "till barn", "de": "für Kinder", "nl": "voor kinderen"}, "kids"),
+    (re.compile(_R.format(w="teacher|opettaja|opettajalle|larare|lararen|lehrer|lehrerin|leraar|juf|meester")),
+     {"en": "for a teacher", "fi": "opettajalle", "sv": "till läraren", "de": "für Lehrer", "nl": "voor de juf"},
+     "any"),
+]
+# the kinds of things given, per recipient: extra searches of a vague present (local language first)
+GIFT_KINDS: dict[str, dict[str, list[str]]] = {
+    "female": {"en": ["jewellery gift for women", "gift set for women"], "fi": ["koru lahja naiselle", "lahjapakkaus naisille"],
+               "sv": ["smycke present till kvinna", "presentset dam"], "de": ["Schmuck Geschenk Frau", "Geschenkset Damen"],
+               "nl": ["sieraad cadeau vrouw", "cadeauset dames"]},
+    "male": {"en": ["gift set for men", "gift for men"], "fi": ["lahjapakkaus miehille", "lahja miehelle"],
+             "sv": ["presentset herr", "present till man"], "de": ["Geschenkset Herren", "Geschenk für Männer"],
+             "nl": ["cadeauset heren", "cadeau voor mannen"]},
+    "kids": {"en": ["toy gift for kids"], "fi": ["lelu lahja lapselle"], "sv": ["leksak present barn"],
+             "de": ["Spielzeug Geschenk Kinder"], "nl": ["speelgoed cadeau kind"]},
+    "any": {"en": ["gift set"], "fi": ["lahjapakkaus"], "sv": ["presentset"], "de": ["Geschenkset"], "nl": ["cadeauset"]},
+}
+# words that name a kind of present in a listing's title: the hunt's kind words (resolve reads category synonyms)
+GIFT_MATCH = ["koru", "korut", "kaulakoru", "rannekoru", "korvakorut", "sormus", "jewellery", "jewelry", "necklace",
+              "bracelet", "earrings", "smycke", "smycken", "halsband", "schmuck", "halskette", "armband", "sieraad",
+              "sieraden", "ketting", "lahjapakkaus", "lahjasetti", "gift set", "giftset", "presentset", "presentask",
+              "geschenkset", "geschenkbox", "cadeauset", "cadeaubox", "kukkakimppu", "kukat", "bouquet", "flowers",
+              "blommor", "bukett", "blumenstrauß", "blumen", "boeket", "bloemen", "elämyslahja", "lahjakortti",
+              "gift card", "presentkort", "gutschein", "cadeaukaart", "kosmetiikka", "cosmetics", "kosmetik",
+              "parfyymi", "perfume", "parfum", "hajuvesi", "kynttilä", "candle", "ljus", "kerze", "kaars",
+              "suklaa", "chocolate", "choklad", "schokolade", "chocolade", "huivi", "scarf", "sjal", "schal",
+              "sjaal", "muki", "mug", "becher", "mok", "kello", "watch", "klocka", "uhr", "horloge"]
+
+
+def recipient(rest: str) -> tuple[dict[str, str] | None, str | None]:
+    """'for mom' -> ({lang: 'äidille' ...}, 'female'); (None, None) when the words name no recipient."""
+    f = fold(rest)
+    for rx, words, who in RECIPIENTS:
+        if rx.match(f):
+            return words, who
+    return None, None
+
+
+def _rest_for(rest: str, lang: str) -> str:
+    """The leftover words in that language: a recipient is translated ('for mom' -> 'äidille'), else unchanged."""
+    words, _ = recipient(rest) if rest else (None, None)
+    return words.get(lang, words["en"]) if words else rest
+
+
 def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str | None, near: str | None,
             rest: str, T: Any) -> dict[str, Any]:
     nb = _node_brief(T, tpl["node"], lang)
@@ -752,7 +849,8 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
         near_txt = ""
     to_txt = ((_TO if tpl["travel"] == "to" else _IN)[lang].format(p=place)) if (tpl["travel"] and place) else ""
     rest_txt = f" {rest}" if rest else ""
-    label = label.replace("{near}", near_txt).replace("{to}", to_txt).replace("{rest}", rest_txt)
+    label = label.replace("{near}", near_txt).replace("{to}", to_txt).replace("{rest}", f" {_rest_for(rest, lang)}"
+                                                                              if rest else "")
     label = re.sub(r"\s+", " ", label).strip()
     if tpl["travel"] and place:
         hunt_words = f"{tpl['hunt']} {'to ' if tpl['travel'] == 'to' else ''}{place}"
@@ -762,12 +860,20 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
     for lg, qs in (tpl["q"] or {}).items():
         out = []
         for qq in qs:
-            qq = qq.replace("{rest}", f" {rest}" if rest else "")
+            qq = qq.replace("{rest}", f" {_rest_for(rest, lg)}" if rest else "")
             if "{place}" not in qq and ((tpl["local"] and where_p) or (tpl["travel"] and place)):
                 qq += " {place}"
             out.append(_fill(qq, where_p if tpl["local"] else place if tpl["travel"] else None))
         queries[lg] = out
     queries.setdefault("en", [_fill(hunt_words, None)])
+    match: list[str] = []
+    if concept == "gift" and tpl["key"] == "ideas":
+        _w, who = recipient(rest) if rest else (None, None)
+        kinds = GIFT_KINDS.get(who or "any") or GIFT_KINDS["any"]
+        for lg, extra in kinds.items():
+            queries.setdefault(lg, [])
+            queries[lg] = list(dict.fromkeys(queries[lg] + extra))
+        match = list(GIFT_MATCH)
     doms = list(tpl["domains"].get(cc, [])) + [d for d in tpl["domains"].get("*", []) if "." in d]
     look = list(tpl["look"])
     for d in tpl["domains"].get("*", []):
@@ -786,7 +892,7 @@ def _render(tpl: dict[str, Any], *, concept: str, lang: str, cc: str, place: str
         "queries": queries, "lanes": list(tpl["lanes"]), "domains": doms[:10], "look": look,
         "why": tpl["why"], "local": tpl["local"], "travel": tpl["travel"] or "",
         "place": where_p if tpl["local"] else place if tpl["travel"] else None,
-        "source": "curated", "w": tpl["w"],
+        "source": "curated", "w": tpl["w"], **({"match": match} if match else {}),
     }
 
 
@@ -1356,7 +1462,14 @@ def apply(need: Any, intent_id: str, *, country: str | None = None, lang: str = 
         cat["domains"] = own + [d for d in cat.get("domains") or [] if d.get("domain") not in set(it["domains"])]
         cat["kind"] = it["kind"] if it["kind"] in ("service", "digital") else cat.get("kind") or it["kind"]
         cat["intent"] = {"id": it["id"], "label": it["label"], "queries": it["queries"], "look": it["look"],
-                         "why": it["why"], "domains": it["domains"], "travel": bool(it.get("travel"))}
+                         "why": it["why"], "domains": it["domains"], "travel": bool(it.get("travel")),
+                         "local": bool(it.get("local")), "vague": not it.get("node")}
+        if it.get("match"):
+            # a vague present: any listing naming a kind of present counts (resolve reads the category synonyms),
+            # never the recipient's word ('mom shorts'); it browses like a hunt from the tree (a kind, no model)
+            cat["synonyms"] = list(dict.fromkeys(list(it["match"]) + list(cat.get("synonyms") or [])))
+            if it["kind"] == "product" and not it.get("node"):
+                cat["source"] = "tree"
         need_mod.apply_category(need, cat)
         if it["kind"] in ("vehicle", "product", "food") and it.get("lanes"):
             need.conditions = [c for c in it["lanes"] if c in ("new", "used", "refurbished", "rental")] \

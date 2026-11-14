@@ -215,6 +215,7 @@ def api_index() -> dict[str, Any]:
             "GET /api/categories/nodes?ids=a,b&lang=": "a few categories by id, each with its full path",
             "GET /api/intent?q=&country=&lang=&cat=&near=": "what a vague request most likely means: 2-5 ranked meanings (label, kind, category, hunt {q, cat, intent}, local queries, lanes, where-to-look domains, why, confidence), dominant, next steps",
             "GET /api/categories/page?id=&lang=": "a category page: plain title, about, subcategory cards with examples, concrete things, popular chips; huntable=false nodes open this instead of a hunt",
+            "GET /api/categories/enrich?id=&lang=&country=": "what people usually look for in a niche category (suggestions to hunt, providers we know); pending=true: ask again shortly",
             "GET /reviews?hunt_id=&domains=": "SSE: seller reviews after a hunt (review events, then done)",
             "GET|POST /demo/story/refusal?pause=1.5": "SSE: watcher skips, buys, refuses a hidden fee, catches a tampered log",
             "GET|POST /demo/buy?pause=1.2": "SSE: lie detector, haggle counter-offer, auto-buy under open->closed mandates, proof",
@@ -756,6 +757,13 @@ try:  # what a vague request most likely means (GET /api/intent); optional like 
     _intent_router = getattr(_module("intent"), "router", None)
     if _intent_router is not None:
         app.include_router(_intent_router)
+except Exception:
+    pass
+
+try:  # what people usually look for in a niche category (GET /api/categories/enrich); optional like the others
+    _enrich_router = getattr(_module("enrich"), "router", None)
+    if _enrich_router is not None:
+        app.include_router(_enrich_router)
 except Exception:
     pass
 

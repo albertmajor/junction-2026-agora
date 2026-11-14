@@ -181,6 +181,8 @@ def _disputed(o: Offer) -> bool:
 MIN_COMPS = 2          # fewer used listings than this: resale comes from the category's depreciation
 MIXED_LOW = 0.15       # mixed bag: under 15% of the median (10% for bulky things) is shown but never the pick
 MIXED_LOW_BULKY = 0.10
+GENERIC_PICK_MIN = 0.5  # ... and a vague need's pick costs at least half the hunt's median of its condition
+MIXED_PICK_MIN = 0.35  # a mixed bag's pick sits in its usual range: a €45 road bike among €450 ones is never it
 MIXED_FLOOR = 0.08     # a mixed bag of models (a kind of thing): only under 8% of its median is a part / misread
 SCALE_FLOOR = 0.25     # a price under 25% of the item's overall median is a part/accessory or a misread
 
@@ -713,7 +715,7 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
         flags.append(f)
     if private_new(o):
         flags.append(f"{PRIVATE_NEW}: sold as new on a marketplace, compared with used listings (no shop warranty)")
-    if ref_flag := reference_flag(o, ref, cat or DEFAULT_CATEGORY):
+    if not mixed and (ref_flag := reference_flag(o, ref, cat or DEFAULT_CATEGORY)):
         score -= 0.6
         flags.append(ref_flag)
 
@@ -755,6 +757,9 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
                          f"(probably another item's price on the page)")
 
     o.raw.pop("far_under", None)
+    o.raw.pop("mixed_ratio", None)
+    if mixed and p and med_same and len(same) >= 5 and cond in ("new", "used", "refurbished"):
+        o.raw["mixed_ratio"] = round(p / med_same, 3)     # the pick of a mixed bag sits in its usual range
     if mixed and p and med_same and len(same) >= 5 and cond in ("new", "used", "refurbished") \
             and p < (MIXED_LOW_BULKY if mixed == "mixed-bulky" else MIXED_LOW) * med_same \
             and not any(f.startswith("too good to be true") for f in flags):
@@ -1721,7 +1726,18 @@ def _cond(o: Offer) -> str:
     return {"new": "new", "used": "used", "refurbished": "refurbished", "rental": "renting"}.get(o.condition, o.condition)
 
 
+# a seller's own low condition grade (vinted 'Kunto: Tyydyttävä', 'Zustand: Akzeptabel', 'Stan: dostateczny')
+LOW_GRADE = re.compile(r"\b(?:kunto|zustand|condition|stan|staat|skick|tilstand)\s*:?\s*(?:tyydyttävä|tyydyttava|"
+                       r"välttävä|valttava|zufriedenstellend|akzeptabel|ausreichend|satisfactory|fair|acceptable|"
+                       r"dostateczny|zadowalający|zadowalajacy|redelijk|acceptabel|godtagbar|okay|ok)\b", re.I)
 UNCHECKED_BARGAIN = 0.60   # a used listing under 60% of its band median ...
+
+
+BODY_ASKED = re.compile(r"\b(?:body|body only|runko|gehäuse|gehause|kropp|korpus|boîtier|boitier|behuizing)\b", re.I)
+
+
+def asks_body(need: Need) -> bool:
+    return need.kind == "product" and bool(BODY_ASKED.search(f"{need.thing} {' '.join(need.must_have)}"))
 
 
 def _unchecked_bargain(o: Offer, band_of: dict[int, dict[str, Any]]) -> bool:
@@ -1730,6 +1746,8 @@ def _unchecked_bargain(o: Offer, band_of: dict[int, dict[str, Any]]) -> bool:
     check = o.raw.get("page_check")
     if not isinstance(check, dict) or check.get("ok") is not None or market_condition(o) != "used":
         return False
+    if any(f.startswith(("well under the usual", "too good to be true")) for f in o.flags):
+        return True      # live: an olx.pl a7 III kit 35% under the used median, empty page, was the pick
     b = band_of.get(id(o)) or o.raw.get("band") or {}
     med, p = b.get("median"), price_of(o)
     return bool(med and p and p < UNCHECKED_BARGAIN * med)
@@ -1862,11 +1880,33 @@ def _estimate_missing_minimums(need: Need, offers: list[Offer]) -> None:
             o.raw["est_callout_fee"] = statistics.median(fees)
 
 
+def _generic_need(need: Need) -> bool:
+    """A kind of thing asked ('road bike', 'sofa', 'puhelin', a tree hunt): no one model's price rules apply."""
+    try:
+        from agora import resolve
+        return resolve.is_generic(need)
+    except Exception:
+        return False
+
+
 def _mixed(need: Need, t: Thing) -> str | None:
-    """'mixed' / 'mixed-bulky' when the Thing is a mixed bag of models (resolve marks its offers generic_thing)."""
-    if is_service(need) or not t.offers or not all(o.raw.get("generic_thing") for o in t.offers):
+    """'mixed' / 'mixed-bulky' when the Thing is a mixed bag of models: the need is a kind of thing, or most of its
+    offers are marked generic_thing by resolve (late shop rows and merged pages may lack the mark: live, 'road
+    bike' lost 406 normal €250-310 bikes to the cheapest-new rule because a few offers were unmarked)."""
+    if is_service(need) or not t.offers:
+        return None
+    marked = sum(1 for o in t.offers if o.raw.get("generic_thing"))
+    if not (_generic_need(need) or marked * 2 > len(t.offers)):
         return None
     return "mixed-bulky" if _bulky(need) else "mixed"
+
+
+def _with_lens(o: Offer) -> bool:
+    try:
+        from agora.resolve import signature
+        return signature(o.title or "", o.brand).kit
+    except Exception:
+        return False
 
 
 def _need_brand(need: Need) -> str | None:
@@ -1897,6 +1937,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         t.offers[:] = _merge_same_page(t.offers)
     mixed = _mixed(need, t)
     brand = _need_brand(need)
+    body = asks_body(need)
     for o in t.offers:
         discount = discount_check(o, t.offers, history=history)
         own = bool(brand) and brand in _host(o.url).split(".")[0]
@@ -1907,6 +1948,10 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
             o.flags.append(note)
+        o.raw.pop("with_lens", None)
+        if body and _with_lens(o):
+            o.raw["with_lens"] = True
+            o.flags.append("with a lens (you asked for the body only): ranked after body-only offers")
         if o.raw.get("net_of_deduction_eur") is not None:
             o.flags.append(f"page shows {fmt(o.raw['net_of_deduction_eur'])} after the household deduction; "
                            f"compared at the gross {fmt(o.price_eur or 0)}")
@@ -1963,7 +2008,7 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         mark_listings(need, everyone)
         # a mixed bag of models (a kind of thing) has no one 'new price': a €142 VoIP phone or a €20 headset must
         # never become every smartphone's yardstick
-        if not any(o.raw.get("generic_thing") for o in everyone):
+        if not any(o.raw.get("generic_thing") for o in everyone) and not _generic_need(need):
             ref = reference_price(everyone, category_for(" ".join([need.thing] + [o.title for o in everyone[:5]])),
                                   need)
         for o in everyone:
@@ -1999,6 +2044,24 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     # never crowned while a checked one exists: a giveaway-priced one of a mixed bag ('far_under'), or a used
     # listing far under its band whose page told us nothing (pick check: no description to read)
     good = [o for o in good if not o.raw.get("far_under") and not _unchecked_bargain(o, band_of)] or good
+    # a kind of thing ('road bike', 'puhelin', 'sofa'): the pick is a sensibly priced one, not the €35 frame or
+    # the €19 diaper bag at the bottom of the bag (live): shown, but crowned only when nothing else is left
+    good = [o for o in good if (o.raw.get("mixed_ratio") or 1.0) >= MIXED_PICK_MIN] or good
+    if not is_service(need) and _generic_need(need):
+        # a vague need ('puhelin', 'sofa'): the pick sits in the hunt's usual range, not at its giveaway end
+        meds: dict[str, float] = {}
+        for c in ("new", "used", "refurbished"):
+            xs = [x for o in priced if market_condition(o) == c and (x := price_of(o))]
+            if len(xs) >= 5:
+                meds[c] = statistics.median(xs)
+
+        def _low_end(o: Offer) -> bool:
+            m, p = meds.get(market_condition(o)), price_of(o)
+            return bool(m and p and p < GENERIC_PICK_MIN * m)
+        good = [o for o in good if not _low_end(o)] or good
+    # the body asked: a body + lens kit is shown ('with a lens') but never crowned over a body alone
+    if asks_body(need):
+        good = [o for o in good if not o.raw.get("with_lens")] or good
     # bulky things: the home country is the pickable set; listings abroad are shown as "also in the EU"
     eu_extra: list[Offer] = []
     if not is_service(need) and _bulky(need):
@@ -2075,6 +2138,12 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
                          "(priced per period, not compared with buying one)")
         sure = [o for o in good if surely_buyable(o)]
         best_all = min(sure or good, key=_landed)
+        if LOW_GRADE.search(best_all.title or ""):
+            # 'Kunto: Tyydyttävä' (satisfactory) by a few euros: a 'Hyvä' one within 10% is the better buy
+            better = [o for o in (sure or good) if not LOW_GRADE.search(o.title or "")
+                      and _landed(o) <= 1.10 * _landed(best_all)]
+            if better:
+                best_all = min(better, key=_landed)
         for o in good:
             extras = _landed(o) - (o.price_eur or 0)
             beat = round(_landed(best_all) - extras, 2)

@@ -2,17 +2,20 @@
 // Start: a log-scale shelf of real cutouts. Hunt: offers fly in from the ticker and land at their
 // tag price. The Turn: every object slides once to what you actually pay, all in (or per job).
 // See DESIGN.md sections 1, 2, 3 and 6. Shelf idea and cutouts: our teammate rpaszekdev.
-import { S, on, emit, cutSrc, isSetAside, eur, condLetter, domainOf, CUT_MIN_PX, allIn, pickUrl, shipsUnconfirmed, shipNote, trustMark, isUnsure } from './core.js';
+import { S, on, emit, cutSrc, isSetAside, eur, condLetter, domainOf, CUT_MIN_PX, allIn, pickUrl, shipsUnconfirmed, shipNote, trustMark, isUnsure, unsureWhy, cheapestByCondition, isJobItem } from './core.js';
 import { flagHtml, originFor, countryName } from './flags.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const EASE = 'cubic-bezier(.2,.7,.2,1)';
 const T_DROP = 450, T_TURN = 900, T_STAG = 30, T_DRIP = 70, T_RING = 600, T_MODE = 300;
 const H = 340;            // tallest stage (desktop); the real height is measured from what stands on it
-const AX_MIN = 150, AX_MAX = 250;
+const AX_MIN = 150, AX_MAX = 290;
 const AXB = 90;           // axis distance from the stage bottom
 const FULL_MAX = 5;
 const TIER = 64;          // full cutouts: collision distance and tier rise
+// Plates float above the line on a hairline stem to their exact price, so the beads and ticks under them
+// stay in view: LIFT px of air between the axis and a plate's bottom (above a dense line's pip columns).
+const LIFT = 46;
 const BEAD = 30;          // dots: stack step
 const RD_ZONE = 44, RD_COLS = 4, RD_STEP = 11, RD_MAX = 8;    // reading dots: reserved zone at the dearer end
 const HOLD_MS = 350;
@@ -49,6 +52,8 @@ let marksReady = null;
 // silhouette of the market), and only the story's plates and a few beads carry photos.
 const DENSE = 40, PIP = 7, PIP_MAX = 14, BEADS_DENSE = 12;
 let dense = false;
+// why the pick: a short note beside the ring (under the pick's row on phones), its reasons on hover or tap
+let whyEl = null, whyCur = null, whyBox = null, whyKey = '';
 
 // Obj = {key, item|null, extra|null, shelf|null, el, face, img, kind:'full'|'dot', x, lvl, y,
 //        placed:bool, tray:bool, cur:'transform string', ghost: tagEur|null}
@@ -197,6 +202,13 @@ export function mountLine(el) {
   rdLayer = div('ln-reading', stage);
   rdLayer.setAttribute('aria-hidden', 'true');
   figs = div('ln-figs', stage);
+  whyEl = div('ln-why', stage, 'button');
+  whyEl.type = 'button'; whyEl.hidden = true;
+  whyEl.setAttribute('aria-expanded', 'false');
+  whyEl.innerHTML = '<svg class="ln-why-a" viewBox="0 0 26 16" aria-hidden="true"><path d="M24 2.5 C17.5 1.6 10 4.2 4.6 12.2"/><path d="M2.6 6.6 L4.4 12.6 L10.2 10.8"/></svg>' +
+    '<span class="t"></span><span class="ln-why-more" role="tooltip"></span>';
+  whyEl.addEventListener('click', e => { e.stopPropagation(); const o = !whyEl.classList.contains('open'); whyEl.classList.toggle('open', o); whyEl.setAttribute('aria-expanded', String(o)); });
+  whyEl.addEventListener('focusout', () => { whyEl.classList.remove('open'); whyEl.setAttribute('aria-expanded', 'false'); });
   srLive = div('ln-sr', root, 'span');
   srLive.setAttribute('aria-live', 'polite');
   figs.setAttribute('role', 'list');
@@ -310,6 +322,7 @@ function clearAll() {
   cheapKey = null; expanded = false; axFloor = AX_MIN; clearTimeout(turnCapTimer);
   clearTimeout(ghostTimer); ghostsSettled = false;
   if (moreBtn) moreBtn.hidden = true;
+  whyCur = null; whyBox = null; syncWhy(null);
   lit = null; notchEur = null; selected = null; ghostDomain = null; focusDom = null;
   vmode = 'tag'; dripAt = 0;
   root.classList.remove('ln-turned', 'ln-lit', 'ln-calm', 'ln-focus', 'ln-turning');
@@ -532,10 +545,11 @@ function classify(o) {
 }
 // the face box of a full object, and what is visible inside it (px above the face bottom, width, centre shift)
 function faceH(o) {
+  // keep in step with line.css (.ln-o.full, .mono, .late, .ln-extra)
   if (o.shelf) return 86;
-  if (o.extra) return 96;
-  if (isLate(o)) return 64;
-  return o.el.classList.contains('mono') ? 76 : 104;
+  if (o.extra) return 84;
+  if (isLate(o)) return 52;
+  return o.el.classList.contains('mono') ? 64 : 80;
 }
 function visBox(o, fh = faceH(o)) {
   const v = o.vis;
@@ -690,46 +704,64 @@ function assignLevels(list) {
     }
     return;
   }
-  // Full cutouts, most important first, each at the lowest height where its visible body, its caption
-  // (which sits right on top of it) and, when raised, its stem down to its price clear everything placed.
-  // Boxes are in px above the axis. No room under the ceiling: it becomes a dot.
+  // Plates, most important first, each floating at the lowest height where its visible body, its caption
+  // (right on top of it) and its stem down to its price clear everything placed. They never stand on the
+  // line: the beads and ticks under them stay in view. Boxes are in px above the axis. No room under the
+  // ceiling: it becomes a bead.
   const fulls = list.filter(o => o.kind === 'full').sort((a, b) => prio(a) - prio(b));
   const boxes = [];
   const hits = (b, kinds) => boxes.some(p => kinds.includes(p.k) && b.x0 < p.x1 && b.x1 > p.x0 && b.y0 < p.y1 && b.y1 > p.y0);
   const ceil = AX_MAX - 10;
+  // a dense line's pip columns rise up to ~100 px: a plate floats clear above the columns under it
+  const pipTop = new Map();
+  if (dense) {
+    const n = new Map();
+    for (const o of list) if (o.kind !== 'full') { const b = Math.round(o.x / PIP); n.set(b, (n.get(b) || 0) + 1); }
+    for (const [b, k] of n) pipTop.set(b, (Math.min(k, PIP_MAX) - 1) * PIP + 4);
+  }
+  const floorAt = (x0, x1) => {
+    let t = 0;
+    for (let b = Math.floor(x0 / PIP); b <= Math.ceil(x1 / PIP); b++) t = Math.max(t, pipTop.get(b) || 0);
+    return Math.max(LIFT, t ? t + 12 : 0);
+  };
   // the finale's shop object owns its spot: a neighbour standing on top of it would hide its price
   const ex = fulls.find(o => o.extra);
+  whyBox = null;
+  let winBoxes = null;
+  const wantWhy = whyWanted();
   for (const o of fulls) {
     o.top = 0;
     if (ex && o !== ex && Math.abs(o.x - ex.x) < TIER) { o.kind = 'dot'; continue; }
     const fh = faceH(o), v = visBox(o, fh);
     const isWin = turned && o.key === winner;
-    const capOff = isWin ? 22 : 6, cw = capWidth(o);
-    // only the story's objects (the finale's shop, the pick, the leader, the cheap tag) may rise off the
-    // line; anything else that has no room standing on it becomes a bead, so nothing floats on a stick
-    // after the night shift only the pick (and the shop playing it) may: no tall stem beside the ring
-    const mayRise = prio(o) < (S.phase === 'finale' ? 2 : 3);
-    const cands = mayRise ? [...new Set([0, ...boxes.filter(p => p.k !== 'stem').map(p => Math.ceil(p.y1 + 4))])].sort((a, b) => a - b) : [0];
-    // a wide caption may slide sideways (flush with the body's left or right edge) before the object rises
+    const capOff = isWin ? 18 : 5, cw = capWidth(o);
     const bx0 = o.x + v.dx - v.w / 2, bx1 = o.x + v.dx + v.w / 2;
+    const base = floorAt(bx0, bx1);
+    // the story's objects (the finale's shop, the pick, the leader, the cheap tag) may climb as high as it
+    // takes; any other plate only one step, else it waits as a bead. After the night shift only the pick.
+    const mayRise = prio(o) < (S.phase === 'finale' ? 2 : 3);
+    const cands = [...new Set([base, ...boxes.filter(p => p.k !== 'stem').map(p => Math.ceil(p.y1 + 4)).filter(y => y > base)])]
+      .sort((a, b) => a - b).filter(L => mayRise || L <= base + 96);
+    // a wide caption may slide sideways (flush with the body's left or right edge) before the plate rises
     const clampX = d => Math.max(6 + cw / 2, Math.min(W - 6 - cw / 2, o.x + d)) - o.x;
     const shifts = [...new Set([0, cw > v.w ? bx0 + cw / 2 - o.x : 0, cw > v.w ? bx1 - cw / 2 - o.x : 0].map(d => Math.round(clampX(d))))];
     let ok = null;
     for (const L of cands) {
       const body = { k: 'body', x0: bx0, x1: bx1, y0: L, y1: L + v.h };
-      const ring = isWin ? { k: 'ring', x0: o.x - (fh + 56) / 2, x1: o.x + (fh + 56) / 2, y0: L - 16, y1: L + v.h + 24 } : null;
-      const stem = L > 0 ? { k: 'stem', x0: o.x - 2, x1: o.x + 2, y0: 0, y1: L } : null;
+      const rw = (fh + 40) / 2;
+      const ring = isWin ? { k: 'ring', x0: o.x - rw, x1: o.x + rw, y0: L - 12, y1: L + v.h + 14 } : null;
+      const stem = { k: 'stem', x0: o.x - 3, x1: o.x + 3, y0: 0, y1: L };
       if (L + v.h + capOff + 16 > ceil) break;
-      if (hits(body, ['body', 'cap', 'ring'])) continue;
-      if (ring && hits(ring, ['body', 'cap'])) continue;
+      if (hits(body, ['body', 'cap', 'ring', 'stem', 'note'])) continue;
+      if (ring && hits(ring, ['body', 'cap', 'stem', 'note'])) continue;
+      if (hits(stem, ['body', 'cap', 'ring', 'note'])) continue;
       let cap = null, sh = 0;
       for (const d of shifts) {
         const c = { k: 'cap', x0: o.x + d - cw / 2, x1: o.x + d + cw / 2, y0: L + v.h + capOff, y1: L + v.h + capOff + 16 };
-        if (hits(c, ['body', 'cap', 'ring', 'stem'])) continue;
+        if (hits(c, ['body', 'cap', 'ring', 'stem', 'note'])) continue;
         cap = c; sh = d; break;
       }
       if (!cap) continue;
-      if (stem && hits(stem, ['cap'])) continue;
       ok = [L, sh, body, cap, ring, stem];
       break;
     }
@@ -738,6 +770,13 @@ function assignLevels(list) {
     bs.forEach(b => b && boxes.push(b));
     o.lvl = L; o.top = bs[1].y1; o.capx = sh;
     o.capdrop = fh - v.h;
+    if (isWin) winBoxes = { o, cap: bs[1], ring: bs[2] };
+  }
+  // the pick says why, in a short note beside its ring: after the plates (it never pushes one off the
+  // line), before the beads (they keep clear of it)
+  if (winBoxes && wantWhy) {
+    whyBox = placeWhy(winBoxes.ring, winBoxes.cap, ceil, hits);
+    if (whyBox) { boxes.push(whyBox); winBoxes.o.top = Math.max(winBoxes.o.top, whyBox.y1); }
   }
   // dots are beads on the line and stack upward in their own column, never over a caption
   let dots = list.filter(o => o.kind === 'dot').sort((a, b) => a.x - b.x);
@@ -745,7 +784,7 @@ function assignLevels(list) {
     // a dense line: the cheapest few stay photo beads, the rest are pips stacked per 7 px column
     // photo beads spread along the line: the cheapest dot in each 90 px stretch, clear of the plates
     const beads = new Set(), seg = new Map();
-    const nearPlate = o => list.some(p => p.kind === 'full' && Math.abs(p.x - o.x) < 64);
+    const nearPlate = o => list.some(p => p.kind === 'full' && Math.abs(p.x - o.x) < 24);
     for (const o of dots.slice().sort((a, b) => valOf(a) - valOf(b))) {
       if (beads.size >= BEADS_DENSE || nearPlate(o)) continue;
       const k = Math.floor(o.x / 90);
@@ -772,7 +811,7 @@ function assignLevels(list) {
     // a stacked bead keeps clear of captions and of the cutouts' bodies and rings; with no clear
     // height under the ceiling it stays a bead on the axis, tucked behind its neighbour
     const busy = k => cols.some(c => c.k === k && Math.abs(c.x - o.x) < BEAD - 2) ||
-      (k > 0 && hits({ x0: o.x - 14, x1: o.x + 14, y0: k * BEAD - 14, y1: k * BEAD + 14 }, ['cap', 'body', 'ring']));
+      (k > 0 && hits({ x0: o.x - 14, x1: o.x + 14, y0: k * BEAD - 14, y1: k * BEAD + 14 }, ['cap', 'body', 'ring', 'note']));
     while (busy(k) && k < 7) k++;
     // the true view stays calm: at most two beads stacked; the rest tuck in on the axis
     if (busy(k) || k > (vmode === 'true' ? 1 : 3)) k = 0;
@@ -788,6 +827,125 @@ function prio(o) {
   return 3 + (valOf(o) || 0) / 1e6;
 }
 
+// ---------- why the pick ----------
+// A calm one-liner beside the ring ("cheapest all-in you can surely buy") and two or three short lines of
+// reasons behind it, all from what the store already knows: the all-in rank, what was added on the tag,
+// the cheaper offers we cannot be sure of (and why), the gap to the cheapest of another condition, the
+// shop's reviews. verdict.js says the same facts as its rows; this is their margin note on the line.
+const WHY_FONT = 'italic 400 14px "Fraunces", Georgia, serif';
+const WHY_MAX = 50;
+function whyWanted() { return !!whyCur; }
+function addedWords(it) {
+  const rec = (it && it.tc && it.tc.true_cost && it.tc.true_cost.receipt) || [];
+  const words = [];
+  for (const [label, v] of rec.slice(1)) {
+    if (!(v > 0.5)) continue;
+    const l = String(label).toLowerCase();
+    const w = /vat|dut|customs/.test(l) ? 'import VAT' : /ship|deliver|postage/.test(l) ? 'shipping' : /fee|call-out/.test(l) ? 'fees' : null;
+    if (w && !words.includes(w)) words.push(w);
+  }
+  return words.length ? words.join(' and ') : 'extras';
+}
+const condWord = it => String((it && it.offer && it.offer.condition) || '').toLowerCase().replace(/^refurb.*/, 'refurbished');
+function pickWhy(o) {
+  const it = o && o.item;
+  const a = it ? num(allIn(it)) : null;
+  if (a == null) return null;
+  const job = isJobItem(it) || unitJob();
+  const e0 = v => eur(Math.round(v), { dp: 0 });
+  const lines = [];
+  // 1. what it costs you
+  const tag = tagOf(o), ex = tag != null ? a - tag : 0;
+  if (job) lines.push(`${fmtVal(a, 'true', o)} for the whole job, every fee in`);
+  else if (ex > 0.5) lines.push(`${e0(tag)} tag + ${e0(ex)} ${addedWords(it)} = ${e0(a)} all in${shipNote(it)}`);
+  else if (ex < -0.5) lines.push(`${e0(tag)} tag, ${e0(-ex)} VAT back = ${e0(a)} all in`);
+  else lines.push(`${e0(a)} all in: nothing on top of the tag${shipNote(it)}`);
+  // 2. the cheaper ones we cannot be sure of (they are why the pick is not the lowest figure)
+  const costed = [...S.offers.values()].filter(x => x !== it && x.tc && !isSetAside(x) && num(allIn(x)) != null);
+  const cheaper = costed.filter(x => allIn(x) < a - 0.5);
+  let short;
+  if (isUnsure(it)) {
+    short = `lowest all-in, but ${unsureWhy(it) || 'not confirmed'}`;
+  } else if (cheaper.length) {
+    short = job ? 'cheapest job you can surely book' : 'cheapest all-in you can surely buy';
+    const why = cheaper.map(x => unsureWhy(x) || '').filter(Boolean);
+    const ship = why.filter(w => /FI/.test(w)).length;
+    const n = cheaper.length;
+    const what = ship === n ? 'may not ship to Finland'
+      : why.every(w => w === why[0]) && why[0] ? `are ${why[0].replace(/^ships to FI\?$/, 'unconfirmed shipping')}`
+      : 'can’t be confirmed (shipping, stock or price)';
+    lines.push(n === 1 ? `the 1 cheaper one ${what.replace(/^are /, 'is ')}` : `the ${n} cheaper ones ${what}`);
+  } else {
+    short = job ? 'cheapest for the whole job' : 'cheapest all-in';
+  }
+  // 3. against the cheapest of another condition ("€204 less than new")
+  if (!job && !isUnsure(it)) {
+    const byC = cheapestByCondition();
+    const mine = condWord(it);
+    for (const c of ['new', 'refurbished', 'used']) {
+      const b = byC[c];
+      if (c === mine || !b || !b.sure || b.it === it) continue;
+      const gap = allIn(b.it) - a;
+      if (gap < 5) continue;
+      const word = c === 'refurbished' ? 'refurb' : c;
+      lines.push(`${e0(gap)} less than the cheapest ${word} (${e0(allIn(b.it))})`);
+      const s2 = `${short} · ${e0(gap)} less than ${word}`;
+      if (s2.length <= WHY_MAX && !cheaper.length) short = s2;
+      break;
+    }
+  }
+  // 4. the shop's reviews, when they speak well of it
+  const tm = trustMark(it);
+  if (tm && tm.state === 'done' && tm.label !== 'watch out' && tm.label !== 'unknown') lines.push(`seller ${tm.text}`);
+  if (short.length > WHY_MAX) short = short.slice(0, WHY_MAX - 1).trimEnd() + '…';
+  return { short, lines: lines.slice(0, 3) };
+}
+// a spot for the note beside the ring: upper right, upper left, middle right, middle left, above the price
+function placeWhy(ring, cap, ceil, hits) {
+  if (!whyCur || !ring) return null;
+  const w = Math.ceil(textW(whyCur.short, WHY_FONT)) + 34, h = 20;
+  const [r0, r1] = range();
+  const lo = Math.max(8, r0 - 40), hiX = W - 8 - (readingOn ? RD_ZONE : 0);
+  const midY = (ring.y0 + ring.y1) / 2 - h / 2;
+  const tries = [
+    { x0: ring.x1 - 4, y0: ring.y1 - 30, side: 'r' },
+    { x0: ring.x0 + 4 - w, y0: ring.y1 - 30, side: 'l' },
+    { x0: ring.x1 + 2, y0: midY, side: 'r' },
+    { x0: ring.x0 - 2 - w, y0: midY, side: 'l' },
+    { x0: cap.x1 + 6, y0: cap.y0 - 4, side: 'r' },
+    { x0: cap.x0 - 6 - w, y0: cap.y0 - 4, side: 'l' },
+    { x0: cap.x1 - 18, y0: cap.y1 + 2, side: 'r' },
+    { x0: cap.x0 + 18 - w, y0: cap.y1 + 2, side: 'l' },
+    { x0: ring.x1 - 4, y0: ring.y1 + 22, side: 'r' },
+    { x0: ring.x0 + 4 - w, y0: ring.y1 + 22, side: 'l' },
+  ];
+  void r1;
+  for (const t of tries) {
+    const b = { k: 'note', x0: t.x0, x1: t.x0 + w, y0: t.y0, y1: t.y0 + h, side: t.side };
+    if (b.x0 < lo || b.x1 > hiX || b.y1 > ceil || b.y0 < 20) continue;
+    if (hits(b, ['body', 'cap', 'ring', 'stem', 'note'])) continue;
+    return b;
+  }
+  return null;
+}
+function syncWhy(at) {
+  if (!whyEl) return;
+  if (!at || !whyCur) { whyEl.hidden = true; whyEl.classList.remove('on', 'open'); return; }
+  const key = whyCur.short + '|' + whyCur.lines.join('|');
+  if (key !== whyKey) {
+    whyKey = key;
+    whyEl.querySelector('.t').textContent = whyCur.short;
+    const more = whyEl.querySelector('.ln-why-more');
+    more.textContent = '';
+    for (const l of whyCur.lines) div('', more, 'span').textContent = l;
+    whyEl.setAttribute('aria-label', `Why this pick: ${whyCur.short}. ${whyCur.lines.join('. ')}.`);
+  }
+  whyEl.dataset.side = at.side;
+  whyEl.style.transform = `translate(${Math.round(at.x)}px, ${Math.round(at.y)}px)`;
+  whyEl.hidden = false;
+  if (!whyEl.classList.contains('on')) requestAnimationFrame(() => whyEl.classList.add('on'));
+}
+
 function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   if (!root) return;
   let list = visible();
@@ -798,6 +956,9 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
   for (const o of objs.values()) if (!o.tray) o.el.classList.toggle('ln-gone', !list.includes(o) && !o.pending);
   const rm = reduced();
   cheapKey = findCheap(list);
+  const wo = objs.get(winner);
+  whyCur = phase === 'hunt' && turned && vmode === 'true' && !focusing && wo && list.includes(wo) ? pickWhy(wo) : null;
+  whyBox = null;
   if (vertical) return layoutVertical({ dur, stagger, list, rm });
   moreBtn.hidden = true;
   for (const o of objs.values()) if (o.el.classList.contains('ln-gone') && list.includes(o)) o.el.classList.remove('ln-gone');
@@ -831,6 +992,7 @@ function layout({ dur = T_DROP, stagger = 0, order = null } = {}) {
     move(o, to, rm ? 0 : dur, stagger * i);
   });
   placeCaps(list);
+  syncWhy(whyBox ? { x: whyBox.x0, y: AX - whyBox.y1, side: whyBox.side } : null);
   readPlace();
   drawAxis();
   drawGhosts(false);
@@ -965,7 +1127,7 @@ function layoutVertical({ dur, stagger, list, rm }) {
   moreBtn.dataset.to = hidden.length + cut > DENSE ? 'ledger' : '';
   if (hidden.length) moreBtn.textContent = moreBtn.dataset.to ? `all ${S.offers.size} listings ↓` : `+${hidden.length} dearer`;
   chooseFull(list);
-  let y = 8;
+  let y = 8, whyAt = null;
   list.forEach((o, i) => {
     o.lvl = 0;
     applyKind(o);
@@ -991,7 +1153,10 @@ function layoutVertical({ dur, stagger, list, rm }) {
     } else move(o, to, rm ? 0 : dur, stagger * i);
     o.fly = false; o.flyFrom = null;
     y += o.kind === 'full' ? 76 : 44;
+    // the pick's why, under its row (clear of its ring), before the next row
+    if (whyCur && o.key === winner) { whyAt = { x: 72, y: y - 2, side: 'u' }; y += 26; }
   });
+  syncWhy(whyAt);
   listH = y + 8;
   const rdH = reading.size ? 30 : 0;
   stage.style.height = Math.max(phase === 'start' ? 120 : 80, y + 8 + rdH) + 'px';

@@ -25,3 +25,17 @@ def test_line_handles_removed_offers_and_quiet_late_labels():
     css = (ROOT / "agora" / "web" / "css" / "line.css").read_text()
     # the "late" word is only drawn where line.js found room for it
     assert "\n.ln-o.late::after" not in css and ".late-lab::after" in css
+
+
+def test_line_plates_float_on_pins_and_the_pick_says_why():
+    """Plates float above the line on a stem (the beads and ticks under them stay in view), are 64-84 px
+    instead of 104, and the ringed pick carries a short "why" note with its reasons on hover or tap."""
+    js = (ROOT / "agora" / "web" / "js" / "line.js").read_text()
+    css = (ROOT / "agora" / "web" / "css" / "line.css").read_text()
+    assert "const LIFT = " in js and "floorAt(" in js
+    assert "return o.el.classList.contains('mono') ? 64 : 80;" in js
+    assert ".ln-o.full { --fw: 80px; --fh: 80px;" in css
+    # the note is placed after the plates (never evicts one) and the beads keep clear of it
+    assert "function pickWhy(" in js and "function placeWhy(" in js
+    assert "['cap', 'body', 'ring', 'note']" in js
+    assert ".ln-why-more" in css and ".ln-turning .ln-why" in css

@@ -540,6 +540,78 @@ def is_service(need: Need) -> bool:
     return need.kind in ("service", "digital")
 
 
+# ---------------------------------------------------------------- services bought from the home country's market
+# Insurance, banking, energy and phone contracts are sold per country (licensed, priced per driver / home / meter),
+# quoted rather than listed, and bought where you live even when no place was typed (eval r2: 'Car insurance' from
+# the tree searched in English with no country and found only US insurers in USD).
+NATIONAL_WORDS = re.compile(
+    r"\b(?:insurances?|vakuutu\w*|versicherung\w*|försäkring\w*|forsikring\w*|verzekering\w*|assurance|"
+    r"mortgages?|asuntolaina\w*|loans?|laina|kredit\w*|hypothek\w*|bolån|hypotheek|bank accounts?|pankkitili\w*|"
+    r"electricity contracts?|electricity|sähkösopimu\w*|sähkö|strom(?:tarif\w*|vertrag\w*)?|elavtal|energiecontract|"
+    r"broadband|laajakaista\w*|mobile plans?|phone plans?|liittymä\w*|handyvertrag\w*|mobilabonnemang)\b", re.I)
+NATIONAL_ROOTS = ("finance-insurance", "utilities")
+
+
+def national_service(need: Need) -> bool:
+    """A service sold per country and priced by quote (insurance, loans, energy, phone plans): searched in the
+    home country and its language when no place is asked."""
+    if need.kind not in ("service", "digital"):
+        return False
+    cat = need.category or {}
+    ids = [str(x) for x in cat.get("path_ids") or []]
+    if ids and any(ids[0].startswith(r) for r in NATIONAL_ROOTS) and not ids[0].startswith("software"):
+        return True
+    return bool(NATIONAL_WORDS.search(f"{need.thing} {need.raw} {cat.get('label') or ''}"))
+
+
+QUOTE_WORDS = re.compile(r"\b(?:insurances?|vakuutu\w*|versicherung\w*|försäkring\w*|forsikring\w*|"
+                         r"verzekering\w*|assurance|mortgages?|loans?|laina\w*|kredit\w*|catering|pitopalvelu\w*)\b",
+                         re.I)
+
+
+def quote_based(need: Need) -> bool:
+    """Priced by a personal quote (insurance per driver, a loan per applicant, catering per event): providers
+    publish calculators and examples, rarely a price list."""
+    cat = need.category or {}
+    return need.kind in ("service", "digital") and bool(
+        QUOTE_WORDS.search(f"{need.thing} {need.raw} {cat.get('label') or ''} {' '.join(cat.get('path') or [])}"))
+
+
+# ---------------------------------------------------------------- who a thing is for (women's, men's, kids')
+AUDIENCE_RE = re.compile(
+    r"\b(?:(women|womens|women's|woman's|ladies|ladies'|female|naisten|damen|dames|dam)|"
+    r"(men|mens|men's|man's|male|miesten|herren|heren|herr)|"
+    r"(kids|kid's|kids'|children|children's|childrens|child|lasten|kinder|barn|girls?|boys?|tyttöjen|poikien))\b",
+    re.I)
+AUDIENCE_WORDS: dict[str, dict[str, str]] = {
+    "women": {"en": "women", "fi": "naisten", "sv": "dam", "nb": "dame", "no": "dame", "da": "dame", "de": "damen",
+              "nl": "dames", "pl": "damska", "fr": "femme", "es": "mujer", "it": "donna", "cs": "dámská"},
+    "men": {"en": "men", "fi": "miesten", "sv": "herr", "nb": "herre", "no": "herre", "da": "herre", "de": "herren",
+            "nl": "heren", "pl": "męska", "fr": "homme", "es": "hombre", "it": "uomo", "cs": "pánská"},
+    "kids": {"en": "kids", "fi": "lasten", "sv": "barn", "nb": "barn", "no": "barn", "da": "børne", "de": "kinder",
+             "nl": "kinder", "pl": "dziecięca", "fr": "enfant", "es": "niño", "it": "bambino", "cs": "dětská"},
+}
+
+
+def audience(need: Need) -> str | None:
+    """'women' | 'men' | 'kids' when the words say who the thing is for ('winter jacket women', 'naisten
+    talvitakki', 'Damen Winterjacke'), else None. Never for a vehicle or a service."""
+    if need.kind != "product" or vehicle_need(need.thing or ""):
+        return None
+    m = AUDIENCE_RE.search(f"{need.raw} {need.thing}")
+    if not m:
+        return None
+    return "women" if m.group(1) else "men" if m.group(2) else "kids"
+
+
+def audience_word(who: str | None, lang: str | None) -> str | None:
+    """The audience in a marketplace's language ('women', 'fi' -> 'naisten')."""
+    if not who:
+        return None
+    words = AUDIENCE_WORDS.get(who) or {}
+    return words.get(lang or "en") or words.get({"se": "sv", "dk": "da", "cz": "cs"}.get(lang or "", ""))
+
+
 def _cut(text: str, spans: list[tuple[int, int]]) -> str:
     chars = list(text)
     for a, b in spans:

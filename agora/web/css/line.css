@@ -52,9 +52,9 @@
   z-index: 2; cursor: pointer; outline: none;
   will-change: transform;
 }
-.ln-o.full { --fw: 104px; --fh: 104px; z-index: 3; }
+.ln-o.full { --fw: 80px; --fh: 80px; z-index: 3; }   /* line.js faceH() keeps the same sizes */
 .ln-o.dot.tuck { z-index: 1; }
-.ln-o.full.mono { --fw: 76px; --fh: 76px; }
+.ln-o.full.mono { --fw: 64px; --fh: 64px; }
 .ln-o.ln-shelfo { --fw: 86px; --fh: 86px; }
 .ln-o.lead, .ln-o.win { z-index: 4; }
 .ln-o:hover, .ln-o:focus-visible { z-index: 10; }
@@ -208,14 +208,14 @@
   content: "late"; position: absolute; left: 0; bottom: calc(var(--lvl) * 1px + 14px);
   transform: translateX(-50%); font: 400 10px/1 var(--mono); color: var(--ink-3); pointer-events: none;
 }
-.ln-o.late.full { --fw: 64px; --fh: 64px; }
+.ln-o.late.full { --fw: 52px; --fh: 52px; }
 
 /* watch tag: right of your price goes 35% grey */
 .ln-o.dim .ln-face { opacity: .35; filter: grayscale(1); }
 .ln-o .ln-face { filter: none; }
 
 /* the extra mock-shop object of the finale */
-.ln-o.ln-extra.full { --fw: 96px; --fh: 96px; }
+.ln-o.ln-extra.full { --fw: 84px; --fh: 84px; }
 
 /* set aside tray */
 .ln-tray {
@@ -608,3 +608,86 @@ html.agent-on #ledger { opacity: 0; pointer-events: none; }
 .ln-o.dot.pip:not(:hover):not(:focus-visible) .ln-pic::after { opacity: 0; }
 .ln-o.dot.pip.unsure-pip:not(:hover) .ln-pic { background: color-mix(in srgb, var(--ink-3) 55%, var(--paper)); }
 .ln-dense .ln-o.dot.pip .ln-face { transition: transform 200ms var(--ease); }
+
+/* ---------- floating plates: smaller photos on a pin, the line under them stays in view ----------
+   A plate floats above the axis on a hairline stem down to its exact price (a small foot on the axis).
+   No backing card: the photo itself, soft rounded corners, a soft shadow; a cut-out keeps its own outline.
+   The condition word and the flag are tucked small into the corners; hover or focus enlarges the plate. */
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full .ln-shadow { display: none; }
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full.raw .ln-pic {
+  padding: 0; background: none; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(28,27,24,.14), 0 6px 16px -4px rgba(28,27,24,.22);
+}
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full.raw .ln-pic img { object-fit: cover; object-position: 50% 50%; mix-blend-mode: normal; }
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full:not(.raw):not(.mono) .ln-pic img {
+  filter: drop-shadow(0 1px 1px rgba(28,27,24,.16)) drop-shadow(0 5px 8px rgba(28,27,24,.16));
+}
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full.mono .ln-pic { border-radius: 12px; }
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full .ln-stem { opacity: .7; }
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full.raised::before {
+  left: -2.5px; bottom: -2.5px; width: 5px; height: 5px; background: var(--ink-2); box-shadow: 0 0 0 1.5px var(--paper);
+}
+/* corners: the word bottom-right, the flag top-left, both small and half outside the photo */
+#line:not(.ln-v) .ln-o.full .ln-cond {
+  right: -6px; bottom: -6px; height: 15px; min-width: 0; padding: 0 5px; border-radius: 8px;
+  font: 500 9.5px/15px var(--sans); box-shadow: 0 0 0 1px var(--hair), 0 1px 2px rgba(28,27,24,.12);
+}
+#line:not(.ln-v) .ln-o.full .ln-cond .w { font: 500 9.5px/15px var(--sans); color: var(--ink-2); }
+#line:not(.ln-v) .ln-o.full .ln-flag { left: -5px; top: -5px; transform: scale(.86); transform-origin: 0 0; }
+#line:not(.ln-v) .ln-o.full .ln-flag .flag { padding: 1.5px; margin: 0; background: var(--paper); border-radius: 3px; box-shadow: 0 0 0 1px var(--hair); }
+/* hover / focus: the plate grows from its pin (the stem and its foot stay put) */
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full:hover,
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full:focus-visible { --s: 1.32; }
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full .ln-face { transition: transform var(--t-drop, 450ms) var(--ease), opacity var(--t-ui, 160ms) linear; }
+#line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full:hover .ln-face { transition-duration: 220ms, 160ms; }
+#line:not(.ln-v) .ln-o.full:focus-visible .ln-pic { border-radius: 12px; }
+/* the ink ring, sized to the smaller plate */
+#line:not(.ln-v) .ln-o.full .ln-ring { bottom: -12px; width: calc(var(--fw) + 40px); height: calc(var(--fh) - var(--capdrop, 0px) + 26px); }
+#line:not(.ln-v) .ln-o.win .ln-cap { bottom: calc(100% + 18px - var(--capdrop, 0px)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full.raw .ln-pic { box-shadow: 0 0 0 1px rgba(238,234,225,.10), 0 6px 18px -4px rgba(0,0,0,.6); }
+  :root:not([data-theme="light"]) #line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full:not(.raw):not(.mono) .ln-pic img { filter: drop-shadow(0 0 1px rgba(255,248,235,.45)) drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
+  :root:not([data-theme="light"]) #line:not(.ln-v) .ln-o.full .ln-cond { box-shadow: 0 0 0 1px var(--hair); }
+}
+:root[data-theme="dark"] #line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full.raw .ln-pic { box-shadow: 0 0 0 1px rgba(238,234,225,.10), 0 6px 18px -4px rgba(0,0,0,.6); }
+:root[data-theme="dark"] #line:not(.ln-v):not([data-ln-phase="start"]) .ln-o.full:not(.raw):not(.mono) .ln-pic img { filter: drop-shadow(0 0 1px rgba(255,248,235,.45)) drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
+:root[data-theme="dark"] #line:not(.ln-v) .ln-o.full .ln-cond { box-shadow: 0 0 0 1px var(--hair); }
+/* phones: the row's photo without a backing card too */
+.ln-v .ln-o.full.raw .ln-pic { padding: 0; background: none; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px var(--hair); }
+.ln-v .ln-o.full.raw .ln-pic img { object-fit: cover; object-position: 50% 50%; mix-blend-mode: normal; }
+
+/* ---------- why the pick: a margin note beside the ring, its reasons on hover / tap ---------- */
+.ln-why {
+  position: absolute; left: 0; top: 0; z-index: 6; display: inline-flex; align-items: flex-start; gap: 4px;
+  height: 20px; margin: 0; padding: 0; border: 0; background: none; cursor: help; white-space: nowrap;
+  font: italic 400 14px/20px var(--serif); color: var(--ink-2); text-align: left;
+  opacity: 0; transition: opacity 300ms linear, transform var(--t-drop, 450ms) var(--ease);
+}
+.ln-why[hidden] { display: none; }
+.ln-why.on { opacity: 1; transition: opacity 400ms linear 450ms, transform var(--t-drop, 450ms) var(--ease); }
+.ln-turning .ln-why { opacity: 0 !important; transition: none; }
+.ln-splitting .ln-why { opacity: .2 !important; }
+.ln-why .t { text-decoration: underline dotted var(--ink-3); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.ln-why:hover, .ln-why:focus-visible, .ln-why.open { color: var(--ink); }
+.ln-why:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+.ln-why-a { flex: none; width: 26px; height: 16px; margin-top: 6px; fill: none; stroke: var(--ink-2); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.ln-why[data-side="l"] { flex-direction: row-reverse; }
+.ln-why[data-side="l"] .ln-why-a { transform: scaleX(-1); }
+.ln-why[data-side="u"] .ln-why-a { transform: scaleY(-1); margin-top: -4px; }
+/* the reasons: two or three short lines, under the note */
+.ln-why-more {
+  position: absolute; top: calc(100% + 6px); left: 30px; display: none; gap: 2px; min-width: 260px; max-width: 340px;
+  padding: 8px 10px; border-radius: 8px; background: var(--paper); box-shadow: 0 0 0 1px var(--hair), 0 8px 24px rgba(0,0,0,.08);
+  font: 400 12.5px/1.4 var(--sans); font-style: normal; color: var(--ink-2); white-space: normal;
+}
+.ln-why[data-side="l"] .ln-why-more { left: auto; right: 30px; }
+.ln-why-more span { display: block; }
+.ln-why-more span:first-child { color: var(--ink); font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ln-why:hover .ln-why-more, .ln-why:focus-visible .ln-why-more, .ln-why.open .ln-why-more { display: grid; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ln-why-more { background: var(--paper-2, var(--stage)); box-shadow: 0 0 0 1px var(--hair), 0 8px 24px rgba(0,0,0,.4); } }
+:root[data-theme="dark"] .ln-why-more { background: var(--paper-2, var(--stage)); box-shadow: 0 0 0 1px var(--hair), 0 8px 24px rgba(0,0,0,.4); }
+/* phones: under the pick's row, beside the photo column */
+.ln-v .ln-why { font-size: 13.5px; max-width: calc(100% - 80px); }
+.ln-v .ln-why .t { overflow: hidden; text-overflow: ellipsis; }
+.ln-v .ln-why-more { left: 0; min-width: 0; width: calc(100vw - 112px); }
+@media (prefers-reduced-motion: reduce) { .ln-why, .ln-why.on { transition: opacity 160ms linear; } }
