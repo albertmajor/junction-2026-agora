@@ -747,8 +747,8 @@ def relevance(need: Need, offer: Offer) -> float:
     """0..1: how well this offer answers the need."""
     if not_an_offer(offer):
         return 0.0
-    if kind_mismatch(need, offer):
-        return 0.05            # a gun for a gunsmith hunt, a repair rate for a product hunt
+    if kind_mismatch(need, offer) or far_provider(need, offer):
+        return 0.05            # a gun for a gunsmith hunt, a repair rate for a product hunt, a US gunsmith
     ns = signature(need.thing)
     os_ = signature(offer.title or "", offer.brand)
     title_toks = set(tokenize(offer.title or "")) | os_.words | set(os_.models)
@@ -814,7 +814,8 @@ GUNSMITH_GROUP = frozenset({"gunsmith", "gunsmiths", "gunsmithing", "aseseppa", 
                             "buchsenmacher", "buchsenmacherei", "buchsenmachermeister", "waffenschmied",
                             "waffenwerkstatt", "wapensmid", "geweermaker", "vapensmed", "bossemager", "bøssemager",
                             "borsemaker", "børsemaker", "armurier", "armurerie", "armero", "armaiolo", "rusznikarz",
-                            "puskar", "armeiro"})
+                            "puskar", "armeiro", "aseiden", "aseen", "asekunnostus", "firearm", "firearms",
+                            "waffenservice", "wapenonderhoud", "vapenservice"})
 SERVICE_NOUNS = SERVICE_NOUNS + (GUNSMITH_GROUP,)
 CLEANING_GROUP, PLUMBER_GROUP, ELECTRICIAN_GROUP, HANDYMAN_GROUP = (SERVICE_NOUNS[1], SERVICE_NOUNS[4],
                                                                     SERVICE_NOUNS[5], SERVICE_NOUNS[6])
@@ -946,11 +947,35 @@ GUN_ITEMS = re.compile(
     r"kivaari\w*|haulikko\w*|pistooli\w*|revolveri\w*|ilmakivaari\w*|kiikaritahtain\w*|kiikari\w*|"
     r"tahtain\w*|aanenvaimen\w*|vaimennin|lipas|lippaat|patruun\w*|ammo|ammunition|cartridges?|"
     r"gewehr\w*|buchse|flinte|zielfernrohr|schalldampfer|munition|geweer|jachtgeweer|vapen\b|gevar|"
-    r"stocks?|magazines?|barrels?|holsters?|gun\s+safe|asekaappi|waffenschrank|bipod)\b", re.I)
+    r"stocks?|magazines?|barrels?|holsters?|gun\s+safe|asekaappi|waffenschrank|bipod|asepussi|asekotelo|"
+    r"gun\s+(?:bag|case|cabinet)|futteral|waffenkoffer)\b", re.I)
 # marketplaces of goods only (no service ads): a listing there is a thing unless it states a rate or the work
 GOODS_ONLY = ("vinted.", "ebay.", "backmarket.", "amazon.", "refurbed.", "swappie.", "rebuy.", "momox.", "etsy.",
               "zalando.", "aliexpress.", "temu.", "wish.com", "huuto.net", "tradera.com", "catawiki.")
 _MARKET_SPLIT = ("contextdev_markdown_split", "contextdev_list", "jsonld_itemlist")
+
+
+FAR_CURRENCIES = {"USD", "CAD", "AUD", "NZD"}
+
+
+def far_provider(need: Need, offer: Offer) -> str | None:
+    """A local trade (a gunsmith, a cleaner) is done where you are: a provider pricing in dollars is on another
+    continent, whatever its page says. B2B / digital services are delivered from anywhere and stay."""
+    if need.kind != "service" or (offer.currency or "").upper() not in FAR_CURRENCIES:
+        return None
+    try:
+        from agora.discover import country_of, domain_of, home_country, is_eu
+        from agora.need import priced_per_period
+        if priced_per_period(need) or is_eu(domain_of(offer.url or "") or offer.source or ""):
+            return None          # a .de page quoting dollars is still a Berlin plumber
+        if offer.location and need.where and need.where.lower() in offer.location.lower():
+            return None
+        cc = country_of(need) or home_country()
+    except Exception:
+        return None
+    if not cc or cc.lower() in ("us", "ca", "au", "nz"):
+        return None
+    return f"a provider abroad (prices in {offer.currency.upper()}), not a {service_label(need)} near you"
 
 
 def service_label(need: Need) -> str:
@@ -1081,9 +1106,9 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return 0.0, why
     if r >= threshold:
         return r, None
-    if why := not_an_offer(offer):
+    if why := kind_mismatch(need, offer) or far_provider(need, offer):
         return r, why
-    if why := kind_mismatch(need, offer):
+    if why := not_an_offer(offer):
         return r, why
     if need.kind == "service":
         return r, off_topic_reason(need, offer) or "not that service (the page does not name the job)"

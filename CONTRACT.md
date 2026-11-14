@@ -250,3 +250,18 @@ Additive (used-dealer units, grades, import clearance, review badges):
 
 ## Tests
 `tests/` with pytest, offline by default (fixtures/mocks). Live tests marked and skipped unless `AGORA_LIVE=1`.
+
+Additive (category context):
+- `GET /hunt?q=&cat=<taxonomy node id>` -> `hunt(text, category=id)`; the viewer (stream.js) sends the page URL's `cat`.
+  `Need.category` (optional dict: id, label, path, path_ids, kind, lanes, size, domains, labels, synonyms, service,
+  source, confidence). `need.categorize(need, category_id|None)`: a tree node sets the need's kind (service / digital
+  -> service lanes only; product / vehicle / food / property -> product lanes from the node); typed text uses
+  `taxonomy.classify` (confidence >= 0.6, score >= 0.85) and turns a product need into a service only on a strong
+  service node clearly ahead of the best product node (not food-drink). New event right after `need`:
+  `category` {id, label, path, kind, confidence, source: "tree"|"classified", lanes, size, domains}.
+- Service lane: the job in the local language (SERVICE_LOCAL, else the node's label) also when no place is asked
+  (home country, AGORA_COUNTRY); the node's own / same-country where-to-look domains join the service-market search.
+- `resolve.kind_mismatch(need, offer)`: a service need rejects things for sale ("a product, not a gunsmith service
+  (...)": books/manga/merch that only share the name, guns and parts, goods-only marketplaces, product pages without
+  service wording); a product need rejects service ads ("a service, not a bike"). `resolve.far_provider`: a local
+  trade priced in USD/CAD/AUD on a non-EU domain is "a provider abroad". Both run before the list-page reason.

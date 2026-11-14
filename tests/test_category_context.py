@@ -187,3 +187,22 @@ def test_api_passes_cat_to_hunt(monkeypatch):
 def test_viewer_sends_cat_to_hunt():
     js = (ROOT / "agora" / "web" / "js" / "stream.js").read_text()
     assert "get('cat')" in js and "p.set('cat'" in js
+
+
+def test_list_page_items_get_the_kind_reason_first():
+    """Live 'aseseppä helsinki': tori gun bags / gun cabinets said 'search or list page'; the kind is the reason."""
+    n, _ = gunsmith_need("aseseppä helsinki", None)
+    for title in ("Kiväärin Asepussi - SNIPER - Pehmustettu", "Asekaappi 150 x 50 x 37 cm"):
+        o = offer("https://www.tori.fi/recommerce/forsale/search?q=aseseppä", "tori.fi", title, 100.0)
+        assert resolve.explain(n, o)[1].startswith("a product, not a gunsmith service"), title
+
+
+def test_dollar_gunsmith_abroad_is_not_a_helsinki_provider(monkeypatch):
+    monkeypatch.setenv("AGORA_COUNTRY", "fi")
+    n, _ = gunsmith_need("aseseppä helsinki", None)
+    us = Offer(url="https://hallprecision.com/gunsmithing", source="hallprecision.com", title="Gunsmithing - Hall Precision",
+               price=70, currency="USD", price_eur=63.34, condition="service", unit="hour")
+    assert resolve.explain(n, us)[1].startswith("a provider abroad (prices in USD)")
+    de = Offer(url="https://jesse-berlin.de/price/", source="jesse-berlin.de", title="Gunsmith work",
+               price=70, currency="USD", price_eur=63.34, condition="service", unit="hour")
+    assert resolve.far_provider(n, de) is None      # a European page quoting dollars stays

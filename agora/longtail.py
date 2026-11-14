@@ -88,7 +88,8 @@ def note_listicle(url: str, title: str = "", snippet: str = "") -> None:
 
 # local home services already have the core service lane (directories, local rates): no long tail there
 LOCAL_TRADES = {"cleaning", "plumbing", "electrician", "moving", "painting", "handyman", "haircut", "childcare",
-                "gardening", "massage", "car wash", "tyre change", "pet care", "laundry", "physiotherapy", "repair"}
+                "gardening", "massage", "car wash", "tyre change", "pet care", "laundry", "physiotherapy", "repair",
+                "gunsmith"}
 B2B_WORDS = re.compile(
     r"\b(?:subscription|saas|software|app|agency|agencies|studio|freelanc\w*|consult\w*|retainer|productized|"
     r"design\w*|develop\w*|web\s?site|webflow|wordpress|shopify|seo|marketing|copywrit\w*|content|branding|logo|"
@@ -117,6 +118,14 @@ def classify(need: Need) -> dict[str, Any] | None:
             return None
     except Exception:
         pass
+    cat = getattr(need, "category", None) or {}
+    if cat.get("kind") == "service" and cat.get("path_ids"):
+        try:   # a local-service node of the tree (a gunsmith, a tailor): rates and directories, not retainers
+            from agora.need import priced_per_period
+            if not priced_per_period(need):
+                return None
+        except Exception:
+            pass
     words = bool(B2B_WORDS.search(text))
     tx = _taxonomy()
     c = None
