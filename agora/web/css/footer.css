@@ -4,7 +4,7 @@
 #rule.pf {
   --pf-bg: #0E0D0B; --pf-ink: #F3EFE6; --pf-ink-2: #B9B2A5; --pf-ink-3: #8A8478; --pf-hair: rgba(243,239,230,.12);
   --pf-label: var(--accent, #F0D435); --pf-monkey: #D9B98C;
-  position: relative; display: block; margin: 96px 0 0; padding: 64px 0 0;
+  position: relative; display: block; margin: 0; padding: 56px 0 0;
   color: var(--pf-ink); border: 0; font-size: 14px;
 }
 /* full-bleed slab behind the centred column */
@@ -12,9 +12,9 @@
   content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
   background: var(--pf-bg); border-radius: 28px 28px 0 0;
 }
-#rule.pf h4 { margin: 0 0 14px; font: 600 11px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--pf-label); }
-.pf-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); gap: 32px 40px; }
-.pf-cols nav { display: grid; gap: 10px; align-content: start; }
+#rule.pf h4 { margin: 0 0 12px; font: 600 11px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--pf-label); }
+.pf-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, .8fr)); gap: 28px 32px; align-items: start; }
+.pf-cols nav { display: grid; gap: 8px; align-content: start; }
 .pf-cols nav a { color: var(--pf-ink-2); text-decoration: none; width: fit-content; }
 .pf-cols nav a:hover { color: var(--pf-ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .pf-big {
@@ -26,12 +26,12 @@
 /* the giant wordmark, bleeding to the edges, with the monkey standing next to it */
 .pf-word {
   display: flex; align-items: flex-end; gap: clamp(8px, 2vw, 28px);
-  margin: clamp(48px, 7vw, 96px) 0 0; margin-left: calc(-1 * clamp(4px, 1vw, 16px));
+  margin: clamp(28px, 3.4vw, 48px) 0 0; margin-left: -0.04em;
   line-height: .78; user-select: none; overflow: hidden;
 }
 .pf-name {
   font: 400 clamp(60px, 12.4vw, 196px)/.8 var(--serif); font-variation-settings: var(--display-vs);
-  letter-spacing: -0.035em; color: var(--pf-ink); white-space: nowrap; padding-bottom: .06em;
+  letter-spacing: -0.035em; color: var(--pf-ink); white-space: nowrap; padding-bottom: .2em;
 }
 .pf-name em { font-style: italic; color: var(--pf-monkey); }
 .pf-mascot { height: clamp(80px, 12vw, 190px); width: auto; flex: none; margin-bottom: .2em;
@@ -41,7 +41,7 @@
 /* the thin legal bar (the old footer line) */
 #rule.pf .pf-bar {
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px 24px; flex-wrap: wrap;
-  margin-top: 28px; padding: 18px 0 26px; border-top: 1px solid var(--pf-hair);
+  margin-top: 0; padding: 16px 0 22px; border-top: 1px solid var(--pf-hair);
   font-size: 12px; color: var(--pf-ink-3);
 }
 #rule.pf .pf-bar::before { content: ""; position: absolute; left: calc(50% - 50vw); right: calc(50% - 50vw); height: 1px; margin-top: -19px; background: var(--pf-hair); }
@@ -49,7 +49,7 @@
 #rule.pf .say, #rule.pf .soft { color: var(--pf-ink-3); }
 #rule.pf .foot-links a, #rule.pf .cd-mark { color: var(--pf-ink-2); }
 #rule.pf .cd-mark b { color: var(--pf-monkey); }
-[data-phase="start"] #rule.pf { text-align: left; padding-top: 64px; }
+[data-phase="start"] #rule.pf { text-align: left; padding-top: 52px; }
 
 @media (max-width: 860px) { .pf-cols { grid-template-columns: 1fr 1fr; } .pf-say { grid-column: 1 / -1; } }
 @media (max-width: 640px) {
