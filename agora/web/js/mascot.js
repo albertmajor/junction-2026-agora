@@ -167,7 +167,9 @@ export function mountMascot() {
 /** Where the start-screen monkey stands, relative to the search box (#ask): his left edge `dx` px right of the
  *  box's right edge, his feet `dy` px below the box's bottom; `w` = width in px; `flip` mirrors him; `rot` tilts.
  *  The owner sets these with the monkey devtool (?monkeydev=1 or Ctrl+Shift+M on localhost) and exports JSON. */
-export const MONKEY_PLACE = { dx: 69, dy: 62, w: 157, flip: false, rot: 3 };
+export const MONKEY_PLACE = { dx: 69, dy: 62, w: 157, flip: false, rot: 3, banana: null };
+// banana: null = mirror the monkey on the left of the box; or { dx, dy, w, rot, flip } measured from the box's LEFT edge
+// (dx = gap to its left, dy = from the box's bottom to the banana's bottom), set with the monkey devtool.
 const LOCAL = () => typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 export function monkeyPlace() {
   if (LOCAL()) {
@@ -189,14 +191,15 @@ export function placeStartMonkey(cfg = monkeyPlace()) {
   m.style.left = `${Math.round(a.right - s.left + cfg.dx)}px`;
   m.style.top = `${Math.round(a.bottom - s.top - h + cfg.dy)}px`;
   if (img) img.style.transform = `${cfg.flip ? 'scaleX(-1) ' : ''}rotate(${cfg.rot || 0}deg)`;
-  // the banana mirrors him on the left of the box: same gap, feet on the same line, opposite tilt
+  // the banana: mirrors him on the left of the box unless placed by hand (cfg.banana)
   const ban = document.querySelector('#start .start-banana');
   if (ban) {
-    const bw = Math.round(cfg.w * 0.55), bh = Math.round(bw * 45 / 72);
-    ban.style.width = `${bw}px`;
-    ban.style.left = `${Math.round(a.left - s.left - cfg.dx - bw)}px`;
-    ban.style.top = `${Math.round(a.bottom - s.top + cfg.dy - bh)}px`;
-    ban.style.transform = `rotate(${-(cfg.rot || 0) - 18}deg)`;
+    const b = cfg.banana || { dx: cfg.dx, dy: cfg.dy, w: Math.round(cfg.w * 0.55), rot: -(cfg.rot || 0) - 18, flip: false };
+    const bh = Math.round(b.w * 45 / 72);
+    ban.style.width = `${b.w}px`;
+    ban.style.left = `${Math.round(a.left - s.left - b.dx - b.w)}px`;
+    ban.style.top = `${Math.round(a.bottom - s.top + b.dy - bh)}px`;
+    ban.style.transform = `${b.flip ? 'scaleX(-1) ' : ''}rotate(${b.rot || 0}deg)`;
   }
 }
 if (typeof window !== 'undefined') {
