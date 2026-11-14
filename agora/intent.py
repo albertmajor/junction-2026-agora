@@ -890,9 +890,16 @@ def _taxonomy_intents(T: Any, core: str, lang: str, cc: str, *, place: str | Non
     if not hits:
         return []
     top = hits[0]["score"]
+    try:
+        cls = T.classify(typed, lang=lang)
+    except Exception:
+        cls = None
+    # a model name the tree does not know ('nintendo switch oled', 'dyson v15') still scores its family node
+    # just under the bar: keep that top hit when the classifier agrees with it
+    sure_top = bool(cls and cls["id"] == hits[0]["id"] and (cls.get("confidence") or 0) >= 0.6)
     groups: dict[tuple[str, str], dict[str, Any]] = {}
     for h in hits:
-        if h["score"] < max(0.8, top * 0.7):
+        if h["score"] < max(0.8, top * 0.7) and not (sure_top and h is hits[0]):
             continue
         root = T.path_idx(T._i(h["id"]))[0]
         kind_group = "product" if h["kind"] in ("product", "food", "vehicle") else h["kind"]
@@ -910,10 +917,6 @@ def _taxonomy_intents(T: Any, core: str, lang: str, cc: str, *, place: str | Non
         if len(ranked) >= limit:
             break
     out = []
-    try:
-        cls = T.classify(typed, lang=lang)
-    except Exception:
-        cls = None
     for k, g in enumerate(ranked):
         h = g["h"]
         as_typed = k == 0 and (cls is None or cls["id"] == h["id"] or (cls.get("confidence") or 0) < 0.6)
@@ -1101,6 +1104,52 @@ def match_concept(text: str) -> tuple[str | None, str, str]:
     return TRIGGERS[best.group(1)], best.group(1), rest
 
 
+def _stems(s: str) -> set[str]:
+    return {w[:6] for w in re.findall(r"[a-z0-9]+", fold(s)) if len(w) > 1}
+
+
+def _rest_selects(c: dict[str, Any], rest: str) -> set[str]:
+    """Template keys the leftover words pick out: 'car' in 'car insurance' names the car-insurance meaning,
+    'photographer' in 'wedding photographer' the photographer one. Those words are then a choice, not a
+    modifier glued onto every other meaning ('home insurance car', 'wedding photographer photographer')."""
+    want = _stems(rest)
+    if not want:
+        return set()
+    out = set()
+    for t in c["intents"]:
+        have = _stems(t["hunt"]) | set().union(*(_stems(re.sub(r"\{\w+\}", " ", v)) for v in t["label"].values()))
+        if want <= have:
+            out.add(t["key"])
+    return out
+
+
+def _only_looks(rest: str) -> bool:
+    """True when the leftover words are only a colour / finish ('bright red', 'matte black')."""
+    try:
+        from agora import need as N
+    except Exception:
+        return False
+    return bool(rest.strip()) and not N.ATTRIBUTE_WORDS.sub(" ", rest).strip()
+
+
+def _vehicle_intent(T: Any, core: str, lang: str, cc: str, *, place: str | None, near: str | None,
+                    typed: str) -> list[dict[str, Any]]:
+    """'volvo v70', 'toyota corolla 2015': the tree knows no model names, the need rules know a car make."""
+    try:
+        from agora import need as N
+        if not N.vehicle_need(core):
+            return []
+        it = _from_node(T, N.CARS_NODE, lang, cc, place=place, near=near, typed=typed, w=3.0, source="as-typed",
+                        why="A car make and model: a car to buy.")
+    except Exception:
+        return []
+    if not it:
+        return []
+    it["kind"] = "vehicle"
+    it["hunt"]["cat"] = N.CARS_NODE
+    return [it]
+
+
 def interpret(q: str, country: str | None = None, lang: str | None = None, category: str | None = None, *,
               near: str | None = None, llm: bool = True) -> dict[str, Any]:
     """q -> {q, country, lang, place, concept, dominant, intents: [...2-5], next: [...]}. Intents are ranked,
@@ -1114,7 +1163,13 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
     near = (near or "").strip()[:60] or None
     if place:
         near = None
-    out: dict[str, Any] = {"q": q, "country": cc, "lang": lang, "place": place, "near": near, "concept": None,
+    try:
+        from agora import need as _N
+        q_lang = _N.query_language(q)
+    except Exception:
+        q_lang = None
+    out: dict[str, Any] = {"q": q, "country": cc, "lang": lang, "query_lang": q_lang, "place": place, "near": near,
+                           "concept": None,
                            "category": None, "dominant": False, "intents": [], "next": []}
     intents: list[dict[str, Any]] = []
     nxt: list[dict[str, Any]] = []
@@ -1132,10 +1187,20 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
         if key:
             out["concept"] = key
             c = BY_KEY[key]
-            intents = [_render(t, concept=key, lang=lang, cc=cc, place=place, near=near, rest=rest, T=T)
-                       for t in c["intents"]]
+            picked = _rest_selects(c, rest)
+            looks = _only_looks(rest)    # 'bright red' describes a car to buy, not its rental or insurance
+            intents = [_render(t, concept=key, lang=lang, cc=cc, place=place, near=near,
+                               rest="" if picked or (looks and t["kind"] not in ("product", "vehicle", "food"))
+                               else rest, T=T) for t in c["intents"]]
+            for t, it in zip(c["intents"], intents):
+                if looks and not picked and t["kind"] in ("product", "vehicle", "food") and not t["travel"]:
+                    it["hunt"]["q"] = f"{rest} {t['hunt']}"          # 'bright red car', not 'car bright red'
+                if t["key"] in picked:
+                    it["w"] *= 10.0          # the words name this meaning: it leads, clearly
         else:
             intents = _taxonomy_intents(T, core or q, lang, cc, place=place, near=near, typed=q)
+            if not intents and T is not None:
+                intents = _vehicle_intent(T, core or q, lang, cc, place=place, near=near, typed=q)
     # context: a place, or words like 'near me' / 'company' / 'delivery', make local services likelier;
     # 'used', sizes, a budget make things for sale likelier
     svc_cue = bool(place) or bool(SERVICE_CUES.search(q))

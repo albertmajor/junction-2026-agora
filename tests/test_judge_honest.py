@@ -255,7 +255,9 @@ def test_seen_before_replaces_unknown_shop_noise():
     for ts in (1_000_000.0, 1_100_000.0):
         store.snapshot(o.url, o.price_eur, True, seen_at=ts)
     _, _, _, again = sony()
-    assert "seen before in 2 hunts" in again["e-infin.com"].flags
+    # round-1 judges: 'seen before in N hunts' on every row is noise to a shopper; kept in raw, not in flags
+    assert again["e-infin.com"].raw.get("seen_hunts") == 2
+    assert not any(f.startswith("seen before") for f in again["e-infin.com"].flags)
 
 
 def test_area_rate_from_page_text():

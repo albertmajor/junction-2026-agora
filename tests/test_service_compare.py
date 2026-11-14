@@ -160,8 +160,11 @@ def test_callout_fee_counts_and_a_lone_visit_fee_is_not_a_job():
     visit = svc("werkstueck-berlin.de", "Kurzbesuch", 90, "visit", page_title="Klempner Preisliste Berlin",
                 location="Berlin")
     _, v = run(PLUMBER, [cheap_rate, plain, visit])
-    assert cheap_rate.true_cost.total_eur == 94 and plain.true_cost.total_eur == 70
-    assert v.headline.startswith("€70 for a standard 1-hour call (estimate) at b-klempner.de, €70/h × 1 h")
+    # like with like (round-1 judges): a page that states no call-out gets the others' usual one, as an estimate,
+    # so knowing less never makes a provider look cheaper
+    assert cheap_rate.true_cost.total_eur == 94 and plain.true_cost.total_eur == 119
+    assert any(lbl.startswith("call-out fee (est.") for lbl, _ in plain.true_cost.receipt)
+    assert v.headline.startswith("€94 for a standard 1-hour call (estimate) at a-klempner.de, €45/h × 1 h + €49 call-out")
     assert visit.true_cost is None and visit.raw["not_comparable"] == "call-out / visit fee only, labour extra"
 
 

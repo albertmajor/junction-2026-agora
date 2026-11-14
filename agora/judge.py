@@ -179,6 +179,9 @@ def _disputed(o: Offer) -> bool:
 
 
 MIN_COMPS = 2          # fewer used listings than this: resale comes from the category's depreciation
+MIXED_LOW = 0.15       # mixed bag: under 15% of the median (10% for bulky things) is shown but never the pick
+MIXED_LOW_BULKY = 0.10
+MIXED_FLOOR = 0.08     # a mixed bag of models (a kind of thing): only under 8% of its median is a part / misread
 SCALE_FLOOR = 0.25     # a price under 25% of the item's overall median is a part/accessory or a misread
 
 
@@ -653,13 +656,15 @@ def _domain_in(source: str, names: tuple[str, ...]) -> bool:
 
 def assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]] | None = None,
                  discount: str | None = None, floor: float = 0.0, ref: Reference | None = None,
-                 cat: Category | None = None) -> tuple[float, list[str]]:
+                 cat: Category | None = None, mixed: str | None = None, own_shop: bool = False
+                 ) -> tuple[float, list[str]]:
     """0..1 plus human-readable flags. `peers` = the offers for the same Thing (may include `o`).
     `photos` = agora.trust.same_photo_groups over the hunt (computed once by judge); `discount` = a
     'discount inflated' flag from `discount_check`; `ref` = the hunt's robust reference price."""
     was_disputed = _disputed(o)
     try:
-        return _assess_trust(o, peers, photos=photos, discount=discount, floor=floor, ref=ref, cat=cat)
+        return _assess_trust(o, peers, photos=photos, discount=discount, floor=floor, ref=ref, cat=cat,
+                             mixed=mixed, own_shop=own_shop)
     finally:
         if _disputed(o) != was_disputed:
             _memo_clear()       # a newly disputed price leaves the market: medians memoised so far are stale
@@ -667,7 +672,12 @@ def assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]]
 
 def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]] | None,
                   discount: str | None, floor: float, ref: Reference | None,
-                  cat: Category | None) -> tuple[float, list[str]]:
+                  cat: Category | None, mixed: str | None = None, own_shop: bool = False) -> tuple[float, list[str]]:
+    """`mixed`: the offer's Thing is a mixed bag of models (a kind of thing: 'road bike', 'sofa', a tree hunt;
+    'mixed-bulky' for furniture / prams): its median is no yardstick for one listing (a €190 used Trek is not
+    'too good to be true' next to a €500 median of carbon bikes, a €10 sofa is a giveaway), so the price-ratio
+    rules are off and only a far-off price (under MIXED_FLOOR of the median, not for bulky things) is suspect.
+    `own_shop`: the maker's own shop (ikea.com for IKEA) sets the new price, it is never too good to be true."""
     score = 1.0
     cap = 1.0
     flags: list[str] = []
@@ -709,6 +719,10 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
 
     pool = peers if any(x is o for x in peers) else peers + [o]
     floor = max(floor, market_floor(pool))
+    if mixed:
+        floor = 0.0 if mixed == "mixed-bulky" else floor * MIXED_FLOOR / SCALE_FLOOR
+    if own_shop and o.condition == "new":
+        floor = 0.0
     if (p and floor and p < floor and o.condition in ("new", "used", "refurbished")
             and o.raw.get("price_check") != "verified" and not any(f.startswith("too good") for f in flags)):
         # ear tips (€10) among €170 AirPods, an OLED panel (€90) among €300 consoles: not the item
@@ -719,7 +733,8 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
     same = market_prices([x for x in pool if x.unit == o.unit] if o.condition == "service" else pool, cond)
     med_same = _median(same)
     # services: a 'median' of 2 job prices (a €15 surcharge line and an €80 estimate) is no market
-    if p and med_same and len(same) >= (3 if o.condition == "service" else 2) and not _disputed(o):
+    if p and med_same and len(same) >= (3 if o.condition == "service" else 2) and not _disputed(o) \
+            and not mixed and not (own_shop and o.condition == "new"):
         r = p / med_same
         if r < 0.5 and not any(f.startswith("too good to be true") for f in flags):
             score -= 0.5
@@ -739,7 +754,17 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
             flags.append(f"price disagrees: product read {fmt(p)} vs the {o.condition} market {fmt(med_same)}{seen} "
                          f"(probably another item's price on the page)")
 
-    if (p and cond in ("used", "refurbished") and not _disputed(o)
+    o.raw.pop("far_under", None)
+    if mixed and p and med_same and len(same) >= 5 and cond in ("new", "used", "refurbished") \
+            and p < (MIXED_LOW_BULKY if mixed == "mixed-bulky" else MIXED_LOW) * med_same \
+            and not any(f.startswith("too good to be true") for f in flags):
+        # a €5 sofa or a €10 road bike among €800 ones: a giveaway, a placeholder, a kids' or a very old one.
+        # Shown and costed, but never the pick while sensibly priced ones exist
+        o.raw["far_under"] = True
+        score -= 0.1
+        flags.append(f"far under the usual {cond} price ({fmt(med_same)} median): a giveaway, an older or "
+                     "smaller one, or a placeholder price; check the listing")
+    if (p and cond in ("used", "refurbished") and not _disputed(o) and not mixed
             and not any(f.startswith("too good to be true") for f in flags)
             and (new_ref := market_prices(pool, "new"))):
         # too few comps of its own condition (early in a hunt): a used/refurb price far under the
@@ -757,10 +782,10 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
 
     used = market_prices(pool, "used")
     new = market_prices(pool, "new")
-    if p and cond == "new" and len(used) >= 2 and p < 0.8 * (_median(used) or 0):
+    if p and cond == "new" and len(used) >= 2 and p < 0.8 * (_median(used) or 0) and not mixed and not own_shop:
         score -= 0.3
         flags.append(f"'new' but cheaper than used ones ({fmt(_median(used) or 0)} median used)")
-    if p and cond == "used" and new and p > min(new):
+    if p and cond == "used" and new and p > min(new) and not mixed:
         flags.append(f"costs more than new ({fmt(min(new))})")
 
     if outside_eu(o):
@@ -1432,6 +1457,26 @@ def _merge_net_gross(offers: list[Offer]) -> list[Offer]:
     return [o for o in offers if id(o) not in drop]
 
 
+# work the Finnish household deduction (kotitalousvähennys) covers: household work (cleaning, care), maintenance
+# and renovation of the home, IT installation at home. Not a haircut, a photographer, insurance or bookkeeping.
+DEDUCTION_WORK = re.compile(
+    r"clean|siivo|kotisiivo|ikkunanpesu|window|household|kotitalous|care|hoiva|hoito(?!la)|nanny|babysit|lastenhoit|"
+    r"garden|puutarha|lumity|snow|nurmikko|lawn|plumb|putki|lvi|electric|sähk|sahk|handyman|remont|renovat|"
+    r"korjaus|repair|maalaus|paint|kirvesmie|carpent|laatoit|tiling|kattoty|roof|it[- ]?tuki|it support|"
+    r"tietokone\w*\s*asennus|install|asennus|huolto|maintenance|muurari|nuohous|chimney|pihaty|kodin", re.I)
+NOT_DEDUCTION_WORK = re.compile(r"hair|parturi|kampaamo|beauty|kauneus|nail|kynsi|massage|hieronta|photo|kuvaaja|"
+                                r"wedding|\bhää|bike|bicycle|pyörä|pyora|fahrrad|cykel|fiets|gun|\base\w*|shoe|"
+                                r"kenkä|watch|kello|phone|puhelin|insur|vakuut|bookkeep|kirjanpi|account|lawyer|legal|tax|"
+                                r"car\b|auto(?!mat)|vehicle|tutor|lesson|opetus|course|kurssi|catering", re.I)
+
+
+def deduction_eligible(need: Need) -> bool:
+    """The household deduction applies to this kind of work (home cleaning, care, renovation, trades at home)."""
+    cat = need.category or {}
+    text = f"{need.thing} {cat.get('id') or ''} {cat.get('label') or ''}"
+    return bool(DEDUCTION_WORK.search(text)) and not NOT_DEDUCTION_WORK.search(text)
+
+
 def deduction_back(gross_labour: float, other_work_this_year: float = 0.0) -> float:
     """What the household deduction gives back for this job, given other household work this year."""
     before = HOUSEHOLD.rate * other_work_this_year - HOUSEHOLD.yearly_excess
@@ -1468,6 +1513,22 @@ def _directory_key(o: Offer) -> str:
     return o.raw.get("from_list_page") or o.url
 
 
+# how long one job of these services usually is, when the page prices it by the hour and no size is asked
+JOB_HOURS: list[tuple[re.Pattern[str], float, str]] = [
+    (re.compile(r"wedding|hää|haa(?:kuva|t\b)|hochzeit|bruiloft|bryllup|bröllop|brollop", re.I), 8.0,
+     "a wedding day"),
+    (re.compile(r"photograph|kuvaaja|valokuva|fotogra", re.I), 2.0, "a typical shoot"),
+    (re.compile(r"haircut|hiustenleik|parturi|barber|friseur|kapper", re.I), 1.0, "one visit"),
+    (re.compile(r"moving|movers|muutto|umzug|verhuiz|flytt", re.I), 4.0, "a typical move"),
+]
+
+
+def job_hours(need: Need) -> tuple[float, str] | None:
+    cat = need.category or {}
+    text = f"{need.thing} {cat.get('label') or ''}"
+    return next(((h, what) for rx, h, what in JOB_HOURS if rx.search(text)), None)
+
+
 def service_cost(o: Offer, need: Need) -> TrueCost | None:
     """One job, with the math shown: unit price x size/hours + call-out fee. The headline is the gross
     price; the household deduction is a conditional note (it depends on the person's whole year).
@@ -1499,24 +1560,41 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         stated = o.raw.get("m2_per_hour")
         speed = float(stated) if isinstance(stated, (int, float)) and stated > 0 else M2_PER_HOUR
         mh = o.raw.get("min_hours")
-        default = resolve.TRADE_HOURS if trade else 2.0
+        est_mh = o.raw.get("est_min_hours")       # the minimum the other providers of this trade state
+        typical = job_hours(need)
+        default = resolve.TRADE_HOURS if trade else (typical[0] if typical else 2.0)
         floor = float(mh) if isinstance(mh, (int, float)) and 0.5 <= mh <= 12 else default   # page's minimum
+        if trade and not isinstance(mh, (int, float)) and isinstance(est_mh, (int, float)) and est_mh > floor:
+            floor = float(est_mh)
         if trade:
             hours = floor
             conf = "low"
             o.raw["area_rate_source"] = "assumed"
             label = f"{fmt(rate)}/h{tier} x {hours:g} h (typical call, est.)"
+            if hours == est_mh and not isinstance(mh, (int, float)):
+                label += ", the usual minimum of the others (this page states none)"
+        elif typical and not size:
+            hours = max(floor, typical[0])
+            conf = "low"
+            o.raw["area_rate_source"] = "assumed"
+            label = f"{fmt(rate)}/h{tier} x {hours:g} h ({typical[1]}, est.)"
         else:
-            hours = max(floor, round((size or 50) / speed * 2) / 2)
+            need_h = round((size or 50) / speed * 2) / 2
+            hours = max(floor, need_h)
             conf = ("high" if stated else "medium") if size else "low"
             where = f"page says {speed:g} m²/h" if stated else f"assumed {M2_PER_HOUR:g} m²/h, same for all"
             o.raw["area_rate_source"] = "page" if stated else "assumed"
             label = f"{fmt(rate)}/h{tier} x {hours:g} h" + (f" for {size:g} m² ({where})" if size
                                                             else " (typical visit, est.)")
+            if size and hours > need_h and not isinstance(mh, (int, float)):
+                label += f"; {size:g} m² takes about {max(0.5, need_h):g} h, but bookings are usually {hours:g} h minimum"
         if isinstance(mh, (int, float)) and hours == floor and floor != default:
             label += f", page minimum {floor:g} h"
         sticker = rate * hours
         calc = f"{fmt_rate(rate)}/h × {hours:g} h"
+        o.raw["job_hours"] = hours
+        if typical and not size and not trade:
+            o.raw["job_what"] = typical[1]
     elif unit == "m2" and size:
         label, sticker = f"{fmt(rate)}/m²{tier} x {size:g} m²", rate * size
         calc = f"{fmt_rate(rate)}/m² × {size:g} m²"
@@ -1529,20 +1607,26 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
     receipt.append((label, round(sticker, 2)))
     callout = o.raw.get("callout_fee") if isinstance(o.raw, dict) else None
     extras = float(callout) if isinstance(callout, (int, float)) else 0.0
+    est_callout = o.raw.get("est_callout_fee") if trade and not extras else None
     if extras:
         receipt.append(("call-out fee", round(extras, 2)))
         calc += f" + {fmt(extras)} call-out"
+    elif isinstance(est_callout, (int, float)) and est_callout > 0:
+        extras = float(est_callout)
+        receipt.append(("call-out fee (est.: the others' usual, this page states none)", round(extras, 2)))
+        calc += f" + {fmt(extras)} call-out (est.)"
     if resolve.is_deal(o):
         o.raw["deal"] = True
         basis.append("deal / voucher price: check its conditions (often first booking only)")
     if trade:
-        basis.append(f"estimate: a standard call of {resolve.TRADE_HOURS:g} h labour at the stated hourly rate"
+        used_h = hours if unit == "hour" else resolve.TRADE_HOURS
+        basis.append(f"estimate: a standard call of {used_h:g} h labour at the stated hourly rate"
                      + (" plus the call-out fee" if extras else "") + "; the real job may take longer")
     o.raw["calc"] = calc
     total = sticker + extras
     if o.raw.get("recurring_only"):
         basis.append("only recurring-contract prices on the page: highest tier used for one job")
-    if FI_PLACES.search(f"{need.where or ''} {need.raw}"):
+    if FI_PLACES.search(f"{need.where or ''} {need.raw}") and deduction_eligible(need):
         full = round(min(HOUSEHOLD.cap, total * HOUSEHOLD.rate), 2)
         o.raw["deduction_eur"] = full
         o.raw["deduction_alone_eur"] = deduction_back(total)
@@ -1637,6 +1721,20 @@ def _cond(o: Offer) -> str:
     return {"new": "new", "used": "used", "refurbished": "refurbished", "rental": "renting"}.get(o.condition, o.condition)
 
 
+UNCHECKED_BARGAIN = 0.60   # a used listing under 60% of its band median ...
+
+
+def _unchecked_bargain(o: Offer, band_of: dict[int, dict[str, Any]]) -> bool:
+    """... whose own page was checked and said nothing (raw.page_check.ok is None: no description): too good
+    to crown on its title alone (live: an olx.pl 'MacBook Air M2' 47% under the band, empty description)."""
+    check = o.raw.get("page_check")
+    if not isinstance(check, dict) or check.get("ok") is not None or market_condition(o) != "used":
+        return False
+    b = band_of.get(id(o)) or o.raw.get("band") or {}
+    med, p = b.get("median"), price_of(o)
+    return bool(med and p and p < UNCHECKED_BARGAIN * med)
+
+
 def _risky(o: Offer) -> bool:
     """Never crowned as the best buy: low trust, a price far under its peers or the reference, a red flag in
     the listing (broken, a copy, one earbud ...), or a disputed price."""
@@ -1689,12 +1787,34 @@ def _shipping_flags(o: Offer, need: Need) -> None:
         o.flags.append(f"pickup in {o.location}")
 
 
-def buyer_fee(o: Offer) -> float:
-    """Platform buyer fee (vinted's buyer protection), from agora.shipping.apply."""
-    try:
-        return float(o.raw.get("buyer_fee_eur") or 0.0)
-    except (TypeError, ValueError):
+# a vinted row's title ends in both prices: '..., Kunto: Hyvä, 166.50 €, 175.53 €' (the second has the buyer
+# protection fee in it); the reader does not always pass it on as raw.price_with_buyer_fee
+_TWO_PRICES_END = re.compile(r"(\d{1,6}(?:[.,]\d{1,2})?)\s*€\s*,\s*(\d{1,6}(?:[.,]\d{1,2})?)\s*€\s*(?:,\s*[^,]{0,40})?$")
+
+
+def _title_buyer_fee(o: Offer) -> float:
+    if "vinted" not in (o.source or "") and "vinted" not in (o.url or ""):
         return 0.0
+    m = _TWO_PRICES_END.search(o.title or "")
+    if not m or o.price is None:
+        return 0.0
+    first, second = (float(x.replace(",", ".")) for x in m.groups())
+    if abs(first - float(o.price)) > 0.02 * max(1.0, first) or not (first < second <= first * 1.25 + 3):
+        return 0.0
+    rate = (o.price_eur / o.price) if o.price_eur and o.price else 1.0
+    return round((second - first) * rate, 2)
+
+
+def buyer_fee(o: Offer) -> float:
+    """Platform buyer fee (vinted's buyer protection), from agora.shipping.apply, else from the row's own two
+    prices ('166.50 €, 175.53 €': €9.03 fee)."""
+    try:
+        fee = float(o.raw.get("buyer_fee_eur") or 0.0)
+    except (TypeError, ValueError):
+        fee = 0.0
+    if not fee and (fee := _title_buyer_fee(o)):
+        o.raw["buyer_fee_eur"] = fee
+    return fee
 
 
 def _shipping_line(o: Offer) -> str:
@@ -1716,6 +1836,50 @@ def _peers_for(o: Offer, peers: list[Offer], everyone: list[Offer]) -> list[Offe
     return everyone
 
 
+def _estimate_missing_minimums(need: Need, offers: list[Offer]) -> None:
+    """Like with like for open trades: a page read from a snippet says nothing of a minimum, while fully read
+    ones add their 2 h minimum, so the less we knew the cheaper it looked (live: a €55/h x 1 h freelancer beat
+    €52/h x 2 h page minimum). The others' usual minimum stands in, labelled an estimate."""
+    try:
+        from agora import resolve
+        if not resolve.is_open_trade(need):
+            return
+    except Exception:
+        return
+    known = [float(o.raw["min_hours"]) for o in offers if o.unit == "hour"
+             and isinstance(o.raw.get("min_hours"), (int, float)) and 0.5 <= o.raw["min_hours"] <= 12]
+    fees = [float(o.raw["callout_fee"]) for o in offers if isinstance(o.raw.get("callout_fee"), (int, float))
+            and o.raw["callout_fee"] > 0]
+    for o in offers:
+        o.raw.pop("est_min_hours", None)
+        o.raw.pop("est_callout_fee", None)
+    for o in offers:
+        if o.unit != "hour":
+            continue
+        if known and not isinstance(o.raw.get("min_hours"), (int, float)):
+            o.raw["est_min_hours"] = statistics.median(known)
+        if fees and not isinstance(o.raw.get("callout_fee"), (int, float)):
+            o.raw["est_callout_fee"] = statistics.median(fees)
+
+
+def _mixed(need: Need, t: Thing) -> str | None:
+    """'mixed' / 'mixed-bulky' when the Thing is a mixed bag of models (resolve marks its offers generic_thing)."""
+    if is_service(need) or not t.offers or not all(o.raw.get("generic_thing") for o in t.offers):
+        return None
+    return "mixed-bulky" if _bulky(need) else "mixed"
+
+
+def _need_brand(need: Need) -> str | None:
+    """The maker named in a need for a product line ('ikea kallax shelf' -> ikea). None when a model is named:
+    'AirPods Pro 2 Ear Tips' at apple.com are still not AirPods."""
+    try:
+        from agora.resolve import signature
+        sig = signature(need.thing)
+        return sig.brand if not sig.models else None
+    except Exception:
+        return None
+
+
 def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                   depreciation: dict[str, Any] | None = None, *, history: bool = False,
                   photos: dict[int, list[Offer]] | None = None, floor: float = 0.0,
@@ -1728,12 +1892,18 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         t.offers[:] = _merge_net_gross(t.offers)
         for o in t.offers:
             _gross_up(o, need, o.raw.get("page_deduction_rate"))
+        _estimate_missing_minimums(need, t.offers)
     else:
         t.offers[:] = _merge_same_page(t.offers)
+    mixed = _mixed(need, t)
+    brand = _need_brand(need)
     for o in t.offers:
         discount = discount_check(o, t.offers, history=history)
-        o.trust, new_flags = assess_trust(o, _peers_for(o, t.offers, everyone or []), photos=photos, discount=discount,
-                                          floor=0.0 if is_service(need) else floor, ref=ref, cat=cat)
+        own = bool(brand) and brand in _host(o.url).split(".")[0]
+        o.trust, new_flags = assess_trust(o, t.offers if mixed else _peers_for(o, t.offers, everyone or []),
+                                          photos=photos, discount=discount,
+                                          floor=0.0 if is_service(need) else floor, ref=ref, cat=cat, mixed=mixed,
+                                          own_shop=own)
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
             o.flags.append(note)
@@ -1743,7 +1913,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         if o.raw.get("recurring_only"):
             o.flags.append("recurring-contract price (no one-time price on the page)")
         if (n := seen.get(o.source, 0)) >= 2:
-            o.flags.append(f"seen before in {n} hunts")
+            o.raw["seen_hunts"] = n        # kept for the record; not a flag a shopper needs to read
         if not is_service(need) and not is_periodic(o):
             _shipping_flags(o, need)
     for o in t.offers:
@@ -1791,7 +1961,11 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     ref: Reference | None = None
     if not is_service(need) and not priced_per_period(need):
         mark_listings(need, everyone)
-        ref = reference_price(everyone, category_for(" ".join([need.thing] + [o.title for o in everyone[:5]])), need)
+        # a mixed bag of models (a kind of thing) has no one 'new price': a €142 VoIP phone or a €20 headset must
+        # never become every smartphone's yardstick
+        if not any(o.raw.get("generic_thing") for o in everyone):
+            ref = reference_price(everyone, category_for(" ".join([need.thing] + [o.title for o in everyone[:5]])),
+                                  need)
         for o in everyone:
             o.raw["ref_suspect"] = bool(ref and reference_flag(o, ref, DEFAULT_CATEGORY))
     else:
@@ -1822,6 +1996,9 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
                        [f"{len(all_offers)} offers found, none with a readable price"])
     good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False
             and not o.raw.get("pickup_abroad")] or [o for o in priced if not o.raw.get("pickup_abroad")] or priced
+    # never crowned while a checked one exists: a giveaway-priced one of a mixed bag ('far_under'), or a used
+    # listing far under its band whose page told us nothing (pick check: no description to read)
+    good = [o for o in good if not o.raw.get("far_under") and not _unchecked_bargain(o, band_of)] or good
     # bulky things: the home country is the pickable set; listings abroad are shown as "also in the EU"
     eu_extra: list[Offer] = []
     if not is_service(need) and _bulky(need):
@@ -1852,7 +2029,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             tc = o.true_cost
             assert tc is not None
             deal = " (deal)" if o.raw.get("deal") else ""
-            parts = [f"{fmt(v)} call-out" if lbl == "call-out fee" else lbl for lbl, v in tc.receipt if v > 0]
+            parts = [f"{fmt(v)} call-out" if lbl == "call-out fee" else f"{fmt(v)} call-out (est.)"
+                     if lbl.startswith("call-out fee (est.") else lbl for lbl, v in tc.receipt if v > 0]
             lines.append(f"{o.source}{deal}: {' + '.join(parts)} -> {fmt(tc.total_eur)}")
         if best_tc.raw.get("deal"):
             regular = [o for o in owned if not o.raw.get("deal")]
@@ -2118,7 +2296,10 @@ def _service_headline(need: Need, best: Offer) -> str:
     g = resolve.service_group(need)
     noun = "clean" if g is resolve.CLEANING_GROUP else "job"
     if resolve.is_open_trade(need):
-        job = f"a standard {resolve.TRADE_HOURS:g}-hour call (estimate)"
+        hrs = best.raw.get("job_hours") or resolve.TRADE_HOURS
+        job = f"a standard {hrs:g}-hour call (estimate)"
+    elif best.raw.get("job_what") and not size:
+        job = f"{best.raw['job_what']} (estimate)"
     else:
         job = f"one {size:g} m² {noun}" if size else f"one {noun}"
     tier = f" ({best.raw['tier']} rate)" if best.raw.get("tier") else ""

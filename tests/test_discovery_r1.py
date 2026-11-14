@@ -265,3 +265,48 @@ def test_lunch_hunt_runs_the_service_lane(monkeypatch):
     assert cat_ev.get("auto") and cat_ev["intent"]["id"] == "c:lunch.places"
     assert seen and seen[0].kind == "service" and seen[0].where == "Helsinki"
     assert need_ev.get("where_default")
+
+
+# ------------------------------------------------------------------ intent: 'car insurance finland', 'wedding photographer'
+
+def _intents(q):
+    from agora import intent as I
+    return I.interpret(q, llm=False)
+
+
+def test_words_that_name_one_meaning_make_it_dominant():
+    for q, want, hunt_q in (("car insurance finland", "c:insurance.car", "car insurance"),
+                            ("wedding photographer", "c:wedding.photographer", "wedding photographer"),
+                            ("travel insurance", "c:insurance.travel", "travel insurance")):
+        r = _intents(q)
+        assert r["dominant"] and r["intents"][0]["id"] == want, q
+        assert r["intents"][0]["hunt"]["q"] == hunt_q, q
+        for it in r["intents"]:                      # never 'home insurance car', 'wedding venue photographer'
+            words = it["hunt"]["q"].lower().split()
+            assert len(words) == len(set(words)) and not (it["id"] != want and words[-1] in hunt_q.split()[:1]), it
+    assert not _intents("insurance")["dominant"]     # the bare word still fans out
+    assert not _intents("wedding")["dominant"]
+
+
+def test_colour_words_only_describe_the_thing():
+    r = _intents("bright red car")
+    by = {i["id"]: i["hunt"]["q"] for i in r["intents"]}
+    assert by["c:car.buy"] == "bright red car"
+    assert by["c:car.rental"] == "car rental" and "red" not in by["c:car.insurance"]
+
+
+# ------------------------------------------------------------------ intent: 'volvo v70', 'nintendo switch oled' had no intents
+
+def test_model_names_get_their_family_node():
+    v = _intents("volvo v70")
+    assert v["intents"] and v["intents"][0]["node"] == N.CARS_NODE and v["intents"][0]["kind"] == "vehicle"
+    assert v["dominant"] and v["intents"][0]["as_typed"]
+    for q, node in (("nintendo switch oled", "sp:el-19"), ("dyson v15", "sp:hg-9-10")):
+        r = _intents(q)
+        assert r["intents"] and r["intents"][0]["node"] == node, q
+
+
+def test_intent_reports_the_typed_language():
+    assert _intents("kinderwagen gebraucht")["query_lang"] == "de"
+    assert _intents("puhelin")["query_lang"] == "fi"
+    assert _intents("iphone 13")["query_lang"] is None
