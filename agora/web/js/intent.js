@@ -11,19 +11,24 @@ const { esc } = C;
 const W = {
   en: { which: 'That could be a few things. Which one?', pick: x => `We see a few products called “${x}”. Which one?`, keep: 'Meanwhile we keep hunting the likeliest one.',
         mean: 'We think you mean:', now: 'Searching for', none: x => `Nothing found for “${x}” yet. Try:`, other: 'Something else? Search the words as typed',
-        near: 'Search providers near you', can: 'We can search these for you:', open: 'Browse' },
+        near: 'Search providers near you', can: 'We can search these for you:', open: 'Browse',
+        picked: 'You picked:', change: 'change', changeL: 'Change what you are looking for', typed: x => `Exactly “${x}”` },
   fi: { which: 'Tämä voi tarkoittaa montaa asiaa. Mitä haet?', pick: x => `Nimellä ”${x}” löytyy useita tuotteita. Mikä niistä?`, keep: 'Haemme sillä välin todennäköisintä.',
         mean: 'Tarkoititko:', now: 'Haetaan', none: x => `”${x}” ei tuottanut vielä tuloksia. Kokeile:`, other: 'Jotain muuta? Hae sanoilla sellaisenaan',
-        near: 'Hae palveluntarjoajia läheltäsi', can: 'Voimme hakea nämä puolestasi:', open: 'Selaa' },
+        near: 'Hae palveluntarjoajia läheltäsi', can: 'Voimme hakea nämä puolestasi:', open: 'Selaa',
+        picked: 'Valitsit:', change: 'vaihda', changeL: 'Vaihda mitä etsit', typed: x => `Juuri ”${x}”` },
   sv: { which: 'Det kan betyda flera saker. Vilken?', pick: x => `Vi ser flera produkter som heter ”${x}”. Vilken menar du?`, keep: 'Under tiden letar vi vidare efter den troligaste.',
         mean: 'Vi tror du menar:', now: 'Söker', none: x => `Inget hittades för ”${x}” än. Prova:`, other: 'Något annat? Sök orden som de är',
-        near: 'Sök leverantörer nära dig', can: 'Vi kan söka de här åt dig:', open: 'Bläddra' },
+        near: 'Sök leverantörer nära dig', can: 'Vi kan söka de här åt dig:', open: 'Bläddra',
+        picked: 'Du valde:', change: 'ändra', changeL: 'Ändra vad du letar efter', typed: x => `Exakt ”${x}”` },
   de: { which: 'Das kann mehreres sein. Welches?', pick: x => `Es gibt mehrere Produkte namens „${x}“. Welches meinst du?`, keep: 'Wir suchen derweil weiter nach dem wahrscheinlichsten.',
         mean: 'Meinst du:', now: 'Wir suchen', none: x => `Noch nichts für „${x}“ gefunden. Versuch:`, other: 'Etwas anderes? Die Wörter so suchen',
-        near: 'Anbieter in deiner Nähe suchen', can: 'Das können wir für dich suchen:', open: 'Ansehen' },
+        near: 'Anbieter in deiner Nähe suchen', can: 'Das können wir für dich suchen:', open: 'Ansehen',
+        picked: 'Gewählt:', change: 'ändern', changeL: 'Ändern, wonach du suchst', typed: x => `Genau „${x}“` },
   nl: { which: 'Dat kan van alles zijn. Welke bedoel je?', pick: x => `We zien een paar producten die “${x}” heten. Welke bedoel je?`, keep: 'Ondertussen zoeken we door naar de meest waarschijnlijke.',
         mean: 'We denken dat je bedoelt:', now: 'We zoeken', none: x => `Nog niets gevonden voor “${x}”. Probeer:`, other: 'Iets anders? Zoek de woorden zoals getypt',
-        near: 'Zoek aanbieders bij jou in de buurt', can: 'Dit kunnen we voor je zoeken:', open: 'Bekijk' },
+        near: 'Zoek aanbieders bij jou in de buurt', can: 'Dit kunnen we voor je zoeken:', open: 'Bekijk',
+        picked: 'Je koos:', change: 'wijzig', changeL: 'Wijzig wat je zoekt', typed: x => `Precies “${x}”` },
 };
 const w = (k, ...a) => { const L = W[C.getLang()] || W.en; const v = L[k] ?? W.en[k]; return typeof v === 'function' ? v(...a) : v; };
 
@@ -48,7 +53,7 @@ export const rewrites = it => !!(it && it.hunt && !it.as_typed);
 
 // ---------- the row under the search box ----------
 let el = null;
-const st = { q: '', interp: null, chosen: null, empty: false, clarify: null };
+const st = { q: '', interp: null, chosen: null, empty: false, clarify: null, picked: false };
 
 // ---------- "which one?" (judges, F3: "We see multiple products with this name.") ----------
 // The engine may send `clarify` {question?, name?, options:[{label, q, image?}]} while the hunt keeps streaming
@@ -84,13 +89,21 @@ function render() {
   if (!el) return;
   const I = st.interp, it = st.chosen, ask = st.clarify;
   if (ask && (!I || !it)) { el.innerHTML = clarifyHtml(ask); el.hidden = false; return; }
-  if (!I || !it || (!I.intents.length && !(I.next || []).length)) { el.hidden = true; el.innerHTML = ''; return; }
-  const showNow = rewrites(it);
-  const showChips = !ask && !I.dominant && I.intents.length > 1;
-  if (!showNow && !showChips && !st.empty && !ask) { el.hidden = true; el.innerHTML = ''; return; }
+  if (!I || !it || (!I.intents.length && !(I.next || []).length && !st.picked)) { el.hidden = true; el.innerHTML = ''; return; }
+  const picked = st.picked;
+  const showNow = rewrites(it) && !picked;
+  const showChips = !ask && !picked && !I.dominant && I.intents.length > 1;
+  if (!showNow && !showChips && !st.empty && !ask && !picked) { el.hidden = true; el.innerHTML = ''; return; }
   const others = I.intents.filter(x => x.id !== it.id && !(it.id === '_typed' && x.hunt && x.hunt.q === st.q));
   let html = '';
   if (ask) html += clarifyHtml(ask);
+  if (picked) {
+    // the answer to the clarify question (clarify.js): what we hunt, and a way back to the question
+    const label = it.id === '_typed' ? w('typed', st.q) : it.label;
+    html += `<p class="it-now it-picked"><span class="it-pk"><span class="it-k">${esc(w('picked'))}</span> <b>${esc(label)}</b>`
+      + `${it.id === '_typed' ? '' : where(it)}</span> <span class="it-dot" aria-hidden="true">·</span> `
+      + `<button type="button" class="it-change" data-change="1" aria-label="${esc(w('changeL'))}">${esc(w('change'))}</button></p>`;
+  }
   if (showNow || showChips) {
     html += `<p class="it-now"><span class="it-k">${esc(w('now'))}</span> <b>${esc(it.label)}</b>${where(it)}</p>`;
   }
@@ -121,13 +134,14 @@ function stepsFor(I, it) {
 }
 
 /** main.js: the hunt is starting with this interpretation (or none). */
-export function show(q, interp, chosen) {
-  st.q = q; st.interp = interp; st.chosen = chosen; st.empty = false; st.clarify = null;
+export function show(q, interp, chosen, { picked = false } = {}) {
+  st.q = q; st.interp = interp; st.chosen = chosen; st.empty = false; st.clarify = null; st.picked = !!picked;
   render();
 }
-export function clear() { st.interp = null; st.chosen = null; st.empty = false; st.clarify = null; render(); }
+export function clear() { st.interp = null; st.chosen = null; st.empty = false; st.clarify = null; st.picked = false; render(); }
 
 function onClick(e) {
+  if (e.target.closest('[data-change]')) { core.emit('clarify:change', { q: st.q, interp: st.interp }); return; }
   const c = e.target.closest('[data-clarify]');
   if (c) {
     const o = st.clarify && st.clarify.options[Number(c.dataset.clarify)];

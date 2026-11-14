@@ -1,5 +1,5 @@
 // Boot, start screen, header, need chips, ticker, URL state, keys, lab panel, stage script (B1).
-import { S, bus, emit, on, eur, domainOf, resetStore, allIn, isJobItem, pickUrl, shipsUnconfirmed, BRAND } from './core.js';
+import { S, bus, emit, on, eur, domainOf, resetStore, allIn, isJobItem, pickUrl, shipsUnconfirmed, BRAND, slugify } from './core.js';
 import * as stream from './stream.js';
 import { mountMascot, setDeciding } from './mascot.js';
 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) import('./devtools.js').then(m => m.init()).catch(e => console.warn('[agora] devtools', e)); // dev type panel: local only (?dev=1, Ctrl/Cmd+Shift+D)
@@ -50,6 +50,16 @@ async function mountAll() {
   load('imagefill').then(m => { try { m && m.mountImagefill && m.mountImagefill(); } catch (e) { console.warn('[agora] mountImagefill failed', e); } });
   const im = await load('intent');
   if (im && im.mountIntents) { try { im.mountIntents($('intents')); } catch (e) { console.warn('[agora] mountIntents failed', e); } }
+  const cl = await load('clarify');
+  if (cl && cl.mountClarify) {
+    try {
+      const host = document.createElement('div');
+      host.id = 'clarify'; host.hidden = true; host.setAttribute('aria-live', 'polite');
+      $('intents').before(host);
+      const C = await import('./cats.js');
+      cl.mountClarify(host, { lang: C.getLang });
+    } catch (e) { console.warn('[agora] mountClarify failed', e); }
+  }
   const cp = await load('catpage');
   if (cp && cp.mountCatpage) { try { cp.mountCatpage($('catpage')); } catch (e) { console.warn('[agora] mountCatpage failed', e); } }
   const lm = await load('landing');
@@ -101,7 +111,7 @@ async function renderExamples() {
     b.dataset.q = live && !x.plain ? exText(x) : recQ;
     if (x.rec) b.dataset.rec = x.rec;
     if (!live && x.rec && !x.plain) b.title = `Offline: replays the recorded search “${recQ}”`;
-    b.addEventListener('click', () => run(b.dataset.q));
+    b.addEventListener('click', () => run(b.dataset.q, { example: true }));
     box.appendChild(b);
   });
 }
@@ -161,19 +171,42 @@ on('catpage:shown', d => {        // an old id (merged away) shows its new home:
 // hunt asks /api/intent first and hunts the likeliest meaning ("Lunch places near you", in Restaurants, with the
 // lunch-menu sites), keeping the typed words in the box. intent.js shows which, and the other meanings as chips
 // when the top one is not clearly it. plan = a meaning picked by a chip / the category page; intent = its id (URL).
-async function run(q, { push = true, cat = null, free = false, intent = null, plan = null, interp = null } = {}) {
+// Clarify first (owner + judges): when the meaning is not clearly one thing, clarify.js asks before any hunt
+// ("gta 6 ps5": just the game, or a PS5 with a GTA 6 deal? · Search exactly “gta 6 ps5”). picked = the answer
+// (an intent id, or '_typed' = the words as typed); intent.js then shows "You picked: … · change".
+let runSeq = 0;
+const typedPlan = q => ({ id: '_typed', label: q, as_typed: true, hunt: null });
+async function run(q, { push = true, cat = null, free = false, intent = null, plan = null, interp = null, example = false, picked = false } = {}) {
   q = String(q || '').trim().replace(/\s+/g, ' ');
   if (q.length < 2) { qIn.focus(); return; }
   const I = mods.intent || null;
+  const my = ++runSeq;
+  if (mods.clarify) mods.clarify.close();
   // the monkey thinks while the meaning (and the category) is worked out; the hunt or the category page ends it
   setDeciding(true);
-  try { return await runDecided(q, I, { push, cat, free, intent, plan, interp }); } finally { setDeciding(false); }
+  try { return await runDecided(q, I, { push, cat, free, intent, plan, interp, example, picked, my }); } finally { setDeciding(false); }
 }
-async function runDecided(q, I, { push, cat, free, intent, plan, interp }) {
+async function isRecorded(q) {
+  try { await stream.liveReady; if (stream.isLive()) return false; return (await stream.recordings()).includes(slugify(q)); }
+  catch { return false; }
+}
+async function runDecided(q, I, { push, cat, free, intent, plan, interp, example, picked, my }) {
+  const CL = mods.clarify || null;
+  if (intent === '_typed' && !plan) { plan = typedPlan(q); free = true; picked = true; }
   if (I && !plan && !cat && !free) {
     interp = interp || await within(I.interpret(q), 900);
+    if (my !== runSeq) return;
     const list = (interp && interp.intents) || [];
-    plan = (intent && list.find(x => x.id === intent)) || list[0] || null;
+    plan = (intent && list.find(x => x.id === intent)) || null;
+    if (intent && plan) picked = !!(CL && CL.recall(q) === intent);
+    if (CL && !plan) {
+      const d = CL.decide(q, interp, { intent, example, recorded: await isRecorded(q), remembered: CL.recall(q) });
+      if (my !== runSeq) return;
+      if (d.pick === CL.TYPED) { plan = typedPlan(q); free = true; picked = true; }
+      else if (d.pick) { plan = list.find(x => x.id === d.pick) || null; picked = !!plan; }
+      else if (d.ask) { askFirst(q, interp, d, push); return; }
+    }
+    plan = plan || list[0] || null;
   } else if (I && !plan && cat && cat.id && !free && cat.huntable !== false) {
     // a hunt from the tree: a category with a plan of its own ('School catering' -> catering companies, in
     // Finnish, on their own sites) hunts that plan; any other keeps its words, with next steps if nothing turns up
@@ -183,6 +216,7 @@ async function runDecided(q, I, { push, cat, free, intent, plan, interp }) {
       : (interp ? { id: '_typed', label: q, as_typed: true, hunt: null } : null);
     if (interp) interp = { ...interp, dominant: true };
   }
+  if (picked && plan && plan.id === '_typed') { free = true; interp = interp || { intents: [], dominant: true }; }
   const rw = !!(I && plan && I.rewrites(plan));
   if (!free && !rw && !(interp && interp.concept)) {
     const dest = await browseInstead(q, cat);
@@ -195,17 +229,58 @@ async function runDecided(q, I, { push, cat, free, intent, plan, interp }) {
     u.searchParams.set('q', q);
     if (rw) { u.searchParams.set('intent', plan.id); u.searchParams.delete('cat'); }
     else { u.searchParams.delete('intent'); if (cat && cat.id) u.searchParams.set('cat', cat.id); else u.searchParams.delete('cat'); }
+    if (picked && plan) u.searchParams.set('intent', plan.id);   // an answered question: reload/back never re-asks
     for (const k of ['share', 'by', 'browse', 'c', 'typed']) u.searchParams.delete(k);
-    if (u.href !== location.href) history.pushState({ q }, '', u);
+    if (u.href !== location.href) history[push === 'replace' ? 'replaceState' : 'pushState']({ q }, '', u);
   }
   showCrumbs(rw ? plan.hunt.q : q, huntCat);
-  if (I) { if (interp && plan) I.show(q, interp, plan); else I.clear(); }
+  if (I) { if (interp && plan) I.show(q, interp, plan, { picked: !!picked }); else I.clear(); }
   setStatus('hunt', 'reading the question…');
   setDeciding(false);
   setPhase('hunting');
   await stream.startHunt(q, rw ? { send: plan.hunt.q, cat: plan.hunt.cat, intent: plan.hunt.intent || plan.id } : {});
 }
+// the question card instead of a hunt: nothing streams, the box moves to the bar, the card sits right under it
+function askFirst(q, interp, d, push) {
+  stream.stop();
+  resetStore('');
+  qIn.value = q;
+  if (push) {
+    const u = new URL(location.href);
+    u.searchParams.set('q', q);
+    for (const k of ['intent', 'cat', 'share', 'by', 'browse', 'c', 'typed']) u.searchParams.delete(k);
+    if (u.href !== location.href) history.pushState({ q }, '', u);
+  }
+  clearChips(); tickerOff(); setStatus(null); showCrumbs(null);
+  if (mods.intent) mods.intent.clear();
+  setDeciding(false);
+  setPhase('asking');
+  emit('reset', { q: '' });
+  document.title = `${q} · ${BRAND}`;
+  mods.clarify.ask(q, d, pick => answer(q, interp, pick));
+}
+// an answer replaces the question's URL entry (back goes to where the question was asked from, not to it again)
+function answer(q, interp, pick, push = 'replace') {
+  if (pick.id === '_typed') run(q, { push, free: true, picked: true, plan: typedPlan(q), interp });
+  else run(q, { push, plan: pick.plan, interp, picked: true });
+}
+// "You picked: … · change" (intent.js): the same question again, over the running hunt
+on('clarify:change', d => {
+  const CL = mods.clarify;
+  if (!CL || !d || !d.q) return;
+  const go = async () => {
+    let interp = d.interp;
+    if (!(interp && interp.intents && interp.intents.length) && mods.intent) interp = await within(mods.intent.interpret(d.q), 900);
+    let x = CL.decide(d.q, interp, {});
+    const prev = CL.lastFor(d.q);
+    if (!x.ask && prev) x = prev.d;
+    if (!x.ask) return;
+    CL.ask(d.q, x, pick => answer(d.q, interp, pick, true));
+  };
+  go();
+});
 function goHome({ push = true } = {}) {
+  if (mods.clarify) mods.clarify.close();
   stream.stop();
   resetStore('');
   qIn.value = '';
@@ -222,7 +297,7 @@ function goHome({ push = true } = {}) {
 }
 ask.addEventListener('submit', e => { e.preventDefault(); run(qIn.value); });
 // a landing card (or 'what an agent sees') asks for a search: back to the top, then run it
-on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null, free: !!d.free, plan: d.plan || null, interp: d.interp || null }); });
+on('ask', d => { if (!d || !d.q) return; scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); run(d.q, { cat: d.cat || null, free: !!d.free, plan: d.plan || null, interp: d.interp || null, example: !!(d.example || d.rec) }); });
 bar.querySelector('.logo').addEventListener('click', e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
   e.preventDefault(); goHome();
