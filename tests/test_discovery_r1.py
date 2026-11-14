@@ -84,7 +84,11 @@ def test_generic_car_is_searched_in_the_home_language_with_its_colour(monkeypatc
     used = dv.lean_plan(n, "used", tokens=10)
     assert used[0][0].startswith("punainen auto")                 # was 'car käytetty myydään tori' (229 toys)
     direct = dv.plan_direct(n, dv.lanes_for(n), 10, 2)
-    tori = [d for d in direct.get("used", []) if d.site.key == "tori"]
+    used_d = direct.get("used", [])
+    # eval r3: with the home cars site planned, tori's goods search (toys, LEGO) is not read for a car
+    assert any(d.site.key == "nettiauto" for d in used_d) and not any(d.site.key == "tori" for d in used_d)
+    low = dv.plan_direct(n, dv.lanes_for(n), 3, 2)        # no token for nettiauto: tori, in Finnish
+    tori = [d for d in low.get("used", []) if d.site.key == "tori"]
     assert tori and tori[0].query == "punainen auto"
 
 

@@ -1,0 +1,1626 @@
+{
+"car_insurance": [
+{
+"url": "https://selkoraha.fi/en/blog/finland-car-insurance-autovakuutus-2026",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.if.fi/globalassets/fi/pdf/guides/motorvehicleinsuranceguide.pdf",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://turvalaina.fi/blogi/autovakuutuslaskuri-vertailu-halvin/",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://turvalaina.fi/yleinen/autovakuutuslaskuri-vertaile-hinnat-turvat/",
+"title": "Autovakuutuslaskuri – Vertaile hinnat ja turvat nopeasti",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://nffleet.fi/en/additional-services/nf-full-cover-insurance/",
+"title": "Comprehensive Insurance - NF Fleet",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://selkoraha.fi/fi/laskurit/autovakuutus-laskuri",
+"title": "Autovakuutuslaskuri 2026 — arvioi liikennevakuutuksen ja kaskon hinta | Selkoraha",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.vakuutusjuristi.fi/usein-kysytyt/autovakuutus/autovakuutuksen-hinta/",
+"title": "Miten autovakuutuksen hinta määräytyy? - Vakuutusjuristi",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://insurancecurator.com/car-insurance-companies-in-finland/",
+"title": "Car Insurance Companies in Finland – Insurance Curator",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.ayvens.com/en-fi/leasing-with-us/our-services/full-cover-insurance/",
+"title": "Ayvens Full Cover Insurance | Ayvens Finland",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.insur.fi/vakuutukset/vakuutuslaskurit/autovakuutuslaskuri/",
+"title": "Autovakuutuslaskuri - Kilpailuta hinta - Insur.fi",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.fennia.fi/ajoneuvot/autovakuutuslaskuri",
+"title": "Autovakuutuslaskuri | Laske ja vertaa hintoja | Fennia",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://vakuutuslaskuri.fi/",
+"title": "Vakuutuslaskuri – Vertaa autovakuutukset ja säästä",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://lainanavi.fi/laskurit/autovakuutuslaskuri-vertaa-halvin-vakuutus/",
+"title": "Autovakuutuslaskuri – Vertaa autovakuutuksen hintoja ja säästä",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.turva.fi/henkilo/vakuutukset/ajoneuvot/autovakuutuslaskuri/",
+"title": "Autovakuutuslaskuri | Laske hinta ja osta vakuutus netistä | Turva",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://valitsevakuutus.fi/laskurit/autovakuutuslaskuri",
+"title": "Autovakuutuslaskuri — Laske autovakuutuksen hinta | Valitse Vakuutus | Valitse Vakuutus",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://monera.fi/kortit/autovakuutuslaskuri-vertailu-ja-vinkit/",
+"title": "Autovakuutuslaskuri – Vertaa hintoja ja löydä halvin autovakuutus",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.op.fi/henkiloasiakkaat/vakuutukset/ajoneuvovakuutus/autovakuutus-henkiloautolle/autovakuutuslaskuri",
+"title": "Autovakuutuslaskuri | Kasko- ja liikennevakuutuslaskuri | OP",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.popvakuutus.fi/ajoneuvovakuutus/autovakuutus/laske-hinta/vaihe/perustiedot",
+"title": "Autovakuutuslaskuri - Hinta ja vakuutus netistä - POP Vakuutus",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://finaro.fi/laskurit/if-autovakuutuslaskuri-hinta-vertailu/",
+"title": "If autovakuutuslaskuri 2026 – laske hinta ja vertaa | Finaro",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.lahitapiola.fi/henkilo/vakuutukset/ajoneuvovakuutukset/autovakuutus/autovakuutuslaskuri/",
+"title": "Autovakuutuslaskuri | Hinta ja vakuutus netistä | LähiTapiola",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.op.fi/henkiloasiakkaat/vakuutukset/ajoneuvovakuutus/autovakuutus-henkiloautolle",
+"title": "Autovakuutus | Kasko -50 % | Laske hinta ja osta netistä | OP",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.turva.fi/henkilo/vakuutukset/ajoneuvot/autovakuutus/",
+"title": "Autovakuutus | Laske hinta ja osta auton vakuutus verkosta | Turva",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/vehicle-insurance/motor-liability-insurance",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/vehicle-insurance/car-insurance-for-passenger-cars",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.if.fi/en/private-customers/insurances/car-insurance",
+"title": "Car insurance in Finland | We make it easy for you | If",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/vehicle-insurance/comprehensive-motor-vehicle-insurance",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/vehicle-insurance/car-insurance-for-passenger-cars/comparing-motor-vehicle-insurance-rates",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/vehicle-insurance",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.fennia.fi/ajoneuvot/autovakuutus",
+"title": "Autovakuutus | Laske hinta ja osta verkosta | Fennia",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.lahitapiola.fi/henkilo/vakuutukset/ajoneuvovakuutukset/autovakuutus/",
+"title": "Autovakuutus | Edullinen ja suosituin | Laske hinta | LähiTapiola",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.popvakuutus.fi/vakuutukset/autovakuutus/autovakuutuksen-hinta",
+"title": "Kilometripohjainen autovakuutus - POP Vakuutus",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.popvakuutus.fi/vakuutukset/autovakuutus",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.fennia.fi/sisaltostudio/nain-autovakuutuksen-hinta-maaraytyy-voiko-halpa-olla-hyva",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.autovakuutusvertailu.com/autovakuutuslaskuri/",
+"title": "Autovakuutuslaskuri – laske autovakuutuksen hinta-arvio | Autovakuutusvertailu",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.autovakuutusvertailu.com/",
+"title": "Autovakuutus vertailu – Kilpailuta autovakuutus",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.autovakuutukset.com/autovakuutuslaskuri/",
+"title": "Autovakuutuslaskuri – Laske vakuutuksen hinta 5 minuutissa",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.autovakuutukset.com/",
+"title": "Autovakuutus: Kilpailutus & vertailu 2026 - Autovakuutukset.com",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://ref.if-insurance.com/private/car-insurance",
+"title": "Car insurance | We make it easy for you - Privat",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://selkoraha.fi/en/calculators/car-insurance-calculator",
+"title": "Car Insurance Calculator 2026 (Finland): traffic + kasko | Selkoraha",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/vehicle-insurance/car-insurance-for-passenger-cars/motor-vehicle-insurance-calculator",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://vertaaensin.fi/vakuutukset/artikkelit/autovakuutus",
+"title": "Autovakuutukset 2026 - VertaaEnsin ja säästä",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.op.fi/en/private-customers/insurance/insurance-calculator",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.op.fi/henkiloasiakkaat/vakuutukset/ajoneuvovakuutus/liikennevakuutus",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.fennia.fi/vakuutuslaskuri",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.turva.fi/henkilo/vakuutukset/ajoneuvot/",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.if.fi/henkiloasiakkaat/vakuutukset/vakuutuslaskuri",
+"title": "Vakuutuslaskuri | Laske vakuutuksen hinta minuutissa | If",
+"lane": "service",
+"type": "source"
+},
+{
+"url": "https://www.lahitapiola.fi/henkilo/vakuutukset/ajoneuvovakuutukset/liikennevakuutus/",
+"title": "",
+"lane": "service",
+"type": "skip"
+},
+{
+"url": "https://www.todellisetkulut.fi/artikkelit/paljonko-auton-vakuutus-maksaa-suomessa",
+"title": "Paljonko auton vakuutus maksaa Suomessa vuonna 2026?",
+"lane": "service",
+"type": "source"
+}
+],
+"kitchen_table": [
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5196.213",
+"title": "tori.fi category: Kitchen Tables",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://www.jotex.fi/huonekalut/poydat/ruokapoydat",
+"title": "Ruokapöydät & keittiön pöydät – Osta pieni ruokapöytä | Jotex",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search/?product_category=2.78.5196.213&page=5",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5196.213&page=38",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5196.213&q=kitchen+table+ikea",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.78.5196&sort=PRICE_DESC&page=15",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=table",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=wooden+table",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.67.3900&sort=PRICE_DESC&page=3",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5196.214",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.67.3900",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5196.216",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5223.8364&location=0.100010",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5223.8364&page=45",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.5223.8364&page=3",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.91.3108.359",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://hobbyhall.fi/fi/huonekalut-ja-sisustus/keittion-kalusteet/ruokapoydat",
+"title": "Ruokapöydät edullisesti netistä | hobbyhall.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://jysk.fi/ruokailutila/ruokapoydat",
+"title": "Ruokapöytä - Laaja valikoima ja tyylikäs muotoilu | JYSK",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.xn--keittiliike-wfb.fi/osasto/poytatabletit/",
+"title": "Pöytätabletit - Keittiöliike.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ubuy.fi/fi/productuk/U60MNUXBK-small-round-side-table-drink",
+"title": "Small Round Side Table,Drink Table,Martini Table Suomi | Ubuy",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.netrauta.fi/keittio-ja-kodinkoneet/keittiotasot",
+"title": "Keittiötaso - Keittiön työtaso edulliseen hintaan",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.prisma.fi/kategoriat/261/poytatabletit",
+"title": "Pöytätabletit | Prisma.fi-verkkokauppa",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.trendo.fi/fi/tuoteryhma/1784459",
+"title": "Pöytätabletit | Osta Laadukkaat & Yksilölliset Pöytätabletit Trendo.fi – Verkkokauppa",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.kitchentime.fi/tekstiilit/keittiotekstiilit/poytatabletit/",
+"title": "Osta Pöytätabletit online | KitchenTime",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://hobbyhall.fi/fi/koti-ja-keittio/ruokailuvalineet-ja-keittiotarvikkeet/poytaliinat-tabletit-ja-lautasliinat",
+"title": "Pöytäliinat, tabletit ja lautasliinat kotiin – Parhaat tarjoukset",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://jysk.fi/sisustus/poytatekstiilit",
+"title": "Pöytäliinat, tabletit ja vahakankaat makusi mukaan - JYSK",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.furniturelandsouth.com/shop/furniture/dining/dining-kitchen-tables/",
+"title": "Dining & Kitchen Tables | Furnitureland South",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.wayfair.com/keyword.php?keyword=cheap+kitchen+tables",
+"title": "Cheap Kitchen Tables | Wayfair",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.wayfair.com/furniture/sb0/kitchen-dining-tables-c46129.html",
+"title": "Kitchen & Dining Tables | Wooden Table & Dinning Room Table",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.mybobs.com/furniture/dining-room",
+"title": "Kitchen & Dining Room Furniture | Bob's Discount Furniture & Mattress Store",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.roomstogo.com/furniture/dining-rooms/tables",
+"title": "Dining Room Tables & ﻿Kitchen Tables",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.vepsalainen.com/en/ee/dining-tables/",
+"title": "Dining tables | Vepsäläinen",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.costco.com/dining-tables.html",
+"title": "Kitchen & Dining Room Tables",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=dining+table",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://isku.fi/collections/ruokapoydat",
+"title": "Ruokapöydät - ISKU Koti",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.hintakaari.fi/koti-ja-keittio/keittiovalineet-ja-ruoanvalmistus/keittiotekstiilit/poytatabletit/c/1180502/",
+"title": "Pöytätabletit | Hintakaari.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ikea.com/us/en/cat/dining-tables-21825/",
+"title": "Dining Tables - Dining Room & Kitchen Tables - IKEA",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://pricebusters.com/collections/tables-only",
+"title": "Cheap Dining Tables for Sale | Price Busters Furniture",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.arhaus.com/collections/dining-room-tables",
+"title": "Dining Room Tables | Kitchen Tables | Arhaus",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ebay.com/b/Kitchen-Dining-Tables/38204/bn_3223481",
+"title": "25+ Kitchen Dining Tables for sale | Updated Nov 2026",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ebay.com/b/Kitchen-Tables/38204/bn_1517353",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.amazon.com/Kitchen-Tables/s?k=Kitchen+Tables",
+"title": "Amazon.com: Kitchen Tables",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ebay.com/b/Kitchen-Traditional-Dining-Table-Tables/38204/bn_7797556",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.ebay.com/shop/kitchen-tables-for-sale?_nkw=kitchen+tables+for+sale",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.amazon.com/kitchen-table/s?k=kitchen+table",
+"title": "",
+"lane": "new",
+"type": "skip"
+}
+],
+"road_bike": [
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.69.3963.257&q=maantiepy%C3%B6r%C3%A4",
+"title": "tori.fi category: Road Bikes + 'maantiepyörä'",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://www.bikester.fi/fi/articles/2483/polkupyorat",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.bikester.fi/fi/articles/2574/gravel-pyorat",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.rosebikes.fi/ale/py%C3%B6r%C3%A4t/road-bike?sf=1",
+"title": "Road Bike Sale: discover high-quality bikes at a low price!",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?bikes_type=3&sub_category=1.69.3963",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?bikes_type=3&sub_category=1.69.3963&page=25",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search/?bikes_type=3&sub_category=1.69.3963&page=4",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?bikes_type=3&sub_category=1.69.3963&page=2",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?bikes_type=3&page=22&product_category=2.69.3963.257",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?bikes_type=3&page=11&sub_category=1.69.3963",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.69.3963&sort=PRICE_DESC&location=1.100018.110753&trade_type=1&page=1",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.69.3963&sort=PRICE_DESC&price_from=250&trade_type=1&page=37",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.69.3963&sort=PRICE_DESC&location=0.100018&dealer_segment=1&trade_type=1",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.69.3963.257&location=1.100007.110179&trade_type=1",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.69.3963.257&sort=PRICE_DESC&location=0.100010&dealer_segment=1&trade_type=1&__rlg=2&page=6",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Bikes",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?bikes_type=7&sub_category=1.69.3963",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://polkupyoratori.fi/collections/used-bikes",
+"title": "Käytetyt pyörät – Polkupyörä Tori®",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://www.stadium.fi/urheilu/pyoraily/pyorat.fi11740502",
+"title": "Pyörät sivustolla stadium.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://hobbyhall.fi/fi/urheilu-ja-vapaa-aika/pyorat-potkulaudat-rullaluistimet-ja-skeittilaudat/polkupyorat",
+"title": "Polkupyörät netistä hyvään hintaan | hobbyhall.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://kauppa.kierratyskeskus.fi/kaytetyt-polkupyorat/",
+"title": "Käytetyt polkupyörät netistä | Kierrätyskeskus",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.prisma.fi/kategoriat/81/polkupyorat",
+"title": "Polkupyörät - koko perheen pyörät | Prisma.fi-verkkokauppa",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://sportsource.fi/",
+"title": "Sportsource.fi - Kotimainen pyöräverkkokauppa",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.canyon.com/fi-fi/in-stock-road-bikes/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://buycycle.com/fi-fi/shop",
+"title": "Käytetyt polkupyörät ja urheiluvälineet myytävänä - Jopa 70% pois uusista | buycycle",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.bike24.com/road-bikes.html",
+"title": "Road bikes - Premium brands online | BIKE24",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://pyoratori.com/",
+"title": "pyoratori.com – Käytetyt polkupyörät",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.bikeexchange.com/en-US/bikes/road-bikes",
+"title": "Road & Gravel Bikes | Buy Online | BikeExchange",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.bikesdirect.com/road-bikes-online-sale/index.htm",
+"title": "Save up to 60% off Road Bikes, Free Ship 48, Schwinn, GT, Kestrel, Fuji, Motobecane and more Road bikes. Authorized dealer for Schwinn, GT, Kestrel, Fuji, Motobecane, Mercier, Gravity, Dawes road bikes. Shimano Carbon Road Bikes, Titanium Road Bikes, Dura Ace Road Bikes, Ultegra Road Bikes - bikesdirect.com",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.bikeexchange.com/en-US/bikes/road-bikes/road-bikes-men",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.bikeexchange.com/en-US/bike/road-sale",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.specialized.com/us/en/shop/bikes/road-bikes",
+"title": "Road Bikes - Specialized",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://bikeplanet.fi/shop/category/kaikki-pyorat-maantiepyorat-261/page/2",
+"title": "Maantiepyörät | Bike Planet",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=road+bike",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.specialized.com/fi/fi/c/bikes",
+"title": "Polkupyörät - Specialized",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.trekbikes.com/fi/fi_FI/polkupy%C3%B6r%C3%A4t/maantiepy%C3%B6r%C3%A4t/c/B200/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://bike-room.com/collections/road-bikes-for-sale",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://bikesonline.com/collections/road-bikes",
+"title": "Road Bikes for Sale | Buy Road Bike Online | BikesOnline",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://bicyclewarehouse.com/collections/road-bikes",
+"title": "Road Bikes: Shop Specialized, Giant & Cannondale – Bicycle Warehouse",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://buycycle.com/en-us/shop/main-types/bikes/types/road-gravel/categories/road",
+"title": "Used Road Bikes for sale | 70% off new | buycycle",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.trekbikes.com/us/en_US/pre-owned-bikes/pre-owned-road-bikes/c/RBR200/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.trekbikes.com/us/en_US/bikes/road-bikes/c/B200/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://epic-cycles.com/collections/road-bikes",
+"title": "Road Bikes for Sale | Premium Carbon Road Bikes – Epic Cycles",
+"lane": "new",
+"type": "source"
+}
+],
+"baby_stroller": [
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.68.3914.9460&product_category=2.68.3914.9461&product_category=2.68.3914.9462&product_category=2.68.3914.9463&product_category=2.68.3914.9464&product_category=2.68.3914.9465",
+"title": "tori.fi category: Baby Strollers",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://kauppapaikat.net/Tori/Baby%20stroller/",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://kauppapaikat.net/Tori/BLACK+stroller",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.verkkokauppa.com/fi/product/926599/CYBEX-Eezy-S-Twist-2-matkarattaat-Magic-Black/reviews?sort=rating:desc",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.pyretosnackan.fi/lastenvaunut/duo-vaunut-combi-vaunut",
+"title": "Lastenrattaat, joissa on istuin ja kantokoppa Pyret & Snäckan",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&location=0.100013&dealer_segment=1",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&sort=PRICE_ASC&page=18",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&sort=PRICE_ASC&page=33",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&sort=PRICE_DESC&location=0.100007&page=3",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&dealer_segment=1&trade_type=1&page=22",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&location=0.100018&dealer_segment=1&page=22",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.68.3914&sort=PRICE_DESC&price_to=25&trade_type=1",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/item/30738665",
+"title": "Baby Stroller | Tori",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://hobbyhall.fi/fi/lapset/vauvatarvikkeet/lastenvaunut-ja-rattaat/vaunut-ja-rattaat/stroller-baby-jogger-city-tour-2-shadow?id=2634898",
+"title": "Stroller Baby Jogger City Tour 2, Shadow Grey hinta | hobbyhall.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/item/33785042",
+"title": "Stokke Stroller Lastenrattaat Sininen | Tori",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://www.pyretosnackan.fi/lastenvaunut/sisarusvaunut",
+"title": "Sisarvaunu, jolla on monia etuja - Aloitus Pyret & Snäckan",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/item/30746183",
+"title": "Double stroller. | Tori",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://www.lastentarvike.fi/",
+"title": "Lastentarvike verkkokauppa | Parasta lapsellesi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.pyretosnackan.fi/lastenvaunut/polkupyorakarryt",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.pyretosnackan.fi/tarvikkeet/tarvikkeet---lastenvaunut/lastenvaunujen-kehto",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.pyretosnackan.fi/tarvikkeet/tarvikkeet---lastenvaunut/kohokas",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.verkkokauppa.com/fi/product/928957/CYBEX-Beezy-matkarattaat-Canvas-White",
+"title": "CYBEX Beezy -matkarattaat, Canvas White – Verkkokauppa.com",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.verkkokauppa.com/fi/product/890320/CYBEX-EOS-Lux-yhdistelmavaunut-Moon-Black-musta-runko",
+"title": "CYBEX EOS Lux -yhdistelmävaunut, Moon Black, musta runko – Verkkokauppa.com",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.stockmann.com/muoti/lapset/lastentarvikkeet/lastenvaunut--rattaat",
+"title": "Lastenvaunut ja lastenrattaat | Stockmann",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://asalvo.com/en/pushchairs-and-buggies",
+"title": "Strollers and baby strollers | Asalvo Online Store",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://babyplus.store/product-category/stroll/strollers/",
+"title": "Shop Strollers online - Baby Plus - Baby Store - babyplus.store",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.bambibaby.com/",
+"title": "Baby Furniture Store - Shop Baby Strollers, Car Seats and Furniture – Bambi Baby",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://kidznbaby.com/",
+"title": "KIDZNBABY - Online Baby Store",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Strollers",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=stroller",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=emmaljunga+stroller",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.lastenturva.fi/b/babyzen/Babyzen/",
+"title": "BabyZen YOYO matkarattaat - Lastenturva.fi verkkokaupasta",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.traumpreisfabrik.de/en/collections/kinderwagen",
+"title": "Buy strollers online | Cheap baby strollers | dream price factory – Traumpreisfabrik",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://kidznbaby.com/collections/strollers",
+"title": "Shop Strollers for Everyday Use & Travel | Great Prices",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://fromrebel.com/collections/all-strollers",
+"title": "Strollers, Travel Systems & Wagons — Open Box Deals at REBEL",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://goodbuygear.com/collections/strollers",
+"title": "Open Box & Used Strollers | Save Up to 75% Off – GoodBuy Gear",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.nordstrom.com/browse/kids/baby-gear/strollers",
+"title": "Baby Strollers | Nordstrom",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.kidslandusa.com/collections/strollers/",
+"title": "Buy Baby Strollers — Single, Double, Jogging & Luxury – Kidsland",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.dillards.com/c/kids-baby-gear-strollers",
+"title": "Baby Strollers & Accessories | Dillard's",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ebay.com/b/Infant-Strollers/66700/bn_18303369",
+"title": "25+ Infant Strollers for sale | Updated Nov 2026",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ebay.com/b/Strollers/66700/bn_1865261",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.amazon.com/baby-strollers-tandem-jogger-double-triple/b?ie=UTF8&node=166842011",
+"title": "Amazon.com: Strollers - Strollers & Accessories: Baby Products: Lightweight, Standard, Travel Systems, Joggers & More",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.amazon.com/Baby-Strollers-40-off-more-Accessories/s?rh=n%3A166842011%2Cp_8%3A40-",
+"title": "",
+"lane": "new",
+"type": "skip"
+}
+],
+"sofa": [
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.7756.8374&product_category=2.78.7756.207&product_category=2.78.7756.206",
+"title": "tori.fi category: Sofas",
+"lane": "used",
+"type": "source"
+},
+{
+"url": "https://kauppapaikat.net/Tori/K%C3%A4ytetty+sohva",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://kauppapaikat.net/Tori/K%C3%A4ytetyt+sohvat",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.buzzfeed.com/elenamgarcia/best-places-to-buy-a-couch-sofa-online",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.goodhousekeeping.com/what-to-buy/g71884003/best-places-to-buy-couches/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.amazon.com/Best-Sellers-Sofas-Couches/zgbs/home-garden/3733551",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://hobbyhall.fi/fi/huonekalut-ja-sisustus/olohuoneen-kalusteet/sohvat-ja-vuodesohvat",
+"title": "Sohvat ja vuodesohvat edullisesti | hobbyhall.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?product_category=2.78.7756.8374",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=sohva++sofa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=soffa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?page=1&product_category=2.78.7756.8374&q=sohva+++sofa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=sohva+++sofa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Sofa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?page=3&q=sofa&sub_category=1.78.7756",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?category=0.78&q=sohva",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=sohva",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=couch",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.78.7756&q=sofa+bed+sofa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Leather+sofa",
+"title": "",
+"lane": "used",
+"type": "skip"
+},
+{
+"url": "https://finsoffat.fi/tuoteryhma/sohvat/",
+"title": "Sohvat | Osta kotimainen sohva verkosta | Finsoffat",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ellos.fi/koti-sisustus/huonekalut/sohvat-nojatuolit",
+"title": "Sohvat & nojatuolit netistä – ellos.fi",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.asko.fi/tuotteet/1/olohuone/sohvat",
+"title": "Sohvat - laadukkaat ja mukavat sohvat | Asko.fi verkkokauppa",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.mjuk.com/fi-fi/brand/574/sofacompany",
+"title": "Osta ➤ Sofacompany huonekaluja löytöhintaan | Mjuk",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.huuto.net/osasto/koti/huonekalut/sohvat/805",
+"title": "Käytetyt sohvat netistä - Osta & Myy edullisesti | Huuto.net",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.masku.com/huoneet/olohuone",
+"title": "Sohva kotiin edullisesti - Laaja valikoima / Masku.com",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.wayfair.com/furniture/sb1/sofas-on-sale-c413892-a69278~8.html",
+"title": "Sofas & Couches On Sale | Wayfair",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.jordans.com/shop/living-room/living-room-seating/sofas",
+"title": "Sofas | Jordan's Furniture",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.wayfair.com/furniture/sb0/sofas-c413892.html",
+"title": "Sofas & Couches | Living Room Furniture & Living Room Furniture Sets",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.costco.com/sofas-couches.html",
+"title": "Sofas & Couches",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Sohva",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.veke.fi/category/huonekalut/sohvat/3-istuttavat-sohvat",
+"title": "Kolmen istuttava sohva netistä | Veke",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=sofa",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?sub_category=1.78.7756",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Sofa%20%20bed%20sofa",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=sofa++bed",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.tori.fi/recommerce/forsale/search?q=Sofa%20Bed",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.ikea.com/fi/fi/cat/sohvat-fu003/",
+"title": "Sohvat – Parhaat sohvat ja sohvaryhmät edullisesti - IKEA",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.moebelehrmann.de/en/category/sofas/e6d7/",
+"title": "Buy sofas - from single sofas to living room sofas | Möbel Ehrmann",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ikea.com/us/en/cat/sofas-sectionals-fu003/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://www.ikea.com/de/en/cat/sofas-fu003/",
+"title": "",
+"lane": "new",
+"type": "skip"
+},
+{
+"url": "https://areastore.com/en/collections/sofas",
+"title": "Sofas – areastore.com",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://pricebusters.com/collections/sofas",
+"title": "Affordable Sofas & Couches for Sale with 2-3 Day Delivery | Price Busters Furniture",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.overstock.com/c/living-room-seating/sofas?t=24464",
+"title": "Sofas | Overstock",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.ebay.com/b/Sofas-Armchairs-Couches/38208/bn_1642996",
+"title": "25+ Sofas, Armchairs & Couches for sale | Updated Nov 2026",
+"lane": "new",
+"type": "source"
+},
+{
+"url": "https://www.amazon.com/Sofas-and-Couches/b?ie=UTF8&node=3733551",
+"title": "Sofas and Couches | Amazon.com",
+"lane": "new",
+"type": "source"
+}
+],
+"volvo_v70_market": {
+"sources": [
+{
+"domain": "tori.fi",
+"country": "FI",
+"total": 4151,
+"at_least": false,
+"read": 410,
+"pages": 8,
+"extra": false
+},
+{
+"domain": "nettiauto.com",
+"country": "FI",
+"total": null,
+"at_least": false,
+"read": 32,
+"pages": 1,
+"extra": false
+},
+{
+"domain": "autotalli.com",
+"country": "FI",
+"total": null,
+"at_least": false,
+"read": 0,
+"pages": 1,
+"extra": false
+}
+],
+"total": 4183,
+"read": 442,
+"at_least": true,
+"scope": {
+"scope": "home",
+"country": "FI",
+"reason": "a car: searched near you in Finland (cars are bought and picked up locally)",
+"eu_included": false,
+"bulky": true,
+"size": "vehicle"
+}
+},
+"puhelin_market": {
+"sources": [
+{
+"domain": "marktplaats.nl",
+"country": "NL",
+"total": 263228,
+"at_least": false,
+"read": 91,
+"pages": 4,
+"extra": false
+},
+{
+"domain": "amazon.co.uk",
+"country": "GB",
+"total": 60000,
+"at_least": false,
+"read": 3,
+"pages": 1,
+"extra": false
+},
+{
+"domain": "finn.no",
+"country": "NO",
+"total": 17282,
+"at_least": false,
+"read": 311,
+"pages": 6,
+"extra": false
+},
+{
+"domain": "tori.fi",
+"country": "FI",
+"total": 7348,
+"at_least": false,
+"read": 519,
+"pages": 10,
+"extra": false
+},
+{
+"domain": "dba.dk",
+"country": "DK",
+"total": 6471,
+"at_least": false,
+"read": 315,
+"pages": 6,
+"extra": false
+},
+{
+"domain": "blocket.se",
+"country": "SE",
+"total": 6153,
+"at_least": false,
+"read": 318,
+"pages": 6,
+"extra": false
+},
+{
+"domain": "olx.pl",
+"country": "PL",
+"total": 1000,
+"at_least": true,
+"read": 42,
+"pages": 1,
+"extra": false
+},
+{
+"domain": "vinted.fi",
+"country": "FI",
+"total": 500,
+"at_least": true,
+"read": 623,
+"pages": 7,
+"extra": false
+},
+{
+"domain": "kleinanzeigen.de",
+"country": "DE",
+"total": null,
+"at_least": false,
+"read": 148,
+"pages": 6,
+"extra": false
+},
+{
+"domain": "proshop.fi",
+"country": "FI",
+"total": null,
+"at_least": false,
+"read": 22,
+"pages": 4,
+"extra": false
+},
+{
+"domain": "refurbed.fi",
+"country": "FI",
+"total": 16,
+"at_least": false,
+"read": 16,
+"pages": 1,
+"extra": false
+}
+],
+"total": 362168,
+"read": 2408,
+"at_least": true,
+"scope": {
+"scope": "eu",
+"country": "FI",
+"reason": "small enough to ship: searched Finland and the big EU marketplaces (home: Finland); foreign prices include estimated shipping",
+"eu_included": true,
+"bulky": false,
+"size": "phone"
+}
+},
+"ps5_market": {
+"sources": [
+{
+"domain": "amazon.co.uk",
+"country": "GB",
+"total": 60000,
+"at_least": false,
+"read": 3,
+"pages": 1,
+"extra": false
+},
+{
+"domain": "kleinanzeigen.de",
+"country": "DE",
+"total": 32896,
+"at_least": false,
+"read": 173,
+"pages": 7,
+"extra": false
+},
+{
+"domain": "marktplaats.nl",
+"country": "NL",
+"total": 18912,
+"at_least": false,
+"read": 171,
+"pages": 7,
+"extra": false
+},
+{
+"domain": "finn.no",
+"country": "NO",
+"total": 4293,
+"at_least": false,
+"read": 418,
+"pages": 8,
+"extra": false
+},
+{
+"domain": "tori.fi",
+"country": "FI",
+"total": 2843,
+"at_least": false,
+"read": 358,
+"pages": 7,
+"extra": false
+},
+{
+"domain": "dba.dk",
+"country": "DK",
+"total": 2362,
+"at_least": false,
+"read": 419,
+"pages": 8,
+"extra": false
+},
+{
+"domain": "blocket.se",
+"country": "SE",
+"total": 1399,
+"at_least": false,
+"read": 420,
+"pages": 8,
+"extra": false
+},
+{
+"domain": "olx.pl",
+"country": "PL",
+"total": 1000,
+"at_least": true,
+"read": 51,
+"pages": 1,
+"extra": false
+},
+{
+"domain": "vinted.fi",
+"country": "FI",
+"total": 500,
+"at_least": true,
+"read": 596,
+"pages": 7,
+"extra": false
+},
+{
+"domain": "proshop.fi",
+"country": "FI",
+"total": null,
+"at_least": false,
+"read": 17,
+"pages": 4,
+"extra": false
+},
+{
+"domain": "refurbed.fi",
+"country": "FI",
+"total": 5,
+"at_least": false,
+"read": 5,
+"pages": 1,
+"extra": false
+}
+],
+"total": 124227,
+"read": 2631,
+"at_least": true,
+"scope": {
+"scope": "eu",
+"country": "FI",
+"reason": "small enough to ship: searched Finland and the big EU marketplaces (home: Finland); foreign prices include estimated shipping",
+"eu_included": true,
+"bulky": false,
+"size": "medium"
+}
+}
+}

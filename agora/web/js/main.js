@@ -35,6 +35,9 @@ async function load(name) {
   catch (e) { console.warn(`[agora] module ${name}.js not loaded:`, e && e.message); return null; }
 }
 async function mountAll() {
+  // the category navbar first: it is the page's chrome (tree.js inside it loads on the first open)
+  const cn = await load('catnav');
+  if (cn && cn.mountCatnav) { try { cn.mountCatnav($('catnav')); } catch (e) { console.warn('[agora] mountCatnav failed', e); } }
   const lineMod = await load('line');
   if (lineMod) {
     try { lineMod.mountLine($('line')); line = lineMod.line || null; }
@@ -124,11 +127,8 @@ function openCategory(id, { push = true, typed = '' } = {}) {
   scrollTo({ top: 0, behavior: 'auto' });
 }
 on('category', d => { if (d && d.id) openCategory(d.id, { typed: d.typed || '' }); });
-on('category:home', () => {
-  goHome();
-  const b = document.getElementById('ld-browse');
-  if (b) setTimeout(() => b.scrollIntoView({ block: 'start' }), 60);
-});
+// the category page's "All categories": the start screen with the navbar's menu open on every root
+on('category:home', () => { goHome(); emit('catnav:open', {}); });
 on('catpage:shown', d => {        // an old id (merged away) shows its new home: keep the URL honest
   if (!d || !d.asked || d.asked === d.id) return;
   const u = new URL(location.href);
@@ -213,12 +213,11 @@ addEventListener('popstate', () => {
 
 // ---------- category breadcrumb (from the tree of everything you can buy) ----------
 // A hunt started from a category shows its path; a typed one shows the tree's best guess when it is sure.
+// The category navbar (catnav.js) shows it as a chip and highlights its root: 'crumbs' {ids, path, guess} | null.
 let crumbSeq = 0;
 async function showCrumbs(q, cat) {
-  const el = $('crumbs');
-  if (!el) return;
   const my = ++crumbSeq;
-  el.hidden = true; el.innerHTML = '';
+  emit('crumbs', null);
   if (!q) return;
   let C = null;
   try { C = await import('./cats.js'); } catch { return; }
@@ -235,20 +234,8 @@ async function showCrumbs(q, cat) {
     ids = m.path_ids; path = m.path; guess = true;
   }
   if (my !== crumbSeq || !ids || !ids.length) return;
-  const sep = '<span class="cb-sep" aria-hidden="true">›</span>';
-  el.dataset.guess = guess ? '1' : '';
-  el.innerHTML = `${C.icon(ids[0], 'ct-ic cb-ic')}<span class="sr">Category: </span>` + ids.map((id, k) =>
-    `<a href="/?browse=${encodeURIComponent(id)}#ld-browse" data-browse="${esc(id)}"${k === ids.length - 1 ? ' aria-current="page"' : ''}>${esc(String(path[k] || '').replace(/\u00ad/g, ''))}</a>`).join(sep)
-    + (guess ? `<span class="cb-guess" title="The category tree's best guess for what you typed">best guess</span>` : '');
-  el.hidden = false;
+  emit('crumbs', { ids, path, guess });
 }
-$('crumbs') && $('crumbs').addEventListener('click', e => {
-  const a = e.target.closest('[data-browse]');
-  if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
-  e.preventDefault();
-  goHome();
-  emit('browse', { id: a.dataset.browse });
-});
 
 // ---------- status line ----------
 // monkey: the mascot shrugs beside a "found nothing" message (the only place he appears in the results)
@@ -748,6 +735,7 @@ async function boot() {
   if (params.get('stage') === '1') stage();
   else if (params.get('c')) openCategory(params.get('c'), { push: false, typed: params.get('typed') || '' });
   else if (q) run(q, { push: false, cat: params.get('cat') ? { id: params.get('cat') } : null, intent: params.get('intent') });
+  else if (params.get('browse')) emit('catnav:open', { id: params.get('browse') });
   else if (matchMedia('(min-width: 641px)').matches) qIn.focus({ preventScroll: true });
 }
 boot();

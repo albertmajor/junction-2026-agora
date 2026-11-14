@@ -494,6 +494,19 @@ def cost_guide(url: str, title: str = "") -> bool:
     return bool(COST_GUIDE.search(title or "") or COST_GUIDE_PATH.search(urlsplit(url).path))
 
 
+CALCULATOR = re.compile(r"\w*(?:laskuri|laskurit|rechner|calculator|kalkulator|r[aä]knare|beregner|kalkulačka)\b|"
+                        r"\bvertailu\w*|\w+vertailu\b|\bvergleich\w*|\w+vergleich\b|\bcompar(?:e|ison|ateur)\b|"
+                        r"\bj[aä]mf[oö]r\w*|\bvergelijk\w*|\bsammenlign\w*|\bkilpailut\w*", re.I)
+
+
+def calculator(url: str, title: str = "") -> bool:
+    """A price calculator or a comparison site ('Autovakuutuslaskuri', 'Vakuutusvertailu', 'Kfz-Vergleich'):
+    it asks for your details and states no price of its own (eval r3: car insurance spent its reads and the
+    insurers' per-domain cap on calculators, and the pick was a calculator's estimate)."""
+    path = urlsplit(url).path.replace("-", " ").replace("/", " ")
+    return bool(CALCULATOR.search(f"{domain_of(url).split('.')[0]} {path} {title or ''}"))
+
+
 def snippet_rate(text: str) -> bool:
     """A price with a unit ('€29 per hour', '25 €/uur', 'ab 35 € pro Stunde') in a search snippet."""
     return any(RATE_UNIT.search(text[m.end():m.end() + 24]) for m in SERVICE_RATE.finditer(text or ""))
@@ -504,7 +517,7 @@ def expected_yield(url: str, kind: str, lane: str, title: str = "", snippet: str
     returns more than the hunt can read. A service directory lists many providers; a page whose snippet
     shows a rate will price; a guide or a quote form usually will not."""
     if kind in ("service", "digital"):
-        if cost_guide(url, title):
+        if cost_guide(url, title) or calculator(url, title):
             return 0.3           # 'Putkimiehen hinta 2026 - opas': an average, read only when budget is left
         if is_service_directory(url, title):
             from agora.domainstats import list_yield
@@ -715,9 +728,10 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
     if lane == "new":
         plan = query_plan(need, lane, 1)
         local = cc or home_country()
-        if vehicle(need) and local:
+        if (vehicle(need) or need_bulky(need)) and local:
             # a car is bought near you: the English query is filtered to that country too (eval r2: the open
-            # 'volvo v70 price buy online' query read carfax, cars.com and edmunds)
+            # 'volvo v70 price buy online' query read carfax, cars.com and edmunds); so is anything bulky (eval
+            # r3: road bike / stroller / sofa / kitchen table read US shops while the Finnish ones timed out)
             plan = [(q, c or local) for q, c in plan]
         lang = _lang(local)
         if lang in LOCAL and avail >= LOCAL_NEW_MIN_TOKENS:
@@ -849,7 +863,8 @@ def home_page(url: str, cc: str | None) -> bool:
 IKEA_LOCALE = {"fi": "fi/fi", "se": "se/sv", "de": "de/de", "nl": "nl/nl", "dk": "dk/da", "no": "no/no",
                "at": "at/de", "fr": "fr/fr", "es": "es/es", "it": "it/it", "pl": "pl/pl", "gb": "gb/en",
                "ie": "ie/en", "be": "be/nl", "ch": "ch/de", "pt": "pt/pt", "cz": "cz/cs", "ee": "ee/et"}
-_IKEA_PATH = re.compile(r"^/([a-z]{2})/([a-z]{2})/(p/[^?#]+-s?\d{8}/?|search/?)(.*)$", re.I)
+_IKEA_PATH = re.compile(r"^/([a-z]{2})/([a-z]{2})/(p/[^?#]+-s?\d{8}/?|cat/[^?#]*-[a-z]*\d{3,}/?|search/?)(.*)$",
+                        re.I)
 
 
 def localize(url: str, cc: str | None) -> str:
@@ -922,7 +937,54 @@ def market_thing(need: Need, lang: str | None) -> str:
     iso = ISO_OF_LOCAL.get(lang or "", lang)
     if (v := vehicle_words(need, iso)) is not None:
         return v
+    return translated_thing(need, iso) or words_in(need, iso) or _thing_q(need)
+
+
+def direct_thing(need: Need, lang: str | None) -> str:
+    """The words handed to marketplaces.direct_pages, which translates generic nouns per site itself: like
+    market_thing, without the home-language translation (else blocket would be searched in Finnish)."""
+    from agora.need import vehicle_words
+    iso = ISO_OF_LOCAL.get(lang or "", lang)
+    if (v := vehicle_words(need, iso)) is not None:
+        return v
     return translated_thing(need, iso) or _thing_q(need)
+
+
+def _marketplace_word(thing: str, iso: str) -> str | None:
+    """The marketplaces' own translation of a generic noun typed in any language ('winter jacket' ->
+    'talvitakki', 'fiets' -> 'polkupyörä'), only when it replaces every word typed (a brand or model word kept
+    by the site query, 'ikea kallax', means the words already work in every language). None otherwise."""
+    try:
+        from types import SimpleNamespace
+
+        from agora import marketplaces
+        tr = marketplaces.site_query(thing, SimpleNamespace(lang=iso))
+    except Exception:
+        return None
+    low = (thing or "").lower()
+    if not tr or tr == low.strip() or set(tr.split()) & set(re.findall(r"[\w'-]+", low)):
+        return None
+    return tr
+
+
+def words_in(need: Need, iso: str | None) -> str | None:
+    """A generic need in language `iso` for a web query or a shop search ('winter jacket women' ->
+    'naisten talvitakki', eval r3: the new lane searched 'winter jacket women hinta osta' and found one premium
+    shop). Who it is for is kept. None when nothing needs translating."""
+    if not iso or iso == "en" or need.kind != "product":
+        return None
+    tr = _marketplace_word(_thing_q(need), iso)
+    if tr is None:
+        return None
+    try:
+        from agora.need import AUDIENCE_RE, audience, audience_word
+        who = audience(need)
+        word = audience_word(who, iso) if who else None
+    except Exception:
+        word, AUDIENCE_RE = None, None
+    if word and AUDIENCE_RE is not None and not AUDIENCE_RE.search(tr):
+        tr = f"{tr} {word}" if iso in _AUDIENCE_AFTER else f"{word} {tr}"
+    return tr
 
 
 def translated_thing(need: Need, iso: str | None) -> str | None:
@@ -931,6 +993,8 @@ def translated_thing(need: Need, iso: str | None) -> str | None:
     typed = query_language(need.raw)
     if not iso or not typed or typed == iso:
         return None
+    if _marketplace_word(_thing_q(need), iso) is not None:
+        return None              # the marketplaces translate 'fiets' to 'polkupyörä' (the node label was 'Pyöräily')
     try:
         from agora import resolve
         if not resolve.is_generic(need):
@@ -969,13 +1033,127 @@ def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int, pa
     for lane in ("used", "refurbished", "new"):
         if lane not in lanes:
             continue
-        thing = market_thing(need, _lang(cc or home))
+        thing = direct_thing(need, _lang(cc or home))
         got = marketplaces.direct_pages(thing, lane, cc, home, left, pages=pages, node=node,
                                         generic=generic, tree=tree)
         left -= sum(1 for d in got if d.paid)
+        got = with_site_language(need, got, thing)
         got = with_audience(need, got)
+        if vehicle(need):
+            got = car_directs(got, cc or home)
         if got:
             out[lane] = got
+    return out
+
+
+def _letters(text: str) -> str:
+    return re.sub(r"[^\w]|_|\d", "", (text or "").lower())
+
+
+def _same_noun(a: str, b: str) -> bool:
+    """'robotti-imuri' ~ 'Robotti-imurit', 'saugroboter' ~ 'Saugroboter' (inflection / plural endings)."""
+    a, b = _letters(a), _letters(b)
+    if len(a) < 4 or len(b) < 4 or abs(len(a) - len(b)) > 3:
+        return False
+    n = max(4, min(len(a), len(b)) - 2)
+    return a[:n] == b[:n]
+
+
+_SITE_ISO = {"no": "nb"}
+
+
+def with_site_language(need: Need, directs: list[Any], thing: str) -> list[Any]:
+    """Each marketplace searched in its own language for a generic thing the marketplaces' word list does not
+    know: the category node's label in the site's language ('robotti-imuri' -> 'robotdammsugare' on blocket,
+    'saugroboter' on kleinanzeigen; eval r3: blocket / finn / dba / olx were searched for the Finnish word and gave
+    0 kept listings of 196). Only when the whole thing IS the node's label in some language; a site in that
+    language, a category page and a car site keep their search."""
+    labels = {k: v for k, v in ((need.category or {}).get("labels") or {}).items()
+              if v and len(v.split()) <= 3 and not re.search(r"[,&/]", v)}
+    if not directs or not labels or not thing:
+        return directs
+    src = {lg for lg, lab in labels.items() if _same_noun(thing, lab)}
+    if not src:
+        return directs
+    import dataclasses
+
+    from agora import marketplaces
+    out: list[Any] = []
+    firsts: dict[str, str] = {}
+    for d in directs:
+        iso = _SITE_ISO.get(d.site.lang, d.site.lang)
+        if d.category or d.site.vehicle or iso in src or not _same_noun(d.query or "", thing):
+            out.append(d)            # translated by the site query already, or the site speaks that language
+            continue
+        q = (labels.get(iso) or labels.get("en") or "").lower()
+        if not q:
+            out.append(d)
+            continue
+        if d.page <= 1:
+            url = firsts[d.site.key] = marketplaces.build_url(d.site, q)
+        else:
+            base = firsts.get(d.site.key) or marketplaces.build_url(d.site, q)
+            url = marketplaces.page_url(d.site, base, d.page) or base
+        for store in (marketplaces.PAGE_PLAN, marketplaces.CATEGORY_PAGES):
+            if d.url in store:
+                marketplaces._remember(store, url, store[d.url])
+        out.append(dataclasses.replace(d, query=q, url=url))
+    return out
+
+
+# car sites whose search box ignores ?q= (eval r3: nettiauto.com/vaihtoautot?q=volvo+v70 listed the site's cheapest
+# cars of every make): their make / model pages instead. {make} / {model} are URL slugs.
+CAR_MODEL_PAGES = {"nettiauto": ("https://www.nettiauto.com/{make}/{model}", "https://www.nettiauto.com/{make}"),
+                   **{f"autoscout24_{cc}": (f"https://www.autoscout24.{cc}/lst/{{make}}/{{model}}?atype=C",
+                                            f"https://www.autoscout24.{cc}/lst/{{make}}?atype=C")
+                      for cc in ("de", "nl", "it", "be", "at")}}
+_MAKE_SLUG = {"vw": "volkswagen", "mercedes": "mercedes-benz", "škoda": "skoda", "citroën": "citroen",
+              "mini cooper": "mini", "range rover": "land-rover"}
+_YEAR = re.compile(r"^(?:19|20)\d\d$")
+
+
+def car_make_model(query: str) -> tuple[str, str | None] | None:
+    """'volvo v70' -> ('volvo', 'v70'), 'land rover defender 2015' -> ('land-rover', 'defender'), 'vw golf' ->
+    ('volkswagen', 'golf'); None when no make is named (or words other than make / model / year are left)."""
+    from agora.need import CAR_MAKES
+    q = (query or "").lower().strip()
+    m = CAR_MAKES.search(q)
+    if not m or q[:m.start()].strip():
+        return None
+    make = _MAKE_SLUG.get(m.group(0), m.group(0)).replace(" ", "-")
+    rest = [w for w in re.findall(r"[\w-]+", q[m.end():]) if not _YEAR.match(w)]
+    if len(rest) > 2:
+        return None
+    model = "-".join(rest) or None
+    return make, model
+
+
+def car_directs(directs: list[Any], where: str | None) -> list[Any]:
+    """A car hunt's marketplace pages (eval r3, 'volvo v70' and 'bright red car'):
+    - a car site that ignores ?q= reads the make / model page (nettiauto.com/volvo/v70); a query naming no make
+      ('electric') cannot be put in its URL, so that site is not read (its site-wide list is any car);
+    - when a cars site of the home country is planned, the general goods marketplace (tori's goods search:
+      toys, LEGO, tyres, parts) is not read for a car: it spent the read budget and filled the market count."""
+    import dataclasses
+    out: list[Any] = []
+    for d in directs:
+        tpl = CAR_MODEL_PAGES.get(d.site.key) if d.site.vehicle else None
+        if tpl is None or not d.query:
+            out.append(d)            # a generic car browses the category (no query): the site's own list
+            continue
+        mm = car_make_model(d.query)
+        if mm is None:
+            continue
+        make, model = mm
+        url = tpl[0].format(make=make, model=model) if model else tpl[1].format(make=make)
+        if d.page > 1:
+            continue                 # the model page has no ?page= of ours: one page
+        if len(_LIST_HINTS) > 5000:
+            _LIST_HINTS.clear()
+        _LIST_HINTS.add(normalize_url(url))     # a list page of that site (marketplaces.site_for)
+        out.append(dataclasses.replace(d, url=url))
+    if any(d.site.vehicle and d.site.country == where for d in out):
+        out = [d for d in out if d.site.vehicle or d.category]
     return out
 
 
@@ -1051,6 +1229,25 @@ CARS_ABROAD = ("carfax.com", "cars.com", "edmunds.com", "jdpower.com", "carsandb
                "carpricetracker.com", "carprice.com", "carsdirect.com", "autobytel.com", "motortrend.com",
                "caranddriver.com", "carsoup.com", "hemmings.com")
 _LIST_HINTS: set[str] = set()       # pages discovery found to be lists by their title (auto1.fi/volvo/v70)
+
+
+_US_PATH = re.compile(r"^/(?:us|en-us|en_us|us-en|en/us)(?:/|$)", re.I)
+_US_TLDS = ("us", "nyc")
+# US home / bike / baby shops that turned up in Finnish bulky hunts (eval r1-r3)
+US_SHOPS = ("wayfair.com", "overstock.com", "jordans.com", "nordstrom.com", "dillards.com", "kidslandusa.com",
+            "goodbuygear.com", "roomstogo.com", "arhaus.com", "mybobs.com", "furniturelandsouth.com",
+            "pricebusters.com", "bikesdirect.com", "bicyclewarehouse.com", "theproscloset.com", "occyclery.com",
+            "tomcatbikes.com", "rei.com", "macys.com", "kohls.com", "potterybarn.com", "westelm.com",
+            "crateandbarrel.com", "ashleyfurniture.com", "bobsdiscount.com", "buybuybaby.com")
+
+
+def us_shop(url: str) -> bool:
+    """A shop selling in the US: a US-only big box (US_FIRST), a .us / .nyc domain, or a /us/ or /en-us/ store
+    of a global site (ikea.com/us/en, specialized.com/us). Used for bulky things only (eval r3)."""
+    dom = domain_of(url)
+    if tld(dom) in _US_TLDS or any(dom_match(dom, d) for d in US_FIRST + US_SHOPS):
+        return True
+    return bool(_US_PATH.match(urlsplit(url).path))
 
 
 def car_list_page(url: str, title: str = "") -> bool:
@@ -1300,14 +1497,17 @@ def local_hit(need: Need, url: str, title: str) -> bool:
 
 # --------------------------------------------------------------------------- eval r2: bought at home (insurance)
 
-NATIONAL_LOCAL = {"fi": ("hinta", "vertailu laskuri"), "de": ("Preis", "Vergleich Rechner"),
-                  "se": ("pris", "jämför pris"), "nl": ("prijs", "vergelijken"), "dk": ("pris", "sammenlign pris"),
-                  "no": ("pris", "sammenlign pris"), "fr": ("prix", "comparateur"), "es": ("precio", "comparador"),
-                  "it": ("prezzo", "confronto"), "pl": ("cena", "porównanie"), "pt": ("preço", "comparar"),
-                  "cz": ("cena", "srovnání")}
+# (price word, 'from ... a month' words): the second query looks for the providers' own stated prices
+# (eval r3: 'vertailu laskuri' found calculators and comparison sites, none an insurer's price)
+NATIONAL_LOCAL = {"fi": ("hinta", "alkaen €/kk"), "de": ("Preis", "ab € monatlich"),
+                  "se": ("pris", "från kr/mån"), "nl": ("prijs", "vanaf € per maand"), "dk": ("pris", "fra kr/md"),
+                  "no": ("pris", "fra kr/mnd"), "fr": ("prix", "à partir de €/mois"), "es": ("precio", "desde €/mes"),
+                  "it": ("prezzo", "da €/mese"), "pl": ("cena", "od zł/mies"), "pt": ("preço", "desde €/mês"),
+                  "cz": ("cena", "od Kč/měsíc")}
 # where a country's insurers, banks and energy companies publish prices and calculators
 NATIONAL_SITES: dict[str, dict[str, tuple[str, ...]]] = {
-    "fi": {"insurance": ("if.fi", "op.fi", "lahitapiola.fi", "fennia.fi", "pohjola.fi", "turva.fi", "pop.fi",
+    "fi": {"insurance": ("if.fi", "op.fi", "lahitapiola.fi", "fennia.fi", "pohjola.fi", "turva.fi", "pop.fi", "popvakuutus.fi",
+                         "pohjantahti.fi",
                          "aktia.fi", "tryg.fi"),
            "energy": ("sahkovertailu.fi", "helen.fi", "fortum.fi", "oomi.fi", "vaasansahko.fi"),
            "loan": ("op.fi", "nordea.fi", "danskebank.fi", "s-pankki.fi", "aktia.fi")},
@@ -1351,6 +1551,19 @@ def national_plan(need: Need, cc: str) -> list[Any]:
     if sites:
         out.append(((label or _thing_q(need)) + (f" {price_w}" if label else ""), cc, sites[:10]))
     return out
+
+
+def national_fit(need: Need, url: str, title: str) -> float:
+    """Read-order bonus for an insurer's / bank's / energy company's own product page in an insurance, loan or
+    energy hunt (+1.5); their calculators and comparison sites get none (eval r3: if.fi, op.fi, turva.fi product
+    pages were cut by the budget and the per-domain cap while calculators were read)."""
+    if not national_service(need) or calculator(url, title) or cost_guide(url, title):
+        return 0.0
+    cc = country_of(need) or home_country() or ""
+    sites = NATIONAL_SITES.get(cc, {}).get(national_kind(need) or "", ())
+    sites += tuple(category_sites(need, cc))
+    dom = domain_of(url)
+    return 1.5 if any(dom_match(dom, d) for d in sites) else 0.0
 
 
 EU_USED_SITES = ("kleinanzeigen", "vinted")
@@ -1510,7 +1723,8 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
             if lane_ == "service":     # stated rates / price lists first, then directories (many providers)
                 # pages naming the job and the asked city first (eval r2: a gunsmith hunt spent its budget on
                 # asbestos and barber pages; lunch read Tampere before Helsinki)
-                cands.sort(key=lambda x: (-(_yield_of(x[2]) + service_fit(need, x[2]["url"], x[2].get("title") or "")),
+                cands.sort(key=lambda x: (-(_yield_of(x[2]) + service_fit(need, x[2]["url"], x[2].get("title") or "")
+                                            + national_fit(need, x[2]["url"], x[2].get("title") or "")),
                                           -x[0], x[1]))
             elif lane_ in ("used", "refurbished"):   # a marketplace search page first: many listings in one read
                 cands.sort(key=lambda x: (-expected_yield(x[2]["url"], need.kind, lane_), -x[0], x[1]))
@@ -1590,6 +1804,8 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                     reason = is_non_shop(url, "" if directory else title) or title_gate(need, title)
                     if not reason and is_service(need):
                         reason = service_skip(need, url, title)
+                    if not reason and bulky and not car and rank_cc and rank_cc != "us" and us_shop(url):
+                        reason = "a US shop (a bulky thing is bought near you)"
                     if not reason and car:
                         if car_abroad(domain_of(url), title):
                             reason = "a car seller outside Europe (a car is bought near you)"

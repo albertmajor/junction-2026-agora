@@ -10,8 +10,6 @@
   padding-block: 96px; background: var(--paper);
 }
 .ld-band.alt { background: var(--paper-2); }
-#ld-browse { padding-top: 32px; }
-#ld-browse .ld-head { margin-bottom: 28px; }
 .ld-in { position: relative; }
 
 .ld-head { max-width: 640px; margin: 0 0 40px; }
@@ -271,7 +269,6 @@
 }
 @media (max-width: 640px) {
   .ld-band { padding-block: 64px; }
-  #ld-browse { padding-top: 24px; }
   .ld-head { margin-bottom: 28px; }
   .ld-h { font-size: 28.99px; }
   .ld-band.ink .ld-h { font-size: 34px; }

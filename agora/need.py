@@ -630,8 +630,56 @@ def clean_thing(text: str) -> str:
     return t
 
 
+# ---------------------------------------------------------------- typos in brand and product-line names
+# eval r3: 'samsng galaxy s24 ultra' searched every marketplace for 'samsng' (tori gave no total, proshop sold SSDs).
+# Only distinctive names (no common word is one edit away), only words of 5+ letters, never the first letter.
+BRAND_NAMES = (
+    "samsung", "iphone", "macbook", "airpods", "playstation", "nintendo", "xiaomi", "huawei", "lenovo", "logitech",
+    "philips", "electrolux", "garmin", "fujifilm", "oneplus", "motorola", "nvidia", "geforce", "radeon", "galaxy",
+    "volkswagen", "mercedes", "hyundai", "porsche", "peugeot", "renault", "citroen", "polestar", "makita",
+    "dewalt", "husqvarna", "karcher", "roomba", "nespresso", "delonghi", "thinkpad", "chromebook", "sennheiser",
+    "marshall", "panasonic", "olympus", "toshiba", "gigabyte", "corsair", "razer", "steelseries", "playstation",
+    "ikea", "dyson", "bosch", "siemens", "miele", "whirlpool", "jabra", "gopro", "hasselblad", "pixel")
+_NOT_TYPOS = {"phone", "phones", "galaxie", "pixels", "razor", "razors", "racer", "racers", "marshal", "phillips"}
+
+
+def _one_edit(a: str, b: str) -> bool:
+    """True when a and b differ by one insertion, deletion, substitution or swap of two neighbours."""
+    if a == b or abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        diff = [i for i in range(len(a)) if a[i] != b[i]]
+        return len(diff) == 1 or (len(diff) == 2 and diff[1] == diff[0] + 1
+                                  and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]])
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    i = 0
+    while i < len(short) and short[i] == long_[i]:
+        i += 1
+    return short[i:] == long_[i + 1:]
+
+
+def correct_spelling(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """'samsng galaxy s24 ultra' -> ('samsung galaxy s24 ultra', [('samsng', 'samsung')]). A word is corrected
+    only to a known brand / product-line name one edit away with the same first letter (so 'phone' never becomes
+    'iphone'); everything else is left exactly as typed."""
+    fixes: list[tuple[str, str]] = []
+
+    def fix(m: re.Match[str]) -> str:
+        w = m.group(0)
+        low = w.lower()
+        if len(low) < 5 or low in BRAND_NAMES or low in _NOT_TYPOS or any(c.isdigit() for c in low):
+            return w
+        for b in BRAND_NAMES:
+            if len(b) >= 5 and b[0] == low[0] and _one_edit(low, b):
+                fixes.append((w, b))
+                return b
+        return w
+    out = re.sub(r"[^\W\d_]+", fix, text or "")
+    return out, fixes
+
+
 def parse_need_rules(text: str) -> Need:
-    raw = _norm(text)
+    raw = correct_spelling(_norm(text))[0]
     work = raw
     budget, currency, bspan = parse_budget(work)
     spans: list[tuple[int, int]] = [bspan] if bspan else []

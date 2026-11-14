@@ -1,0 +1,125 @@
+/* The category navbar under the header (catnav.js) and its mega menu (tree.js inside). Sticky together with the
+   header on wider screens; a "Categories" button with a full-screen drill-down list on phones (<= 640 px).
+   Tokens from base.css; dark mode follows them. */
+
+/* ---------- header + navbar: one sticky block ---------- */
+#top { position: sticky; top: 0; z-index: 50; }
+#top::before {                     /* full-bleed paper behind the centred #app column, one hairline under it */
+  content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(50% - 50vw); right: calc(50% - 50vw);
+  background: var(--paper); box-shadow: 0 1px 0 var(--hair);
+}
+html { scroll-padding-top: calc(var(--top-h, 0px) + 12px); }
+@media (max-width: 640px) {
+  #top { position: relative; }     /* a phone keeps its height for the results */
+  html { scroll-padding-top: 0; }
+}
+
+/* ---------- the row ---------- */
+#catnav { position: relative; margin-top: 12px; }
+.cn-row { display: flex; align-items: center; gap: 2px; height: 44px; min-width: 0; }
+.cn-list { display: flex; align-items: center; column-gap: 2px; min-width: 0; flex: 0 1 auto; list-style: none; margin: 0; padding: 0; overflow: hidden; }
+.cn-list > li { flex: none; }
+.cn-root, .cn-more, .cn-cats {
+  position: relative; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: none; white-space: nowrap;
+  font: 400 13.5px/1 var(--sans); color: var(--ink-2);
+  transition: color var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+.cn-root .cn-ic { width: 16px; height: 16px; color: var(--ink-3); transition: color var(--t-ui) var(--ease); }
+.cn-root:hover, .cn-more:hover, .cn-cats:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.cn-root:hover .cn-ic { color: var(--ink); }
+.cn-root[aria-expanded="true"], .cn-more[aria-expanded="true"] { color: var(--ink); background: var(--paper-2); }
+.cn-root:focus-visible, .cn-more:focus-visible, .cn-cats:focus-visible { outline-offset: -2px; }
+/* the category we are in: ink, medium weight, the banana-yellow underline (the app's one mark for "this one") */
+.cn-root.on { color: var(--ink); font-weight: 500; }
+.cn-root.on .cn-ic { color: var(--ink); }
+.cn-root.on::after, .cn-cats.on::after {
+  content: ""; position: absolute; left: 10px; right: 10px; bottom: 1px; height: 3px; border-radius: 2px; background: var(--accent);
+}
+.cn-div { display: flex; align-items: center; gap: 8px; padding: 0 6px 0 8px; font: 400 11px/1 var(--sans); color: var(--ink-3); letter-spacing: .02em; }
+.cn-div::before { content: ""; width: 1px; height: 18px; background: var(--hair); }
+.cn-more svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-ui) var(--ease); }
+.cn-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+.cn-cats { display: none; }
+.cn-burger { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+
+/* ---------- the breadcrumb chip: where this hunt is ---------- */
+#crumbs.cn-chip {
+  margin-left: auto; flex: 0 1 auto; min-width: 0; max-width: 44%;
+  display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px;
+  border-radius: var(--r-pill); background: var(--receipt); box-shadow: inset 0 0 0 1px var(--hair);
+  font: 400 12.5px/1 var(--sans); color: var(--ink-2);
+}
+#crumbs.cn-chip[hidden] { display: none; }
+.cn-chip .cb-ic { width: 15px; height: 15px; color: var(--ink); }
+.cn-chip .cb-trail { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.cn-chip .cb-gap { flex: none; color: var(--ink-3); }
+.cn-chip a { min-width: 0; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); text-decoration: none; flex: 0 1 auto; }
+.cn-chip a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
+.cn-chip a[aria-current] { color: var(--ink); font-weight: 500; max-width: none; flex: 0 0 auto; }
+.cn-chip .cb-sep { flex: none; color: var(--ink-3); }
+.cn-chip .cb-guess { flex: none; font: 400 10.5px/1 var(--mono); color: var(--ink-3); padding: 3px 6px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--hair); }
+#app[data-phase="start"] #crumbs { display: none; }
+
+/* ---------- the mega menu ---------- */
+.cn-menu {
+  position: absolute; z-index: 5; top: calc(100% + 1px); left: 0; right: 0;
+  border-radius: 0 0 16px 16px; box-shadow: 0 22px 48px -12px rgba(28,27,24,.22), 0 2px 6px rgba(28,27,24,.06);
+  animation: cn-in 180ms var(--ease) both;
+}
+.cn-menu[hidden] { display: none; }
+.cn-sheet-h { display: none; }
+.cn-menu .ct { --ct-h: min(540px, calc(100vh - var(--menu-top, 170px) - 96px)); border-radius: 0 0 16px 16px; }
+.cn-menu .ct-top { grid-template-columns: minmax(220px, 380px) minmax(0, 1fr) auto; }
+.cn-menu .ct-top .ct-crumbs[hidden] + .ct-langs { grid-column: 3; }
+.cn-menu .ct-body { min-height: 300px; }
+.cn-menu .ct-note { margin: 0; border-radius: 0; box-shadow: none; border-top: 1px solid var(--hair); max-width: none; }
+.ct[data-roots="off"] .ct-body { grid-template-columns: minmax(0, 1fr); }
+.ct[data-roots="off"] .ct-roots { display: none; }
+@keyframes cn-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .cn-menu { animation: none; }
+  .cn-root, .cn-more, .cn-more svg { transition: none; }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cn-menu { box-shadow: 0 22px 48px -12px rgba(0,0,0,.6), 0 0 0 1px var(--hair); }
+}
+:root[data-theme="dark"] .cn-menu { box-shadow: 0 22px 48px -12px rgba(0,0,0,.6), 0 0 0 1px var(--hair); }
+
+/* ---------- phone: one button, a full-screen drill-down ---------- */
+@media (max-width: 640px) {
+  #catnav { margin-top: 8px; }
+  .cn-row { height: 46px; gap: 8px; }
+  .cn-list, .cn-more { display: none; }
+  .cn-cats { display: inline-flex; flex: none; height: 36px; padding: 0 12px 0 10px; border-radius: var(--r-pill);
+    color: var(--ink); background: var(--receipt); box-shadow: inset 0 0 0 1px var(--hair); font-weight: 500; }
+  .cn-cats.on::after { left: 14px; right: 14px; bottom: 2px; }
+  #crumbs.cn-chip { max-width: none; flex: 1 1 auto; margin-left: 0; background: none; box-shadow: none; padding: 0 2px; }
+  /* the last two crumbs; an ellipsis stands for the rest */
+  .cn-chip .cb-trail > :nth-last-child(n+4) { display: none; }
+  .cn-chip .cb-trail:has(> :nth-child(4))::before { content: "…"; color: var(--ink-3); }
+  .cn-chip a { max-width: 12ch; }
+  .cn-chip a[aria-current] { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+  .cn-chip .cb-guess { display: none; }
+
+  .cn-menu {
+    position: fixed; inset: 0; z-index: 80; border-radius: 0; box-shadow: none; background: var(--paper);
+    overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation-name: cn-up;
+  }
+  .cn-sheet-h {
+    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 8px 10px 16px; background: var(--paper); border-bottom: 1px solid var(--hair);
+    font: 340 21px/1.1 var(--serif);
+  }
+  .cn-sheet-h b { font-weight: inherit; }
+  .cn-x { width: 44px; height: 44px; border: 0; background: none; border-radius: 10px; font: 300 28px/1 var(--sans); color: var(--ink-2); }
+  .cn-x:hover { color: var(--ink); background: var(--paper-2); }
+  .cn-menu .ct { border-radius: 0; box-shadow: none; background: var(--paper); }
+  .cn-menu .ct[data-mode="list"] .ct-top { grid-template-columns: minmax(0, 1fr) auto; border-bottom: 0; }
+  .cn-menu .ct-top .ct-crumbs { grid-column: 1 / -1; grid-row: 2; }
+  .cn-menu .ct-top .ct-langs { grid-column: 2; grid-row: 1; }
+  .cn-menu .ct-body { min-height: 0; }
+  html.cn-lock, html.cn-lock body { overflow: hidden; }
+}
+@keyframes cn-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }

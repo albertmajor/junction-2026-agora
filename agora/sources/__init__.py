@@ -365,6 +365,33 @@ TITLE_JUNK = re.compile(r"\b(?:Bewaren in Mijn Favorieten|Opslaan als favoriet|Z
                         r"Product images?,? \d+ (?:of|/) \d+|Tuotekuva\w*,? \d+ / \d+)", re.I)
 
 
+# a card's link label that runs the item's fields together (vinted: 'Airpods Pro 2, Tuotemerkki: Apple, Malli: AirPods
+# Pro 2 (2022), Kunto: Erittäin hyvä, 85.00 €, 89.95 €'): the title is the part before the first ', Label: '
+_CARD_FIELD = re.compile(r",\s+(?=[^\W\d][^,:]{1,24}:\s)")
+_TRAILING_PRICES = re.compile(r"(?:,\s*(?:[€$£]\s?\d[\d .,]*|\d[\d .,]*\s?(?:€|eur|kr|zł|£|\$)))+\s*$", re.I)
+
+
+_INNER_HEADING = re.compile(r"<(h[1-4]|[a-z]+\b[^>]*\b(?:product-display-name|itemprop=[\"']name[\"']))[^>]*>(.*?)</(?:h[1-4]|[a-z]+)>",
+                            re.I | re.S)
+# an image URL or a bare EAN pasted into a card's text ('... 825GB 6941876219100 https://www.proshop.dk/Images/...')
+_TITLE_NOISE = re.compile(r"https?://\S+|(?<![\w-])\d{12,14}(?![\w-])")
+
+
+def split_card_label(label: str) -> tuple[str, dict[str, str]]:
+    """'Title, Brand: x, Condition: y, 41.34 €, 44.11 €' -> ('Title', {'brand': 'x', 'condition': 'y'}).
+    A plain title comes back unchanged with no fields."""
+    label = " ".join((label or "").split())
+    parts = _CARD_FIELD.split(label)
+    title = _TRAILING_PRICES.sub("", parts[0]).strip(" ,")
+    fields: dict[str, str] = {}
+    for p in parts[1:]:
+        k, _, v = p.partition(":")
+        v = _TRAILING_PRICES.sub("", v).strip(" ,")
+        if k.strip() and v:
+            fields[k.strip().lower()] = v[:60]
+    return (title or label), fields
+
+
 def rows_from_html(page: str, page_url: str, src: dict, max_rows: int = 25) -> list[dict]:
     """Cut a plainly fetched results page into listings with code (no model, no Context.dev):
     [{title, url, price, currency, text}], one per distinct listing URL matching the source's `listing` regex.
@@ -392,7 +419,8 @@ def rows_from_html(page: str, page_url: str, src: dict, max_rows: int = 25) -> l
     for i, (start, end, u, attrs, inner) in enumerate(anchors):
         nxt = next((a[0] for a in anchors[i + 1:] if a[2] != u), len(page))
         text = D.visible_text(page[start:min(nxt, start + 6000)])
-        title = TITLE_JUNK.sub(" ", D.visible_text(inner)).strip()
+        hm = _INNER_HEADING.search(inner)          # proshop: <a><h2>Name</h2><p>EAN, image URL, description</p></a>
+        title = TITLE_JUNK.sub(" ", D.visible_text(hm.group(2) if hm else inner)).strip()
         if not title:
             t = re.search(r"""\b(?:title|aria-label)\s*=\s*["']([^"']+)""", attrs) or \
                 re.search(r"""<img\b[^>]*\balt\s*=\s*["']([^"']+)""", inner, re.I)
@@ -401,13 +429,24 @@ def rows_from_html(page: str, page_url: str, src: dict, max_rows: int = 25) -> l
         pm = D.PRICE.search(text)
         price = _amount(pm.group(0)) if pm else None
         cur = CURRENCY.get(next((c for c in src.get("countries", []) if c != "eu"), ""), "EUR")
+        title = " ".join(_TITLE_NOISE.sub(" ", title).split()).strip(" -–|,")
+        label = title
+        title, fields = split_card_label(title)
+        model = next((v for k, v in fields.items() if k in ("malli", "model", "modell", "modèle", "modelo", "modello")),
+                     "")
+        if model and not set(re.findall(r"\w+", model.lower())) <= set(re.findall(r"\w+", title.lower())):
+            title = f"{title} ({model})"          # the model only in the fields: keep it readable in the title
         r = rows.get(u)
         if r is None:
             rows[u] = {"title": title[:200], "url": u, "price": price, "currency": cur, "text": text[:400]}
+            if fields:
+                rows[u]["fields"], rows[u]["label"] = fields, label[:300]
             order.append(u)
         else:
             if len(title) > len(r["title"]):
                 r["title"] = title[:200]
+            if fields and not r.get("fields"):
+                r["fields"], r["label"] = fields, label[:300]
             if r["price"] is None and price is not None:
                 r["price"] = price
     return [rows[u] for u in order][:max_rows]

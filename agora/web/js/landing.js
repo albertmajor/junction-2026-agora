@@ -1,9 +1,8 @@
-// The landing page under the start search (UI round A, section 3): the tree of everything you can buy
-// (tree.js, 'Browse everything'), how it works, the sources we read, the agent door, and "Powered by Context.dev".
+// The landing page under the start search (UI round A, section 3): how it works (the tree of everything you can
+// buy moved into the category navbar, catnav.js), the sources we read, the agent door, and "Powered by Context.dev".
 // main.js calls mountLanding($('landing')) and listens for the bus event 'ask' {q}.
 import * as core from './core.js';
 import { queryFor } from './stream.js';
-import { mountTree } from './tree.js';
 
 const brand = () => core.BRAND || document.documentElement.dataset.brand || 'PriceMonkey';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,7 +49,7 @@ function howHtml() {
   ];
   return `<section class="ld-band alt" id="ld-how" aria-labelledby="ld-how-h">
     <div class="ld-in">
-      <header class="ld-head ld-rv">${head('03', 'How it works', 'One question. Every shop. One line.', 'ld-how-h')}</header>
+      <header class="ld-head ld-rv">${head('02', 'How it works', 'One question. Every shop. One line.', 'ld-how-h')}</header>
       <ol class="ld-steps" role="list">
         ${steps.map(([k, t, b], i) => `<li class="ld-step ld-rv" style="--d:${i * 80}ms">${SVG[k]}<h3><span class="ld-n">${i + 1}</span>${esc(t)}</h3><p>${esc(b)}</p></li>`).join('')}
       </ol>
@@ -62,7 +61,7 @@ function sourcesHtml() {
   return `<section class="ld-band" id="ld-sources" aria-labelledby="ld-sources-h">
     <div class="ld-in">
       <header class="ld-head ld-rv">
-        ${head('04', 'Sources', 'Where we look.', 'ld-sources-h')}
+        ${head('03', 'Sources', 'Where we look.', 'ld-sources-h')}
         <p class="ld-sub">Second-hand marketplaces, refurbishers and big shops across Europe, plus any shop the search turns up.</p>
       </header>
       <div class="ld-wall"></div>
@@ -94,7 +93,7 @@ function agentsHtml() {
   return `<section class="ld-band alt" id="ld-agents" aria-labelledby="ld-agents-h">
     <div class="ld-in">
       <header class="ld-head ld-rv">
-        ${head('05', 'For agents', 'Same line, for your agent.', 'ld-agents-h')}
+        ${head('04', 'For agents', 'Same line, for your agent.', 'ld-agents-h')}
         <p class="ld-sub">Agents get the same offers in the same order, ranked by all-in price, over MCP or plain JSON. Read-only: ${esc(brand())} never buys for an agent.</p>
       </header>
       <div class="ld-codes">
@@ -113,7 +112,7 @@ function cdHtml() {
   return `<section class="ld-band ink" id="ld-cd" aria-labelledby="ld-cd-h">
     <div class="ld-in">
       <header class="ld-head ld-rv">
-        <p class="ld-kicker"><span class="ld-n">02</span><span class="ld-pulse" aria-hidden="true"></span>The engine</p>
+        <p class="ld-kicker"><span class="ld-n">01</span><span class="ld-pulse" aria-hidden="true"></span>The engine</p>
         <h2 class="ld-h" id="ld-cd-h">Powered by <span class="ld-cd-name"><img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="28" height="28" data-fb="sq">Context.dev</span>.</h2>
         <p class="ld-sub">Every page ${esc(brand())} reads goes through Context.dev: web search to find the shops, product extraction, structured JSON from listing pages, markdown scrapes of marketplace search results, and the brand logos you see in the live log. We spend it carefully: free JSON-LD first, paid reads where they matter.</p>
       </header>
@@ -203,7 +202,6 @@ export function mountLanding(el) {
   el.classList.add('ld-js');
   const cue = el.querySelector('.scroll-cue');
   el.insertAdjacentHTML('beforeend', cdHtml() + howHtml() + sourcesHtml() + agentsHtml());
-  mountTree(el);
   if (cue) el.prepend(cue);
   getJson('/web/assets/brands.json').then(b => {
     const wall = el.querySelector('.ld-wall');
@@ -228,7 +226,7 @@ export function mountLanding(el) {
     const cueA = e.target.closest('.scroll-cue');
     if (cueA) {
       e.preventDefault();
-      const t = el.querySelector('#ld-browse');
+      const t = el.querySelector('.ld-band');
       if (t) t.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
     }
   });

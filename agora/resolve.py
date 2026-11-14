@@ -31,6 +31,7 @@ BRANDS = {
     "fitbit", "kindle", "amazon", "logitech", "razer", "ikea", "delonghi", "de'longhi", "nespresso",
     "jura", "sage", "breville", "kitchenaid", "weber", "makita", "dewalt", "festool", "trek",
     "specialized", "canyon", "cube", "brompton", "tesla", "volvo", "toyota", "bmw", "audi", "vw",
+    "lego", "nike", "adidas", "puma", "asics", "new balance", "fjallraven", "patagonia", "north face",
 }
 BRAND_ALIASES = {"fuji": "fujifilm", "alpha": "sony", "ilce": "sony", "eos": "canon", "iphone": "apple",
                  "ipad": "apple", "macbook": "apple", "airpods": "apple", "galaxy": "samsung", "pixel": "google",
@@ -119,6 +120,17 @@ ACCESSORY_WORDS = {
     "keychain", "key chain", "keyring", "avaimenperä", "schlüsselanhänger", "nyckelring", "brelok", "sleutelhanger",
     # boxes and baskets for a shelf (live, kallax: '2kpl punaista laatikkoa Kallax' €10 in the top 3)
     "laatikkoa", "laatikot", "laatikoita", "säilytyslaatikkoa",
+    # accessories in Nordic titles (live, dyson v15: 'Originalt Dyson V15s Detect Submarine tilbehør' €361)
+    "tilbehør", "tilbehor", "tillbehör", "tillbehor", "suulake", "suulakkeet", "moppaussuulake", "lader",
+    # things a fuzzy marketplace search returns for a phone / pram (live, vinted.fi: a lanyard, a fisheye lens, a
+    # flower pot, a blanket, a lock cable kept as 'puhelin' / 'kinderwagen')
+    "avainnauha", "kaulanauha", "kalansilmä", "kalansilmälinssi", "gimbel", "käsilaukku", "olkalaukku",
+    "kukkaruukku", "koriste", "koristeet", "viltti", "villaviltti", "vaijeri", "lukitusvaijeri", "hyttysverkko",
+    "myggnät", "myggnat",
+    # parts of a pram / sofa / bike sold alone (live: 'Brio lastenrattaiden istuinosa' €5, 'Bugaboo donkey istuin
+    # kankaat', 'Twistshake rattaiden lisäosia', 'rattaiden istuinpehmuste', 'Askon taivutettaessa tarjotintaso')
+    "istuinosa", "istuinkangas", "kankaat", "lisäosa", "lisäosia", "lisäosat", "pehmuste", "istuinpehmuste",
+    "tarjotin", "tarjotintaso", "stemmi", "koppa", "vaunukoppa", "kantokoppa", "babywanne", "liggdel",
 }
 # words that are an extra in a listing of the item when they come AFTER its name with a separator or a spec between
 # ('Sony A7 III Body | SmallRig Cage | OVP', 'iPhone 13 93% - telefon,opakowanie,kabel'): tier A needs a separator
@@ -155,7 +167,8 @@ _BATTERY_STATE = re.compile(r"(?:e-?bike|fat\s?bike|sähköpy\w*|sahkopy\w*|pede
 _ACC_TAIL = re.compile(r"\b\w{3,}?(kuoret|kuori|suojakuori|suojalasi|panssarilasi|laturi|hülle|ladekabel|"
                        r"ladegerät|ladeschale|kiinnitys|suutin|suuttimet|harja|harjat|suodatin|suodattimet|renkaat|"
                        r"renkaita|rengas|kumi|kumit|kansi|kannu|pussit|pusseja|pussi|ohjain|ohjaimet|bürste|düse|"
-                       r"behälter|halterung|zubehör|vanteet|vanne|akseli|ladestation|kapseln|kapselit|kotelo)\b")
+                       r"behälter|halterung|zubehör|vanteet|vanne|akseli|ladestation|kapseln|kapselit|kotelo|suulake|suulakkeet|"
+                       r"-lader|-laddare|-laturi)\b")
 # words that name a part of the item: an accessory when they come *before* the item's name
 # ("OLED Display for Nintendo Switch OLED"), not after ("MacBook Air with 15.3" display")
 PART_WORDS = ("display", "screen", "panel", "housing", "shell", "back cover", "battery", "beeldscherm", "scherm",
@@ -206,7 +219,10 @@ SYNONYMS: dict[str, set[str]] = {
              "hardtail", "maastopyora", "mountainbike", "racefiets", "rennrad", "cykel", "herrecykel", "damecykel"},
     "city": {"kaupunki", "stads", "citybike", "cityrad", "miejski", "ville", "bysykkel"},
     "shelf": {"hylly", "regal", "hylla", "hylle", "reol", "kast", "etagere"},
-    "sofa": {"sohva", "couch", "soffa"},
+    "sofa": {"sohva", "couch", "soffa", "sohvasänky", "sohvasanky", "vuodesohva", "divaani", "bäddsoffa",
+             "baddsoffa", "schlafsofa", "slaapbank", "sovesofa", "sovesófa", "kanapa", "sofa"},
+    "road": {"kilpapyora", "kilpapyörä", "racer", "racercykel", "landeveissykkel", "landevejscykel", "racefiets",
+             "rennrad", "maantiepyora", "maantiepyörä"},
     "laptop": {"notebook", "kannettava", "lappari"},
     "phone": {"puhelin", "smartphone", "handy"},
     "camera": {"kamera"},
@@ -318,6 +334,17 @@ def _fold(text: str) -> str:
                lambda m: f" gen{_ORDINAL_WORDS[m.group(1)]} ", t)
     t = re.sub(r"\bgen(?:eration)?\.?\s*(\d{1,2})\b(?!\s*(?:gb|tb|mm))", r" gen\1 ", t)   # 'Gen 2' / 'Generation 3'
     t = re.sub(r"\b(\d{1,2})\s*-?\s*gen(?:eration)?\b", r" gen\1 ", t)                 # '2-gen' / '3 generation'
+    # Apple part numbers ('MQKU3H/A', 'MLY33KS/A') are no model names; the screen size after 'MacBook Air' is no
+    # model number either ('MacBook Air 13 (2022)'); an Air of 2022 / 2023 with no chip named is the M2
+    t = re.sub(r"\bm[a-z0-9]{4}[a-z]{0,2}/a\b", " ", t)
+    t = re.sub(r"\b(\d{2,4})\s+(gb|tb)\b", r"\1\2", t)          # '256 GB' is a size, never 'macbook256
+    t = re.sub(r"\b(macbook\s+(?:air|pro))\s+(1[1-6])\b(?![.,]\d)", r"\1 \2in ", t)
+    if re.search(r"\bmacbook\s+air\b", t) and re.search(r"\b202[23]\b", t) and not re.search(r"\bm[1-5]\b", t):
+        t += " m2"
+    # Norwegian / Swedish 'lite brukt' / 'lite använd' = lightly used, never the 'Lite' version
+    t = re.sub(r"\blite\s+(brukt|brugt|begagnad|anvand|anvant|slitt|used)\b", r"\1", t)
+    # Dyson 'V15s' / 'V12s' (Submarine: the same vacuum with a wet head) is the V15 / V12, not another model
+    t = re.sub(r"\b(v1[0-5])s\b", r"\1 submarine", t)
     # 'Sony α 7 III', 'Sony Alpha 7 III' are the a7 III (live: two lens kits were 'does not match')
     t = re.sub(r"(?:α|\balpha)\s?-?\s?(\d{1,4}[a-z]{0,2})\b", r"a\1", t)
     for pat, rep in CODE_ALIASES:
@@ -325,6 +352,8 @@ def _fold(text: str) -> str:
     # "mark iii" / "mk3" / "mkiii" / "mark 3" / "m3 " after a model -> generation number token
     t = re.sub(r"\b(?:mark|mk)\.?\s*(i{1,3}|iv|vi{0,3}|ix|x|\d{1,2})\b", lambda m: " gen" + str(ROMAN.get(m.group(1), m.group(1))), t)
     t = re.sub(r"\b([a-z]{1,4}\d{1,4}[a-z]{0,2})\s*m(\d)\b", r"\1 gen\2", t)         # "a7 m3" / "a7m3"
+    # engine sizes / versions are units, never a generation glued to the model: 'Volvo V70 2.0 D4' is no 'v70-2'
+    t = re.sub(r"(?<![\d.,])(\d)[.,](\d)(?![\d.,])([a-z]{0,4})\b", r" \1\2l \3 ", t)
     t = re.sub(r"[^\w\s+/-]", " ", t)
     return t
 
@@ -348,7 +377,7 @@ def tokenize(title: str) -> list[str]:
     """Normalised tokens with generations as standalone 'genN' tokens (a7iii -> a7 gen3)."""
     out: list[str] = []
     toks: list[str] = []
-    for tok in re.split(r"[\s/]+", _fold(title)):
+    for tok in re.split(r"[\s/]+|(?<=[a-z])\+(?=\w)", _fold(title)):     # 'Oled+Sd card': two words
         # 'OLED-Modell' / 'Pro-Version' are two words; 'WH-1000XM5' / 'X-T5' / 'zv-e10' stay one code
         toks += tok.split("-") if "-" in tok.strip("-") and not re.search(r"\d", tok) else [tok]
     for tok in toks:
@@ -375,6 +404,10 @@ KIT_LENS = re.compile(r"(?:\+|&|\bwith\b|\bw/|\bmit\b|\bmed\b|\bmet\b|\bja\b|\bz
 _BUNDLE_SPLIT = re.compile(r"\s(?:\+|&|with|w/|incl\w*|bundle|plus\s+\d)\s", re.I)
 
 
+_NOT_WORDS = {"ej", "ei", "not", "no", "non", "nicht", "kein", "keine", "ikke", "inte", "ingen", "uten", "ohne",
+              "without", "geen", "niet", "nie", "bez"}
+
+
 def signature(title: str, brand: str | None = None) -> Signature:
     """Identity of the main item. Text after '+'/'with' (kit lens, batteries) is not identity."""
     toks = tokenize(_BUNDLE_SPLIT.split(title, maxsplit=1)[0])
@@ -390,7 +423,7 @@ def signature(title: str, brand: str | None = None) -> Signature:
     family: str | None = None   # "iphone", "galaxy", "pixel"... glues to a following bare number
     prev_model = False
     early: list[str] = []       # variant words before any name ('OLED Nintendo Switch'): kept once a name follows
-    for t in toks:
+    for i, t in enumerate(toks):
         if t in FAMILIES:
             family = t
             seen_family = seen_family or t      # 'AirPods Pro 2 for iPhone' is AirPods
@@ -429,7 +462,11 @@ def signature(title: str, brand: str | None = None) -> Signature:
             models[-1] = models[-1] + "-" + t           # "a7 3" -> a7-3
             prev_model = False
             continue
-        if t in VARIANT_WORDS and (models or family):
+        if t in VARIANT_WORDS and i and toks[i - 1] in _NOT_WORDS:
+            prev_model = False
+            continue            # 'Nintendo Switch (EJ OLED)': not the OLED
+        if t in VARIANT_WORDS and (models or family or seen_family):
+            # 'Nintendo Switch spelkonsol OLED', 'Switch - Vit OLED': the tier may come after other words
             if t not in variants:
                 variants.append(t)
             continue
@@ -561,6 +598,13 @@ def _part_after_model(low: str, need: Need) -> bool:
     return False
 
 
+# a battery word in front of the whole item's noun is 'cordless': 'Akku Staubsauger', 'akku-imuri', 'battery vacuum'
+_CORDLESS_ITEM = re.compile(
+    r"\b(?:akku|accu|battery|batteri|batterie)\W{0,2}(?:\w+-)?(?:\w*staubsauger|\w*sauger|\w*stofzuiger|\w*støvsuger|"
+    r"\w*dammsugare|\w*imuri|odkurzacz\w*|vacuum|vac|cleaner|\w*bohrschrauber|\w*schrauber|\w*porakone|drill|"
+    r"\w*rasenm[aä]her|\w*ruohonleikkuri|\w*trimmer|\w*leikkuri|\w*s[aä]ge|\w*saha)\b", re.I)
+
+
 def is_accessory(title: str, need: Need | None = None) -> bool:
     """True when the listing is a thing *for* the item rather than the item."""
     # Finnish compound tails on marketplace titles: "AirPods Pro 2 (USB-C) -latauskotelo" = the charging case
@@ -590,6 +634,8 @@ def is_accessory(title: str, need: Need | None = None) -> bool:
     for w in (x for x in ACCESSORY_WORDS if x in low and (not lego_set or x in MERCH_WORDS)):
         if w in BATTERY_WORDS and _BATTERY_STATE.search(low):
             continue           # 'akku 93 %', 'aito akku', 'Akku 89%': the phone's battery health, not a battery
+        if w in BATTERY_WORDS and _CORDLESS_ITEM.search(low):
+            continue           # 'Akku Staubsauger DYSON V15': a cordless vacuum, not a battery for one
         if re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", low) and w not in asked:
             # "camera with battery and charger" is a bundle, not an accessory: the accessory word
             # must come before "for X" or lead the title, or appear without a main-item word
@@ -691,7 +737,12 @@ _RED: list[tuple[str, re.Pattern[str], str]] = [
     ("part", re.compile(r"\b(?:for parts|parts only|spares|varaos(?!akoodi)\w*|osiksi|ersatzteil\w*|onderdelen|reservdel\w*|"
                         r"reservedel\w*|deler|na czesci|czesci zamienne)\b"), "sold as parts"),
     ("wanted", re.compile(r"\b(?:ostetaan|ostan|etsitaan|etsin|wanted|wtb|looking for|gezocht|gesucht|sucht|suche|"
-                          r"kopes|kjopes|kobes|kupie|szukam|cherche|busco|cerco)\b"), "a wanted ad, not an offer"),
+                          r"kopes|kjopes|kobes|kupie|szukam|cherche|busco|cerco|soker|sokes|soeker|sokes|onskas|onskes)\b"),
+     "a wanted ad, not an offer"),
+    # for rent, not for sale (live, baby stroller: 'VUOKRATAAN Ora Aina matkarattaat')
+    ("rental", re.compile(r"\b(?:vuokrataan|vuokralle|vuokraan|vuokrattavana|uthyres|hyres ut|zu vermieten|vermiete|"
+                          r"te huur|verhuur|for rent|for hire|udlejes|leies ut|do wynajecia|wynajme)\b"),
+     "for rent, not for sale"),
     ("broken", re.compile(r"\b(?:rikki|rikkinai\w*|hajonn\w*|hajalla|viallinen|vialli\w*|vika|vikaa|vikoja|"
                           r"toimimat\w*|ei toimi|ei lataa|hairio\w*|broken|faulty|defective|defect|not working|"
                           r"doesn ?t work|does not work|dont work|cracked|water damage\w*|defekt\w*|kaputt|"
@@ -701,7 +752,12 @@ _RED: list[tuple[str, re.Pattern[str], str]] = [
                           r"knust\w*|\w+defekt\w*|waterschade|wasserschaden|vesivahin\w*|vattenskad\w*|vandskade\w*|"
                           r"vannskade\w*|water damaged?|zalan\w*|gesprungen|gebrochen|zerbrochen|sprung im|rikkoutun\w*|"
                           r"haljennut|halkeama\w*|säröi\w*|saroi\w*|gebarsten|barst|gebroken|kapotte|"
-                          r"do naprawy|wadliw\w*|sugedes|neveikia)\b"), "broken or faulty"),
+                          r"do naprawy|wadliw\w*|sugedes|neveikia|"
+                          # 'korjattavaksi' (to be repaired), 'ilman akkua' (without its battery), 'Pyörät eivät
+                          # kunnolla käänny' (the wheels don't turn): not a working one (live, robotti-imuri)
+                          r"korjattava\w*|kunnostettava\w*|korjausta vaativa|ilman akkua|ilman laturia|ilman akkuja|"
+                          r"ei kaanny|eivat (?:\w+ ){0,2}kaanny|utan batteri\w*|ohne akku|zonder accu|without (?:the )?battery|"
+                          r"no battery|reparaturbedurftig|zum reparieren|for repair|needs repair)\b"), "broken or faulty"),
     ("fake", re.compile(r"(?:\b(?:kopio\w*|replica\w*|replika\w*|fake|clone|klon|klony|high quality copy|hq copy|"
                         r"super copy|master copy|aaa quality|nachbau|namaak|kopia(?! (?:paragon|faktur|rachun|dowod))|podrobk\w*|ei alkuperainen|"
                         r"not original|non original|nie oryginaln\w*|nieoryginaln\w*|niet origineel|kein original|"
@@ -736,7 +792,7 @@ SUB_BRANDS = {"playstation": "sony", "sony playstation": "sony", "sony interacti
 NO_NAME_BRANDS = {"tws", "ingen", "kita", "other", "others", "muu", "andere", "anders", "inny", "be prekinio zenklo",
                   "no brand", "nobrand", "unbranded", "noname", "no name", "generic", "bluetooth", "idk", "brak",
                   "ei merkkia", "ohne marke", "geen merk", "utan marke"}
-RED_REJECT = ("part", "wanted")       # not the item / not an offer: resolve drops them
+RED_REJECT = ("part", "wanted", "rental")       # not the item / not an offer: resolve drops them
 RED_RISKY = ("broken", "fake", "locked", "swap")    # the item with a problem: judge never picks or prices them
 
 
@@ -764,10 +820,10 @@ def _red_flags_cached(text: str, need_thing: str, need_brand: str, earbuds: bool
     asked = fold_text(need_thing)
     out: list[tuple[str, str, str]] = []
     for kind, rx, what in _RED:
-        if kind in ("wanted", "swap") and not title:
+        if kind in ("wanted", "swap", "rental") and not title:
             continue      # site chrome says 'Ostetaan' / 'Gesucht' (a category); 'Tausch möglich' on a sale is fine
         for m in rx.finditer(folded):
-            if kind not in ("wanted", "part") and _negated(folded, m.start(), m.end()):
+            if kind not in ("wanted", "part", "rental") and _negated(folded, m.start(), m.end()):
                 continue
             if kind == "part" and _negated(folded, m.start()) and not re.match(rf"(?:{_WITHOUT})\b", m.group(0)):
                 continue
@@ -853,7 +909,14 @@ LIST_URL = re.compile(
     r"|/(?:all|alle|kaikki)/?$", re.I)
 # a used-car site's make / model page: '/fi/kaytetyt-autot/Volvo/V70' lists hundreds of cars (live: 'New from €3,932')
 CAR_LIST_PATH = re.compile(r"/(?:kaytetyt-autot|vaihtoautot|used-cars|gebrauchtwagen|gebrauchtwagen-\w+|occasions?|"
-                           r"begagnade-bilar|brugte-biler|bruktbil|tweedehands-auto\w*)(?:/[A-Za-z][\w-]*){0,4}/?$", re.I)
+                           r"begagnade-bilar|brugte-biler|bruktbil|tweedehands-auto\w*)(?:/[A-Za-z][\w-]*){0,4}/?$"
+                           # mobile.de '/en/car/volvo/v70': a make / model page, not one car (no listing id)
+                           r"|/(?:car|cars)/[a-z][a-z-]*(?:/[a-z0-9][a-z0-9-]{0,20})?/?$", re.I)
+# weekly store flyers on aggregator sites: a page of a printed ad, nothing to buy there (live, kahvinkeitin: the
+# pick was 'KAHVINKEITIN VAALEANPUNAINEN' €14.99 on promotheus.fi/halpa-halli-tarjoukset/tarjouslehti-79434-0)
+FLYER_URL = re.compile(r"tarjouslehti|tarjouslehde\w*|mainoslehti|/flyers?/|/prospekte?/|reklamblad|kundeavis|"
+                       r"tilbudsavis|weekly-?ads?\b|/folders?/\d|//(?:www\.)?(?:promotheus|minuntarjouslehteni|kimbino|"
+                       r"tiendeo|ofertolino|marktjagd|kaufda|reklambladet|tjek|etilbudsavis)\.", re.I)
 NOT_OFFER_TITLE = re.compile(
     r"\bab\s*€\s*\d|\bpreisvergleich\b|\bprice comparison\b|\bhintavertailu\b|\bprice history\b"
     r"|\bis on sale\b|\bon sale for\b|\bprice drops?\b|\bdeal alert\b"
@@ -934,6 +997,40 @@ def _is_a_vehicle(word: str, offer: Offer) -> bool:
     return offer.raw.get("category") == "vehicle" or bool(CAR_MAKES.search(title) and VEHICLE_EVIDENCE.search(title))
 
 
+_MAKE_ALIAS = {"volkswagen": "vw", "mercedes-benz": "mercedes", "škoda": "skoda", "citroën": "citroen",
+               "range rover": "land rover"}
+
+
+def _makes(text: str) -> set[str]:
+    try:
+        from agora.need import CAR_MAKES
+    except ImportError:
+        return set()
+    return {_MAKE_ALIAS.get(m.lower(), m.lower()) for m in CAR_MAKES.findall(text or "")}
+
+
+def _is_vehicle_need(need: Need) -> bool:
+    try:
+        from agora.need import vehicle_need
+    except ImportError:
+        return False
+    return need.kind == "product" and vehicle_need(need.thing or "")
+
+
+def other_make(need: Need, offer: Offer) -> str | None:
+    """A car make asked ('volvo v70') and the listing names only another one ('Saab 96'): another car, whatever
+    page or category it came from (live: nettiauto's search returned every cheap car as the V70)."""
+    if not _is_vehicle_need(need):
+        return None
+    asked = _makes(need.thing)
+    if not asked:
+        return None
+    named = _makes(offer.title or "")
+    if named and not named & asked:
+        return sorted(named)[0]
+    return None
+
+
 def vehicle_mismatch(need: Need, offer: Offer) -> str | None:
     """For a vehicle need, why this listing is not a vehicle: a toy / kids' car / model, an item that only
     shares a word (paint 'Bright Red', an LP, a bed), or a 'car' under VEHICLE_FLOOR_EUR with nothing that
@@ -980,6 +1077,8 @@ def not_an_offer(o: Offer) -> str | None:
     parts = urlsplit(url)
     if listy or LIST_URL.search(parts.path + ("?" + parts.query if parts.query else "")) or CAR_LIST_PATH.search(parts.path):
         return "search or list page, not one listing"
+    if FLYER_URL.search(url):
+        return "a store flyer page, not a buyable listing"
     if NOT_OFFER_TITLE.search(o.title or ""):
         return "price comparison or news page, not a shop listing"
     if not o.raw.get("from_list_page") and category_page(o.title or ""):
@@ -1028,6 +1127,25 @@ def _older_than_asked(need_sig: Signature, title: str) -> bool:
         and not re.search(r"\bm[1-5]\b", title or "", re.I)
 
 
+_ROMAN_TAIL = re.compile(r"^([a-z]{0,2})(\d{1,4})(iv|i{1,3})$")
+
+
+def _shorthand(nm: str, om: str) -> bool:
+    """Sellers' shorthand for a generation: 'A73' / 'a7m3' / '7iii' for the a7 III (asked 'a7-3')."""
+    if "-" not in nm or "-" in om:
+        return False
+    base, gen = nm.split("-", 1)
+    if not gen.isdigit():
+        return False
+    if om == base + gen and base[-1:].isdigit():
+        return True                      # 'a73'
+    m = _ROMAN_TAIL.match(om)
+    if m and ROMAN.get(m.group(3)) == int(gen):
+        letters = re.match(r"[a-z]*", base).group(0)     # type: ignore[union-attr]
+        return m.group(2) == base[len(letters):] and (not m.group(1) or m.group(1) == letters)
+    return False
+
+
 def _model_match(need_sig: Signature, off_sig: Signature) -> float:
     """1 = all asked models present, ~0.1 = a *different* generation/model, 0.45 = cannot tell."""
     if _family_clash(need_sig, off_sig):
@@ -1045,7 +1163,7 @@ def _model_match(need_sig: Signature, off_sig: Signature) -> float:
     score = 1.0
     for nm in need_sig.models:
         base = nm.split("-")[0]
-        if nm in off_sig.models:
+        if nm in off_sig.models or any(_shorthand(nm, om) for om in off_sig.models):
             continue
         same_base = [om for om in off_sig.models if om.split("-")[0] == base]
         if same_base:
@@ -1252,7 +1370,10 @@ def other_kind(need: Need, offer: Offer) -> str | None:
 def _narrow_broad(noun: str) -> tuple[frozenset[str], frozenset[str]]:
     from agora import marketplaces as M
     head = noun.split()[-1]
-    return (_fold_words({w for w in M.translations(noun) if len(w) >= 4}),
+    narrow = {w for w in M.translations(noun) if len(w) >= 4}
+    if " " in noun:
+        narrow |= SYNONYMS.get(noun.split()[0], set())     # 'kilpapyörä', 'racer' name a road bike too
+    return (_fold_words(narrow),
             _fold_words(SYNONYMS.get(head, set()) | set(M.translations(head))))
 
 
@@ -1267,6 +1388,20 @@ def _only_broad(need: Need, offer: Offer, toks: set[str]) -> bool:
     if not narrow or _hits(narrow, frozenset(toks)):
         return False
     if not broad or not _hits(broad, frozenset(toks)):
+        return False
+    maker = KIND_MAKERS.get(noun)
+    return not (maker is not None and maker.search(offer.title or ""))
+
+
+def _narrow_unnamed(need: Need, offer: Offer, toks: set[str]) -> bool:
+    """A narrower kind was asked ('road bike') and the title names neither it nor a maker of it: on an exact
+    category page that is still any bike, a part or a bare 'Myydään'."""
+    noun = _kind_noun(need)
+    if not noun or " " not in noun or noun.split()[0] in ("baby", "kids", "women", "men") or noun in KIND_ALSO \
+            or noun not in SUBKINDS:
+        return False
+    narrow, _ = _narrow_broad(noun)
+    if not narrow or _hits(narrow, frozenset(toks)):
         return False
     maker = KIND_MAKERS.get(noun)
     return not (maker is not None and maker.search(offer.title or ""))
@@ -1299,25 +1434,36 @@ def _generic_coverage(need: Need, offer: Offer, toks: set[str]) -> float | None:
         return 0.85                     # 'OnePlus Nord 5 256GB' on tori is a phone without saying so
     cp = offer.raw.get("category_page") if isinstance(offer.raw, dict) else None
     if cp and cp.get("exact"):
+        if _narrow_unnamed(need, offer, toks):
+            return 0.3                  # tori's 'Maantiepyörät' holds city bikes, pedals and 'Myydään' too
         return 1.0                      # the seller filed it under exactly this kind (tori 'Matkapuhelimet')
     raw = offer.raw if isinstance(offer.raw, dict) else {}
-    if raw.get("site") and raw.get("from_list_page"):
+    if raw.get("site") and raw.get("from_list_page") and str(raw.get("site")).split(".")[0] not in FUZZY_SEARCH:
         return 0.7                      # the marketplace's own search (or broader category) for this kind
     return None
+
+
+# marketplaces whose search matches loosely (vinted: a 'puhelin' search returns handbags and lanyards): a row from
+# their search is no evidence of the kind; its title must name the kind or a maker of it
+FUZZY_SEARCH = frozenset({"vinted"})
 
 
 # ---------------------------------------------------------------- the wrong kind of thing for a product need
 # Judged per listing from its own title, whatever the site: a toy or a magazine is never the coffee maker, a game
 # never the console, a dog coat or a kids' jacket never 'winter jacket women', a 3-speed city bike never a road
 # bike, a VoIP desk phone never a smartphone.
-TOY_RX = re.compile(r"\b(?:toys?|lelu\w*|leikki(?!kuri)\w*|spielzeug\w*|kinderspiel\w*|kinderset|leksak\w*|speelgoed\w*|"
+TOY_RX = re.compile(r"\b(?:toys?|lelu\w*|\w+lelu(?:t|ja|a)?|leikki(?!kuri)\w*|spielzeug\w*|kinderspiel\w*|kinderset|leksak\w*|speelgoed\w*|"
                     r"zabawk\w*|legetøj|legetoj|leketøy|leketoy|jouet\w*|giocattol\w*|juguete\w*|playmobil|lego|duplo|"
                     r"barbie|nuken\w*|nukke\w*|nukkej\w*|puppen\w*|dukke\w*|docka|dockvagn|lalk\w*|poppenwagen|"
                     r"pienoismalli\w*|miniatyyri\w*|miniature|modellauto|1\s?:\s?\d{2,3})\b", re.I)
 MEDIA_RX = re.compile(r"\b(?:lehti|lehtiä|lehdet|magazine|zeitschrift|tidning|tijdschrift|czasopism\w*|kirja|kirjat|book|"
                       r"books|buch|bücher|bok|boek|książka|ksiazka|käyttöohje|kayttoohje|manual|anleitung|bedienungsanleitung|"
                       r"juliste|poster|tarra|tarrat|sticker|aufkleber|magneet(?:ti|it|teja|tia)|magnet|magnets|magneten|postikortti\w*|"
-                      r"postcard|postkarte|dvd|blu-?ray|vinyyli|lp-levy|cd-levy)\b", re.I)
+                      r"postcard|postkarte|dvd|blu-?ray|vinyyli|lp-levy|cd-levy|"
+                      # loose building instructions (live, lego technic: 'LEGO Technic ohjekirja setille 8259' €4)
+                      r"ohjekirja\w*|rakennusohje\w*|bauanleitung\w*|building\s+instructions|bygganvisning\w*|"
+                      r"byggeinstruktion\w*|bouwinstructie\w*)\b(?!\W+(?:mukana|mukaan|included|inkl\w*|incl\w*|dabei|"
+                      r"inklusive|medfølger|medfoljer|ingår|ingar|tallella|jäljellä))", re.I)
 CONSOLE_NEED = re.compile(r"\b(?:ps[345]|playstation\s?[345]?|xbox(?:\s+(?:series\s+[xs]|one))?|nintendo\s+switch|switch\s+"
                           r"(?:oled|lite|2)|switch|steam\s+deck|game\s?boy|wii\s?u?|ds\b|3ds)\b", re.I)
 _PLATFORM = r"(?:ps\s?[345]|playstation\s?[345]|xbox(?:\s+(?:series\s+[xs]|one|360))?|(?:nintendo\s+)?switch(?:\s+(?:oled|2))?)"
@@ -1395,7 +1541,8 @@ SUBKINDS: dict[str, tuple[re.Pattern[str] | None, re.Pattern[str] | None]] = {
               None),
     "sofa": (None, re.compile(r"tuoli\w*|\bchairs?\b|armchair|sessel\w*|fåtölj|fatolj|lenestol|lænestol|fotel\w*|"
                               r"pöytä\w*|poyta\w*|\btable\b|\btisch\w*|\bmatto\w*|\brug\b|tyyny\w*|cushion|kissen|"
-                              r"päällinen|paallinen|\bpeti\b|lemmikki\w*|hylly\w*|lipasto\w*|sänky\w*|\bbed\b", re.I)),
+                              r"päällinen|paallinen|\bpeti\b|lemmikki\w*|hylly\w*|lipasto\w*|sänky\w*|\bbed\b|\w*penkki\w*|"
+                              r"\bvuode\b|\bvuoteet\b|\bbench\b", re.I)),
     "coffee machine": (None, re.compile(r"kahvimylly\w*|grinder|kaffeemühle|kvarn|termos\w*|thermos|vedenkeitin\w*|"
                                         r"\bkettle|wasserkocher|leivänpaahdin\w*|toaster|maitovaahdot\w*|frother|"
                                         r"kahvikupp?\w*|\bkupit\b|\bmukit?\b|\bcups?\b|tassen|"
@@ -1563,6 +1710,14 @@ def _product_clash(thing: str, must: str, cat_id: str, cat_label: str, title: st
                 return f"an add-on for it ({m.group(0).strip()}), not the console"
             if name := _named_before_platform(title):
                 return f"a game for it ({name}), not the console"
+    if ROBOT_VAC.search(asked) and (m := OTHER_VAC.search(title)) and not ROBOT_VAC.search(title):
+        return f"another kind of vacuum ({m.group(0).strip()}), not a robot vacuum"
+    if CONSOLE_NEED.search(thing) and (m := STORAGE_RX.search(title)) and not STORAGE_RX.search(f"{thing} {must}") \
+            and not _WITH_WORD_BEFORE.search(title[:m.start()]):
+        # 'Corsair MP600 Elite SSD 2Tb ... PS5 konsolille' is a drive; 'PS5 Digital 825GB SSD' is the console
+        plat = _PLATFORM_RX.search(title)
+        if STORAGE_MAKER.search(title) or plat is None or m.start() < plat.start() or "konsoli" in m.group(0).lower():
+            return f"storage for it ({m.group(0).strip()}), not the console"
     if APPAREL_NEED.search(asked):
         want = _audience(asked)
         have = _audience(title)
@@ -1582,9 +1737,10 @@ def _product_clash(thing: str, must: str, cat_id: str, cat_label: str, title: st
             return f"a frame alone ({m.group(0).strip()}), not a whole {noun}"
     if noun and noun in SUBKINDS:
         strong, soft = SUBKINDS[noun]
-        if strong is not None and (m := strong.search(title)):
+        if strong is not None and (m := strong.search(title)) \
+                and not _extra_of_named_item(n, title, m.start(), strict=True):
             return f"another kind of thing ({m.group(0).strip()}), not a {noun}"
-        if soft is not None and (m := soft.search(title)):
+        if soft is not None and (m := soft.search(title)) and not _extra_of_named_item(n, title, m.start()):
             try:
                 from agora import marketplaces as M
                 words = {w for w in M.translations(noun) if len(w) >= 4}
@@ -1597,6 +1753,43 @@ def _product_clash(thing: str, must: str, cat_id: str, cat_label: str, title: st
             if not _hits(own, frozenset(tokenize(title))):
                 return f"another kind of thing ({m.group(0).strip()}), not a {noun}"
     return None
+
+
+STORAGE_RX = re.compile(r"\b(?:ssd|nvme|m\.2|kiintolevy\w*|hårddisk\w*|harddisk\w*|festplatte\w*|hard\s?drive|"
+                        r"\w+konsolille|\w+konsoliin)\b", re.I)
+STORAGE_MAKER = re.compile(r"\b(?:corsair|wd_?black|western\s+digital|seagate|crucial|kingston|sabrent|lexar|"
+                           r"firecuda|sn\d{3}\w*|mp\d{3}\w*|990\s?pro|980\s?pro|samsung\s+9\d0)\b", re.I)
+ROBOT_VAC = re.compile(r"robot\w*[\s-]?(?:imur\w*|vac\w*|staubsauger|dammsugare|stofzuiger|odkurzacz)|saugroboter|"
+                       r"robotdammsugare|robotstøvsuger|robotstovsuger|robotstofzuiger|roomba|roborock|\bdreame\b|"
+                       r"robotti\w*|\brobot\b", re.I)
+OTHER_VAC = re.compile(r"\b(?:varsi-?imur\w*|rikkaimur\w*|käsi-?imur\w*|kasi-?imur\w*|keskusimur\w*|märkäimur\w*|"
+                       r"markaimur\w*|vesi-?imur\w*|stick\s+vac\w*|hand(?:held)?\s+vac\w*|handstaubsauger|"
+                       r"stielstaubsauger|akkustaubsauger|bodenstaubsauger|skaftdammsugare|handdammsugare|"
+                       r"steelstofzuiger|kruimeldief|stangstøvsuger|håndstøvsuger)", re.I)
+
+
+_EXTRA_LEAD = re.compile(r"(?:\+|&|\s[-–—]\s|\b(?:ja|and|und|og|och|en|with|mit|med|met|incl\w*|inkl\w*|ilman|"
+                         r"without|ohne|utan|uden|uten|plus|sis\.?|sekä|samt|m\.)\b)")
+
+
+_EXTRA_LEAD_STRICT = re.compile(_EXTRA_LEAD.pattern.replace("|\\s[-–—]\\s", ""))
+
+
+def _extra_of_named_item(need: Need, title: str, at: int, strict: bool = False) -> bool:
+    """The other-kind word at `at` comes after the item itself and a with-word: 'Apple iPhone 16 128 GB + 5 cover',
+    'Felt Z85 maantiepyörä 56 cm – Shimano 105 & Ultegra-kiekot', 'vuodesohvan runko ilman patjaa'. The item is
+    named before it by its kind word, a maker of the kind or a model code."""
+    before = title[:at]
+    rx = _EXTRA_LEAD_STRICT if strict else _EXTRA_LEAD
+    if not rx.search(before):
+        return False
+    lead = rx.split(before, maxsplit=1)[0]
+    toks = frozenset(tokenize(lead))
+    noun = _kind_noun(need) or ""
+    maker = KIND_MAKERS.get(noun)
+    narrow = _narrow_broad(noun)[0] if " " in noun else frozenset()
+    return bool(_hits(_need_words(need), toks) or (narrow and _hits(narrow, toks))
+                or (maker is not None and maker.search(lead)) or signature(lead).models)
 
 
 BIKE_NOUNS = {"bike", "bicycle", "road bike", "mountain bike", "city bike", "gravel bike", "hybrid bike", "e-bike"}
@@ -1622,6 +1815,18 @@ def search_title(need: Need, offer: Offer) -> bool:
     asked = set(tokenize(need.thing))
     extra = [t for t in toks if t not in asked]
     return bool(toks) and bool(extra) and all(t in _SEARCH_WORDS for t in extra) and len(set(toks) & asked) >= 1
+
+
+def _line_missing(ns: Signature, need_words: set[str], toks: set[str]) -> bool:
+    """A maker + product line asked ('lego technic', 'ikea kallax'): the title names the maker but not the line."""
+    try:
+        from agora import marketplaces as M
+    except ImportError:
+        return False
+    line = [w for w in need_words if w != ns.brand and w not in ATTRIBUTE_ONLY and w not in FAMILIES
+            and not M.english_noun(w)
+            and w not in SYNONYMS and not any(w in v for v in SYNONYMS.values()) and len(w) >= 3]
+    return bool(line) and not all(word_hit(w, toks) for w in line)
 
 
 def relevance(need: Need, offer: Offer) -> float:
@@ -1653,11 +1858,28 @@ def relevance(need: Need, offer: Offer) -> float:
         model = 0.1            # 'iPhone XR' / 'iPhone SE' carry no number but are other models
     if ns.models and not os_.models and _older_than_asked(ns, offer.title or ""):
         model = 0.1            # 'MacBook Air 2018' for 'macbook air m2'
+    if ns.models and not ns.variants and os_.variants and CONSOLE_NEED.search(need.thing or "") \
+            and re.fullmatch(r"\W*(?:\w+\W+){0,1}\w+\W*", need.thing or ""):
+        # a bare console name ('ps5'): the Pro and Slim are that console too (the tier shows in the title)
+        model = _model_match(ns, Signature(os_.brand, os_.models, (), os_.kit, os_.words, os_.family))
+    if ns.models and not os_.models and model > 0.45 and _marketplace_row(offer) and not _is_vehicle_need(need):
+        model = 0.45           # a seller's 'Dyson dammsugare' for a 'dyson v15': not shown to be the one asked
+    vehicle = _is_vehicle_need(need)
+    if vehicle and ns.models:
+        # a car's trim words are no tier ('V70 2.0 D4 Polar plus edition' is a V70); a car with no model named is
+        # not shown to be the one asked ('Volvo 940' / 'Volvo farmari' for a V70)
+        model = _model_match(ns, Signature(os_.brand, os_.models, ns.variants, os_.kit, os_.words, os_.family))
+        if not os_.models:
+            model = min(model, 0.3)
     brand_ok = 1.0
     if ns.brand and os_.brand and ns.brand != os_.brand:
         brand_ok = 0.2
+    elif other_make(need, offer):
+        brand_ok = 0.2          # 'Saab 96' for a 'volvo v70' (the title's make is not in BRANDS)
     elif ns.brand and not os_.brand and ns.brand not in hay:
         brand_ok = 0.95
+    if ns.brand and not ns.models and (os_.brand == ns.brand or ns.brand in hay) and _line_missing(ns, need_words, toks):
+        coverage = min(coverage, 0.2)    # 'lego technic': a LEGO City set names the maker, not the line asked
     # model identity dominates; extra words only nudge ("sony a7 iii" vs "a7 iii body black")
     score = model * (0.75 + 0.25 * coverage) if ns.models else (0.2 + 0.8 * coverage) * model
     score *= brand_ok
@@ -2150,23 +2372,32 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return r, "not that service (the page does not name the job)"
     if why := vehicle_mismatch(need, offer):
         return r, why
+    if make := other_make(need, offer):
+        return r, f"another make ({make.title() if len(make) > 3 else make.upper()}), not the car asked"
     if is_generic(need) and (other := other_kind(need, offer)):
         return r, f"another kind of thing ({other}), not a {_need_noun(need)}"
     if is_accessory(offer.title or "", need):
         return r, "accessory, not the item"
     if why := product_clash(need, offer):
         return r, why
-    if is_generic(need) and _only_broad(need, offer, set(tokenize(offer.title or ""))):
+    if is_generic(need) and (_only_broad(need, offer, set(tokenize(offer.title or "")))
+                             or _narrow_unnamed(need, offer, set(tokenize(offer.title or "")))):
         noun = _kind_noun(need) or _need_noun(need)
         return r, f"any {noun.split()[-1]}: the listing does not say it is a {noun}"
     if bad := [f for f in title_red_flags(offer, need) if f[0] in RED_REJECT]:
         k, what, phrase = bad[0]
-        return r, (f"not an offer: {red_flag_text(k, what, phrase)}" if k == "wanted"
+        return r, (f"not an offer: {red_flag_text(k, what, phrase)}" if k in ("wanted", "rental")
                    else f"a part, not the whole item: {red_flag_text(k, what, phrase)}")
     ns, os_ = signature(need.thing), signature(offer.title or "", offer.brand)
     if _family_clash(ns, os_):
         return r, (f"another product ({FAMILY_DISPLAY.get(os_.family or '', os_.family)} vs "
                    f"{FAMILY_DISPLAY.get(ns.family or '', ns.family)})")
+    if ns.brand and not ns.models and _line_missing(ns, {w for w in ns.words if w not in ATTRIBUTE_ONLY},
+                                                     set(tokenize(offer.title or "")) | ({os_.brand} if os_.brand else set())):
+        line = " ".join(w for w in tokenize(need.thing) if w != ns.brand)
+        return r, f"another product line (asked: {ns.brand.upper() if len(ns.brand) <= 4 else ns.brand.title()} {line.title()})"
+    if ns.models and _is_vehicle_need(need) and not os_.models:
+        return r, f"the listing names no model (asked: {' '.join(ns.models).upper()})"
     if ns.models and set(ns.models) <= set(os_.models) and _tiers(ns.variants) != _tiers(os_.variants):
         return r, f"another version ({_pretty(os_)} vs {_pretty(ns)})"     # iphone 13 pro / mini for iphone 13
     if ns.models and os_.models and _model_match(ns, os_) <= 0.2:

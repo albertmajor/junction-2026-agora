@@ -669,6 +669,41 @@ def _any_image(u: str | None, base: str) -> str | None:
     return None if _NOT_A_FACE.search(path) else u
 
 
+_LOGO = re.compile(r"(^|[/_.-])(logo|logos|logotype|brand[_-]?mark|wordmark)", re.I)
+
+
+def _brand_of(url: str) -> str:
+    host = urlsplit(url).netloc.lower().split(":")[0]
+    host = host[4:] if host.startswith("www.") else host
+    return max(host.split(".")[:-1] or [host], key=len)
+
+
+def offer_image_ok(image: str | None, page_url: str, seller: str | None = None, service: bool = False) -> bool:
+    """May this picture stand for the offer? Never an .svg / icon / pixel. A product needs a real photo
+    (is_product_photo). A service may show a logo only when it is the PROVIDER's own (its name or its own site's
+    brand), never the platform's: tekijatori.fi/profiili/siim-heinaste with Tekijatori-logo.svg is the
+    directory's logo, not the electrician."""
+    if not image or not isinstance(image, str):
+        return False
+    try:
+        path = urlsplit(image).path
+    except ValueError:
+        return False
+    if IMG_EXT_BAD.search(path) or _NOT_A_FACE.search(path):
+        return False
+    if not service:
+        return is_product_photo(image)
+    if not _LOGO.search(path):
+        return True
+    fname = re.sub(r"[^a-z0-9äöüå]+", " ", path.rsplit("/", 1)[-1].lower())
+    seller_words = {w for w in re.findall(r"[a-z0-9äöüå]{4,}", (seller or "").lower())}
+    if seller_words & set(fname.split()):
+        return True                                  # 'paavolainen-logo-musta.webp' for Sähköpalvelu Paavolainen
+    brand = _brand_of(page_url)
+    # the page's own site, and the seller IS that site (no other named seller): its logo is the provider's
+    return not seller_words or any(brand.startswith(w) or w in brand for w in seller_words)
+
+
 def service_image(page: str, url: str) -> str | None:
     """og:image > JSON-LD business image > JSON-LD logo > a real product-style photo on the page."""
     if not page:

@@ -1,6 +1,9 @@
-// "Browse everything": the tree of everything you can buy (products AND services) as a big shop's mega menu.
-// Desktop: all roots on the left (things | services), Miller columns to the right (children, grandchildren …,
-// the last three levels), a breadcrumb with "Hunt for X". Phone: a drill-down list with breadcrumbs.
+// The tree of everything you can buy (products AND services) as a big shop's mega menu. Since 14 Nov it lives in
+// the category navbar's dropdown (catnav.js), not on the landing page (owner: "lets move this section into a navbar").
+// Two modes: 'root' (opened from a root in the navbar: no roots column, Miller columns from that root's children)
+// and 'all' (the navbar's "More": every root on the left (things | services), popular tiles on the right).
+// Desktop: Miller columns (children, grandchildren …, the last three levels), a breadcrumb with "Hunt for X".
+// Phone (<= 640 px): a drill-down list with breadcrumbs, full screen.
 // A search box inside finds any of the ~35k categories instantly. Clicking a concrete leaf (or "Hunt for X") asks
 // for a hunt with the label in the viewer's language and the category path (main.js shows it as a breadcrumb).
 // A broad category (huntable === false: "Lifestyle Services", a whole department) never hunts its own label:
@@ -10,7 +13,7 @@ import * as C from './cats.js';
 import { recordings, queryFor } from './stream.js';
 
 const { esc, t } = C;
-const PHONE = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : { matches: false, addEventListener() {} };
+const PHONE = typeof matchMedia === 'function' ? matchMedia('(max-width: 640px)') : { matches: false, addEventListener() {} };
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const MAX_COLS = 3;
 
@@ -26,8 +29,8 @@ const POPULAR = [
   { id: 'sp:vp-2-2-1', img: '/web/assets/shelf/fiat-500-0.png', title: 'Fiat 500, 2015', q: 'Fiat 500 used' },
 ];
 
-let el = null, root = null;
-const st = { path: [], q: '', hits: null, hi: 0, live: false, recs: new Set(), roots: null, pop: null };
+let el = null, root = null, popLoaded = null, opts = {};
+const st = { path: [], mode: 'all', q: '', hits: null, hi: 0, live: false, recs: new Set(), roots: null, pop: null };
 const info = new Map();           // id -> item {id,label,count,n,kind,icon,leaf} in the current language
 let renderId = 0, prevCols = [];
 
@@ -55,39 +58,24 @@ const actHtml = (id, cls = 'ct-hunt') => {
 
 // ---------- markup ----------
 function shell() {
-  return `<section class="ld-band" id="ld-browse" aria-labelledby="ld-browse-h">
-    <div class="ld-in">
-      <header class="ct-headrow">
-        <div class="ld-head ld-rv">
-          <p class="ld-kicker"><span class="ld-n">01</span><span class="ct-k"></span></p>
-          <h2 class="ld-h" id="ld-browse-h"></h2>
-          <p class="ld-sub ct-sub"></p>
-        </div>
-        <div class="ct-langs ld-rv" role="group"></div>
-      </header>
-      <div class="ct ld-rv">
-        <div class="ct-top">
-          <label class="ct-find"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
-            <span class="sr ct-find-l"></span>
-            <input class="ct-q" type="search" autocomplete="off" spellcheck="false" maxlength="80" role="combobox"
-              aria-autocomplete="list" aria-expanded="false" aria-controls="ct-results"></label>
-          <nav class="ct-crumbs" aria-label="Category path"></nav>
-        </div>
-        <div class="ct-body">
-          <div class="ct-roots" role="navigation"></div>
-          <div class="ct-main" aria-live="polite"></div>
-        </div>
-      </div>
-      <p class="ld-note" role="status" hidden>This demo server runs offline, so it replays the recorded live hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki, a city bike). The other searches run live when a Context.dev key is set.</p>
+  return `<div class="ct" data-roots="on">
+    <div class="ct-top">
+      <label class="ct-find"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+        <span class="sr ct-find-l"></span>
+        <input class="ct-q" type="search" autocomplete="off" spellcheck="false" maxlength="80" role="combobox"
+          aria-autocomplete="list" aria-expanded="false" aria-controls="ct-results"></label>
+      <nav class="ct-crumbs" aria-label="Category path"></nav>
+      <div class="ct-langs" role="group"></div>
     </div>
-  </section>`;
+    <div class="ct-body">
+      <div class="ct-roots" role="navigation"></div>
+      <div class="ct-main" aria-live="polite"></div>
+    </div>
+    <p class="ld-note ct-note" role="status" hidden>This demo server runs offline, so it replays the recorded live hunts (Sony A7 III, iPhone 15, home cleaning in Helsinki, a city bike). The other searches run live when a Context.dev key is set.</p>
+  </div>`;
 }
 
 function words() {
-  const total = (st.roots && st.roots.total) || 0;
-  root.querySelector('.ct-k').textContent = t('kicker');
-  root.querySelector('#ld-browse-h').textContent = t('head');
-  root.querySelector('.ct-sub').textContent = t('sub', total ? C.num(total) : 'Tens of thousands of');
   const q = root.querySelector('.ct-q');
   q.placeholder = t('find');
   root.querySelector('.ct-find-l').textContent = t('find');
@@ -207,8 +195,12 @@ async function render() {
   // load every level on the path (cached per language)
   const levels = await Promise.all(st.path.map(id => kids(id)));
   if (my !== renderId) return;
-  const ct = root.querySelector('.ct');
+  const ct = root;
   ct.dataset.mode = phone ? 'list' : 'cols';
+  // 'root' mode (opened from a navbar root): the navbar is the roots column, so the menu shows none
+  const showRoots = st.mode === 'all' || !st.path.length;
+  ct.dataset.roots = showRoots ? 'on' : 'off';
+  if (opts.onPath) opts.onPath({ path: [...st.path], mode: showRoots ? 'all' : 'root' });
   const rootsEl = root.querySelector('.ct-roots'), main = root.querySelector('.ct-main');
   root.querySelector('.ct-crumbs').innerHTML = crumbsHtml();
   root.querySelector('.ct-crumbs').hidden = !st.path.length;
@@ -216,7 +208,7 @@ async function render() {
   qIn.setAttribute('aria-expanded', String(!!st.q.trim()));
 
   if (st.q.trim() && st.hits) {
-    if (!phone) rootsEl.innerHTML = rootsHtml(roots, true);
+    if (!phone && showRoots) rootsEl.innerHTML = rootsHtml(roots, true);
     root.querySelector('.ct-crumbs').hidden = true;
     main.innerHTML = resultsHtml();
     qIn.setAttribute('aria-activedescendant', st.hits.length ? `ct-opt-${st.hi}` : '');
@@ -238,7 +230,7 @@ async function render() {
     </div>`;
     return;
   }
-  rootsEl.innerHTML = rootsHtml(roots, true);
+  rootsEl.innerHTML = showRoots ? rootsHtml(roots, true) : '';
   if (!st.path.length) { main.innerHTML = popHtml(false); prevCols = []; return; }
   // columns: children of each node on the path (a leaf at the end gets a card instead), the last MAX_COLS shown
   const cols = [];
@@ -268,13 +260,14 @@ async function render() {
     const ul = col.querySelector('ul');
     if (s && ul) { const top = s.offsetTop - ul.offsetTop; if (top < ul.scrollTop || top > ul.scrollTop + ul.clientHeight - 40) ul.scrollTop = top - ul.clientHeight / 3; }
   });
-  const rs = rootsEl.querySelector('.ct-row.sel');
+  const rs = showRoots && rootsEl.querySelector('.ct-row.sel');
   if (rs) { const top = rs.offsetTop; if (top > rootsEl.scrollTop + rootsEl.clientHeight - 30) rootsEl.scrollTop = top - rootsEl.clientHeight / 3; }
 }
 
 function focusRow(id) {
-  const b = root.querySelector(`.ct-row[data-id="${CSS.escape(id)}"]`);
+  const b = id && root.querySelector(`.ct-row[data-id="${CSS.escape(id)}"]`);
   if (b) b.focus({ preventScroll: true });
+  return !!b;
 }
 
 // ---------- actions ----------
@@ -299,6 +292,7 @@ export async function reveal(id) {
   for (let k = 0; k < n.path_ids.length; k++) info.set(n.path_ids[k], { ...(info.get(n.path_ids[k]) || {}), id: n.path_ids[k], label: n.path[k] });
   info.set(n.id, { ...info.get(n.id), ...n });
   st.path = [...n.path_ids];
+  if (st.mode !== 'all') st.mode = 'root';
   st.q = ''; st.hits = null;
   root.querySelector('.ct-q').value = '';
   await render();
@@ -331,7 +325,7 @@ function onClick(e) {
     return;
   }
   const cr = e.target.closest('[data-depth]');
-  if (cr) { st.path = st.path.slice(0, Number(cr.dataset.depth)); render().then(() => { if (st.path.length) focusRow(st.path[st.path.length - 1]); }); return; }
+  if (cr) { st.path = st.path.slice(0, Number(cr.dataset.depth)); if (!st.path.length) st.mode = 'all'; render().then(() => { if (st.path.length) focusRow(st.path[st.path.length - 1]); }); return; }
   if (e.target.closest('[data-hunt-path]')) { hunt(st.path); return; }
   const op = e.target.closest('[data-open-path]');
   if (op) {
@@ -353,7 +347,7 @@ function onClick(e) {
     const p = POPULAR[Number(pop.dataset.pop)];
     const n = st.pop && st.pop.get(p.id);
     if (pop.dataset.ok !== '1') {
-      const note = root.querySelector('.ld-note');
+      const note = root.querySelector('.ct-note');
       note.hidden = false; note.classList.remove('flash'); void note.offsetWidth; note.classList.add('flash');
       note.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'nearest' });
       return;
@@ -383,7 +377,9 @@ function onKey(e) {
   } else if (e.key === 'ArrowRight' && !row.classList.contains('leaf')) {
     e.preventDefault(); open(level, row.dataset.id, { focusChild: true });
   } else if (e.key === 'ArrowLeft' && level > 0) {
-    e.preventDefault(); focusRow(st.path[level - 1]);
+    e.preventDefault(); if (!focusRow(st.path[level - 1]) && opts.onEdge) opts.onEdge();
+  } else if (e.key === 'ArrowLeft' && opts.onEdge) {
+    e.preventDefault(); opts.onEdge();
   }
 }
 
@@ -397,10 +393,14 @@ async function loadPopular() {
   st.live = !!(status && status.live);
 }
 
-export function mountTree(host) {
-  if (!host || el) return;
+// ---------- the component (catnav.js mounts it in the navbar's dropdown, lazily, on the first open) ----------
+const ensurePopular = () => (popLoaded = popLoaded || loadPopular().catch(() => {}));
+
+export function mountTree(host, options = {}) {
+  if (!host || el) return api;
+  opts = options || {};
   host.insertAdjacentHTML('afterbegin', shell());
-  el = host; root = host.querySelector('#ld-browse');
+  el = host; root = host.querySelector('.ct');
   words();
   root.addEventListener('click', onClick);
   root.addEventListener('keydown', onKey);
@@ -409,15 +409,30 @@ export function mountTree(host) {
   core.on('lang', async () => {
     words();
     st.roots = null;
-    await loadPopular();
+    popLoaded = null;
+    if (!el.closest('[hidden]')) await ensurePopular();
     if (st.q.trim()) onQuery(st.q); else render();
   });
-  core.on('browse', d => {
-    if (!d || !d.id) return;
-    reveal(d.id).then(() => root.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }));
-  });
-  loadPopular().then(render);
-  render();
-  const want = new URLSearchParams(location.search).get('browse');
-  if (want) reveal(want).then(() => root.scrollIntoView({ block: 'start' }));
+  return api;
 }
+
+/** Show the menu at a place: {all: true} = every root + popular; {root} = that root's columns; {path} = a node
+ *  path (ids, root first); {id} = any node (its path is looked up). Popular tiles load on the first show. */
+export async function show({ all = false, root: r = null, path = null, id = null } = {}) {
+  if (!el) return;
+  st.q = ''; st.hits = null;
+  const qIn = root.querySelector('.ct-q'); if (qIn) qIn.value = '';
+  if (all) { st.mode = 'all'; st.path = []; ensurePopular().then(() => { if (!st.path.length) render(); }); }
+  else if (id) { st.mode = 'root'; await reveal(id); return; }
+  else { st.mode = 'root'; st.path = path && path.length ? [...path] : (r ? [r] : []); }
+  await render();
+}
+
+/** Move focus into the menu: the first row of the first column (or the search box). */
+export function focusIn() {
+  if (!root) return;
+  const b = root.querySelector('.ct-main .ct-col .ct-row, .ct-roots .ct-row, .ct-list .ct-row, .ct-main .ct-pop') || root.querySelector('.ct-q');
+  if (b) b.focus({ preventScroll: true });
+}
+export const focusSearch = () => { const q = root && root.querySelector('.ct-q'); if (q) q.focus({ preventScroll: true }); };
+const api = { show, focusIn, focusSearch, reveal };

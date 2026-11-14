@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="/web/css/livelog.css">
 <link rel="stylesheet" href="/web/css/landing.css">
 <link rel="stylesheet" href="/web/css/tree.css">
+<link rel="stylesheet" href="/web/css/catnav.css">
 <link rel="stylesheet" href="/web/css/catpage.css">
 <link rel="stylesheet" href="/web/css/intent.css">
 <link rel="stylesheet" href="/web/css/listings.css">
@@ -42,6 +43,7 @@
 <div id="app" data-phase="start">
   <a class="skip" href="#q">Skip to search</a>
 
+  <div id="top">
   <header id="bar">
     <a class="logo" href="/" aria-label="Start over">
       <img class="logo-mark" src="/web/assets/brand/logo.svg" width="40" height="34" alt=""><span class="brand">Price<b>Monkey</b></span>
@@ -57,8 +59,9 @@
       <a href="#agent" id="agent-top" data-open="agent">for agents</a>
     </nav>
   </header>
+  <nav id="catnav" aria-label="Categories"><div id="crumbs" hidden></div></nav>
+  </div>
 
-  <nav id="crumbs" aria-label="Category" hidden></nav>
   <div id="chips" aria-label="What we understood" hidden></div>
   <div id="intents" aria-label="What we think you mean" aria-live="polite" hidden></div>
   <div id="ticker" aria-live="polite" hidden>
@@ -88,7 +91,7 @@
   </main>
 
   <section id="landing" aria-label="About">
-    <a class="scroll-cue" href="#ld-browse" aria-label="Browse everything you can buy, below"><i aria-hidden="true"></i><span>browse everything ↓</span></a>
+    <a class="scroll-cue" href="#ld-cd" aria-label="How it works, below"><i aria-hidden="true"></i><span>how it works ↓</span></a>
   </section>
 
   <aside id="sheet" aria-hidden="true"></aside>

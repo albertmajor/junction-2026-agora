@@ -79,5 +79,10 @@ def test_viewer_ships_the_tree():
         assert (WEB / f).is_file()
     tree = (WEB / "js" / "tree.js").read_text()
     assert "mountTree" in tree and "/api/categories" in (WEB / "js" / "cats.js").read_text()
-    assert "mountTree(el)" in (WEB / "js" / "landing.js").read_text()
+    # the tree lives in the category navbar's dropdown (catnav.js), no longer on the landing page
+    assert 'id="catnav"' in html and "/web/css/catnav.css" in html
+    nav = (WEB / "js" / "catnav.js").read_text()
+    assert "mountTree(treeHost" in nav and "import('./tree.js')" in nav and "huntcategory" in nav
+    assert "mountCatnav" in (WEB / "js" / "main.js").read_text()
+    assert "mountTree" not in (WEB / "js" / "landing.js").read_text()
     assert "mountSuggest" in (WEB / "js" / "main.js").read_text()

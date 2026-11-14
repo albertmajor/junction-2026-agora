@@ -552,6 +552,55 @@ class HuntResult:
     hunt_id: str | None = None
 
 
+MARKET_MIN_READ = 10        # a site's stated total counts only when we read at least this many of its rows ...
+MARKET_MAX_RATIO = 50       # ... or the total is not absurdly larger than what we read (amazon's '60,000 results')
+
+
+def market_body(rd: Any, urls: Any, need: Need) -> dict[str, Any] | None:
+    """The `market` event body (reader.market_for) with two corrections (eval r3):
+    - a site total from a page we barely read (fewer than MARKET_MIN_READ rows) and far above it (a generic
+      '60,000 results' on amazon.co.uk after 3 rows) is not a count of this thing: kept as what we read, at_least;
+    - a car hunt counts car listings: a general goods marketplace's total (toys, tyres, parts) is left out."""
+    store = getattr(rd, "MARKET", None)
+    if not isinstance(store, dict):
+        return rd.market_for(urls)
+    car = False
+    try:
+        from agora.discover import vehicle
+        car = vehicle(need)
+    except Exception:
+        car = False
+    sites: dict[str, Any] = {}
+    try:
+        from agora import marketplaces
+        sites = marketplaces.SITES
+    except Exception:
+        marketplaces = None    # type: ignore[assignment]
+    recs: list[dict[str, Any]] = []
+    for u in urls:
+        rec = store.get(u)
+        if not rec:
+            continue
+        rec = dict(rec)
+        site = sites.get(rec.get("site") or "")
+        if car and site is not None and not getattr(site, "vehicle", False):
+            continue           # tori's goods search for 'volvo v70': summer tyres and parts, not cars for sale
+        read = int(rec.get("read") or 0)
+        tot = rec.get("total")
+        if tot is not None and read < MARKET_MIN_READ and tot > MARKET_MAX_RATIO * max(1, read):
+            rec["total"], rec["at_least"] = None, True
+            rec["claimed"] = tot
+        recs.append(rec)
+    if marketplaces is None:
+        return rd.market_for(urls)
+    body = marketplaces.market_summary(recs)
+    claimed = {r["domain"]: r["claimed"] for r in recs if r.get("claimed")}
+    for src in body.get("sources") or []:
+        if src.get("domain") in claimed:
+            src["claimed"] = claimed[src["domain"]]   # the site's own figure, shown apart, never summed
+    return body
+
+
 def new_hunt_id() -> str:
     return "h_" + uuid.uuid4().hex[:12]
 
@@ -723,9 +772,27 @@ async def hunt(
                     cat_event["auto"] = True
         except Exception as exc:
             yield ev("error", where="intent", message=f"{type(exc).__name__}: {exc}"[:300])
+    if not intent and not category and real_parse:
+        # a half-understood typed need takes its clearly-likeliest meaning of the same kind (eval r3: movers
+        # found but never scoped to; 'fiets' searched as the Finnish word for the sport): agora.intent.refine
+        try:
+            from agora import intent as intent_mod
+            refined = intent_mod.refine(need)
+        except Exception:
+            refined = None
+        if refined and refined.get("category") and cat_event is None:
+            cat_event = refined["category"]
     where_note = default_where(need) if real_parse or category else None
     out.need = need
     extra_need: dict[str, Any] = {}
+    if real_parse and need_mod is not None and hasattr(need_mod, "correct_spelling"):
+        try:
+            fixes = need_mod.correct_spelling(text)[1]
+        except Exception:
+            fixes = []
+        if fixes:     # 'samsng galaxy s24 ultra': searched for 'samsung galaxy s24 ultra' (shown to the person)
+            extra_need["corrected"] = {"typed": text, "searched": need.raw,
+                                       "words": [{"from": a, "to": b} for a, b in fixes]}
     if where_note:
         extra_need["where_default"] = where_note
     if real_parse and (ask := scope_question(need)):
@@ -1118,7 +1185,7 @@ async def hunt(
     rd = _module("reader")
     if rd is not None and getattr(rd, "market_for", None) is not None:
         try:
-            body = rd.market_for(seen)
+            body = market_body(rd, seen, need)
         except Exception:
             body = None
         scope = next((e.data for e in out.events if e.type == "scope"), None)

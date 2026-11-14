@@ -27,6 +27,7 @@ Round 3:
 from __future__ import annotations
 
 import contextvars
+from collections import Counter
 import dataclasses
 import os
 import functools
@@ -358,6 +359,8 @@ REF_FLOOR_OTHER_MODEL = 0.30   # any other category, when the need names a model
 REFURB_TO_NEW = 0.85           # a refurbished shop price is ~85% of new: new reference when no shop sells it new
 UPPER_SHARE = 0.60             # the marketplace reference is the median of the top 60% of matching listings
 MIN_MARKET_REF = 5             # marketplace listings needed before they alone set a reference
+MIN_USED_FLOOR_N = 15          # this many marketplace listings set the floor from their own median ...
+USED_FLOOR_SHARE = 0.55        # ... at this share of it (when lower than ratio x new)
 PRIVATE_NEW = "new (private seller)"
 _MARKET_KINDS = ("classifieds", "resale", "auction", "specialist")
 
@@ -406,6 +409,7 @@ class Reference:
     shop_refurb: int = 0
     market_eur: float | None = None   # upper-60% median of the marketplace listings
     market_n: int = 0
+    floor_basis: str | None = None    # set when the floor comes from the used listings, not ratio x new
 
 
 def _ref_ratio(cat: Category, need: Need | None) -> float | None:
@@ -477,8 +481,17 @@ def reference_price(offers: list[Offer], cat: Category, need: Need | None = None
     if market_ref is not None and (shop_new or shop_ref) and new < market_ref:
         # the 'shop' prices are under what private sellers ask: accessories that slipped through, not the item
         new, basis = market_ref / max(cat.used_factor, 0.3), basis + f"; raised to the marketplace level {fmt(market_ref)}"
-    return Reference(round(new, 2), round(ratio * new, 2), ratio, basis, len(shop_new), len(shop_ref),
-                     round(market_ref, 2) if market_ref is not None else None, len(market))
+    floor, floor_basis = ratio * new, None
+    if len(market) >= MIN_USED_FLOOR_N:
+        # plenty of matching marketplace listings: the floor is what they sell for, not a share of a 'new' price
+        # that may be a stale launch price (live, iphone 13: €598 x 0.35 = €209 flagged 677 ordinary €189 phones)
+        # (only when that median sits above the ratio floor: a median under it is a flood of ear tips and cases)
+        med = statistics.median(market)
+        if med >= floor and USED_FLOOR_SHARE * med < floor:
+            floor = USED_FLOOR_SHARE * med
+            floor_basis = f"{USED_FLOOR_SHARE:.0%} of the median of {len(market)} marketplace listings ({fmt(med)})"
+    return Reference(round(new, 2), round(floor, 2), ratio, basis, len(shop_new), len(shop_ref),
+                     round(market_ref, 2) if market_ref is not None else None, len(market), floor_basis)
 
 
 def _what_junk(cat: Category) -> str:
@@ -512,6 +525,9 @@ def reference_flag(o: Offer, ref: Reference | None, cat: Category) -> str | None
     if near_floor_with_model_code(o, ref):
         return None
     what = PRIVATE_NEW if private_new(o) else o.condition
+    if ref.floor_basis:
+        return (f"too good to be true: {what} {fmt(p)} is under {fmt(ref.floor_eur)} ({ref.floor_basis}): "
+                f"probably {_what_junk(cat)}")
     return (f"too good to be true: {what} {fmt(p)} is {1 - p / ref.new_eur:.0%} under the new price "
             f"({fmt(ref.new_eur)}, {ref.basis}); under {fmt(ref.floor_eur)} it is probably {_what_junk(cat)}")
 
@@ -520,9 +536,10 @@ def mark_listings(need: Need, offers: list[Offer]) -> None:
     """Per listing, before anything is judged: red flags in its title / row text / checked description
     (raw['red_flags']), so medians and references never see them. Recomputed on every judge."""
     try:
-        from agora.resolve import listing_red_flags, title_red_flags
+        from agora.resolve import VEHICLE_FLOOR_EUR, _is_vehicle_need, listing_red_flags, title_red_flags
     except ImportError:
         return
+    vehicle = _is_vehicle_need(need)
     for o in offers:
         found = list(title_red_flags(o, need))
         page = o.raw.get("page_red_flags") or []
@@ -530,6 +547,11 @@ def mark_listings(need: Need, offers: list[Offer]) -> None:
         if o.raw.get("search_text") and is_marketplace(o):
             found += [f for f in listing_red_flags(str(o.raw["search_text"]), need, title=False)
                       if f[0] in ("broken", "fake", "locked") and f not in found]
+        if vehicle and o.condition in ("used", "unknown", "new") and (p := price_of(o)) is not None \
+                and 1 < p < VEHICLE_FLOOR_EUR and (o.condition != "new" or is_marketplace(o)):
+            # a whole car for €100: a scrap / parts car, a placeholder or a scam (live, bright red car: a €100
+            # Talbot was the pick and nettiauto's cheapest-first browse page set the 'typical' band)
+            found.append(("broken", "too little for a whole car: a scrap or parts car, or a scam", fmt(p)))
         o.raw["red_flags"] = [list(f) for f in found]
 
 
@@ -2298,7 +2320,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             o.raw["beat_eur"] = beat
             o.raw["gap_eur"] = round((o.price_eur or 0) - beat, 2)
         # a vague need ('puhelin', a tree hunt): say which one the price buys ('used iPhone 13 128GB at tori.fi')
-        headline = all_in_headline(good, best_all, lines, named=_generic_need(need))
+        headline = all_in_headline(good, best_all, lines, named=_generic_need(need),
+                                   titled=_names_more_than_asked(need, best_all))
         lines[0:0] = skipped_lines(priced)
         if ref is not None:
             n_low = sum(1 for o in all_offers if o.raw.get("ref_suspect"))
@@ -2331,10 +2354,7 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
 
     flagged = [o for o in all_offers if _risky(o)]
     if flagged:
-        reasons = sorted({next((f for f in o.flags if f.startswith(("too good", "price disagrees"))),
-                               next((f for f in o.flags if f != "bundle"), "low trust")) for o in flagged})
-        verb = "looks" if len(flagged) == 1 else "look"
-        lines.append(f"{len(flagged)} offer{'s' * (len(flagged) != 1)} {verb} risky: " + "; ".join(reasons)[:200])
+        lines.append(risky_line(flagged))
 
     pick = best_tc or cheapest
     budget = _budget_eur(need)
@@ -2414,7 +2434,62 @@ def short_title(o: Offer, n: int = 40) -> str:
     return t
 
 
-def all_in_headline(good: list[Offer], best: Offer, lines: list[str], named: bool = False) -> str:
+_RISK_GROUPS = (
+    ("price disagrees", "whose price disagrees between the page and the search"),
+    ("too good", "priced too low to be real"),
+    ("red flag: too little for a whole car", "priced too low to be a whole car"),
+    ("red flag: the description says", "with a problem in the description"),
+    ("red flag: a swap", "look like swaps, not sales"),
+    ("red flag: broken", "broken or faulty"),
+    ("red flag: locked", "locked to an account or operator"),
+    ("red flag: a copy", "possible copies or fakes"),
+    ("red flag", "with another red flag in the title"),
+    ("outside the EU", "may not ship to Finland"),
+    ("out of stock", "out of stock"),
+    ("photo copied", "with a photo copied from another listing"),
+    ("scam pattern", "matching a scam pattern"),
+)
+
+
+def _risk_group(o: Offer) -> str:
+    for f in o.flags:
+        for start, label in _RISK_GROUPS:
+            if f.startswith(start):
+                return label
+    return "low trust for other reasons"
+
+
+def risky_line(flagged: list[Offer]) -> str:
+    """'375 offers look risky: 200 priced too low to be real, 120 look like swaps, not sales, 40 broken or
+    faulty': plain counts per reason, never raw flag strings, never cut mid-word."""
+    counts = Counter(_risk_group(o) for o in flagged)
+    verb = "looks" if len(flagged) == 1 else "look"
+    parts = [f"{n} {label}" for label, n in counts.most_common(4)]
+    rest = sum(counts.values()) - sum(n for _, n in counts.most_common(4))
+    if rest:
+        parts.append(f"{rest} for other reasons")
+    return f"{len(flagged)} offer{'s' * (len(flagged) != 1)} {verb} risky: " + ", ".join(parts)
+
+
+def _names_more_than_asked(need: Need, o: Offer) -> bool:
+    """Name the pick in the headline unless its title is just the words asked ('Saab 96' for 'volvo v70' must
+    show; 'iPhone 13' for 'iphone 13' need not)."""
+    try:
+        from agora.resolve import tokenize
+    except ImportError:
+        return True
+    t = short_title(o)
+    if not t:
+        return False
+    asked = set(tokenize(f"{need.thing} {need.raw}"))
+    return not set(tokenize(t)) <= asked
+
+
+LANE_OUTLIER = 5.0     # a condition's cheapest offer over 5x the cheapest used one is no useful 'from' line
+
+
+def all_in_headline(good: list[Offer], best: Offer, lines: list[str], named: bool = False,
+                    titled: bool = False) -> str:
     """'€825 all in: used at tori.fi. New from €1,029, refurbished from €899.' Every number is the full
     price you pay once (tag + shipping + import VAT + fees)."""
     per_cond: dict[str, Offer] = {}
@@ -2424,13 +2499,21 @@ def all_in_headline(good: list[Offer], best: Offer, lines: list[str], named: boo
             cur = per_cond.get(c)
             if cur is None or _landed(o) < _landed(cur):
                 per_cond[c] = o
+    used = [_landed(o) for o in good if market_condition(o) == "used"]
+    if len(used) >= 3:
+        # 'refurbished from €330' for a coffee maker whose used ones start at €25 is another kind of thing
+        med = statistics.median(used)
+        per_cond = {c: o for c, o in per_cond.items()
+                    if c == "used" or o is best or _landed(o) <= LANE_OUTLIER * med}
     for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])):
         extra = _landed(o) - (o.price_eur or 0)
         how = f" ({fmt(o.price_eur or 0)} + {fmt(extra)} shipping/import/fees)" if extra >= 1 else ""
         label = f" ({PRIVATE_NEW})" if private_new(o) else ""
         lines.append(f"{c}: {fmt(_landed(o))} all in at {o.source}{label}{how}")
     what = f" {short_title(best)}" if named and short_title(best) else ""
-    head = f"{fmt(_landed(best))} all in: {_cond(best)}{what} at {best.source}."
+    # the pick's own name after the shop when it says more than the words asked ('Saab 96' for a 'volvo v70')
+    after = f" ({short_title(best)})" if titled and not what and short_title(best) else ""
+    head = f"{fmt(_landed(best))} all in: {_cond(best)}{what} at {best.source}{after}."
     others = [f"{c} from {fmt(_landed(o))}" + ("" if surely_buyable(o) else " (may not ship to Finland)")
               for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])) if c != market_condition(best)]
     if others:

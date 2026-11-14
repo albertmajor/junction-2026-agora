@@ -1491,6 +1491,64 @@ def apply(need: Any, intent_id: str, *, country: str | None = None, lang: str = 
         return None
 
 
+REFINE_MIN_CONF = 0.6
+
+
+def refine(need: Any) -> dict[str, Any] | None:
+    """A typed need the literal parse left half-understood, fitted to its clearly-likeliest meaning of the SAME
+    kind (agora.hunt calls it when no meaning or category was picked). Never raises; returns what changed
+    {category?: <category event>, thing?: (old, new)} or None.
+
+    - No category from the classifier, but the top meaning has a tree node at >= REFINE_MIN_CONF
+      ('Umzugsfirma Hamburg 2-Zimmer-Wohnung': movers 0.66, eval r3 hunted a parking-ban permit unscoped): that
+      node becomes need.category (its kind, lanes and local words).
+    - A bare foreign word for a known thing ('fiets'): the meaning's English words become need.thing when the
+      marketplaces can translate them ('bicycle' -> polkupyörä / Fahrrad / cykel, and 'fiets' on marktplaats),
+      instead of the classifier's sport node label ('Pyöräily', eval r3)."""
+    try:
+        key, _phrase, rest = match_concept(getattr(need, "raw", "") or "")
+        if key is None:
+            return None
+        got = interpret(need.raw, llm=False)
+        top = (got.get("intents") or [None])[0]
+        if not top or top.get("as_typed"):
+            return None
+        conf = float(top.get("confidence") or 0)
+        if conf < REFINE_MIN_CONF:
+            return None
+        from agora import need as need_mod
+        service_like = top.get("kind") in ("service", "digital")
+        if service_like != need_mod.is_service(need):
+            return None                  # another kind of thing: that is auto_intent's call, not a refinement
+        out: dict[str, Any] = {}
+        if need.category is None and top.get("node"):
+            cat = need_mod.category_info(top["node"], source="intent", confidence=round(conf, 3))
+            if cat is not None:
+                need_mod.apply_category(need, cat)
+                out["category"] = need_mod._cat_event(cat)
+        hq = fold(((top.get("hunt") or {}).get("q") or "")).strip()
+        typed = need_mod.query_language(need.raw)
+        try:
+            from agora.discover import home_country
+            home_lang = need_mod._LANG_OF_LOCAL.get(home_country() or "", None)
+        except Exception:
+            home_lang = None
+        if need.kind == "product" and not rest and hq and hq != fold(need.thing or "") \
+                and typed and typed != home_lang:
+            # typed in a language other than home's ('fiets' from Finland): a Finn's 'polkupyörä' stays as typed
+            try:
+                from agora import marketplaces
+                translatable = hq in marketplaces.WORDS
+            except Exception:
+                translatable = False
+            if translatable:
+                out["thing"] = (need.thing, hq)
+                need.thing = hq
+        return out or None
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------- HTTP (mounted by agora.api)
 
 try:

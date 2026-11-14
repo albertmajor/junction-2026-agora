@@ -31,7 +31,7 @@ const crumbLabels = d => (d.path || []).map(p => p.label);
 
 function header(d) {
   const sep = '<span class="cp-sep" aria-hidden="true">›</span>';
-  const trail = [`<a href="/#ld-browse" data-home="1">${esc(t('home'))}</a>`]
+  const trail = [`<a href="/" data-home="1">${esc(t('home'))}</a>`]
     .concat((d.path || []).map((p, k, a) => k === a.length - 1
       ? `<span aria-current="page">${esc(p.label)}</span>`
       : `<a href="/?c=${encodeURIComponent(p.id)}" data-cat="${esc(p.id)}">${esc(p.label)}</a>`)).join(sep);
