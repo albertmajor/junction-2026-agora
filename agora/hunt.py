@@ -61,7 +61,10 @@ def _module(name: str) -> Any | None:
 def offer_payload(offer: Offer) -> dict[str, Any]:
     """Offer as JSON for the stream, without the heavy `raw` blob."""
     d = to_dict(offer)
-    d.pop("raw", None)
+    raw = d.pop("raw", None) or {}
+    for k in ("grade", "grade_score", "shutter_count", "battery_health"):   # used-dealer condition, small
+        if raw.get(k) is not None:
+            d[k] = raw[k]
     d["origin"] = _origin(offer)
     return d
 

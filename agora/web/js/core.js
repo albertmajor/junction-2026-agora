@@ -259,11 +259,11 @@ export function riskWhy(item) {
   const fl = flagsOf(item);
   const pick = re => fl.find(f => re.test(f));
   let f;
-  if ((f = pick(/^not costed/i))) return 'price unconfirmed: far off the market';
   if ((f = pick(/too good to be true/i))) {
     const m = /(\d+)% under/.exec(f);
     return m ? `too cheap to trust: ${m[1]}% under the usual price` : 'too cheap to trust';
   }
+  if (pick(/^not costed/i)) return 'price unconfirmed: far off the market';
   if (pick(/price disagrees/i)) return 'the page shows two different prices';
   if (reviewWatchOut(item)) return 'reviews: red flags';
   if (pick(/scam pattern/i)) return 'looks like a scam pattern';

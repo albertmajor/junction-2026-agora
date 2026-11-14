@@ -223,5 +223,30 @@ Additive (origin, UI round A; docs/UI_ROUND_A.md section 6): `agora/origin.py`, 
   lack them (`hunt.add_origins`; fixtures are not rewritten). Agent cards (`find_offers`, `GET /api/offers`,
   `get_offer`) carry `origin`; recordings keep the recorded one.
 
+Additive (used-dealer units, grades, import clearance, review badges):
+- `agora/units.py` (pure): `USED_DEALERS`, `is_used_dealer(url)`, `grade_info(*texts)` -> {grade (as the seller wrote it,
+  "Excellent (9)", "Like new", "Fair"), grade_score 0..1, shutter_count, battery_health}, `cards_from_html` (Wex unit
+  cards), `pick_units` (page's own unit + cheapest of each grade, then cheapest; `MAX_UNITS` 8).
+- Reader: a used dealer's page with several in-stock units -> one Offer per unit with `expand_lists=True` (free JSON-LD
+  page: main unit + its unit cards; paid JSON read: every same-item offer, `raw.step` "contextdev_units"). Each unit has
+  its own URL (or page URL + `#unit-N`), `raw.unit_of` = page URL, `raw.units_on_page`, `raw.from_list_page` when
+  the URL differs. `OFFER_SCHEMA` items gain nullable `grade`, `shutter_count`, `battery_health`. Used/refurb offers carry
+  `raw.grade`, `raw.grade_score`, `raw.shutter_count`, `raw.battery_health`, `raw.grade_from` (title|page) when stated.
+  JSON-LD blocks ending in `};` are parsed (extruct drops them).
+- Judge: receipt line `("condition: Good (8), shutter count 14,641 (seller's grade); lower than the usual Excellent (9)
+  here, so a lower price is expected; same grade elsewhere: €X", 0.0)` + `raw.grade_note`; units of one page vote once
+  per grade in market medians and are never merged as a VAT pair; used dealers get no haggle script.
+  Imports from outside the EU add `("courier customs clearance fee (est., UPS/DHL/FedEx typically €10–20)", 15.0)`
+  (marketplace / private listing: `("postal customs handling fee (est., usually under €10)", 5.0)`) and, over €150,
+  `("customs duty: 0% for cameras (ITA agreement)", 0.0)` (cameras/phones/tablets/laptops) or `("customs duty: possible
+  over €150, depends on the category (not priced)", 0.0)`; `import_fee` / all-in include the clearance fee.
+- Reviews: the shop's own page is scanned for rating badges ("4.8 Trustpilot Rating", Feefo/Reevoo/Google/Trusted Shops,
+  TrustBox attributes) -> source {name "Trustpilot (shown on the shop's own page)", via "shown on the shop's own page"},
+  weight 0.3, at most 100 reviews, never counted as independent (badge-only = label "unknown", status done, summary
+  "4.8★ on Trustpilot, as shown on the shop's own page (not checked independently); ..."). Its Trustpilot link
+  (uk.trustpilot.com/review/www.<domain>) is followed; big shops (known shops or badge/link on the page) the batch missed
+  get one own Trustpilot search (incl. the local `uk.`/`de.` site, max 2 per phase) and the paid page read uses the
+  linked / local Trustpilot page.
+
 ## Tests
 `tests/` with pytest, offline by default (fixtures/mocks). Live tests marked and skipped unless `AGORA_LIVE=1`.

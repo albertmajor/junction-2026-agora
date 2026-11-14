@@ -14,8 +14,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 def test_depth_reads_more_pages_until_hunt_takes_depth(monkeypatch):
     seen = {}
 
-    async def fake_hunt(text, **kw):
-        seen.update(kw)
+    async def fake_hunt(text, *, max_sources=32, budget_s=True, **kw):
+        seen.update({k: v for k, v in kw.items() if k != "result"})
+        if max_sources != 32:
+            seen["max_sources"] = max_sources
+        if budget_s is not True:
+            seen["budget_s"] = budget_s
         if False:
             yield None
 
@@ -34,7 +38,7 @@ def test_depth_passes_through_when_hunt_supports_it(monkeypatch):
     seen = {}
 
     async def fake_hunt(text, *, depth=1, **kw):
-        seen.update(kw, depth=depth)
+        seen.update({k: v for k, v in kw.items() if k != "result"}, depth=depth)
         if False:
             yield None
 

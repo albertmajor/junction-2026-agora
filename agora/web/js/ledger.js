@@ -97,7 +97,7 @@ export function highlights(offers = S.offers) {
   const cheapest = list => list.reduce((a, b) => (allIn(b) < allIn(a) ? b : a), list[0]);
   const pu = corePick(offers);
   const pick = (pu && offers.get(pu) && pool.includes(offers.get(pu))) ? offers.get(pu) : cheapest(base);
-  add(pick, isUnsure(pick) ? 'cheapest all-in' : 'cheapest all-in you can surely buy', 'pick');
+  add(pick, 'cheapest all-in', 'pick');
   for (const c of CONDS) {
     const list = base.filter(it => condWord(it.offer.condition) === c);
     if (list.length) add(cheapest(list), `cheapest ${c}`, 'c-' + c);
@@ -266,6 +266,7 @@ function scaffold() {
     <div class="lg-top"><h2 class="lg-h"></h2><span class="lg-cnt" role="status"></span></div>
     <ol class="lg-hl" aria-label="The better ones"></ol>
     <div class="lg-fb" aria-label="Filter the listings"></div>
+    <p class="lg-jump" hidden></p>
     <div class="lg-r lg-head" aria-hidden="true"><span></span><span></span><span>shop</span><span>title</span><span>condition</span><span class="lg-tag">tag</span><span class="lg-tc">all in</span><span></span></div>
     <ol class="lg-l" data-g="main"></ol>
     <div class="lg-more-w" data-g="main"><button type="button" class="lg-more" data-g="main"></button></div>
@@ -284,7 +285,7 @@ function scaffold() {
     head: root.querySelector('.lg-head'),
     list: { main: root.querySelector('ol[data-g=main]'), eu: root.querySelector('ol[data-g=eu]'), risky: root.querySelector('ol[data-g=risky]') },
     more: { main: root.querySelector('.lg-more[data-g=main]'), eu: root.querySelector('.lg-more[data-g=eu]'), risky: root.querySelector('.lg-more[data-g=risky]') },
-    eu: root.querySelector('.lg-eu'), risk: root.querySelector('.lg-risk'),
+    eu: root.querySelector('.lg-eu'), risk: root.querySelector('.lg-risk'), jump: root.querySelector('.lg-jump'),
   };
   if (typeof IntersectionObserver === 'function') {
     io = new IntersectionObserver(ents => {
@@ -368,6 +369,13 @@ function render() {
     els.risk.querySelector('.lg-gn').textContent = 'We would not buy these at that price: too cheap to trust, a price we could not confirm, or a seller with red flags. Shown so you can see everything we found.';
     if (riskOpen) part('risky', risky, 'risky'); else fill(els.list.risky, [], 'risky', pick);
   }
+  // the folded groups sit under a long list: say they exist, and jump there
+  const jumps = [];
+  if (euOn) jumps.push(`<button type="button" data-jump="eu">Also in the EU (+ shipping est.): ${n0(eu.length)} ↓</button>`);
+  if (rOn) jumps.push(`<button type="button" data-jump="risky">Set aside: ${n0(risky.length)} ↓</button>`);
+  const jk = jumps.join('');
+  if (els.jump.dataset.k !== jk) { els.jump.dataset.k = jk; els.jump.innerHTML = jk; }
+  els.jump.hidden = !jumps.length || main.length < 12;
   // rows that left for good (removed offers, a reset) free their nodes
   if (cache.size > S.offers.size + 64) for (const u of cache.keys()) if (!S.offers.has(u)) cache.delete(u);
 }
@@ -402,6 +410,15 @@ export function mountLedger(el) {
     const sh = e.target.closest('[data-ship]');
     if (sh) { filt.ship = sh.dataset.ship; render(); refocus(`[data-ship="${sh.dataset.ship}"]`); return; }
     if (e.target.closest('.lg-clear')) { filt = freshFilter(); render(); return; }
+    const j = e.target.closest('[data-jump]');
+    if (j) {
+      if (j.dataset.jump === 'eu') euOpen = true; else riskOpen = true;
+      render();
+      const sec = j.dataset.jump === 'eu' ? els.eu : els.risk;
+      sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      sec.querySelector('.lg-gh').focus({ preventScroll: true });
+      return;
+    }
     const b = e.target.closest('.lg-r, .lg-hc');
     if (b && b.dataset.url) emit('select', b.dataset.url);
   });

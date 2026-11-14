@@ -479,8 +479,11 @@ function collapse() {
  *  read through Context.dev (paid marketplace scrapes, product/extract reads); listings = offers from those reads.
  *  Free = listings from the page's own JSON-LD (tori's search pages), per site. Exported via _test. */
 export function cdStats() {
-  const sq = searchRows().filter(r => r.via && r.via[1]);
-  const found = sq.reduce((n, r) => n + (r.n || 0), 0);
+  // from the store (not the rows on screen): every query of every lane but Exa's look-alike lane
+  const qs = new Set();
+  for (const l of S.lanes || []) if (l && l.via !== 'exa') for (const q of l.queries || []) qs.add(String(q).toLowerCase());
+  const sq = [...qs];
+  const found = (S.sources || []).filter(s => !s.direct && s.lane !== 'lookalike').length;
   const all = S.offers ? [...S.offers.values()] : [];
   const viaOf = it => methodOf(it.offer && it.offer.read_via);
   const dom = it => bare((it.offer && it.offer.source) || domainOf(it.url));
@@ -499,7 +502,8 @@ export function cdStats() {
     else if (cdDomains.has(d) && !freeBy.has(d)) reads++;
   }
   // the engine's own count of Context.dev requests is the floor (cached reads included): searches + reads
-  if (budget && +budget.requests > sq.length) reads = Math.max(reads, +budget.requests - sq.length);
+  const bud = budget || S.budget;
+  if (bud && +bud.requests > sq.length) reads = Math.max(reads, +bud.requests - sq.length);
   const free = [...freeBy.entries()].sort((a, b) => b[1] - a[1]);
   return { searches: sq.length, found, reads, listings, free, freeN: free.reduce((n, [, k]) => n + k, 0) };
 }
@@ -512,8 +516,10 @@ function summary() {
   const cd = [];
   if (st.searches) cd.push(`<b class="ll-cd-n">${plural(st.searches, 'search', 'searches')}</b> found <b>${plural(st.found, 'page')}</b>`);
   if (st.reads) cd.push(`read <b class="ll-cd-n">${plural(st.reads, 'page')}</b>${st.listings ? ` → <b>${plural(st.listings, 'listing')}</b>` : ''}`);
-  const free = st.free.slice(0, 2).map(([d, n]) => `${esc(d)} <b>${n}</b> free`);
-  if (st.free.length > 2) free.push(`${st.free.length - 2} more site${st.free.length - 2 === 1 ? '' : 's'} free`);
+  // the free reads: the biggest site by name ("tori.fi 211 free"), the rest as one count
+  const free = st.free.slice(0, 1).map(([d, n]) => `${esc(d)} <b>${n}</b> free`);
+  const restN = st.freeN - (st.free[0] ? st.free[0][1] : 0);
+  if (restN) free.push(`${restN} more free`);
   const cdText = cd.length ? `<span class="ll-cdw">Context.dev: ${cd.join(' · ')}</span>` : `<span class="ll-cdw">Read <b>${plural(pages, 'page')}</b></span>`;
   els.sumText.innerHTML =
     (replay ? '<span class="ll-s-rec">Recorded live hunt · </span>' : '') +

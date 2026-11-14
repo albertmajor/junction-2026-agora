@@ -576,6 +576,17 @@ def _period(after: str) -> str | None:
     return None
 
 
+# a price quoted to compare with (hiring in-house, a freelancer, a competitor, 'the average agency'): not a plan
+COMPARISON = re.compile(r"\b(?:in[- ]house|full[- ]time|freelancers?|hiring|hire an?|salary|salaries|traditional|"
+                        r"typical|average|competitors?|other agencies|vs\.?|versus|compared|instead of|"
+                        r"unpredictable|both include|you save|savings?)\b", re.I)
+
+
+def _comparison(lines: list[str], i: int, before: str) -> bool:
+    near = " ".join([before] + lines[max(0, i - 2):i])
+    return bool(COMPARISON.search(near))
+
+
 def _plan_name(lines: list[str], i: int, before: str) -> str | None:
     cands = [before] if before else []
     cands += [lines[j] for j in range(i - 1, max(-1, i - 7), -1)]
@@ -610,6 +621,8 @@ def parse_plans_text(html: str, dom: str = "") -> list[dict[str, Any]]:
                 continue
             before = ln[:m.start()].strip()
             if re.search(r"\b(?:save|off|was|instead of|regular|normally|säästä|statt)\W*$", before, re.I):
+                continue
+            if _comparison(lines, i, before):
                 continue
             name = _plan_name(lines, i, before if len(before) <= 40 else "")
             key = (name or f"plan {len(plans) + 1}").lower()
@@ -1001,7 +1014,8 @@ class _Lane:
             return await asyncio.wait_for(contextdev.search(query, n=SEARCH_N, country=country, exclude_domains=excl),
                                           timeout=max(1.0, self.left() - 1.0))
         except Exception as exc:
-            await self.put(self.ev("error", where="longtail", message=f"search '{query}': {str(exc)[:160]}"))
+            if not contextdev.offline():
+                await self.put(self.ev("error", where="longtail", message=f"search '{query}': {str(exc)[:160]}"))
             return []
 
     def take_results(self, results: list[dict[str, Any]], via: str, origin: str | None = None) -> None:

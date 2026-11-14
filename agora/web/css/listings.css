@@ -101,11 +101,16 @@ html.agent-on #market { opacity: 0; pointer-events: none; }
 .lg-price input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .lg-clear { border: 0; background: none; padding: 0; font: 400 12.5px var(--sans); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--hair); cursor: pointer; }
 
+/* jump links to the folded groups below the long list */
+.lg-jump { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: -4px 0 12px; font: 400 12.5px/1.4 var(--sans); color: var(--ink-3); }
+.lg-jump[hidden] { display: none; }
+.lg-jump button { border: 0; padding: 0; background: none; font: inherit; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
+.lg-jump button:hover { color: var(--ink); text-decoration-color: currentColor; }
+
 /* rows: same columns as round A, the note column a little wider for reasons */
 .lg-r { grid-template-columns: 28px 44px minmax(160px, 220px) minmax(0, 1fr) 84px 68px 92px minmax(120px, 200px); }
 .lg-head[hidden] { display: none; }
 .lg-l:empty { border-top: 0; }
-.lg-l li { content-visibility: auto; contain-intrinsic-size: auto 53px; }
 .lg-x .lg-why { color: var(--ink-2); }
 .lg-nc { font: 400 11.5px var(--sans); color: var(--ink-3); }
 .lg-more-w { padding: 10px 0 4px; }

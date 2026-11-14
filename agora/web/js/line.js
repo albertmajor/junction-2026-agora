@@ -47,7 +47,7 @@ let shelf = null;                  // shelf.json rows (cached)
 let marksReady = null;
 // Hundreds of offers: past DENSE on the line, the beads become small pips stacked into a dot plot (a density
 // silhouette of the market), and only the story's plates and a few beads carry photos.
-const DENSE = 40, PIP = 7, PIP_MAX = 16, BEADS_DENSE = 10;
+const DENSE = 40, PIP = 7, PIP_MAX = 14, BEADS_DENSE = 12;
 let dense = false;
 
 // Obj = {key, item|null, extra|null, shelf|null, el, face, img, kind:'full'|'dot', x, lvl, y,
@@ -743,7 +743,15 @@ function assignLevels(list) {
   let dots = list.filter(o => o.kind === 'dot').sort((a, b) => a.x - b.x);
   if (dense) {
     // a dense line: the cheapest few stay photo beads, the rest are pips stacked per 7 px column
-    const beads = new Set(dots.slice().sort((a, b) => valOf(a) - valOf(b)).slice(0, BEADS_DENSE));
+    // photo beads spread along the line: the cheapest dot in each 90 px stretch, clear of the plates
+    const beads = new Set(), seg = new Map();
+    const nearPlate = o => list.some(p => p.kind === 'full' && Math.abs(p.x - o.x) < 64);
+    for (const o of dots.slice().sort((a, b) => valOf(a) - valOf(b))) {
+      if (beads.size >= BEADS_DENSE || nearPlate(o)) continue;
+      const k = Math.floor(o.x / 90);
+      if (seg.has(k)) continue;
+      seg.set(k, o); beads.add(o);
+    }
     const bins = new Map();
     for (const o of dots) {
       const pip = !beads.has(o);

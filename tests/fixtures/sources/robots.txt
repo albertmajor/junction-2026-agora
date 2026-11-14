@@ -1,0 +1,8 @@
+User-agent: Googlebot
+Disallow: /private/
+
+User-agent: *
+Disallow: /haku
+Allow: /haku/ohje
+Disallow: /*?sort=
+Disallow: /tili$

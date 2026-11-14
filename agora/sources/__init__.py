@@ -108,6 +108,8 @@ def test_query(src: dict) -> str:
         return _CAPITAL.get(cc, "babysitter")
     if set(cats) & {"beauty_services", "petcare", "tutoring", "moving", "gardening_services"}:
         return _CAPITAL.get(cc, "london")
+    if cats[0] == "general":
+        return "lego"
     if cats[0] == "furniture":
         return _FURNITURE.get(lang, "sofa")
     for c in cats:
@@ -327,3 +329,83 @@ def as_site_kwargs(src: dict) -> dict | None:
             "itemlist": bool(src.get("itemlist")) and src.get("status") == "verified_free",
             "verified": src.get("status") in ("verified_free", "verified_contextdev"),
             "bulky_ok": True}
+
+
+def for_url(url: str, path: str | pathlib.Path | None = None) -> dict | None:
+    """The registry source this URL belongs to (longest home-path match on the same host), else None."""
+    p = urlsplit(url)
+    host = p.netloc.lower()
+    host = host[4:] if host.startswith("www.") else host
+    best, best_len = None, -1
+    for s in load(path):
+        if s.get("domain") != host:
+            continue
+        hp = urlsplit(s.get("home") or "").path.rstrip("/")
+        if p.path.startswith(hp) and len(hp) > best_len:
+            best, best_len = s, len(hp)
+    return best
+
+
+def rows_from_html(page: str, page_url: str, src: dict, max_rows: int = 25) -> list[dict]:
+    """Cut a plainly fetched results page into listings with code (no model, no Context.dev):
+    [{title, url, price, currency, text}], one per distinct listing URL matching the source's `listing` regex.
+    A row's text runs from its link to the next listing link; its price is the first price in that text."""
+    import html as _html
+    from urllib.parse import urljoin
+
+    from agora.sources import discovery as D
+    rx = src.get("listing")
+    if not rx or not page:
+        return []
+    pat = re.compile(rx)
+    anchors = []
+    for m in re.finditer(r"<a\b([^>]*)>(.*?)</a>", page, re.I | re.S):
+        hm = re.search(r"""\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')""", m.group(1), re.I)
+        if not hm:
+            continue
+        u = urljoin(page_url, _html.unescape(hm.group(1) or hm.group(2) or ""))
+        up = urlsplit(u)
+        if not D.same_site(u, page_url) or not pat.search(up.path + ("?" + up.query if up.query else "")):
+            continue
+        anchors.append((m.start(), m.end(), u.split("#")[0], m.group(1), m.group(2)))
+    rows: dict[str, dict] = {}
+    order: list[str] = []
+    for i, (start, end, u, attrs, inner) in enumerate(anchors):
+        nxt = next((a[0] for a in anchors[i + 1:] if a[2] != u), len(page))
+        text = D.visible_text(page[start:min(nxt, start + 6000)])
+        title = D.visible_text(inner).strip()
+        if not title:
+            t = re.search(r"""\b(?:title|aria-label)\s*=\s*["']([^"']+)""", attrs) or \
+                re.search(r"""<img\b[^>]*\balt\s*=\s*["']([^"']+)""", inner, re.I)
+            title = _html.unescape(t.group(1)).strip() if t else ""
+        pm = D.PRICE.search(text)
+        price = _amount(pm.group(0)) if pm else None
+        cur = CURRENCY.get(next((c for c in src.get("countries", []) if c != "eu"), ""), "EUR")
+        r = rows.get(u)
+        if r is None:
+            rows[u] = {"title": title[:200], "url": u, "price": price, "currency": cur, "text": text[:400]}
+            order.append(u)
+        else:
+            if len(title) > len(r["title"]):
+                r["title"] = title[:200]
+            if r["price"] is None and price is not None:
+                r["price"] = price
+    return [rows[u] for u in order][:max_rows]
+
+
+def _amount(s: str) -> float | None:
+    m = re.search(r"\d[\d .,  ']*", s)
+    if not m:
+        return None
+    n = re.sub(r"[   ']", "", m.group(0)).rstrip(".,")
+    if re.search(r"[.,]\d{1,2}$", n):
+        whole, frac = n[:-3 if n[-3] in ".," else -2], n[-2:] if n[-3] in ".," else n[-1:]
+        whole = re.sub(r"[.,]", "", whole)
+        try:
+            return float(f"{whole}.{frac}")
+        except ValueError:
+            return None
+    try:
+        return float(re.sub(r"[.,]", "", n))
+    except ValueError:
+        return None

@@ -79,11 +79,12 @@ class Fetcher:
         self.c = client
         self.requests = 0
 
-    async def get(self, url: str) -> tuple[int, str, str]:
-        """(status, text, final url); status 0 = network error."""
+    async def get(self, url: str, lang: str = "en") -> tuple[int, str, str]:
+        """(status, text, final url); status 0 = network error. Asks for the site's own language."""
         self.requests += 1
+        al = f"{lang},en;q=0.5" if lang != "en" else "en-GB,en;q=0.9"
         try:
-            async with self.c.stream("GET", url) as r:
+            async with self.c.stream("GET", url, headers={"Accept-Language": al}) as r:
                 ctype = r.headers.get("content-type", "")
                 if ctype and not any(t in ctype for t in ("html", "xml", "text")):
                     return r.status_code, "", str(r.url)
@@ -122,15 +123,16 @@ async def onboard(rec: dict, f: Fetcher, known: dict[str, dict]) -> dict:
                 "robots_disallowed": [], "test_query": S.test_query(rec), "tried": 0, "contextdev": False,
                 "checked_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")})
     home_url = rec["home"]
+    lang = (rec.get("languages") or ["en"])[0]
     p = urlsplit(home_url)
     origin = f"{p.scheme}://{p.netloc}"
     rs, rtext, _ = await f.get(origin + "/robots.txt")
     rules = D.parse_robots(rtext) if rs == 200 else []
-    hs, home, final_home = await f.get(home_url)
+    hs, home, final_home = await f.get(home_url, lang)
     if hs == 0:
         alt = "https://" + rec["domain"] + "/"
         if alt != home_url:
-            hs, home, final_home = await f.get(alt)
+            hs, home, final_home = await f.get(alt, lang)
     if hs == 0 and not known_for(rec, known):
         out["reason"] = "unreachable"
         return out
@@ -151,7 +153,6 @@ async def onboard(rec: dict, f: Fetcher, known: dict[str, dict]) -> dict:
     cands += [(t, "searchaction", "get") for t in D.searchaction_templates(home, base)]
     cands += [(d["template"], "form", d["method"]) for d in D.form_templates(home, base)[:2]]
     strong = len(cands)
-    lang = (rec.get("languages") or ["en"])[0]
     cands += [(t, "pattern", "get") for t in D.common_templates(base if not urlsplit(home_url).path.strip("/")
                                                                  else home_url, lang)]
     seen: set[str] = set()
@@ -175,7 +176,7 @@ async def onboard(rec: dict, f: Fetcher, known: dict[str, dict]) -> dict:
                 out["robots_disallowed"].append(tpl)
             continue
         out["tried"] += 1
-        st, page, final = await f.get(url)
+        st, page, final = await f.get(url, lang)
         if D.looks_blocked(st, page):
             blocked_hits += 1
             if via == "pattern" and found_strong is None:
@@ -345,6 +346,7 @@ async def main() -> None:
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--contextdev", type=int, default=0)
     ap.add_argument("--report", action="store_true")
+    ap.add_argument("--retry", default="", help="re-check sources with these statuses (comma separated)")
     a = ap.parse_args()
     data = read_registry()
     meta = data.get("meta", {})
@@ -357,7 +359,9 @@ async def main() -> None:
         if k in reg:
             reg[k].update({f: r[f] for f in ("name", "countries", "languages", "lanes", "categories", "kind", "home")})
     only = {x.strip() for x in a.only.split(",") if x.strip()}
-    todo = [r for k, r in seeds.items() if (k in only if only else (a.force or k not in reg))]
+    retry = {x.strip() for x in a.retry.split(",") if x.strip()}
+    todo = [r for k, r in seeds.items() if (k in only if only else (a.force or k not in reg
+                                                                 or reg[k].get("status") in retry))]
     if a.limit:
         todo = todo[: a.limit]
     known = known_templates()

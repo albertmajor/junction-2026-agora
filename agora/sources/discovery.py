@@ -220,6 +220,9 @@ def searchaction_templates(page: str, base: str) -> list[str]:
     return out
 
 
+SEARCH_WORD = re.compile(
+    r"search|such|haku|hae\b|etsi|zoek|recherch|sök|sok\b|søg|soeg|søk|leit|szuk|wyszuk|hled|hlad|hľad|busc|"
+    r"pesquis|cerc|ricerc|keres|caut|otsi|mekl|iešk|iesk|paiešk|търс|αναζ|pretra|iskan|išči|trazi|traži", re.I)
 SEARCH_NAMES = ("q", "query", "search", "s", "k", "keyword", "keywords", "text", "search_text", "searchTerm",
                 "searchterm", "term", "w", "searchtext", "search_query", "hledat", "searchQuery", "qs", "find",
                 "phrase", "fraza", "zoekterm", "suche", "sok", "haku", "ss", "kw", "st", "string")
@@ -241,12 +244,13 @@ def form_templates(page: str, base: str) -> list[dict]:
             if not name or typ not in ("text", "search", ""):
                 continue
             s = (3 if typ == "search" else 0) + (2 if name.lower() in _SEARCH_NAMES_L else 0) \
-                + (1 if re.search(r"search|such|haku|zoek|recherch|sök|søg|szuk|hled|busc|cerc", " ".join(a.values()), re.I) else 0)
+                + (1 if re.search(r"(?:^|[_-])(?:q|query|search|stext|keywords?|term|text)$", name, re.I) else 0) \
+                + (1 if SEARCH_WORD.search(" ".join(a.values())) else 0)
             if s > score:
                 score, text_in = s, a
         action = fa.get("action", "")
         role = (fa.get("role", "") + " " + fa.get("class", "") + " " + fa.get("id", "") + " " + action).lower()
-        if re.search(r"search|such|haku|zoek|recherch|sok|søg|szuk|hled|busc|cerc|catalog", role):
+        if SEARCH_WORD.search(role) or "catalog" in role:
             score += 2
         if text_in is None or score < 2:
             continue
@@ -257,7 +261,7 @@ def form_templates(page: str, base: str) -> list[dict]:
         ap = urlsplit(act)
         params = [(k, v) for k, v in parse_qsl(ap.query, keep_blank_values=True)]
         hidden = [(a.get("name"), a.get("value", "")) for a in inputs
-                  if a.get("type", "").lower() == "hidden" and a.get("name") and len(a.get("value", "")) <= 30
+                  if a.get("type", "").lower() == "hidden" and a.get("name") and 0 < len(a.get("value", "")) <= 30
                   and not re.search(r"token|csrf|nonce|form_key|__", a.get("name", ""), re.I)]
         params += hidden[:3]
         query = urlencode(params)
@@ -359,6 +363,9 @@ def link_shape(url: str) -> tuple[str, ...]:
     segs = [s for s in p.path.split("/") if s]
     toks = [_seg_token(s) for s in segs]
     ext = _EXT.search(segs[-1]).group(0).lower() if segs and _EXT.search(segs[-1]) else ""
+    ids = [i for i, t in enumerate(toks) if t in ("#", "@", "slug#")]
+    if ids and ids[-1] < len(toks) - 1:
+        toks, ext = toks[: ids[-1] + 1], ""      # /dp/B0ABC/ref=sr_1_3 -> /dp/B0ABC (the rest is tracking)
     if ext:
         toks.append("ext" + ext)
     if all(t.startswith("=") or t.startswith("ext") for t in toks):
@@ -393,7 +400,7 @@ def shape_regex(shape: tuple[str, ...]) -> str:
     rx = "^/" + "/".join(segs)
     if qkey:
         return rx + r"/?\?(?:.*&)?" + re.escape(qkey) + "="
-    return rx + r"/?(?:$|\?)"
+    return rx + r"(?:[/?#]|$)"
 
 
 def infer_listing(page: str, url: str, home: str = "", query: str = "") -> dict:
@@ -407,11 +414,12 @@ def infer_listing(page: str, url: str, home: str = "", query: str = "") -> dict:
     for u in links:
         p = urlsplit(u)
         key_path = p.path.rstrip("/")
-        if p.query and any(w in p.query.lower() for w in qwords):
-            continue                      # another view of the same search (page 2, sort, filter)
         if key_path == here and p.query:
-            continue
+            continue                      # another view of the same search (page 2, sort, filter)
         shape = link_shape(u)
+        if p.query and not _variable(shape[:-1] if shape and shape[-1].startswith("?") else shape) \
+                and any(w in p.query.lower() for w in qwords):
+            continue
         if not _variable(shape) or not key_path:
             continue
         first = next((t[1:] for t in shape if t.startswith("=")), None)
@@ -441,7 +449,7 @@ def infer_listing(page: str, url: str, home: str = "", query: str = "") -> dict:
 _NUM = r"\d{1,3}(?:[ .,  ']\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?"
 CUR_AFTER = r"€|EUR\b|kr\.?|SEK\b|NOK\b|DKK\b|zł|PLN\b|Kč|CZK\b|Ft\b|HUF\b|lei\b|RON\b|лв\.?|BGN\b|CHF\b|£|GBP\b|,-"
 CUR_BEFORE = r"€|£|EUR\b|CHF\b|kr\.?|SEK\b|NOK\b|DKK\b|PLN\b"
-PRICE = re.compile(rf"(?:(?:{CUR_BEFORE})\s?(?:{_NUM}))|(?:(?<![\d.,])(?:{_NUM})\s?(?:{CUR_AFTER}))")
+PRICE = re.compile(rf"(?:(?:{CUR_BEFORE})\s?(?:{_NUM}))|(?:(?<![\w.,])(?:{_NUM})\s?(?:{CUR_AFTER}))")
 
 
 def visible_text(page: str) -> str:
@@ -497,15 +505,26 @@ def query_echo(page: str, query: str) -> bool:
 
 
 def evaluate(page: str, url: str, query: str, home: str = "", service: bool = False) -> dict:
-    """Score one results page. verified = a real results page we can cut with code from a plain fetch."""
+    """Score one results page. verified = a real results page we can cut with code from a plain fetch:
+    >= 5 listing links of one shape, and (products) >= 3 of those listings carry their own price, and the
+    listings are about the query (its first word in >= 30 % of the rows) or the page states structured products."""
+    from agora.sources import rows_from_html
     lst = infer_listing(page, url, home, query)
     prices = count_prices(page)
     st = structured(page)
     links = lst.get("count", 0)
-    priced = prices >= 3 or st["jsonld_products"] >= 3 or st["itemlist"]
-    verified = links >= 5 and (priced or service)
-    y = min(1.0, links / 20) * 0.55 + min(1.0, max(prices, st["jsonld_products"]) / 20) * 0.3 \
-        + (0.1 if st["itemlist"] else 0.0) + (0.05 if query_echo(page, query) else 0.0)
+    rows = rows_from_html(page, url, {"listing": lst.get("regex")}, max_rows=60) if lst.get("regex") else []
+    priced_rows = sum(1 for r in rows if r["price"] is not None)
+    w = next((x.lower() for x in query.split() if len(x) > 2), "")
+    import unicodedata
+    def fold(t: str) -> str:
+        return unicodedata.normalize("NFKD", t.lower()).encode("ascii", "ignore").decode()
+    on_topic = sum(1 for r in rows if w and fold(w) in fold(r["title"] + " " + r["text"] + " " + r["url"]))
+    relevant = bool(rows) and (on_topic >= max(2, 0.3 * len(rows)) or st["jsonld_products"] >= 3)
+    priced = priced_rows >= 3 or st["jsonld_products"] >= 3 or st["itemlist"]
+    verified = links >= 5 and ((priced and relevant) or (service and (relevant or not w)))
+    y = min(1.0, links / 20) * 0.5 + min(1.0, max(priced_rows, st["jsonld_products"]) / 20) * 0.3 \
+        + (0.1 if st["itemlist"] else 0.0) + (0.1 * min(1.0, on_topic / max(1, len(rows))))
     return {"verified": verified, "links": links, "listing": lst.get("regex"), "sample": lst.get("sample", []),
-            "prices": prices, **st, "echo": query_echo(page, query), "pagination": detect_pagination(page, url),
-            "yield": round(y, 3)}
+            "prices": prices, "priced_rows": priced_rows, "on_topic": on_topic, **st, "echo": query_echo(page, query),
+            "pagination": detect_pagination(page, url), "yield": round(y, 3)}
