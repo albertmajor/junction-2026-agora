@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agora Lab</title>
+<meta name="description" content="Agora lab viewer: one search box for everything you can buy, streamed live.">
+<meta name="theme-color" content="#0d0c0b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d0c0b'/%3E%3Ctext x='16' y='24' font-family='Georgia' font-size='22' text-anchor='middle' fill='%23f0ebe2'%3EA%3C/text%3E%3Ccircle cx='25' cy='23' r='2.4' fill='%23ff5a1f'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <a class="brand" href="/" title="Agora">Agora<i>.</i></a>
+    <span class="tag">lab view · engine on the wire</span>
+    <span class="spacer"></span>
+    <div class="seg" id="modeSeg" role="group" aria-label="source">
+      <button data-mode="auto" aria-pressed="true" title="replay when a recording exists, else live">Auto</button>
+      <button data-mode="live" aria-pressed="false" title="live web: spends Context.dev credits">Live</button>
+      <button data-mode="replay" aria-pressed="false" title="recorded hunt, no network">Replay</button>
+    </div>
+    <div class="seg" id="speedSeg" role="group" aria-label="replay speed">
+      <button data-speed="1" aria-pressed="true">1×</button>
+      <button data-speed="2" aria-pressed="false">2×</button>
+    </div>
+    <div class="seg" id="idleSeg" role="group" aria-label="replay pacing">
+      <button data-idle="skip" aria-pressed="true" title="replay: waits longer than 1.5 s (slow pages) are skipped and labelled">Skip idle</button>
+      <button data-idle="real" aria-pressed="false" title="replay at the recorded pace, waits included">Real pace</button>
+    </div>
+    <button class="btn acc stage-btn" id="stageBtn" title="the whole demo in one take: hunt, verdict, true cost, haggle, buy, proof">▶ Stage</button>
+    <div class="clock mono" id="clock">0.0s</div>
+  </header>
+
+  <section class="hero">
+    <h1>Everything you can buy, <em>costed</em> to the end.</h1>
+    <form class="search" id="form" autocomplete="off">
+      <input id="q" name="q" placeholder="type anything you can buy: a product or a service" aria-label="what do you want to buy" maxlength="200">
+      <button type="submit" id="go">Hunt</button>
+    </form>
+    <div class="row">
+      <div class="chips" id="chips">
+        <button class="chip" data-q="sony a7 iii body">sony a7 iii body</button>
+        <button class="chip" data-q="iphone 15 128gb used">iphone 15 128gb used</button>
+        <button class="chip" data-q="home cleaning helsinki 60m2">home cleaning helsinki 60m2</button>
+      </div>
+    </div>
+    <div class="needline" id="needline"></div>
+    <div class="banner" id="sharedBanner" hidden></div>
+    <div class="banner" id="errBanner" hidden></div>
+  </section>
+
+  <main class="grid">
+    <div>
+      <section class="verdict" id="verdict">
+        <div class="state"><span class="pill">waiting</span><span>pick a chip or type a thing</span></div>
+        <div class="headline">One box. New, refurbished, used, rental and services on one ladder, ranked by what owning it really costs.</div>
+        <div class="lead" id="lead"></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h2>Sources</h2><span class="n" id="srcCount">0 pages</span></div>
+        <div class="lanes" id="lanes"><div class="empty-note">lanes open here as discovery fans out</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph">
+          <h2>The ladder</h2><span class="n" id="ladderNote">EUR</span><span class="spacer"></span>
+          <div class="seg" id="axisSeg" role="group" aria-label="ladder axis">
+            <button data-axis="price" aria-pressed="true">Sticker</button>
+            <button data-axis="tc" aria-pressed="false">True cost</button>
+          </div>
+        </div>
+        <div class="ladder-wrap"><div class="ladder" id="ladder"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h2>Offers</h2><span class="n" id="offerCount">0</span></div>
+        <div class="cards" id="cards"><div class="empty-note">offers stream in as pages are read</div></div>
+      </section>
+    </div>
+
+    <aside>
+      <section class="panel meter">
+        <div class="ph"><h2>Budget</h2><span class="n" id="budgetState">idle</span></div>
+        <div class="big mono" id="credits">0<small>credits</small></div>
+        <div class="stack" id="stack"><i class="free"></i><i class="cache"></i><i class="paid"></i></div>
+        <div class="kv" id="kv">
+          <span><i class="sw" style="background:var(--paper)"></i>free reads (JSON-LD)</span><b id="kFree">0</b>
+          <span><i class="sw" style="background:var(--paper-2);opacity:.45"></i><span id="kCacheLbl">cache hits</span></span><b id="kCache">0</b>
+          <span><i class="sw" style="background:var(--acc)"></i>paid requests</span><b id="kPaid">0</b>
+          <span>pages · offers</span><b id="kPages">0 · 0</b>
+        </div>
+        <div class="small-note" id="ledgerNote">Context.dev: 10 requests/minute for the whole account. Replays cost nothing.</div>
+      </section>
+
+      <section class="panel dep" id="depPanel" hidden>
+        <div class="ph"><h2>Depreciation</h2><span class="n" id="depSrc"></span></div>
+        <div id="dep"></div>
+      </section>
+
+      <section class="panel share">
+        <div class="ph"><h2>Share this hunt</h2></div>
+        <div class="field"><label for="sharer">your name (gets the credit)</label><input id="sharer" maxlength="40" placeholder="albert"></div>
+        <button class="btn acc" id="shareBtn" disabled>Make a share link</button>
+        <div class="out" id="shareOut"></div>
+        <div class="stats" id="shareStats"></div>
+        <div class="small-note">Every outbound offer link runs through /go: one click row, attributed to whoever shared, then on to the shop.</div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h2>Wire</h2><span class="n" id="wireCount">0 events</span></div>
+        <div class="wire" id="wire"></div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="watch" id="watch">
+    <div class="ph"><h2 style="font-size:40px">Standing order</h2><span class="n">watch · mandate · agent buys · proof</span></div>
+    <p class="intro">A watch is a standing order on a need. Give the agent a signed mandate (a cap and an expiry), point it at our mock shop, then drop the price on stage: the watcher fires, signs a cart for exactly that price, buys inside the mandate, and every decision lands in a hash-chained log anyone can verify.</p>
+    <div class="wgrid">
+      <div class="box shop">
+        <h3>Mock shop <span class="spacer"></span></h3>
+        <div class="field"><select id="shopProduct" aria-label="mock shop product"></select></div>
+        <div class="ptitle" id="pTitle">loading…</div>
+        <div class="pprice" id="pPrice">€—</div>
+        <div class="meta" id="pMeta"></div>
+        <svg id="pSpark" viewBox="0 0 300 46" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="stage">
+          <div class="row">
+            <input class="mono field-inline" id="dropTo" type="number" min="1" step="1" aria-label="new price" style="background:var(--ink);border:1px solid var(--line-2);border-radius:3px;padding:6px 8px">
+            <button class="btn acc" id="dropBtn">Drop price on stage</button>
+          </div>
+          <div class="row">
+            <button class="btn small" id="feeBtn">Slip in a €39 hidden fee</button>
+            <button class="btn small" id="resetBtn">Reset shop</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3>Mandate</h3>
+        <div class="field"><label for="wNeed">need</label><input id="wNeed" value="sony a7 iii body"></div>
+        <div class="two">
+          <div class="field"><label for="wBeat">buy at or under (€)</label><input id="wBeat" type="number" min="1" step="1" value="771"></div>
+          <div class="field"><label for="wCap">mandate cap (€)</label><input id="wCap" type="number" min="1" step="1" value="780"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="wDays">expires in (days)</label><input id="wDays" type="number" min="1" max="365" step="1" value="7"></div>
+          <div class="field"><label for="wAction">action</label>
+            <select id="wAction"><option value="auto_buy">auto-buy (L3)</option><option value="one_tap">one-tap link (L2)</option><option value="notify">notify (L1)</option></select>
+          </div>
+        </div>
+        <div class="small-note" id="wFrom">Merchant allowlist: our mock shop only. Arm from any offer card to prefill.</div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn acc" id="armBtn">Arm the watch</button>
+          <button class="btn" id="storyBtn" title="scripted: skip, buy, refuse a hidden fee, catch a tampered log">Play the full story</button>
+          <button class="btn" id="haggleBtn" title="offline: sold-out lie caught, €1,099 declined, shop counters, agent buys under a closed mandate">Play the haggle story</button>
+        </div>
+        <div class="armed" id="armed"></div>
+      </div>
+
+      <div class="box logbox">
+        <h3>Decision log <span class="spacer"></span><button class="btn small detail-toggle" id="detailBtn" hidden>show technical detail</button></h3>
+        <div class="proofbar" id="proofbar"></div>
+        <div class="log" id="log"><div class="empty-note">arm a watch, then drop the price</div></div>
+        <div id="receipt"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Agora · Junction 2026 · lab view</span>
+    <a href="/api">/api</a><a href="/docs">/docs</a><a href="/recordings">/recordings</a><a href="/ledger">/ledger</a>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+<div class="caption" id="caption" role="status" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

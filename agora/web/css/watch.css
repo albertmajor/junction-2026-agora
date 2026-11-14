@@ -1,0 +1,547 @@
+/* Agora: the "your price" tag, the guard, the buy finale, the stamp (B4).
+   Tokens come from base.css. Yellow (--accent) is used ONLY for the tag here. */
+
+/* ---------- shared: a photo that could not be cut out ----------
+   Use: <figure class="cut-plate"><img ...></figure>. The raw photo sits on a rounded stage plate. */
+.cut-plate {
+  position: relative; margin: 0; padding: 6px;
+  background: var(--stage); border-radius: 10px;
+  display: grid; place-items: center;
+}
+.cut-plate img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+:root:not([data-theme="dark"]) .cut-plate img { mix-blend-mode: multiply; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cut-plate img { mix-blend-mode: normal; } }
+.cut-plate::after {
+  content: ""; position: absolute; left: 12%; right: 12%; bottom: -7px; height: 10px; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(28,27,24,.18), transparent); filter: blur(3px);
+}
+
+/* ---------- the tag strip, right under the line ---------- */
+#tag { position: relative; width: 100%; display: none; }   /* #app already pads the gutter */
+#tag .tg-title { display: none; margin: 14px 0 0; font: 500 13px/1.3 var(--sans); color: var(--ink); }
+#tag.is-own .tg-title { display: block; }
+#tag.is-shown { display: block; }
+[data-phase="start"] #tag { display: none !important; }
+
+#tag .tg-rail {
+  position: relative; height: 70px; touch-action: none; cursor: ew-resize;
+  -webkit-user-select: none; user-select: none;
+}
+
+/* the string the tag hangs from, up through the line */
+#tag .tg-needle {
+  position: absolute; left: var(--tx, 50%); bottom: 100%; width: 0; pointer-events: none;
+  border-left: 1.5px dashed var(--ink); opacity: 0; transform: translateX(-.75px);
+  transition: opacity var(--t-ui) var(--ease);
+  /* a break where the axis's euro labels sit, so the needle never strikes through "€800" */
+  -webkit-mask: linear-gradient(#000 0 13px, transparent 13px 38px, #000 38px);
+          mask: linear-gradient(#000 0 13px, transparent 13px 38px, #000 38px);
+}
+#tag.is-set .tg-needle { opacity: .28; }
+#tag.is-parked .tg-needle, #tag.is-parked .tg-zone { opacity: 0 !important; }
+#tag .tg-tag { transition: left 300ms var(--ease), transform var(--t-ui) var(--ease); }
+#tag.is-active:not(.is-glide) .tg-tag { transition: transform var(--t-ui) var(--ease); }
+#tag .tg-watch { transition: opacity var(--t-ui) var(--ease); }
+#tag.is-active .tg-watch { opacity: .35; }
+#tag.is-active .tg-needle, #tag.is-armed .tg-needle { opacity: .55; }
+
+/* the hatched empty zone left of the tag */
+#tag .tg-zone {
+  position: absolute; bottom: calc(100% + var(--needle, 0px)); height: var(--zoneh, 0px);
+  left: var(--zl, 0px); width: max(0px, calc(var(--tx, 0px) - var(--zl, 0px)));
+  pointer-events: none; opacity: 0; transition: opacity var(--t-ui) var(--ease);
+  background: repeating-linear-gradient(135deg, var(--hair) 0 1px, transparent 1px 8px);
+  border-right: 0; display: flex; align-items: flex-end;
+}
+#tag .tg-zlab {
+  position: absolute; bottom: calc(100% + var(--needle, 0px) + var(--zoneh, 0px) - 30px);
+  left: var(--tx, 0px); transform: translateX(calc(-100% - 10px));
+  font: 400 12px/1.3 var(--sans); color: var(--ink-2); background: var(--paper);
+  padding: 3px 9px; border-radius: var(--r-pill); white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity var(--t-ui) var(--ease);
+}
+#tag.is-left .tg-zlab { transform: translateX(10px); }
+#tag.is-left .tg-zlab::before { content: "← "; }
+#tag.is-own .tg-zlab { bottom: auto; top: 34px; }
+#tag.is-empty.is-set:is(.is-active, .is-armed):not(.is-parked) .tg-zlab { opacity: 1; }
+#tag.is-empty.is-set:is(.is-active, .is-armed) .tg-zone { opacity: 1; }
+
+/* the yellow price tag with a punched hole */
+#tag .tg-tag {
+  position: absolute; top: 6px; left: var(--tx, 50%); transform: translateX(-50%);
+  min-width: 92px; height: 52px; padding: 18px 14px 0; border: 0; margin: 0;
+  background: none; color: #1C1B18; cursor: grab; touch-action: none;
+  font: 500 14px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: transform var(--t-ui) var(--ease);
+  isolation: isolate; z-index: 3;
+}
+#tag.is-glide .tg-tag { transition: left 600ms var(--ease), transform var(--t-ui) var(--ease); }
+#tag .tg-tag::before {               /* the tag body: a little house shape, pointing up at the line */
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent);
+  clip-path: polygon(50% 0, 100% 26%, 100% 100%, 0 100%, 0 26%);
+  border-radius: 4px;
+}
+#tag .tg-tag::after {                /* a darker fold line, very faint */
+  content: ""; position: absolute; left: 6px; right: 6px; top: 13px; height: 1px; z-index: -1;
+  background: rgba(28,27,24,.14);
+}
+#tag .tg-hole {
+  position: absolute; top: 5px; left: 50%; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%;
+  background: var(--paper); box-shadow: inset 0 0 0 1.5px rgba(28,27,24,.35);
+}
+#tag .tg-val { font: 500 14px/1 var(--mono); letter-spacing: -.01em; }
+#tag:not(.is-set) .tg-val { font: 500 13px/1 var(--sans); }
+#tag .tg-hint {
+  position: absolute; right: 100%; top: 24px; margin-right: 12px;
+  font: 400 13px/1 var(--sans); color: var(--ink-2); pointer-events: none; white-space: nowrap;
+}
+#tag .tg-hint::before { content: "← "; color: var(--ink-3); }
+#tag.is-set .tg-hint { opacity: 0; transition: opacity var(--t-ui); }
+/* a price is set but the line shows true cost: the tag waits at the dock, half-lit, and says why */
+#tag.is-parked.is-set .tg-tag { opacity: .55; }
+#tag.is-parked.is-set .tg-hint { opacity: 1; }
+#tag.is-parked:not(.is-set):not(.is-active) .tg-tag { animation: tg-nudge 900ms var(--ease) 1.2s 2; }
+@keyframes tg-nudge { 0%, 100% { transform: translateX(-50%); } 30% { transform: translateX(calc(-50% - 10px)); } 60% { transform: translateX(calc(-50% + 6px)); } }
+#tag .tg-tag:hover { transform: translateX(-50%) translateY(-1px); }
+#tag.is-active .tg-tag { cursor: grabbing; transform: translateX(-50%) scale(1.04); }
+#tag .tg-tag:focus { outline: none; }
+#tag.is-kbd .tg-tag:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+
+/* one pulse when an offer crosses the tag */
+#tag.is-pulse .tg-tag { animation: tg-pulse 800ms var(--ease) 1; }
+@keyframes tg-pulse {
+  0% { transform: translateX(-50%) scale(1); }
+  30% { transform: translateX(-50%) scale(1.12); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+#tag.is-pulse .tg-needle { animation: tg-needle 800ms var(--ease) 1; }
+@keyframes tg-needle { 0%, 100% { opacity: .55; } 30% { opacity: 1; } }
+
+/* ---------- our own small ruler (mobile, or when the line has no scale) ---------- */
+#tag .tg-track { display: none; }
+#tag.is-own .tg-rail { height: 132px; margin-top: 4px; }
+#tag.is-own .tg-track {
+  display: block; position: absolute; left: 0; right: 0; top: 64px; height: 0;
+  border-top: 1.5px solid var(--ink);
+}
+#tag.is-own .tg-tag { top: 70px; }
+#tag.is-own .tg-needle { display: none; }
+#tag .tg-o {
+  position: absolute; top: -5px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+  background: var(--ink-3); opacity: .45; transition: opacity var(--t-ui), background var(--t-ui);
+}
+#tag .tg-o.lit { background: var(--ink); opacity: 1; }
+#tag .tg-o.lead { box-shadow: 0 0 0 3px var(--paper), 0 0 0 4.5px var(--ink); }
+#tag .tg-lo, #tag .tg-hi {
+  position: absolute; top: 9px; font: 400 11px/1 var(--mono); color: var(--ink-3);
+}
+#tag .tg-lo { left: 0; } #tag .tg-hi { right: 0; }
+
+/* ghosts + the finale's fallback object on our rail */
+#tag .tg-ghosts { position: absolute; inset: 0; pointer-events: none; }
+#tag .tg-ghost {
+  position: absolute; top: -4px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%;
+  border: 1px solid var(--ink-3); opacity: .7;
+}
+#tag.is-own .tg-ghost { top: 60px; }
+#tag .tg-extra {
+  position: absolute; left: var(--ex, 50%); bottom: calc(100% - 4px); margin: 0; transform: translateX(-50%);
+  display: grid; justify-items: center; gap: 2px; pointer-events: none;
+  transition: left var(--t-turn) var(--ease), opacity var(--t-ui);
+}
+#tag.is-own .tg-extra { bottom: auto; top: 2px; }
+#tag .tg-extra img { height: 56px; width: auto; max-width: 96px; object-fit: contain; }
+#tag.is-own .tg-extra img { height: 34px; }
+#tag .tg-extra figcaption { font: 400 11px/1 var(--mono); color: var(--ink-2); white-space: nowrap; }
+#tag .tg-extra.is-dim { opacity: .35; }
+
+/* ---------- caption row, pill, watch sentence, guard ---------- */
+#tag .tg-row { display: flex; align-items: center; gap: 10px; min-height: 24px; flex-wrap: wrap; }
+#tag .tg-pill {
+  font: 500 12px/1 var(--sans); color: var(--ink); background: var(--stage);
+  padding: 6px 10px; border-radius: var(--r-pill);
+  opacity: 0; transform: translateY(2px); transition: opacity var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+  display: none;
+}
+#tag.is-active .tg-pill { display: inline-block; opacity: 1; transform: none; }
+#tag .tg-cap { margin: 0; font: 400 13px/1.4 var(--sans); color: var(--ink-2); }
+#tag .tg-cap:empty { display: none; }
+
+#tag .tg-watch { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--hair); max-width: 720px; }
+#tag .tg-watch[hidden] { display: none; }
+#tag .tg-sentence { margin: 0 0 8px; font: 400 15px/1.45 var(--sans); color: var(--ink); }
+#tag .tg-buy { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font: 400 14px/1.4 var(--sans); min-height: 32px; }
+#tag .tg-buy input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+#tag .tg-box {
+  flex: none; width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--ink);
+  display: grid; place-items: center; transition: background var(--t-ui);
+}
+#tag .tg-box::after {
+  content: ""; width: 9px; height: 5px; border-left: 2px solid var(--paper); border-bottom: 2px solid var(--paper);
+  transform: translateY(-1px) rotate(-45deg); opacity: 0;
+}
+#tag .tg-buy input:checked + .tg-box { background: var(--ink); }
+#tag .tg-buy input:checked + .tg-box::after { opacity: 1; }
+#tag .tg-buy input:focus-visible + .tg-box { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+#tag .tg-guard { margin: 8px 0 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 400 13px/1.4 var(--sans); color: var(--ink-2); }
+#tag .tg-guard[hidden] { display: none; }
+#tag .tg-guard-t { font-variant-numeric: tabular-nums; }
+#tag .tg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: tg-breathe 2.4s ease-in-out infinite; }
+@keyframes tg-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+#tag .tg-see { color: var(--ink); font-weight: 500; margin-left: 6px; }
+
+/* ---------- the finale ---------- */
+#finale { width: 100%; }
+#finale:not(.is-on) { display: none; }
+.fn-lines { margin: 18px 0 0; min-height: 0; }
+.fn-lines .fn-line {
+  margin: 0; font: 400 14px/1.7 var(--sans); color: var(--ink-2); font-variant-numeric: tabular-nums;
+  transition: color var(--t-ui);
+}
+.fn-lines .fn-line:last-child { color: var(--ink); }
+.fn-lines .fn-line::before { content: "› "; color: var(--ink-3); }
+.fn-lines .fn-line.is-note { color: var(--ink-3); }
+.fn-lines .fn-line.is-typing span::after {
+  content: ""; display: inline-block; width: .55em; height: 1.05em; margin-left: 1px; vertical-align: -2px;
+  background: var(--ink); animation: fn-caret 900ms steps(1) infinite;
+}
+@keyframes fn-caret { 50% { opacity: 0; } }
+
+#finale .fn-out { margin: 22px 0 8px }
+#finale .fn-receipt {
+  --tooth: 12px;
+  position: relative; max-width: 400px; padding: 22px 24px calc(26px + var(--tooth));
+  background: var(--receipt); color: var(--ink);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth) 100%;
+          mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth) 100%;
+  opacity: 0; transform: translateY(-24px);
+  transition: opacity var(--t-drop) var(--ease), transform var(--t-drop) var(--ease);
+}
+#finale .fn-receipt.is-in { opacity: 1; transform: none; }
+#finale .fn-head { margin: 0 0 16px; font: 400 13px/1.4 var(--sans); color: var(--ink-2); }
+#finale .fn-big { margin: 0 0 4px; font: 400 44px/1.05 var(--serif); letter-spacing: -.01em; }
+#finale .fn-big span { display: block; font: 400 13px/1.4 var(--sans); color: var(--ink-2); letter-spacing: 0; }
+#finale .fn-rows { margin: 0; font: 400 12px/1.5 var(--mono); }
+#finale .fn-rows div { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
+#finale .fn-rows dt { color: var(--ink-2); font: 400 13px/1.5 var(--sans); }
+#finale .fn-rows dd { margin: 0; text-align: right; }
+#finale .fn-rows .fn-sum { border-top: 1px dashed var(--hair); margin-top: 4px; padding-top: 7px; font-weight: 500; }
+#finale .fn-rows .fn-sum dt { color: var(--ink); }
+
+#finale .fn-stamp {
+  position: absolute; top: 18px; right: 20px; transform: rotate(-6deg);
+  font: italic 400 22px/1 var(--serif); color: var(--ok);
+  border: 1.5px solid var(--ok); border-radius: 6px; padding: 4px 12px 5px;
+  opacity: 0; transition: opacity 200ms var(--ease) 350ms;
+}
+#finale .fn-receipt.is-in .fn-stamp { opacity: .85; animation: fn-stamp 380ms var(--ease) 350ms 1 backwards; }
+@keyframes fn-stamp { from { transform: rotate(-6deg) scale(1.25); opacity: 0; } to { transform: rotate(-6deg) scale(1); opacity: .85; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #finale .fn-receipt { box-shadow: 0 0 0 1px var(--hair); } }
+:root[data-theme="dark"] #finale .fn-receipt { box-shadow: 0 0 0 1px var(--hair); }
+
+#finale .fn-verify { margin-top: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+#finale .fn-vbtn {
+  font: 500 13px/1 var(--sans); color: var(--ink); background: none; cursor: pointer;
+  border: 1px solid var(--ink); border-radius: var(--r-pill); padding: 8px 14px; min-height: 34px;
+  transition: background var(--t-ui), color var(--t-ui);
+}
+#finale .fn-vbtn:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+#finale .fn-vbtn:disabled { cursor: default; border-color: var(--hair); color: var(--ink-2); }
+#finale .fn-vnote { font: 400 12px/1.4 var(--sans); color: var(--ink-3); }
+#finale .fn-receipt.is-tampered .fn-chain { color: var(--alarm); }
+
+#finale .fn-ledger { margin-top: 14px; border-top: 1px solid var(--hair); padding-top: 10px; }
+#finale .fn-ledger[hidden] { display: none; }
+#finale .fn-ltitle { margin: 0 0 6px; font: 500 13px/1.4 var(--sans); }
+#finale .fn-receipt.is-tampered .fn-ltitle { color: var(--alarm); }
+#finale .fn-ledger ol { list-style: none; margin: 0; padding: 0; font: 400 11.5px/1.45 var(--mono); }
+#finale .fn-ledger li {
+  display: grid; grid-template-columns: 34px 1fr auto; gap: 2px 8px; padding: 4px 6px; border-radius: 4px;
+  border-left: 2px solid transparent;
+}
+#finale .fn-ledger .fn-i { color: var(--ink-3); }
+#finale .fn-ledger .fn-r { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#finale .fn-ledger .fn-h { color: var(--ink-3); }
+#finale .fn-ledger li.is-bad {
+  color: var(--alarm); border-left-color: var(--alarm);
+  background: color-mix(in srgb, var(--alarm) 9%, transparent);
+  animation: fn-bad 600ms var(--ease) 1;
+}
+#finale .fn-ledger li.is-bad .fn-i, #finale .fn-ledger li.is-bad .fn-h { color: var(--alarm); }
+#finale .fn-ledger li.is-after { opacity: .55; }
+#finale .fn-ledger .fn-why { grid-column: 2 / -1; font: 500 12px/1.4 var(--sans); }
+#finale .fn-ledger .fn-why s { font-weight: 400; opacity: .7; margin-left: 6px; }
+#finale .fn-diff { margin: 8px 0 0; font: 400 11.5px/1.5 var(--mono); color: var(--ink-2); }
+#finale .fn-diff s { color: var(--ink-3); }
+@keyframes fn-bad { from { background: color-mix(in srgb, var(--alarm) 26%, transparent); } }
+
+/* ---------- mobile ---------- */
+@media (max-width: 640px) {
+  #tag .tg-tag { min-width: 104px; height: 56px; }       /* 44 px+ hit area */
+  #tag .tg-hint { display: none; }
+  #tag .tg-sentence { font-size: 14px; }
+  #finale .fn-receipt { max-width: none; padding: 18px 18px calc(22px + var(--tooth)); }
+  #finale .fn-big { font-size: 38px; }
+  .fn-lines .fn-line { font-size: 13px; }
+}
+
+/* ---------- reduced motion: positions jump, only opacity changes ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #tag .tg-tag, #tag.is-glide .tg-tag, #tag .tg-extra { transition: none; }
+  #tag.is-pulse .tg-tag, #tag .tg-dot, #finale .fn-receipt.is-in .fn-stamp, #finale .fn-ledger li.is-bad { animation: none; }
+  #finale .fn-receipt { transform: none; }
+  .fn-lines .fn-line.is-typing span::after { animation: none; }
+}
+
+/* while the recorded night plays, the tag is the story's, not yours */
+#tag.is-busy .tg-tag { cursor: default; }
+#tag.is-busy .tg-see, #tag.is-busy .tg-buy { pointer-events: none; }
+#tag.is-busy .tg-see { opacity: 0; }
+#tag.is-busy .tg-sentence, #tag.is-busy .tg-buy { display: none; }
+#tag.is-busy .tg-watch { border-top: 0; padding-top: 0; margin-top: 4px; }
+
+/* integration: the parked tag sits on the right end of the small ruler; don't let it cover the top price */
+#tag.is-own:not(.is-set) .tg-hi { opacity: 0; }
+#finale .fn-big span { max-width: calc(100% - 120px); }
+
+/* ---------- phone: the tag is a dashed rule across the vertical list ----------
+   #tag.is-vert: the rail has no height of its own; --ty is the y of your price measured from the
+   rail's top (negative: the list is above), --vl the list's left edge. The chip sits on the rail. */
+#tag .tg-vrule, #tag .tg-park { display: none; }
+#tag.is-vert { z-index: 4; }
+#tag.is-vert .tg-title, #tag.is-vert .tg-needle, #tag.is-vert .tg-zone, #tag.is-vert .tg-zlab,
+#tag.is-vert .tg-track, #tag.is-vert .tg-hint, #tag.is-vert .tg-pill, #tag.is-vert .tg-row { display: none; }
+#tag.is-vert .tg-rail { height: 0; cursor: default; touch-action: auto; }
+#tag.is-vert.is-parked .tg-rail { height: 56px; }
+
+#tag.is-vert:not(.is-parked):not(.is-off) .tg-vrule {
+  display: block; position: absolute; left: var(--vl, 0px); right: 0; top: var(--ty, 0px); height: 0;
+  border-top: 1.5px dashed var(--ink); opacity: .7; pointer-events: none;
+  transition: top 300ms var(--ease), opacity var(--t-ui) var(--ease);
+}
+#tag.is-vert.is-active .tg-vrule { opacity: 1; transition: opacity var(--t-ui) var(--ease); }
+#tag.is-vert.is-glide .tg-vrule { transition: top 600ms var(--ease); }
+#tag.is-vert .tg-vlab {
+  position: absolute; right: 0; bottom: 5px; padding: 2px 8px; border-radius: var(--r-pill);
+  font: 400 12px/1.3 var(--sans); color: var(--ink-2); background: var(--paper); white-space: nowrap;
+}
+#tag.is-vert .tg-vlab:empty { display: none; }
+
+#tag.is-vert .tg-tag {
+  top: var(--ty, 0px); left: var(--vl, 0px); transform: translateY(-50%);
+  min-width: 0; height: 30px; padding: 0 15px 0 17px; flex-direction: row; gap: 0;
+  transition: top 300ms var(--ease), transform var(--t-ui) var(--ease), opacity var(--t-ui);
+}
+#tag.is-vert.is-active:not(.is-glide) .tg-tag { transition: transform var(--t-ui) var(--ease); }
+#tag.is-vert.is-glide .tg-tag { transition: top 600ms var(--ease), transform var(--t-ui) var(--ease); }
+#tag.is-vert .tg-tag::before {        /* a price tag pointing right, at the rows */
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+  border-radius: 4px 0 0 4px;
+}
+#tag.is-vert .tg-tag::after {         /* no fold line here: a bigger, invisible hit area (44 px+) */
+  left: -6px; right: -10px; top: -8px; bottom: -8px; height: auto; background: none;
+}
+#tag.is-vert .tg-hole { top: 50%; left: 6px; margin: -3.5px 0 0; }
+#tag.is-vert .tg-val { font-size: 13px; }
+#tag.is-vert:not(.is-set) .tg-val { font-size: 12px; }
+#tag.is-vert .tg-tag:hover { transform: translateY(-50%); }
+#tag.is-vert.is-active .tg-tag { transform: translateY(-50%) scale(1.06); }
+#tag.is-vert.is-off .tg-tag { opacity: 0; pointer-events: none; }
+
+/* parked (no price yet, or the line shows true cost): the chip waits under the list */
+#tag.is-vert.is-parked .tg-tag { top: 28px; left: 0; }
+#tag.is-vert.is-parked .tg-park {
+  display: block; position: absolute; top: 28px; left: 102px; transform: translateY(-50%);
+  font: 400 13px/1.3 var(--sans); color: var(--ink-2); white-space: nowrap; pointer-events: none;
+}
+#tag.is-vert.is-parked:not(.is-set):not(.is-active) .tg-tag { animation: tg-vnudge 900ms var(--ease) 1.2s 2; }
+@keyframes tg-vnudge { 0%, 100% { transform: translateY(-50%); } 35% { transform: translateY(calc(-50% - 8px)); } 65% { transform: translateY(calc(-50% + 3px)); } }
+#tag.is-vert.is-pulse .tg-tag { animation: tg-vpulse 800ms var(--ease) 1; }
+@keyframes tg-vpulse { 0%, 100% { transform: translateY(-50%) scale(1); } 30% { transform: translateY(-50%) scale(1.14); } }
+#tag.is-vert.is-pulse .tg-vrule { animation: tg-needle 800ms var(--ease) 1; }
+
+/* the finale's mock shop on a phone: at the right end of the rows, climbing past the rule */
+#tag.is-vert .tg-extra {
+  left: auto; right: 0; bottom: auto; top: var(--ey, 0px); transform: translateY(-50%);
+  grid-auto-flow: column; align-items: center; gap: 6px; padding: 2px 6px; border-radius: 8px;
+  background: var(--paper); transition: top var(--t-turn) var(--ease), opacity var(--t-ui);
+}
+#tag.is-vert .tg-extra img { height: 34px; max-width: 56px; }
+#tag.is-vert .tg-ghost { right: 24px; margin: -3.5px 0 0; left: auto; }
+
+/* under the tag on a phone: at most two lines of text, then one row of controls */
+#tag .tg-ctl { display: block; }
+@media (max-width: 640px) {
+  #tag.is-vert .tg-watch { margin-top: 14px; padding-top: 12px; }
+  #tag.is-vert:not(.is-busy) .tg-sentence {
+    margin: 0 0 6px; font-size: 14px; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  #tag.is-vert .tg-ctl { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+  #tag.is-vert .tg-buy { min-height: 44px; }
+  #tag.is-vert .tg-guard { margin: 0; flex-wrap: nowrap; }
+  #tag.is-vert:not(.is-busy) .tg-guard-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #tag.is-vert .tg-see { margin-left: 0; display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+/* ---------- round 5 ---------- */
+/* bought: the watch is over, one calm line stays */
+#tag.is-done .tg-buy, #tag.is-done .tg-see, #tag.is-done .tg-guard, #tag.is-done .tg-cap,
+#tag.is-done .tg-zlab, #tag.is-done .tg-zone { display: none !important; }
+#tag.is-done .tg-watch { border-top: 0; padding-top: 0; margin-top: 4px; }
+#tag.is-done .tg-sentence { display: block !important; -webkit-line-clamp: unset; }
+/* your price is above the pick: nothing to wait for */
+#tag.is-already .tg-buy, #tag.is-already .tg-guard { display: none !important; }
+#tag .tg-now { color: var(--ink); font-weight: 500; white-space: nowrap; }
+
+/* the typing caret: a thin bar, gone when the line is typed */
+.fn-lines .fn-line.is-typing span::after {
+  width: 1.5px; height: 14px; margin-left: 2px; vertical-align: -2px;
+  background: var(--ink-2); animation: fn-caret 1s steps(2) infinite;
+}
+#finale .fn-receipt p, .fn-lines .fn-line, #finale .fn-vnote { text-wrap: pretty; }
+#finale .fn-big span { text-wrap: balance; }
+
+/* calmer focus rings everywhere */
+:where(a, button, [tabindex]):focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 6px; }
+
+/* the night shift on a wide screen: typed lines above the line, the receipt in a column by the tag */
+#line { position: relative; }
+#line > .fn-lines.is-over {
+  position: absolute; top: 4px; left: 0; margin: 0; z-index: 6; pointer-events: none;
+  max-width: min(560px, 50%);
+}
+#line > .fn-lines.is-over .fn-line {
+  font: 400 12.5px/1.75 var(--mono); color: var(--ink-2); background: color-mix(in srgb, var(--paper) 86%, transparent);
+  width: fit-content; padding: 0 6px; border-radius: 4px;
+}
+#line > .fn-lines.is-over .fn-line:last-child { color: var(--ink); }
+#line > .fn-lines.is-over .fn-line.is-note { color: var(--ink-3); }
+@media (min-width: 1100px) {
+  #finale.is-side { position: absolute; right: 0; top: var(--fy, 0px); width: 400px; z-index: 5; }
+  #finale.is-side .fn-out { margin: 0; }
+  #app[data-phase="finale"] #tag .tg-watch { max-width: calc(100% - 440px); }
+}
+
+/* night: one gesture. The paper dims a shade while Agora works, and comes back with the receipt. */
+html, body { transition: background-color 1.2s var(--ease); }
+html.night { --paper: #E6E1D6; --field: #EEEAE1; }
+@media (prefers-color-scheme: dark) { html.night:not([data-theme="light"]) { --paper: #0E0D0B; --field: #171613; } }
+html.night[data-theme="dark"] { --paper: #0E0D0B; --field: #171613; }
+html.night #stagebar { background: var(--ink); color: var(--paper); border-color: transparent; }
+html.night #stagebar .sb-hint, html.night #stagebar .sb-n, html.night #stagebar .sb-skip, html.night #stagebar .sb-x { color: color-mix(in srgb, var(--paper) 70%, transparent); }
+#tag .tg-guard-t { font-variant-numeric: tabular-nums; }
+
+/* the tour bar never covers content */
+html.staging #main { padding-bottom: 110px; }
+
+/* phone: the quick "your price" pill beside the switch, and a ±€10 stepper under the sentence */
+.tg-quick {
+  pointer-events: auto; flex: none; border: 0; border-radius: var(--r-pill); min-height: 32px; padding: 0 12px;
+  background: var(--accent); color: #1C1B18; font: 500 12.5px/1 var(--sans); cursor: pointer;
+}
+.tg-quick[hidden] { display: none; }
+#tag .tg-step { display: none; }
+#tag.is-vert.is-set:not(.is-busy):not(.is-done) .tg-step { display: inline-flex; gap: 6px; margin: 0 0 6px; }
+#tag .tg-step button {
+  min-height: 36px; min-width: 64px; padding: 0 12px; border: 1px solid var(--hair); border-radius: var(--r-pill);
+  background: var(--receipt); color: var(--ink); font: 500 13px/1 var(--mono);
+}
+/* the needle: a stub under the axis and a stub over the tag, never through the labels between */
+#tag .tg-needle {
+  -webkit-mask: linear-gradient(#000 0 13px, transparent 13px calc(100% - 12px), #000 calc(100% - 12px));
+          mask: linear-gradient(#000 0 13px, transparent 13px calc(100% - 12px), #000 calc(100% - 12px));
+}
+#tag.is-busy .tg-cap { display: none; }
+@media (min-width: 1100px) {
+  #finale.is-side .fn-receipt { padding: 18px 22px calc(20px + var(--tooth)); }
+  #finale.is-side .fn-big { font-size: 40px; }
+  #finale.is-side .fn-head { margin-bottom: 10px; }
+  #finale.is-side .fn-verify { margin-top: 12px; }
+}
+#app[data-phase="finale"] .tg-quick { display: none; }
+html.staging .fn-line, html.staging .fn-receipt, html.staging .fn-ledger li { scroll-margin-bottom: 120px; }
+/* the agent door covers the line; the night's receipt and log step back with it */
+html.agent-on #finale.is-side, html.agent-on .fn-lines.is-band { opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease); }
+
+/* ---------- polish: "drag me", once ----------
+   The old double nudge on a timer is gone; tag.js adds .is-hint the first time the parked tag is
+   fully on screen. It lifts, glides the way it wants to go, and settles. */
+#tag.is-parked:not(.is-set):not(.is-active) .tg-tag,
+#tag.is-vert.is-parked:not(.is-set):not(.is-active) .tg-tag { animation: none; }
+#tag.is-hint.is-parked:not(.is-set):not(.is-active) .tg-tag { animation: tg-hint 1900ms var(--ease) 1; }
+#tag.is-vert.is-hint.is-parked:not(.is-set):not(.is-active) .tg-tag { animation: tg-vhint 1900ms var(--ease) 1; }
+@keyframes tg-hint {
+  0%   { transform: translateX(-50%) }
+  16%  { transform: translateX(-50%) translateY(-3px) }
+  52%  { transform: translateX(calc(-50% - 40px)) translateY(-3px) }
+  84%  { transform: translateX(-50%) translateY(-1px) }
+  100% { transform: translateX(-50%) }
+}
+@keyframes tg-vhint {
+  0%   { transform: translateY(-50%) }
+  16%  { transform: translateY(-50%) translateX(2px) }
+  52%  { transform: translateY(calc(-50% - 14px)) translateX(2px) }
+  84%  { transform: translateY(-50%) }
+  100% { transform: translateY(-50%) }
+}
+/* the words beside it wake up with it */
+#tag .tg-hint, #tag.is-vert .tg-park { transition: color 300ms var(--ease); }
+#tag.is-hint .tg-hint, #tag.is-hint .tg-park { color: var(--ink); }
+/* hovering a parked tag says it can move */
+#tag.is-parked:not(.is-set) .tg-tag:hover { transform: translateX(-50%) translateY(-2px); }
+#tag.is-vert.is-parked:not(.is-set) .tg-tag:hover { transform: translateY(-50%); }
+
+/* phone: the quick "your price" pill sits on the switch's row, the axis words wrap under both */
+.ln-v .ln-axislab .tg-quick { order: 0; margin-left: auto; }
+
+/* phone: the receipt is the answer. It comes first, the night's log under it, and the tag's own
+   "Done." line steps aside (the headline and the receipt already say it). */
+@media (max-width: 640px) {
+  #finale.is-on { display: flex; flex-direction: column; }
+  #finale .fn-out { order: -1; margin: 16px 0 4px; }
+  #finale .fn-lines { margin-top: 10px; }
+  #tag.is-vert.is-done .tg-watch { display: none !important; }
+  #finale .fn-receipt { padding: 16px 16px calc(18px + var(--tooth)); }
+  #finale .fn-head { margin-bottom: 10px; }
+  #finale .fn-rows div { padding: 2px 0; }
+  #finale .fn-verify { margin-top: 12px; }
+  #finale .fn-vnote { flex: 1 1 160px; }
+}
+
+/* the side column from 900 px: narrower below 1100 */
+@media (min-width: 900px) and (max-width: 1099px) {
+  #finale.is-side { position: absolute; right: 0; top: var(--fy, 0px); width: 340px; z-index: 5; }
+  #finale.is-side .fn-out { margin: 0; }
+  #finale.is-side .fn-receipt { padding: 16px 18px calc(18px + var(--tooth)); }
+  #finale.is-side .fn-big { font-size: 36px; }
+  #finale.is-side .fn-big span { max-width: calc(100% - 110px); }
+  #finale.is-side .fn-head { margin-bottom: 10px; }
+  #finale.is-side .fn-rows div { gap: 10px; }
+  #finale.is-side .fn-rows dd { font-size: 11px; white-space: nowrap; }
+  #finale.is-side .fn-verify { margin-top: 12px; }
+  #app[data-phase="finale"] #tag .tg-watch { max-width: calc(100% - 380px); }
+}
+
+/* the night's log on a wide screen: a mono band right above the line, room kept for five lines */
+.fn-lines.is-band { margin: 0 0 6px; min-height: calc(5 * 12.5px * 1.75); }
+.fn-lines.is-band .fn-line { font: 400 12.5px/1.75 var(--mono); color: var(--ink-2); }
+.fn-lines.is-band .fn-line:last-child { color: var(--ink); }
+.fn-lines.is-band .fn-line.is-note { color: var(--ink-3); }
+/* the receipt column covers the right end of the axis row: "dearer →" steps out for the night */
+#app[data-phase="finale"] .ln-dearer { visibility: hidden; }
+#finale .fn-out:empty { display: none; }
+
+/* phone: one "your price" control. Until a price is set it is the pill beside the switch; the parked
+   tag under the list appears once there is a price to show */
+#tag.is-vert.is-parked:not(.is-set):not(.is-active) .tg-rail { display: none; }
+
+/* desktop night shift: band, line, tag and receipt on one calm screen; the line's empty caption
+   row gives its height back */
+@media (min-width: 641px) {
+  #app[data-phase="finale"] #line:not(.ln-v) .ln-caption:not(.on) { display: none; }
+}
+/* after the night shift the Turn's two remaining arcs are only a trace */
+#app[data-phase="finale"] #line .ln-arc.keep { opacity: .22; }

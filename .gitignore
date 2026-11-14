@@ -1,0 +1,15 @@
+.env
+.env.*
+node_modules/
+__pycache__/
+.venv/
+.cache/
+*.db
+!.env.example
+*.db-wal
+*.db-shm
+*.db-journal
+.DS_Store
+*.egg-info/
+.pytest_cache/
+*.pyc

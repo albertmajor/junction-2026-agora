@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-brand="Agora">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agora</title>
+<meta name="description" content="One search box for everything you can buy. Ranked by what you pay, all in. No paid placements.">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/web/css/base.css">
+<link rel="stylesheet" href="/web/css/line.css">
+<link rel="stylesheet" href="/web/css/sheet.css">
+<link rel="stylesheet" href="/web/css/watch.css">
+<link rel="stylesheet" href="/web/css/livelog.css">
+<link rel="stylesheet" href="/web/css/landing.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23F4F1EA'/%3E%3Cpath d='M5 21h22' stroke='%231C1B18' stroke-width='2'/%3E%3Ccircle cx='12' cy='16' r='4' fill='%23F5D547' stroke='%231C1B18' stroke-width='1.5'/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="app" data-phase="start">
+  <a class="skip" href="#q">Skip to search</a>
+
+  <header id="bar">
+    <a class="logo" href="/" aria-label="Start over">
+      <svg class="logo-mark" viewBox="0 0 28 14" aria-hidden="true"><path d="M1 11h26" /><circle cx="10" cy="6.5" r="3.6" /></svg>
+      <span class="brand">Agora</span>
+    </a>
+    <form id="ask" role="search" autocomplete="off">
+      <label class="sr" for="q">What do you want to buy?</label>
+      <input id="q" name="q" type="search" enterkeyhint="search" spellcheck="false"
+             placeholder="a camera, a used iPhone, someone to clean my flat…" maxlength="160">
+      <button type="submit" class="go" aria-label="Search"><span aria-hidden="true">→</span></button>
+    </form>
+    <nav id="links" aria-label="More">
+      <a href="#how" id="how-top" data-open="drawer">how it works</a>
+      <a href="#agent" id="agent-top" data-open="agent">for agents</a>
+    </nav>
+  </header>
+
+  <div id="chips" aria-label="What we understood" hidden></div>
+  <div id="ticker" aria-live="polite" hidden>
+    <span class="tick-text"><span class="tick-cur"></span></span>
+  </div>
+  <section id="reading" class="livelog" aria-label="Live log" hidden></section>
+
+  <main id="main">
+    <section id="start" aria-labelledby="ask-title">
+      <h1 id="ask-title">What do you want to <em>buy</em>?</h1>
+      <div id="examples" aria-label="Try one"></div>
+    </section>
+
+    <div id="status" aria-live="polite"></div>
+
+    <section id="verdict" aria-live="polite"></section>
+
+    <section id="line" aria-label="Offers on one price line, cheaper left, dearer right"></section>
+    <div id="tag"></div>
+
+    <section id="finale" aria-live="polite"></section>
+    <section id="ledger" aria-label="Every offer, ranked" hidden></section>
+  </main>
+
+  <section id="landing" aria-label="About">
+    <a class="scroll-cue" href="#ld-browse" aria-label="Browse real listings below"><i aria-hidden="true"></i><span>browse ↓</span></a>
+  </section>
+
+  <aside id="sheet" aria-hidden="true"></aside>
+  <aside id="drawer" aria-hidden="true"></aside>
+  <div id="agent" aria-hidden="true"></div>
+
+  <div id="lab" hidden aria-label="Lab panel"></div>
+
+  <footer id="rule">
+    <p class="say"><svg class="rule-mark" viewBox="0 0 28 14" aria-hidden="true"><path d="M1 11h26" /><circle cx="10" cy="6.5" r="3.6" /></svg>Ranked by what you pay, all in. No paid placements. <span class="nb soft">We may earn a fee, never a better spot.</span></p>
+    <p class="foot-links"><a class="cd-mark" href="https://context.dev" target="_blank" rel="noopener">Powered by <img src="https://www.google.com/s2/favicons?domain=context.dev&amp;sz=64" alt="" width="14" height="14" onerror="this.replaceWith(Object.assign(document.createElement('i'),{className:'cd-sq'}))"> <b>Context.dev</b></a><a href="/lab" id="lab-link" hidden>lab</a></p>
+  </footer>
+</div>
+<script type="module" src="/web/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+{
+ "success": true,
+ "url": "https://www.kleinanzeigen.de/s-nintendo-switch-oled/k0",
+ "json": {
+  "success": true,
+  "data": {
+   "listings": [
+    {
+     "title": "Nintendo Switch OLED weiß",
+     "price": 240,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-0/3000000000-279-1000",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED Konsole neon",
+     "price": 255,
+     "currency": "EUR",
+     "url": "/s-anzeige/nintendo-switch-oled-neon/3000000099-279-3331",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Switch OLED Modell mit OVP",
+     "price": 260,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-2/3000000002-279-1002",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED + 2 Spiele",
+     "price": 280,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-3/3000000003-279-1003",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED Mario Edition",
+     "price": 300,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-4/3000000004-279-1004",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED wie neu",
+     "price": 265,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-5/3000000005-279-1005",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED schwarz",
+     "price": 230,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-6/3000000006-279-1006",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED Zelda Edition",
+     "price": 320,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-7/3000000007-279-1007",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED mit Rechnung",
+     "price": 270,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-8/3000000008-279-1008",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED Top Zustand",
+     "price": 250,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/nintendo-switch-oled-9/3000000009-279-1009",
+     "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9.jpg",
+     "condition": "used",
+     "location": "Berlin"
+    },
+    {
+     "title": "Nintendo Switch OLED bei MediaMarkt",
+     "price": 349,
+     "currency": "EUR",
+     "url": "https://www.mediamarkt.de/de/product/_switch-oled.html",
+     "image": null,
+     "condition": "new",
+     "location": null
+    },
+    {
+     "title": "Nintendo Switch OLED Suche",
+     "price": null,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-anzeige/x/3000000500-279-1",
+     "image": null,
+     "condition": "unknown",
+     "location": null
+    },
+    {
+     "title": "Mehr Nintendo Switch OLED",
+     "price": 250,
+     "currency": "EUR",
+     "url": "https://www.kleinanzeigen.de/s-nintendo-switch-oled/k0",
+     "image": null,
+     "condition": "unknown",
+     "location": null
+    }
+   ]
+  }
+ },
+ "key_metadata": {
+  "credits_consumed": 5,
+  "credits_remaining": 50000
+ }
+}

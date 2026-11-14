@@ -1,0 +1,78 @@
+{
+ "request_url": "https://www.cleava.fi/en/home-cleaning/helsinki/",
+ "response": {
+  "url": "https://www.cleava.fi/en/home-cleaning/helsinki/",
+  "json": {
+   "requested": true,
+   "success": true,
+   "data": {
+    "page_type": "service",
+    "offers": [
+     {
+      "title": "Home cleaning in Helsinki — weekly",
+      "price": 39,
+      "currency": "EUR",
+      "unit": "hour",
+      "condition": "service",
+      "shipping": null,
+      "callout_fee": null,
+      "min_charge": null,
+      "in_stock": null,
+      "seller": "Cleava Siivouspalvelut",
+      "seller_rating": 4.9,
+      "location": "Helsinki",
+      "posted": null,
+      "brand": "Cleava",
+      "model": null,
+      "sku": null,
+      "image": null,
+      "url": "https://www.cleava.fi/en/home-cleaning/helsinki/"
+     },
+     {
+      "title": "Home cleaning in Helsinki — every two weeks",
+      "price": 45,
+      "currency": "EUR",
+      "unit": "hour",
+      "condition": "service",
+      "shipping": null,
+      "callout_fee": null,
+      "min_charge": null,
+      "in_stock": null,
+      "seller": "Cleava Siivouspalvelut",
+      "seller_rating": 4.9,
+      "location": "Helsinki",
+      "posted": null,
+      "brand": "Cleava",
+      "model": null,
+      "sku": null,
+      "image": null,
+      "url": "https://www.cleava.fi/en/home-cleaning/helsinki/"
+     },
+     {
+      "title": "Home cleaning in Helsinki — monthly",
+      "price": 49,
+      "currency": "EUR",
+      "unit": "hour",
+      "condition": "service",
+      "shipping": null,
+      "callout_fee": null,
+      "min_charge": null,
+      "in_stock": null,
+      "seller": "Cleava Siivouspalvelut",
+      "seller_rating": 4.9,
+      "location": "Helsinki",
+      "posted": null,
+      "brand": "Cleava",
+      "model": null,
+      "sku": null,
+      "image": null,
+      "url": "https://www.cleava.fi/en/home-cleaning/helsinki/"
+     }
+    ]
+   }
+  },
+  "metadata": {
+   "title": "Home cleaning Helsinki | Cleava"
+  }
+ }
+}
