@@ -18,9 +18,9 @@ def test_mascot_moods():
     assert "FAIL" not in r.stdout
 
 
-def test_start_screen_mascot_is_the_idle_animation_and_lazy():
+def test_start_screen_mascot_is_the_eat_animation_and_lazy():
     html = (ROOT / "agora" / "web" / "index.html").read_text()
-    assert 'class="mk start-monkey"' in html and "monkey-idle.webp" in html and 'loading="lazy"' in html
+    assert 'class="mk start-monkey"' in html and "monkey-eat.webp" in html and 'loading="lazy"' in html
     assert "/web/css/mascot.css" in html
     css = (ROOT / "agora" / "web" / "css" / "mascot.css").read_text()
     assert "prefers-reduced-motion" in css

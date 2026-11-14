@@ -1,6 +1,7 @@
 // The mascot's moods, from the owner's animations (assets/animations; web-sized copies in /web/assets/mascot,
 // cropped so every mood stands on the same feet with its right edge in the same place):
-//   idle       the start screen, beside the box
+//   eat        the start screen, beside the box, chewing his banana
+//   idle       standing still (a provisional answer, a done hunt)
 //   searching  peeking over the live log while the hunt reads pages
 //   thinking   while costing / judging (first answer in, final not yet) and while the intent chips decide
 //   found-it   once, when the final verdict lands (peeking over the pick card), then a still frame
@@ -10,9 +11,9 @@
 import { S, on } from './core.js';
 
 const BASE = '/web/assets/mascot/';
-export const MOODS = ['idle', 'searching', 'thinking', 'found-it'];
+export const MOODS = ['idle', 'eat', 'searching', 'thinking', 'found-it'];
 export const ONCE_MS = 2000;                 // found-it's length (37 frames at 50-60 ms)
-const STILL = { 'found-it': 'monkey-found-it-still.png' };
+const STILL = { 'found-it': 'monkey-found-it-still.png', eat: 'monkey-eat-still.png' };
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -120,7 +121,7 @@ function refresh() {
   if (typeof document === 'undefined') return;
   const still = hidden();
   const start = document.querySelector('#start .start-monkey');
-  if (start) setMood(start, deciding ? 'thinking' : 'idle', { still });
+  if (start) setMood(start, deciding ? 'thinking' : 'eat', { still });
   const peek = document.querySelector('#reading .ll-peek');
   if (peek) setMood(peek, peekMood(S, deciding), { still });
   const pic = pickEl && pickEl.querySelector('.mk');
