@@ -2017,3 +2017,81 @@ async def read(url: str, need: Need, *, fresh: bool = False, **kw: Any) -> Offer
     """URL -> Offer via the cheap-first cascade. Kwargs: lane, snippet, title, paid, max_age_ms, snippet_ok, fresh."""
     offer, _ = await read_with_reason(url, need, fresh=fresh, **kw)
     return offer
+
+
+# --------------------------------------------------------------------------- listing description check
+# Before a marketplace listing becomes the pick, its own page is read for free (plain HTTP, the same fetch as the
+# tori / vinted / marktplaats item pages) and the seller's description is scanned for red flags: 'only the left
+# earbud', 'häiriötä' (a fault), 'replica', 'icloud locked' (agora.resolve.listing_red_flags).
+
+_DESC_OPEN = re.compile(
+    r"<(\w+)\b[^>]*(?:data-testid=\"(?:description|item-description|ad-description)\"|"
+    r"class=\"[^\"]*(?:Description-module-description|description__text|ad-description|item-description)[^\"]*\"|"
+    r"id=\"viewad-description(?:-text)?\"|itemprop=\"description\"|data-cy=\"ad_description\")[^>]*>", re.I)
+_META_DESC = re.compile(r"<meta\b[^>]*(?:name|property)=\"(?:og:description|description)\"[^>]*>", re.I)
+_CONTENT = re.compile(r"\bcontent=\"([^\"]*)\"", re.I)
+DESC_CHARS = 4000
+
+
+def _element_text(html: str, m: re.Match[str], limit: int = 20000) -> str:
+    """Visible text of the element opened by `m` (same-name nesting counted), capped."""
+    tag = m.group(1).lower()
+    tok = re.compile(rf"<(/?){tag}\b[^>]*?(/?)>", re.I)
+    depth, pos, end = 1, m.end(), min(len(html), m.end() + limit)
+    for t in tok.finditer(html, pos, end):
+        if t.group(2):
+            continue
+        depth += -1 if t.group(1) else 1
+        if depth == 0:
+            end = t.start()
+            break
+    return fence.visible_text(html[m.end():end])
+
+
+def listing_description(html: str) -> str:
+    """The seller's description on a listing page: its description element (tori/finn/dba `data-testid=
+    description`, marktplaats, kleinanzeigen), the page's own Product JSON-LD description, og/meta description.
+    Never the 'similar listings' around it. '' when none."""
+    if not html:
+        return ""
+    import html as _html
+    parts: list[str] = []
+    m = _DESC_OPEN.search(html)
+    if m:
+        parts.append(_element_text(html, m))
+    for node in _loose_jsonld(html[:MAX_HTML]):
+        for n in (node if isinstance(node, list) else [node]):
+            if not isinstance(n, dict):
+                continue
+            t = str(n.get("@type") or "").lower()
+            if (t == "product" or (t == "imageobject" and n.get("representativeOfPage") is True)) and n.get("description"):
+                parts.append(str(n["description"]))
+                break
+    for mm in _META_DESC.finditer(html[:200_000]):
+        c = _CONTENT.search(mm.group(0))
+        if c:
+            parts.append(_html.unescape(c.group(1)))
+            break
+    out: list[str] = []
+    for p in parts:
+        p = re.sub(r"\s+", " ", _html.unescape(p)).strip()
+        if p and not any(p[:80] in q for q in out):
+            out.append(p)
+    return " | ".join(out)[:DESC_CHARS]
+
+
+async def check_listing(url: str, need: Need) -> dict[str, Any]:
+    """Free read of one listing page -> {ok: True | False | None (could not read), flags: [[kind, what, words]],
+    description (first 300 chars), status}. Network errors and bot walls are 'could not read', never a fail."""
+    from agora.resolve import listing_red_flags
+    try:
+        status, html = await fetch_html(url)
+    except Exception:
+        status, html = 0, ""
+    if status != 200 or not html or looks_blocked(status, html):
+        return {"ok": None, "flags": [], "description": "", "status": status}
+    desc = listing_description(html)
+    if not desc:
+        return {"ok": None, "flags": [], "description": "", "status": status}
+    flags = [list(f) for f in listing_red_flags(desc, need, title=False)]
+    return {"ok": not flags, "flags": flags, "description": desc[:300], "status": status}

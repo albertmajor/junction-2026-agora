@@ -26,6 +26,7 @@ Round 3:
 """
 from __future__ import annotations
 
+import contextvars
 import dataclasses
 import os
 import functools
@@ -198,25 +199,52 @@ def _list_url(url: str) -> bool:
         return False
 
 
+def _memo_key(tag: str, offers: list[Offer]) -> tuple[Any, ...] | None:
+    return (tag, tuple(map(id, offers))) if _MEMO.get() is not None else None
+
+
+def _junk(x: Offer) -> bool:
+    """Red-flagged (broken, copy, one earbud ...) or far under the reference new price: never a market price."""
+    return bool(x.raw.get("red_flags") or x.raw.get("ref_suspect"))
+
+
 def market_floor(offers: list[Offer]) -> float:
     """The price under which an offer cannot be the item (ear tips at €10 among €170 AirPods, an OLED
     panel at €90 among €300 consoles): SCALE_FLOOR x the median over all conditions. 0 = too few prices."""
+    key = _memo_key("floor", offers)
+    memo = _MEMO.get()
+    if key is not None and memo is not None and key in memo:
+        return memo[key]
     prices = [p for x in offers if x.condition in ("new", "used", "refurbished")
-              and (p := price_of(x)) is not None and p > 1 and not _disputed(x) and not _list_offer(x)]
-    if len(prices) < 3:
-        return 0.0
-    return SCALE_FLOOR * statistics.median(prices)
+              and (p := price_of(x)) is not None and p > 1 and not _disputed(x) and not _list_offer(x)
+              and not _junk(x)]
+    out = SCALE_FLOOR * statistics.median(prices) if len(prices) >= 3 else 0.0
+    if key is not None and memo is not None:
+        memo[key] = out
+    return out
 
 
 def market_prices(offers: list[Offer], condition: str) -> list[float]:
     """Prices of one condition that describe the market: no disputed prices, no search/list pages, no
-    'from' prices, nothing under the item's price floor (parts, accessories), used ones not dearer than
+    'from' prices, nothing under the item's price floor (parts, accessories), nothing red-flagged or far under
+    the reference new price, a private seller's 'new' counted as used, used ones not dearer than
     new (bundles, wishful sellers), and the far outliers (< half or > 2.5x the median) dropped once.
     Trust flags, haggle bands and resale all use this same set, so they quote the same median."""
+    key = _memo_key("mp:" + condition, offers)
+    memo = _MEMO.get()
+    if key is not None and memo is not None and key in memo:
+        return list(memo[key])
+    out = _market_prices(offers, condition)
+    if key is not None and memo is not None:
+        memo[key] = tuple(out)
+    return out
+
+
+def _market_prices(offers: list[Offer], condition: str) -> list[float]:
     floor = market_floor(offers)
-    sel = [x for x in _one_vote_per_listing(offers) if x.condition == condition
+    sel = [x for x in _one_vote_per_listing(offers) if market_condition(x) == condition
            and (p := price_of(x)) is not None and p > 1 and p >= floor and not _disputed(x)
-           and not _list_offer(x) and not x.raw.get("from_price")]
+           and not _list_offer(x) and not x.raw.get("from_price") and not _junk(x)]
     if condition == "service":
         votes: dict[str, list[float]] = {}
         for x in sel:   # one directory page = one voice in the median, however many providers it listed
@@ -225,8 +253,8 @@ def market_prices(offers: list[Offer], condition: str) -> list[float]:
     else:
         prices = [price_of(x) or 0.0 for x in sel]
     if condition == "used":
-        new = [p for x in offers if x.condition == "new" and (p := price_of(x)) is not None and not _disputed(x)
-               and x.in_stock is not False and p >= floor and not _list_offer(x)]
+        new = [p for x in offers if market_condition(x) == "new" and (p := price_of(x)) is not None
+               and not _disputed(x) and x.in_stock is not False and p >= floor and not _list_offer(x) and not _junk(x)]
         new = _trim(new)
         if new:
             prices = [p for p in prices if p <= min(new) * 1.05]
@@ -284,6 +312,196 @@ def _comp_urls(thing_offers: list[Offer], exclude: Offer | None = None) -> list[
             and not _list_offer(x) and price_of(x) in comps][:8]
 
 
+# ---------------------------------------------------------------- REFERENCE PRICE (robust, per hunt)
+# Hundreds of marketplace rows (vinted, tori, marktplaats, olx ...) are mostly cases, boxes, single earbuds and
+# €30 'new sealed' copies: a median over them calls a €30 'AirPods Pro 2' typical. So the reference is built from
+# the most trustworthy signals first: the median NEW price at real shops / comparison sites (gigantti, verkkokauppa,
+# hinta.fi, amazon ...), then refurbished shop prices (backmarket, refurbed), and only then the marketplace rows that passed
+# the relevance and red-flag filters, taking the median of their UPPER 60% (a flood of cheap junk cannot drag it).
+# A used / private 'new' / marketplace listing under REF_FLOOR[category] x that new reference is "too good to be
+# true: probably a part, a single earbud, broken or fake": shown, never priced into a median, never the pick.
+
+REF_FLOOR = {"phone": 0.35, "tablet": 0.35, "laptop": 0.30, "camera": 0.40, "lens": 0.40, "console": 0.35,
+             "audio": 0.38, "wearable": 0.33, "tv": 0.25, "luxury watch": 0.50}
+REF_FLOOR_OTHER_MODEL = 0.30   # any other category, when the need names a model ('dyson v15', 'kindle 11')
+REFURB_TO_NEW = 0.85           # a refurbished shop price is ~85% of new: new reference when no shop sells it new
+UPPER_SHARE = 0.60             # the marketplace reference is the median of the top 60% of matching listings
+MIN_MARKET_REF = 5             # marketplace listings needed before they alone set a reference
+PRIVATE_NEW = "new (private seller)"
+_MARKET_KINDS = ("classifieds", "resale", "auction", "specialist")
+
+
+@functools.lru_cache(maxsize=4096)
+def _marketplace_host(host: str) -> bool:
+    if any(n in host for n in MARKETPLACES):
+        return True
+    try:
+        from agora.marketplaces import second_hand
+        sh = second_hand(host)
+    except Exception:
+        sh = None
+    return bool(sh and sh[1] in _MARKET_KINDS)
+
+
+def is_marketplace(o: Offer) -> bool:
+    """A classifieds / resale platform (tori, vinted, marktplaats, olx, ebay ...): private sellers, not a shop."""
+    return _marketplace_host(_host(o.url) or (o.source or "").lower())
+
+
+def private_new(o: Offer) -> bool:
+    """'New' from a private seller on a marketplace is not shop-new: no warranty, often a copy. Used-like."""
+    return o.condition == "new" and is_marketplace(o)
+
+
+def market_condition(o: Offer) -> str:
+    """The condition an offer is compared in: a private seller's 'new' counts with the used listings."""
+    return "used" if private_new(o) else o.condition
+
+
+def _upper_median(prices: list[float], share: float = UPPER_SHARE) -> float:
+    s = sorted(prices)
+    if len(s) >= 3:
+        s = s[len(s) - max(1, round(len(s) * share)):]
+    return statistics.median(s)
+
+
+@dataclass
+class Reference:
+    new_eur: float                  # what the item costs new (the yardstick)
+    floor_eur: float                # used-like listings under this are suspect
+    ratio: float
+    basis: str                      # 'median of 5 shop prices (gigantti.fi, hinta.fi, ...)'
+    shop_new: int = 0
+    shop_refurb: int = 0
+    market_eur: float | None = None   # upper-60% median of the marketplace listings
+    market_n: int = 0
+
+
+def _ref_ratio(cat: Category, need: Need | None) -> float | None:
+    base = cat.name.split(",")[0]
+    if base in REF_FLOOR:
+        return REF_FLOOR[base]
+    if need is not None and base == "other":
+        try:
+            from agora.resolve import signature
+            if signature(need.thing).models:
+                return REF_FLOOR_OTHER_MODEL
+        except Exception:
+            return None
+    return None
+
+
+def _red_kinds(o: Offer) -> set[str]:
+    return {k for k, _, _ in (o.raw.get("red_flags") or [])}
+
+
+def _ref_usable(o: Offer) -> bool:
+    p = price_of(o)
+    return (p is not None and p > 1 and not _disputed(o) and not _list_offer(o) and not o.raw.get("from_price")
+            and not _red_kinds(o) and o.condition in ("new", "used", "refurbished"))
+
+
+def reference_price(offers: list[Offer], cat: Category, need: Need | None = None) -> Reference | None:
+    """The item's robust reference price (see above). None when the category has no floor or nothing to go on."""
+    ratio = _ref_ratio(cat, need)
+    if ratio is None:
+        return None
+    shop_new: list[tuple[float, str]] = []
+    shop_ref: list[tuple[float, str]] = []
+    market: list[float] = []
+    for o in offers:
+        if not _ref_usable(o):
+            continue
+        p = price_of(o) or 0.0
+        if is_marketplace(o):
+            market.append(p)
+        elif o.condition == "new":      # out of stock still says what the shop asks for it
+            shop_new.append((p, o.source))
+        elif o.condition == "refurbished":
+            shop_ref.append((p, o.source))
+    market_ref = _upper_median(market) if len(market) >= MIN_MARKET_REF else None
+
+    def shops(xs: list[tuple[float, str]]) -> str:
+        names = list(dict.fromkeys(s for _, s in sorted(xs, reverse=True)))
+        return ", ".join(names[:3]) + (", ..." if len(names) > 3 else "")
+
+    if shop_new:
+        new = statistics.median(p for p, _ in shop_new)      # shops passed resolve: no flood of junk to resist
+        basis = (f"new at {shop_new[0][1]}" if len(shop_new) == 1 else
+                 f"median of {len(shop_new)} shop prices: {shops(shop_new)}")
+    elif shop_ref:
+        new = statistics.median(p for p, _ in shop_ref) / REFURB_TO_NEW
+        basis = f"from {len(shop_ref)} refurbished shop price{'s' * (len(shop_ref) != 1)} ({shops(shop_ref)}) / {REFURB_TO_NEW:.0%}"
+    elif market_ref is not None:
+        new = market_ref / max(cat.used_factor, 0.3)
+        basis = (f"no shop price: the upper {UPPER_SHARE:.0%} of {len(market)} marketplace listings (median "
+                 f"{fmt(market_ref)}) / the usual used share {cat.used_factor:.0%}")
+    else:
+        return None
+    if market_ref is not None and (shop_new or shop_ref) and new < market_ref:
+        # the 'shop' prices are under what private sellers ask: accessories that slipped through, not the item
+        new, basis = market_ref / max(cat.used_factor, 0.3), basis + f"; raised to the marketplace level {fmt(market_ref)}"
+    return Reference(round(new, 2), round(ratio * new, 2), ratio, basis, len(shop_new), len(shop_ref),
+                     round(market_ref, 2) if market_ref is not None else None, len(market))
+
+
+def _what_junk(cat: Category) -> str:
+    return ("a single earbud, the case only, broken or a fake" if cat.name.startswith("audio")
+            else "a part, broken, locked or a fake")
+
+
+def reference_flag(o: Offer, ref: Reference | None, cat: Category) -> str | None:
+    """'too good to be true: ...' for a used-like listing far under the reference new price."""
+    p = price_of(o)
+    if ref is None or p is None or p <= 1 or not ref.floor_eur:
+        return None
+    if not (o.condition in ("used", "refurbished") or private_new(o)):
+        return None
+    if p >= ref.floor_eur:
+        return None
+    what = PRIVATE_NEW if private_new(o) else o.condition
+    return (f"too good to be true: {what} {fmt(p)} is {1 - p / ref.new_eur:.0%} under the new price "
+            f"({fmt(ref.new_eur)}, {ref.basis}); under {fmt(ref.floor_eur)} it is probably {_what_junk(cat)}")
+
+
+def mark_listings(need: Need, offers: list[Offer]) -> None:
+    """Per listing, before anything is judged: red flags in its title / row text / checked description
+    (raw['red_flags']), so medians and references never see them. Recomputed on every judge."""
+    try:
+        from agora.resolve import listing_red_flags, title_red_flags
+    except ImportError:
+        return
+    for o in offers:
+        found = list(title_red_flags(o, need))
+        page = o.raw.get("page_red_flags") or []
+        found += [tuple(x) for x in page if tuple(x) not in found]
+        if o.raw.get("search_text") and is_marketplace(o):
+            found += [f for f in listing_red_flags(str(o.raw["search_text"]), need, title=False)
+                      if f[0] in ("broken", "fake", "locked") and f not in found]
+        o.raw["red_flags"] = [list(f) for f in found]
+
+
+def red_flag_flags(o: Offer) -> list[str]:
+    """The trust flags for raw['red_flags']: 'red flag: broken or faulty ("rikki")'."""
+    out: list[str] = []
+    page = {tuple(x) for x in o.raw.get("page_red_flags") or []}
+    for f in o.raw.get("red_flags") or []:
+        k, what, phrase = f
+        where = "the description says " if tuple(f) in page else ""
+        out.append(f"red flag: {where}{what} (“{str(phrase)[:40]}”)")
+    return out
+
+
+# memo for market_prices / market_floor within one judge() run (hundreds of offers x several calls per offer)
+_MEMO: contextvars.ContextVar[dict[Any, Any] | None] = contextvars.ContextVar("judge_memo", default=None)
+
+
+def _memo_clear() -> None:
+    memo = _MEMO.get()
+    if memo is not None:
+        memo.clear()
+
+
 # ---------------------------------------------------------------- TWO WITNESSES
 
 def _independent(o: Offer, w: dict[str, Any]) -> bool:
@@ -297,6 +515,7 @@ def _independent(o: Offer, w: dict[str, Any]) -> bool:
     return w.get("via") not in ("snippet", "search_highlight")
 
 
+@functools.lru_cache(maxsize=50000)
 def _host(url: str) -> str:
     m = re.match(r"https?://(?:www\.)?([^/]+)", url or "")
     return m.group(1).lower() if m else ""
@@ -407,15 +626,27 @@ def _domain_in(source: str, names: tuple[str, ...]) -> bool:
 
 
 def assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]] | None = None,
-                 discount: str | None = None, floor: float = 0.0) -> tuple[float, list[str]]:
+                 discount: str | None = None, floor: float = 0.0, ref: Reference | None = None,
+                 cat: Category | None = None) -> tuple[float, list[str]]:
     """0..1 plus human-readable flags. `peers` = the offers for the same Thing (may include `o`).
     `photos` = agora.trust.same_photo_groups over the hunt (computed once by judge); `discount` = a
-    'discount inflated' flag from `discount_check`."""
+    'discount inflated' flag from `discount_check`; `ref` = the hunt's robust reference price."""
+    was_disputed = _disputed(o)
+    try:
+        return _assess_trust(o, peers, photos=photos, discount=discount, floor=floor, ref=ref, cat=cat)
+    finally:
+        if _disputed(o) != was_disputed:
+            _memo_clear()       # a newly disputed price leaves the market: medians memoised so far are stale
+
+
+def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]] | None,
+                  discount: str | None, floor: float, ref: Reference | None,
+                  cat: Category | None) -> tuple[float, list[str]]:
     score = 1.0
     cap = 1.0
     flags: list[str] = []
     p = price_of(o)
-
+    cond = market_condition(o)
     if o.price is None:
         score -= 0.4
         flags.append("no price on the page")
@@ -441,30 +672,38 @@ def assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]]
     if o.raw.get("from_price"):
         score -= 0.05
         flags.append("from-price, not a specific unit")
+    for f in red_flag_flags(o):
+        score -= 0.6
+        flags.append(f)
+    if private_new(o):
+        flags.append(f"{PRIVATE_NEW}: sold as new on a marketplace, compared with used listings (no shop warranty)")
+    if ref_flag := reference_flag(o, ref, cat or DEFAULT_CATEGORY):
+        score -= 0.6
+        flags.append(ref_flag)
 
     pool = peers if any(x is o for x in peers) else peers + [o]
     floor = max(floor, market_floor(pool))
     if (p and floor and p < floor and o.condition in ("new", "used", "refurbished")
-            and o.raw.get("price_check") != "verified"):
+            and o.raw.get("price_check") != "verified" and not any(f.startswith("too good") for f in flags)):
         # ear tips (€10) among €170 AirPods, an OLED panel (€90) among €300 consoles: not the item
         score -= 0.5
         flags.append(f"too good to be true: {fmt(p)} is under a quarter of this item's going price "
                      f"({fmt(floor / SCALE_FLOOR)} median): probably a part, an accessory or a misread")
     # services: an hourly rate is compared with hourly rates, never with a €3/m² line
-    same = market_prices([x for x in pool if x.unit == o.unit] if o.condition == "service" else pool, o.condition)
+    same = market_prices([x for x in pool if x.unit == o.unit] if o.condition == "service" else pool, cond)
     med_same = _median(same)
     # services: a 'median' of 2 job prices (a €15 surcharge line and an €80 estimate) is no market
     if p and med_same and len(same) >= (3 if o.condition == "service" else 2) and not _disputed(o):
         r = p / med_same
-        if r < 0.5:
+        if r < 0.5 and not any(f.startswith("too good to be true") for f in flags):
             score -= 0.5
-            flags.append(f"too good to be true: {1 - r:.0%} under the {o.condition} median ({fmt(med_same)})")
-        elif r < 0.7:
+            flags.append(f"too good to be true: {1 - r:.0%} under the {cond} median ({fmt(med_same)})")
+        elif 0.5 <= r < 0.7:
             score -= 0.2
-            flags.append(f"well under the usual {o.condition} price ({1 - r:.0%} below {fmt(med_same)})")
+            flags.append(f"well under the usual {cond} price ({1 - r:.0%} below {fmt(med_same)})")
         elif r > 2.5:
             score -= 0.1
-            flags.append(f"priced {r:.1f}x the {o.condition} median ({fmt(med_same)})")
+            flags.append(f"priced {r:.1f}x the {cond} median ({fmt(med_same)})")
         if r < 0.5 and o.read_via == "contextdev_product" and o.raw.get("price_check") not in ("verified", "consistent"):
             # the product format sometimes reads another item's price off the page (mpb: €239 for an A7 III)
             o.raw["price_check"] = "disputed"
@@ -474,7 +713,7 @@ def assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]]
             flags.append(f"price disagrees: product read {fmt(p)} vs the {o.condition} market {fmt(med_same)}{seen} "
                          f"(probably another item's price on the page)")
 
-    if (p and o.condition in ("used", "refurbished") and not _disputed(o)
+    if (p and cond in ("used", "refurbished") and not _disputed(o)
             and not any(f.startswith("too good to be true") for f in flags)
             and (new_ref := market_prices(pool, "new"))):
         # too few comps of its own condition (early in a hunt): a used/refurb price far under the
@@ -492,10 +731,10 @@ def assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]]
 
     used = market_prices(pool, "used")
     new = market_prices(pool, "new")
-    if p and o.condition == "new" and len(used) >= 2 and p < 0.8 * (_median(used) or 0):
+    if p and cond == "new" and len(used) >= 2 and p < 0.8 * (_median(used) or 0):
         score -= 0.3
         flags.append(f"'new' but cheaper than used ones ({fmt(_median(used) or 0)} median used)")
-    if p and o.condition == "used" and new and p > min(new):
+    if p and cond == "used" and new and p > min(new):
         flags.append(f"costs more than new ({fmt(min(new))})")
 
     if outside_eu(o):
@@ -1367,13 +1606,16 @@ def _budget_eur(need: Need) -> float | None:
 
 
 def _cond(o: Offer) -> str:
+    if private_new(o):
+        return PRIVATE_NEW
     return {"new": "new", "used": "used", "refurbished": "refurbished", "rental": "renting"}.get(o.condition, o.condition)
 
 
 def _risky(o: Offer) -> bool:
-    """Never crowned as the best buy: low trust, a price far under its peers, or a disputed price."""
+    """Never crowned as the best buy: low trust, a price far under its peers or the reference, a red flag in
+    the listing (broken, a copy, one earbud ...), or a disputed price."""
     return ((o.trust if o.trust is not None else 1) < 0.5 or _disputed(o)
-            or any(f.startswith("too good to be true") for f in o.flags))
+            or any(f.startswith(("too good to be true", "red flag")) for f in o.flags))
 
 
 def _landed(o: Offer) -> float:
@@ -1451,7 +1693,7 @@ def _peers_for(o: Offer, peers: list[Offer], everyone: list[Offer]) -> list[Offe
 def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                   depreciation: dict[str, Any] | None = None, *, history: bool = False,
                   photos: dict[int, list[Offer]] | None = None, floor: float = 0.0,
-                  everyone: list[Offer] | None = None) -> None:
+                  everyone: list[Offer] | None = None, ref: Reference | None = None) -> None:
     cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                             depreciation)
     for o in t.offers:
@@ -1465,7 +1707,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
     for o in t.offers:
         discount = discount_check(o, t.offers, history=history)
         o.trust, new_flags = assess_trust(o, _peers_for(o, t.offers, everyone or []), photos=photos, discount=discount,
-                                          floor=0.0 if is_service(need) else floor)
+                                          floor=0.0 if is_service(need) else floor, ref=ref, cat=cat)
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
             o.flags.append(note)
@@ -1485,8 +1727,8 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         if is_service(need):
             o.true_cost = service_cost(o, need)
             continue
-        if _disputed(o) or (any(f.startswith("too good to be true") for f in o.flags)
-                            and o.raw.get("price_check") != "verified"):
+        if _disputed(o) or o.raw.get("ref_suspect") or (any(f.startswith("too good to be true") for f in o.flags)
+                                                          and o.raw.get("price_check") != "verified"):
             o.true_cost, o.haggle = None, None
             o.flags.append("not costed: price unconfirmed (far off the market or disputed)")
             continue
@@ -1499,6 +1741,15 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     """Mutates offers (trust, flags, true_cost, haggle, raw[evidence/beat]) and returns the verdict.
     `history=False` skips the price-history lookup (the hunt's fast live re-ranking).
     `depreciation` = agora.depreciation.measure(...) result: a measured yearly rate replaces the assumed one."""
+    token = _MEMO.set({})
+    try:
+        return _judge(need, things, months, history=history, depreciation=depreciation)
+    finally:
+        _MEMO.reset(token)
+
+
+def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
+           depreciation: dict[str, Any] | None) -> Verdict:
     seen = _seen_counts(sorted({o.source for t in things for o in t.offers})) if history else {}
     everyone = [o for t in things for o in t.offers]
     try:
@@ -1511,10 +1762,20 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     cat_of: dict[int, Category] = {}
     offers_of: dict[int, list[Offer]] = {}
     band_of: dict[int, dict[str, Any]] = {}
+    ref: Reference | None = None
+    if not is_service(need) and not priced_per_period(need):
+        mark_listings(need, everyone)
+        ref = reference_price(everyone, category_for(" ".join([need.thing] + [o.title for o in everyone[:5]])), need)
+        for o in everyone:
+            o.raw["ref_suspect"] = bool(ref and reference_flag(o, ref, DEFAULT_CATEGORY))
+    else:
+        for o in everyone:
+            o.raw.pop("red_flags", None)
+            o.raw.pop("ref_suspect", None)
     floor = market_floor(everyone) if not is_service(need) else 0.0   # across Things: a lone part is its own Thing
     for t in things:
         _judge_offers(need, t, months, seen, depreciation, history=history, photos=photos, floor=floor,
-                      everyone=everyone if not is_service(need) else None)
+                      everyone=everyone if not is_service(need) else None, ref=ref)
         cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                                 depreciation)
         bands = price_band(t, history=history)
@@ -1616,6 +1877,11 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
             o.raw["beat_eur"] = beat
             o.raw["gap_eur"] = round((o.price_eur or 0) - beat, 2)
         headline = all_in_headline(good, best_all, lines)
+        lines[0:0] = skipped_lines(priced)
+        if ref is not None:
+            n_low = sum(1 for o in all_offers if o.raw.get("ref_suspect"))
+            lines.append(f"reference: new {fmt(ref.new_eur)} ({ref.basis}); used or private listings under "
+                         f"{fmt(ref.floor_eur)} are treated as parts, broken or fakes ({n_low} flagged)")
         if best_all is not cheapest and not surely_buyable(cheapest):
             lines.append(f"{cheapest.source} is cheaper ({fmt(_landed(cheapest))} all in) but does not say it ships to Finland")
         if eu_extra:
@@ -1678,6 +1944,17 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     return Verdict(headline, best_link.url, best_tc.url if best_tc else None, buy_or_wait, lines, price_band=vband)
 
 
+def skipped_lines(offers: list[Offer]) -> list[str]:
+    """'skipped €30 tori.fi: the description says broken or faulty ("häiriötä")' for every candidate whose
+    listing page was checked (hunt.verify_pick) and failed."""
+    out: list[str] = []
+    for o in sorted((o for o in offers if o.raw.get("page_red_flags")), key=_landed):
+        k, what, phrase = o.raw["page_red_flags"][0]
+        out.append(f"skipped {fmt(_landed(o))} {o.source} ({(o.title or '')[:40]}): the description says "
+                   f"{what} (\u201c{str(phrase)[:40]}\u201d)")
+    return out[:4]
+
+
 def _bulky(need: Need) -> bool:
     try:
         from agora import marketplaces
@@ -1711,17 +1988,19 @@ def all_in_headline(good: list[Offer], best: Offer, lines: list[str]) -> str:
     price you pay once (tag + shipping + import VAT + fees)."""
     per_cond: dict[str, Offer] = {}
     for o in good:
-        if o.condition in ("new", "refurbished", "used", "rental"):
-            cur = per_cond.get(o.condition)
+        c = market_condition(o)          # a private seller's 'new' is in the used row, labelled as such
+        if c in ("new", "refurbished", "used", "rental"):
+            cur = per_cond.get(c)
             if cur is None or _landed(o) < _landed(cur):
-                per_cond[o.condition] = o
+                per_cond[c] = o
     for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])):
         extra = _landed(o) - (o.price_eur or 0)
         how = f" ({fmt(o.price_eur or 0)} + {fmt(extra)} shipping/import/fees)" if extra >= 1 else ""
-        lines.append(f"{c}: {fmt(_landed(o))} all in at {o.source}{how}")
+        label = f" ({PRIVATE_NEW})" if private_new(o) else ""
+        lines.append(f"{c}: {fmt(_landed(o))} all in at {o.source}{label}{how}")
     head = f"{fmt(_landed(best))} all in: {_cond(best)} at {best.source}."
     others = [f"{c} from {fmt(_landed(o))}" + ("" if surely_buyable(o) else " (may not ship to Finland)")
-              for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])) if c != best.condition]
+              for c, o in sorted(per_cond.items(), key=lambda kv: _landed(kv[1])) if c != market_condition(best)]
     if others:
         tail = ", ".join(others)
         head += f" {tail[0].upper()}{tail[1:]}."
@@ -1908,3 +2187,12 @@ def _product_headline(owned: list[Offer], best_tc: Offer, cheapest: Offer, month
             lines.append(f"cheapest {c.upper()} ({o.source}) would need to drop {fmt((o.price_eur or 0) - beat)} "
                          f"(to {fmt(beat)}) to beat {_cond(best_tc)}")
     return headline
+
+
+def pick_candidates(things: list[Thing], k: int = 3) -> list[Offer]:
+    """The k offers the verdict would crown next, cheapest all-in first (the same pickable set as judge's
+    product branch): the ones worth a look at their own page before the pick is final."""
+    priced = [o for t in things for o in t.offers if o.price_eur is not None]
+    good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False
+            and not o.raw.get("pickup_abroad") and not is_periodic(o)]
+    return sorted(good, key=_landed)[:k]

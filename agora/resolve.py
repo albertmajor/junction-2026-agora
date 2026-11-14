@@ -10,6 +10,7 @@ and `relevance(need, offer)` scores 0..1 how well an offer answers the need.
 """
 from __future__ import annotations
 
+import functools
 import re
 import unicodedata
 from collections import Counter
@@ -66,6 +67,9 @@ ACCESSORY_WORDS = {
     "logic board", "flex cable", "joy-con", "joycon", "joy con", "thumbstick", "battery door", "brush head",
     "brush bar", "brushroll", "filter head", "wall mount", "charging case only", "left earbud", "right earbud",
     "korvatyynyt", "varaosa", "näyttö", "latauskotelo", "ladecase", "ladeetui",
+    # protective covers in Nordic/Dutch/Polish/German titles (live: 'Nike airpods pro 2 suoja' €25 won airpods)
+    "suoja", "suojus", "suojakotelo", "kuori", "kuoret", "suojakuoret", "hoesje", "hoes", "fodral", "skal",
+    "etui", "deksel", "futerał", "schutzhülle", "case only", "cover only", "silicone case", "silikonikuori",
     # bike parts sold on their own (live: a €25 'Kaupunkipyörä ohjaustanko' handlebar won 'city bike')
     "ohjaustanko", "sisärengas", "cykelslang", "slang", "fahrradschlauch", "schlauch", "montageständer",
     "kaasukahva", "binnenband", "dętka",
@@ -75,6 +79,12 @@ ACCESSORY_WORDS = {
     "jakaja", "somiste", "pulloteline", "viinipulloteline", "jalat", "einsatz", "einsätze", "drahtkorb",
     "förvaringslåda", "förvaringslådor", "laatikosto", "lasihylly", "lasihyllyt", "kello-ovi", "liitoshela",
     "säilytyskori", "ritiläkori", "teline", "jalusta", "ovi", "ovet", "latikosto", "lemmikkipeti",
+    # cases, covers and ear tips in Lithuanian / Polish / Nordic marketplace titles (live, vinted.fi: 'Airpods pro 2
+    # dėkliukas' €1, 'Obudowa AirPods Pro 2' €3, 'Silikonepropper AirPods Pro' €10 were costed as AirPods)
+    "dėklas", "deklas", "dėkliukas", "dekliukas", "dėkliukai", "obudowa", "obudowy", "pokrowiec", "okładka",
+    "okladka", "nakładki", "końcówki", "koncowki", "gumki", "vaihtopäät", "silikonepropper", "propper",
+    "örontoppar", "tulpat", "muistivaahtotulpat", "laddningsfodral", "laddningsetui", "kotelosuoja", "beskytter",
+    "oplaadcase", "ladeetui", "dėžutė", "dėžutę", "dezute", "dežute", "pudełko", "pudelko", "opakowanie",
 }
 # words that name a part of the item: an accessory when they come *before* the item's name
 # ("OLED Display for Nintendo Switch OLED"), not after ("MacBook Air with 15.3" display")
@@ -323,7 +333,8 @@ def is_accessory(title: str, need: Need | None = None) -> bool:
         if re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", low) and w not in asked:
             # "camera with battery and charger" is a bundle, not an accessory: the accessory word
             # must come before "for X" or lead the title, or appear without a main-item word
-            if re.search(rf"(?:\bwith\b|\bmit\b|\bincl\w*|\+|\band\b|\bw/)[^|]*\b{re.escape(w)}", low):
+            if re.search(rf"(?:\bwith\b|\bmit\b|\bincl\w*|\binkl\w*|\+|\band\b|\bw/|\bz\b|\bze\b|\bmed\b|\bmet\b"
+                         rf"|\bsu\b|\bja\b|\bund\b|\ben\b|\boch\b|\bog\b|\bi\b)[^|]*\b{re.escape(w)}", low):
                 continue
             return True
     item_at = _first_item_pos(low, need) if need else None
@@ -344,6 +355,204 @@ def is_accessory(title: str, need: Need | None = None) -> bool:
                 return True
         return False
     return any(p.search(title) for p in ACCESSORY_PATTERNS)
+
+
+# ---------------------------------------------------------------- listing red flags (title + description)
+# Marketplace listings say in plain words what they are: 'vain vasen kuuloke', 'kapot', 'replica', 'ostetaan'.
+# Matched on a folded copy of the text (lower case, accents off, ł->l, ø->o, æ->a: one char per char, so a
+# match maps back to the seller's own words). Negated or conditional mentions ('ei vikoja', 'keine Mängel',
+# 'Vervanging bij verlies of defect') do not count.
+
+_FOLD_1 = {"ł": "l", "ø": "o", "æ": "a", "ß": "s", "đ": "d", "ı": "i", "œ": "o"}
+
+
+@functools.lru_cache(maxsize=8192)
+def _fold1(c: str) -> str:
+    if c in _FOLD_1:
+        return _FOLD_1[c]
+    d = "".join(x for x in unicodedata.normalize("NFKD", c) if not unicodedata.combining(x))
+    return d[:1] if d else " "
+
+
+def fold_text(text: str) -> str:
+    """Lower case, accents off, one output character per input character (indices map back)."""
+    return "".join(_fold1(c) for c in (text or "").lower())
+
+
+_SIDE_L = (r"left|vasen|vasemp\w*|vasemma\w*|links|linke[rnms]?|linker|lewa|lewy|lewe|lewej|vanster|venstre|kaire|"
+           r"gauche|izquierd\w*|sinistr\w*")
+_SIDE_R = (r"right|oikea|oikean|oikeanpuole\w*|rechts|rechte[rnms]?|rechter|prawa|prawy|prawe|prawej|hoger|hojre|"
+           r"hoyre|desine|droit\w*|derech\w*|destr\w*")
+_EAR = (r"earbuds?|airpods?|buds?|ear ?pieces?|earphones?|kuuloke\w*|nappi\w*|nappikuulok\w*|ohrhorer\w*|"
+        r"ohrstopsel|kopfhorer\w*|oortje\w*|oordopje\w*|sluchawk\w*|horlur\w*|orepropp\w*|oresnegl\w*|ausin\w*|"
+        r"ecouteur\w*|auricular\w*|auricolar\w*")
+_CASE = (r"(?:charging |wireless charging |magsafe )?case|cases|kotelo|latauskotelo|ladecase|ladeetui|ladeschale|"
+         r"etui|oplaadcase|oplaaddoos|laddningsetui|laddfodral|laddningsfodral|ladeboks|ladeetui|ladeskal|"
+         r"dekl\w*|pudelko ladujace|etui ladujace")
+_BOX = (r"box|boxen|laatikko|pakkaus|myyntipakkaus|ovp|verpackung|originalverpackung|karton|schachtel|doos|"
+        r"verpakking|pudelk[oa]|opakowani[ae]|lada|kartong|aske|eske|dezut\w*")
+_ONLY = r"only|vain|pelkka|pelkat|pelkastaan|ainoastaan|nur|alleen|bara|kun|tylko|just|solo|seulement|enkel|losse"
+_WITHOUT = r"without|ilman|ohne|zonder|utan|uden|uten|bez|sans|sin|senza"
+# words that may sit between 'only' and 'case' ('only the original Apple charging case'), nothing else
+_FILL = (r"(?:(?:the|a|an|de|het|een|das|die|der|den|det|la|le|el|il|original\w*|oryginaln\w*|alkuperai\w*|apple|"
+         r"airpods?|pro|2|usb ?c|usb|lightning|magsafe|lataus|charging|wireless|lade|oplaad|" + _SIDE_L + "|" + _SIDE_R +
+         r")\W+){0,3}")
+_NEG = re.compile(r"(?:\b(?:no|not|never|without|ei|eika|ilman|kein\w*|nicht|ohne|geen|niet|zonder|ingen|inga|inte|"
+                  r"ej|ikke|uden|uten|nie|bez|brak|zero|nada|zadn\w*|falls|wenn|if|jos|bij|als|in case|om|hvis|"
+                  r"jesli|gdy|vid|ved|bei|case of)\b[^.!?;\n]{0,56})$")
+
+# kind -> (pattern, what it means); kinds 'part' and 'wanted' are not the item at all (resolve drops them),
+# the others are the item with a problem (judge flags them: never the pick, never a market price)
+_RED: list[tuple[str, re.Pattern[str], str]] = [
+    ("part", re.compile(rf"\b(?:single|one|1 ?st|jedn[aey]|jeden|einzeln\w*|einzige[rn]?|losse|yksittai\w*|"
+                        rf"enkel\w*)\W+{_FILL}(?:{_EAR})\b"), "only one earbud"),
+    ("part", re.compile(rf"\b(?:{_ONLY}|single|one|1 ?st|einzeln\w*)\W+(?:the\W+)?(?:{_SIDE_L}|{_SIDE_R})\b"),
+     "only one earbud"),
+    ("part", re.compile(rf"\b(?:{_SIDE_L}|{_SIDE_R})\W+(?:{_EAR})\W+(?:only|alleen|vain)\b"), "only one earbud"),
+    ("part", re.compile(rf"\b(?:{_ONLY})\W+{_FILL}(?:{_CASE})\b(?!\W+(?:and|ja|und|en|och|og|i|\+)\b)"),
+     "only the charging case"),
+    ("part", re.compile(rf"\b(?:{_CASE})\W+(?:\w+\W+)?(?:only|alleen|ilman kuulokkeita|ohne)\b"), "only the charging case"),
+    ("part", re.compile(rf"\b(?:{_WITHOUT})\W+{_FILL}(?:{_EAR})\b"), "only the charging case (no earbuds)"),
+    ("part", re.compile(rf"\b(?:{_WITHOUT})\W+{_FILL}(?:charging case|case|kotelo\w*|latauskotelo\w*|ladecase|"
+                        rf"ladeetui|oplaadcase|etui|laddningsetui|dekl\w*)\b"), "earbuds without their charging case"),
+    ("part", re.compile(rf"\b(?:empty|tyhja\w*|leer\w*|lege|pust[aey]|tom|tomt|tomme|{_ONLY})\W+{_FILL}"
+                        rf"(?:{_BOX})\b"), "only the box"),
+    ("part", re.compile(rf"\b(?:{_BOX})\W+(?:only|po|od|von|from|of|till|af|til)\b"), "only the box"),
+    ("part", re.compile(r"\b(?:for parts|parts only|spares|varaosa(?!koodi)\w*|osiksi|ersatzteil\w*|onderdelen|reservdel\w*|"
+                        r"reservedel\w*|deler|na czesci|czesci zamienne)\b"), "sold as parts"),
+    ("wanted", re.compile(r"\b(?:ostetaan|ostan|etsitaan|etsin|wanted|wtb|looking for|gezocht|gesucht|sucht|"
+                          r"kopes|kjopes|kobes|kupie|szukam|cherche|busco|cerco)\b"), "a wanted ad, not an offer"),
+    ("broken", re.compile(r"\b(?:rikki|rikkinai\w*|hajonn\w*|hajalla|viallinen|vialli\w*|vika|vikaa|vikoja|"
+                          r"toimimat\w*|ei toimi|ei lataa|hairio\w*|broken|faulty|defective|defect|not working|"
+                          r"doesn ?t work|does not work|dont work|cracked|water damage\w*|defekt\w*|kaputt|"
+                          r"funktioniert nicht|bastler\w*|kapot|werkt niet|trasig|fungerar (?:inte|ej)|ej fungerande|"
+                          r"virker ikke|fungerer ikke|i stykker|odelagt|uszkodz\w*|zepsut\w*|nie dziala\w*|"
+                          r"do naprawy|wadliw\w*|sugedes|neveikia)\b"), "broken or faulty"),
+    ("fake", re.compile(r"(?:\b(?:kopio\w*|replica\w*|replika\w*|fake|clone|klon|klony|high quality copy|hq copy|"
+                        r"super copy|master copy|aaa quality|nachbau|namaak|kopia(?! (?:paragon|faktur|rachun|dowod))|podrobk\w*|ei alkuperainen|"
+                        r"not original|non original|nie oryginaln\w*|nieoryginaln\w*|niet origineel|kein original|"
+                        r"imitat\w*|ei aito|ei aidot)\b|(?<![\d.,:])1 ?: ?1(?![\d.,:]))"), "probably a copy, not the original"),
+    ("locked", re.compile(r"\b(?:lukossa|lukittu|icloud\W+(?:\w+\W+)?(?:lock\w*|lukko\w*|lukossa|gesperrt|"
+                          r"zablokowan\w*|last|vergrendeld)|activation lock|aktivierungssperre|gesperrt|"
+                          r"zablokowan\w*|vergrendeld|apple id\W+(?:\w+\W+)?(?:lock\w*|lukossa|gesperrt))\b"),
+     "locked to someone else's account"),
+    ("swap", re.compile(r"\b(?:vaihto(?:kauppa\w*)?|vaihdetaan|vaihdossa|vaihtaisin|swap\w*|trade for|tausch\w*|"
+                        r"ruil\w*|bytes|byte mot|byttes|zamiana|zamienie)\b"), "a swap, not a sale"),
+]
+_PAIR = re.compile(r"\b(?:pair|pari|paar|par|para|set|sett|zestaw|komplet\w*)\b")
+_TITLE_HYPHEN_CASE = re.compile(r"\b[\w]+-(?:case|oplaadcase|ladecase|kotelo|latauskotelo|etui|ladeetui|hulle)\b")
+_WITH_BEFORE = re.compile(r"\b(?:with|met|mit|med|kanssa|incl\w*|inkl\w*|z|ze|su|and|en|und|och|og|ja)\b[^,|]*$|\+[^,|]*$")
+_ROW_META = re.compile(r",\s*(?:tuotemerkki|malli|kunto|koko|brand|condition|marke|zustand|merk|staat|stan)\s*:")
+_TITLE_BOX_END = re.compile(rf"\b(?:{_BOX})\W*$")
+_TITLE_BOX_LEAD = re.compile(rf"^\W*(?:\w+\W+)?(?:{_BOX})\b(?!\W*:)")
+_IN_BOX = re.compile(r"\b(?:in|i|w|im|met|with|mit|med|kanssa|z|ze|incl\w*|inkl\w*|og|ja|and|und|en|plus|new|nieuw|uusi|"
+                     r"neu|ny|nowe|sealed|geseald)\W+(?:\w+\W+)?$|\+\W*$")
+_SINGLE_SIDE_L = re.compile(rf"\b(?:{_SIDE_L})\b")
+_SINGLE_SIDE_R = re.compile(rf"\b(?:{_SIDE_R})\b")
+_EAR_RX = re.compile(rf"\b(?:{_EAR})\b")
+# marketplaces put the seller's brand field in the row text: 'Tuotemerkki: Shein', 'Marke: TWS', 'Merk: Burga'
+_BRAND_FIELD = re.compile(r"\b(?:tuotemerkki|brand|marke|merk|marka|marque|marca|varumarke|maerke)\s*:\s*([^,|;]{1,40})")
+NO_NAME_BRANDS = {"tws", "ingen", "kita", "other", "others", "muu", "andere", "anders", "inny", "be prekinio zenklo",
+                  "no brand", "nobrand", "unbranded", "noname", "no name", "generic", "bluetooth", "idk", "brak",
+                  "ei merkkia", "ohne marke", "geen merk", "utan marke"}
+RED_REJECT = ("part", "wanted")       # not the item / not an offer: resolve drops them
+RED_RISKY = ("broken", "fake", "locked", "swap")    # the item with a problem: judge never picks or prices them
+
+
+# negation AFTER the word: Finnish / Nordic / German word order ('Mitään vikoja ei ole ilmennyt', 'Mängel sind keine')
+_NEG_AFTER = re.compile(r"^[^.!?;\n]{0,24}?\b(?:ei (?:ole|ilmene|esiinny|loydy|havaittu|ilmennyt)|eika|ei mitaan|"
+                        r"not (?:found|present|any)|sind keine|gibt es (?:nicht|keine)|zijn er niet|niet aanwezig|"
+                        r"finns (?:inte|ej)|finnes ikke|findes ikke|nie ma|nie stwierdzono|brak)\b")
+
+
+def _negated(folded: str, start: int, end: int | None = None) -> bool:
+    if _NEG.search(folded[max(0, start - 64):start]):
+        return True
+    return end is not None and bool(_NEG_AFTER.search(folded[end:end + 40]))
+
+
+def _earbuds(need: Need | None) -> bool:
+    return bool(need and re.search(r"airpods|earbuds|buds\b|earphones|in-ear|nappikuulok|kuulokkeet|"
+                                   r"galaxy buds|pixel buds|wf-\d", need.thing.lower()))
+
+
+@functools.lru_cache(maxsize=50000)
+def _red_flags_cached(text: str, need_thing: str, need_brand: str, earbuds: bool, title: bool
+                      ) -> tuple[tuple[str, str, str], ...]:
+    folded = fold_text(text)
+    asked = fold_text(need_thing)
+    out: list[tuple[str, str, str]] = []
+    for kind, rx, what in _RED:
+        if kind in ("wanted", "swap") and not title:
+            continue      # site chrome says 'Ostetaan' / 'Gesucht' (a category); 'Tausch möglich' on a sale is fine
+        for m in rx.finditer(folded):
+            if kind not in ("wanted", "part") and _negated(folded, m.start(), m.end()):
+                continue
+            if kind == "part" and _negated(folded, m.start()) and not re.match(rf"(?:{_WITHOUT})\b", m.group(0)):
+                continue
+            if m.group(0).strip() in asked:
+                continue      # they asked for it ('airpods pro 2 case', 'broken iphone')
+            if kind == "part" and _PAIR.search(m.group(0)):
+                continue      # 'one pair of AirPods' is the whole thing
+            phrase = text[m.start():m.end()].strip()
+            if not any(k == kind and w == what for k, w, _ in out):
+                out.append((kind, what, phrase))
+            break
+    if title and not any(k == "part" for k, _, _ in out):
+        # 'AirPods Pro 2 Lightning-case goede staat' / 'USB-C-case': a hyphenated case word is the case alone
+        m = _TITLE_HYPHEN_CASE.search(folded)
+        if m and not _WITH_BEFORE.search(folded[max(0, m.start() - 30):m.start()]) and "case" not in asked.split():
+            out.append(("part", "only the charging case", text[m.start():m.end()].strip()))
+    if title and not any(k == "part" for k, _, _ in out):
+        # 'Original AirPods Pro (2nd generation) box', 'Airpods pro (Laatikko)', 'Pudełko AirPods Pro 2'
+        head = folded[:m0.start()] if (m0 := _ROW_META.search(folded)) else folded
+        m = _TITLE_BOX_END.search(head) or _TITLE_BOX_LEAD.search(head)
+        if m and not _IN_BOX.search(head[max(0, m.start() - 24):m.start()]) and "box" not in asked.split():
+            out.append(("part", "only the box", text[m.start():m.end()].strip(" ()")))
+    # one earbud: a side named without the other ('AirPods Pro 2 Oikea A3047', 'lewa słuchawka')
+    if earbuds and not any(k == "part" and w == "only one earbud" for k, w, _ in out):
+        lm, rm = _SINGLE_SIDE_L.search(folded), _SINGLE_SIDE_R.search(folded)
+        side = lm if lm and not rm else rm if rm and not lm else None
+        if side is not None and (title or _near_ear(folded, side.start())) and not _negated(folded, side.start()):
+            out.append(("part", "only one earbud", text[side.start():side.end()].strip()))
+    if title and need_brand:
+        for m in _BRAND_FIELD.finditer(folded):
+            b = m.group(1).strip()
+            if not b or need_brand in b or b in need_brand:
+                continue
+            if b in NO_NAME_BRANDS:
+                out.append(("fake", "a no-name brand, not the original", text[m.start(1):m.end(1)].strip()))
+            else:
+                out.append(("part", f"another brand ({text[m.start(1):m.end(1)].strip()}), so a case or accessory",
+                            text[m.start(1):m.end(1)].strip()))
+            break
+    return tuple(out)
+
+
+def _near_ear(folded: str, at: int) -> bool:
+    return bool(_EAR_RX.search(folded[max(0, at - 30):at + 30]))
+
+
+def listing_red_flags(text: str, need: Need | None = None, *, title: bool = True) -> list[tuple[str, str, str]]:
+    """[(kind, what it means, the seller's words)] for a listing title (title=True) or its description.
+    kinds: part (one earbud, the case or box only, sold as parts, another brand's case), wanted (a wanted ad),
+    broken, fake (copy / no-name), locked (iCloud), swap. Empty when nothing is wrong."""
+    if not text:
+        return []
+    brand = signature(need.thing).brand if need is not None and need.kind != "service" else None
+    return list(_red_flags_cached(text[:6000], need.thing if need else "", brand or "", _earbuds(need), title))
+
+
+def red_flag_text(kind: str, what: str, phrase: str) -> str:
+    """'only one earbud ("Oikea")' for a verdict line or a skip reason."""
+    return f"{what} (“{phrase[:40]}”)"
+
+
+def title_red_flags(o: Offer, need: Need | None) -> list[tuple[str, str, str]]:
+    """Red flags in what the listing row itself says: its title (+ the row text a split marketplace page gave)."""
+    if need is not None and need.kind == "service":
+        return []
+    return listing_red_flags(o.title or "", need, title=True)
 
 
 # ---------------------------------------------------------------- pages that are not one offer
@@ -560,6 +769,8 @@ def relevance(need: Need, offer: Offer) -> float:
     score *= brand_ok
     if is_accessory(offer.title or "", need):
         score *= 0.15
+    elif any(k in RED_REJECT for k, _, _ in title_red_flags(offer, need)):
+        score *= 0.15     # one earbud, the box, a wanted ad: not the item
     if vehicle_mismatch(need, offer):
         score *= 0.05
     if os_.kit and not ns.kit and not need.must_have:
@@ -748,6 +959,10 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return r, why
     if is_accessory(offer.title or "", need):
         return r, "accessory, not the item"
+    if bad := [f for f in title_red_flags(offer, need) if f[0] in RED_REJECT]:
+        k, what, phrase = bad[0]
+        return r, (f"not an offer: {red_flag_text(k, what, phrase)}" if k == "wanted"
+                   else f"a part, not the whole item: {red_flag_text(k, what, phrase)}")
     ns, os_ = signature(need.thing), signature(offer.title or "", offer.brand)
     if ns.models and os_.models and _model_match(ns, os_) <= 0.2:
         return r, f"different model ({' '.join(os_.models)} vs {' '.join(ns.models)})"

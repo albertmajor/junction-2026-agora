@@ -469,6 +469,7 @@ async def hunt(
     hunt_id: str | None = None,
     longtail: bool = True,
     depth: int = 1,
+    check_pick: bool = True,
 ) -> AsyncIterator[Event]:
     """Run one hunt, yielding Events as they happen. Pass `result` to also collect the final objects.
 
@@ -985,14 +986,27 @@ async def hunt(
                   if cat is not None else "assumed category rate"))
 
     # 5 JUDGE
-    try:
+    def judge_all() -> Verdict:
         if depreciation is not None and "depreciation" in inspect.signature(judge).parameters:
-            verdict = judge(need, things, depreciation=depreciation)  # type: ignore[call-arg]
-        else:
-            verdict = judge(need, things)
+            return judge(need, things, depreciation=depreciation)  # type: ignore[call-arg]
+        return judge(need, things)
+
+    judged = False
+    try:
+        verdict = judge_all()
+        judged = True
     except Exception as exc:
         yield ev("error", where="judge", message=f"{type(exc).__name__}: {exc}"[:300])
         verdict = _fallback_judge(need, things)
+    # 5b CHECK THE PICK: the top marketplace candidates' own pages (free fetch), description scanned for red flags
+    if judged and check_pick and not is_service(need):
+        try:
+            verdict, checks = await verify_pick(need, things, verdict, judge_all)
+        except Exception as exc:
+            checks = []
+            yield ev("error", where="pick_check", message=f"{type(exc).__name__}: {exc}"[:300])
+        for c in checks:
+            yield ev("pick_check", **c)
     if persist:
         try:
             await asyncio.to_thread(_register, hunt_id, out.offers)
@@ -1047,6 +1061,61 @@ async def hunt(
         out.budget["credit_eur_basis"] = f"{delta['credits_used']:g} credits x €{per_credit:g} (AGORA_EUR_PER_CREDIT)"
     yield ev("budget", **out.budget)
     yield ev("done", ms=int((time.monotonic() - t0) * 1000))
+
+
+# ---------- pick check: read the would-be pick's own page before the verdict is final ----------
+
+PICK_CHECK_K = 3            # candidates checked per round (cheapest all-in first)
+PICK_CHECK_ROUNDS = 2       # a failed round re-judges and checks the next candidates once more
+PICK_CHECK_BUDGET_S = 6.0   # wall clock for all rounds; a page that is not back in time is simply not checked
+
+
+async def verify_pick(need: Need, things: list[Thing], verdict: Verdict, rejudge: Callable[[], Verdict], *,
+                      check: Callable[[str, Need], Awaitable[dict[str, Any]]] | None = None,
+                      k: int = PICK_CHECK_K, rounds: int = PICK_CHECK_ROUNDS,
+                      budget_s: float = PICK_CHECK_BUDGET_S) -> tuple[Verdict, list[dict[str, Any]]]:
+    """Free-fetch the top `k` marketplace candidates (the pick first) and scan each seller's description for red
+    flags (reader.check_listing). A candidate that fails gets raw['page_red_flags'] (judge: a 'red flag' = never
+    the pick, plus a 'skipped ...' verdict line) and the hunt is re-judged, then the next candidates are checked.
+    Returns (verdict, [{url, source, price_eur, title, ok, flags, description}])."""
+    jm, rd = _module("judge"), _module("reader")
+    check = check or getattr(rd, "check_listing", None)
+    if jm is None or check is None or not hasattr(jm, "pick_candidates"):
+        return verdict, []
+    end = time.monotonic() + budget_s
+    checked: set[str] = set()
+    results: list[dict[str, Any]] = []
+    for _ in range(max(1, rounds)):
+        by_url = {o.url: o for t in things for o in t.offers}
+        cands = ([by_url[verdict.best_offer_url]] if verdict.best_offer_url in by_url else []) + jm.pick_candidates(things, k)
+        todo: list[Offer] = []
+        for o in cands:
+            if o.url not in checked and jm.is_marketplace(o) and all(o is not x for x in todo):
+                todo.append(o)
+        todo = todo[:k]
+        left = end - time.monotonic()
+        if not todo or left <= 0.3:
+            break
+        tasks = {asyncio.create_task(check(o.url, need)): o for o in todo}
+        done, pending = await asyncio.wait(tasks, timeout=left)
+        for t in pending:
+            t.cancel()
+        failed = False
+        for task, o in tasks.items():
+            checked.add(o.url)
+            r = task.result() if task in done and not task.cancelled() and task.exception() is None else \
+                {"ok": None, "flags": [], "description": ""}
+            o.raw["page_check"] = {"ok": r.get("ok"), "flags": r.get("flags") or []}
+            results.append({"url": o.url, "source": o.source, "price_eur": o.price_eur, "title": o.title,
+                            "ok": r.get("ok"), "flags": r.get("flags") or [],
+                            "description": (r.get("description") or "")[:200]})
+            if r.get("ok") is False and r.get("flags"):
+                o.raw["page_red_flags"] = [list(f) for f in r["flags"]]
+                failed = True
+        if not failed:
+            break
+        verdict = rejudge()
+    return verdict, results
 
 
 # ---------- replay: a recorded hunt, streamed back at its real pace (demo-proof, zero credits) ----------
