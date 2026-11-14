@@ -189,7 +189,7 @@ button { cursor: pointer; }
   animation: rise 700ms 180ms var(--ease) both; pointer-events: none;
 }
 /* a banana on the other side of the box, mirroring the monkey (placed by mascot.js placeStartMonkey) */
-.start-banana { position: absolute; width: 72px; height: auto; pointer-events: none;
+.start-banana { position: absolute; z-index: 60; width: 72px; height: auto; pointer-events: none;
   /* drops in from above onto its spot and bounces (uses `translate`/`rotate`, so mascot.js's own transform stays) */
   animation: banana-drop 900ms 200ms both; }
 @keyframes banana-drop {
