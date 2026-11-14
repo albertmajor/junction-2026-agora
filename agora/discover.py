@@ -159,7 +159,8 @@ SERVICE_DIRECTORIES = tuple(sorted({d for ds in SERVICE_MARKETS.values() for d i
                                    | {"yelp.", "treatwell.", "fresha.com", "booksy.com", "yoopies.", "yoojo.",
                                       "helpling.", "hulp.nl", "klusjebij.app", "care.com", "sittercity.com"}))
 PROFILE_PATH = re.compile(r"/(?:profiel|profile|profil|pro|biz|bedrijf|company|firma|yritys|anbieter|handwerker|"
-                          r"cleaner|schoonmaker)/[^/]+/?$", re.I)
+                          r"cleaner|schoonmaker|urakoitsija|yritykset|palveluntarjoaja|tekija)/[^/]+/?$", re.I)
+DIRECTORY_PROFILES = 5        # provider profiles read from one directory (each its own provider and price)
 # job boards and job ads: a cleaner's WAGE per hour is not what hiring one costs
 JOB_DOMAINS = ("payscale.", "salaryexpert.", "gehalt.de", "erieri.com", "indeed.", "werkzoeken.nl", "nationalevacaturebank.nl", "monsterboard.", "jobbird.com", "stepstone.",
                "glassdoor.", "hups.nl", "staffyou.nl", "randstad.", "tempo-team.", "youngcapital.", "jobted.",
@@ -378,10 +379,48 @@ def local_words(need: Need, lang: str | None) -> str | None:
     return labels.get(ISO_OF_LOCAL.get(lang, lang)) or None
 
 
+# how a trade states its price: catering per meal / person, a photographer per package, the rest per hour
+UNIT_PER_PERSON = re.compile(r"\b(?:cater\w*|ateri\w*|ruokailu\w*|kouluruo\w*|meals?|lunch\w*|lounas\w*|"
+                             r"buffet\w*|pitopalvelu\w*|food|ruoka\w*|mittagessen|essen|maaltijd\w*|måltid\w*)\b",
+                             re.I)
+UNIT_PACKAGE = re.compile(r"\b(?:photograph\w*|valokuva\w*|kuvaaja\w*|wedding|hää\w*|videograph\w*|dj|band|"
+                          r"fotograf\w*|hochzeit\w*|bröllop\w*|bruiloft\w*)\b", re.I)
+UNIT_PHRASE = {
+    "person": {"en": "price per person", "fi": "hinta per henkilö", "de": "Preis pro Person", "se": "pris per person",
+               "nl": "prijs per persoon", "dk": "pris pr person", "no": "pris per person", "fr": "prix par personne",
+               "es": "precio por persona", "it": "prezzo a persona", "pl": "cena za osobę", "pt": "preço por pessoa",
+               "cz": "cena za osobu"},
+    "package": {"en": "prices packages", "fi": "hinnasto", "de": "Preise Pakete", "se": "priser paket",
+                "nl": "prijzen pakketten", "dk": "priser pakker", "no": "priser pakker", "fr": "tarifs forfaits",
+                "es": "precios paquetes", "it": "prezzi pacchetti", "pl": "cennik pakiety", "pt": "preços pacotes",
+                "cz": "ceník balíčky"},
+}
+
+
+def service_unit(need: Need) -> str:
+    """'person' (catering, meals), 'package' (photographers, weddings) or 'hour' (the trades)."""
+    cat = need.category or {}
+    hay = " ".join([need.thing or "", need.raw or "", str(cat.get("label") or ""), " ".join(cat.get("path") or []),
+                    " ".join(str(v) for v in (cat.get("labels") or {}).values())])
+    if UNIT_PER_PERSON.search(hay):
+        return "person"
+    if UNIT_PACKAGE.search(hay):
+        return "package"
+    return "hour"
+
+
+def price_words(need: Need, lang: str | None) -> str:
+    """The 'price per ...' words of a service query in that language (None = English)."""
+    unit = service_unit(need)
+    if unit == "hour":
+        return LOCAL[lang]["service"] if lang in LOCAL else "price per hour"
+    return UNIT_PHRASE[unit].get(lang or "en", UNIT_PHRASE[unit]["en"])
+
+
 def local_service_query(need: Need, lang: str) -> str:
     """'home cleaning' in Tilburg -> 'schoonmaker Tilburg prijs per uur'."""
     words = local_words(need, lang) or _thing_q(need)
-    return re.sub(r"\s+", " ", f"{words} {need.where or ''} {LOCAL[lang]['service']}").strip()
+    return re.sub(r"\s+", " ", f"{words} {need.where or ''} {price_words(need, lang)}").strip()
 
 
 def category_sites(need: Need, cc: str | None) -> list[str]:
@@ -437,6 +476,22 @@ RATE_UNIT = re.compile(
     r"timme|time|heure|hora|ora|godz\w*|hodin\w*|m2|m²|sqm|job|visit|klus|einsatz|kerta)\b", re.I)
 
 
+COST_GUIDE = re.compile(
+    r"\b(?:opas|oppaa\w*|mediaani\w*|keskihinta|mitä\s+[\w\s-]{0,30}maksa\w*|paljonko\s+[\w\s-]{0,30}maksa\w*|"
+    r"hinta\s+20\d\d|20\d\d\s+hinta|how\s+much\s+(?:does|do|is)|cost\s+guide|average\s+cost|costs?\s+(?:in\s+)?20\d\d|"
+    r"cost\s+per\s+hour\s+20\d\d|was\s+kostet|kosten\s+20\d\d|wat\s+kost|vad\s+kostar|price\s+guide|"
+    r"hourly\s+rates?\s+(?:guide|20\d\d)|calculator|laskuri)\b", re.I)
+COST_GUIDE_PATH = re.compile(r"/(?:costs?|cost-guide|hub|blogi?|artikkeli\w*|haablogi|opas)/|how-much|"
+                             r"-cost(?:s)?(?:-|/|$)|average-|hinta-20\d\d|20\d\d-hinta|mita-\w+-maksaa", re.I)
+
+
+def cost_guide(url: str, title: str = "") -> bool:
+    """An article about what the work costs on average, not a provider's own price: read last."""
+    if PRICE_PAGE_PATH.search(urlsplit(url).path) and not COST_GUIDE.search(title or ""):
+        return False             # '/hinnasto' is a provider's own price list
+    return bool(COST_GUIDE.search(title or "") or COST_GUIDE_PATH.search(urlsplit(url).path))
+
+
 def snippet_rate(text: str) -> bool:
     """A price with a unit ('€29 per hour', '25 €/uur', 'ab 35 € pro Stunde') in a search snippet."""
     return any(RATE_UNIT.search(text[m.end():m.end() + 24]) for m in SERVICE_RATE.finditer(text or ""))
@@ -447,6 +502,8 @@ def expected_yield(url: str, kind: str, lane: str, title: str = "", snippet: str
     returns more than the hunt can read. A service directory lists many providers; a page whose snippet
     shows a rate will price; a guide or a quote form usually will not."""
     if kind in ("service", "digital"):
+        if cost_guide(url, title):
+            return 0.3           # 'Putkimiehen hinta 2026 - opas': an average, read only when budget is left
         if is_service_directory(url, title):
             from agora.domainstats import list_yield
             seen = list_yield(domain_of(url))
@@ -480,16 +537,28 @@ def lanes_for(need: Need) -> list[str]:
     for c in need.conditions:
         if c in ("new", "refurbished", "used", "rental") and c not in lanes:
             lanes.append(c)
-    if "refurbished" in lanes and len(lanes) > 1 and NO_REFURB.search(f"{need.thing} {need.raw}"):
+    if "refurbished" in lanes and len(lanes) > 1 and no_refurb(need):
         lanes.remove("refurbished")      # nobody refurbishes a shelf: the query would only find DIY 'hacks'
     return lanes or ["new"]
 
 
 # things with no refurbished trade (furniture, clothes, books): the refurbished lane is a wasted search
 NO_REFURB = re.compile(
-    r"\b(shelf|shelves|shelving|hylly\w*|kallax|billy|sofa|couch|sohva|table|pöytä|chair|tuoli|desk|bed|sänky|"
-    r"wardrobe|dresser|lipasto|cabinet|kaappi|rug|matto|curtains?|jacket|takki|coat|shoes|kengät|dress|"
-    r"shirt|jeans|book|kirja|stroller|rattaat)\b", re.I)
+    r"\b(shel(?:f|ves)|shelving|hylly\w*|kallax|billy|sofas?|couch(?:es)?|sohv\w*|tables?|pöytä|pöydät|chairs?|"
+    r"tuol\w*|desks?|beds?|sänky|sängyt|wardrobes?|dressers?|lipasto\w*|cabinets?|kaappi|kaapit|rugs?|mat(?:to|ot)|"
+    r"curtains?|jackets?|takki|takit|coats?|shoes|kengät|dress(?:es)?|shirts?|jeans|books?|kirja\w*|"
+    r"strollers?|rattaat|prams?|kinderwagen)\b", re.I)
+NO_REFURB_ROOTS = ("furniture", "apparel", "clothing", "books", "fashion")
+
+
+def no_refurb(need: Need) -> bool:
+    """No refurbished trade for this kind of thing: its words, or its category (a hunt from 'Sofas' typed
+    nothing: eval r1 spent the budget on US refurbished sofa sites)."""
+    if NO_REFURB.search(f"{need.thing} {need.raw}"):
+        return True
+    cat = need.category or {}
+    root = str((cat.get("path_ids") or [""])[0]).lower()
+    return any(root.startswith(r) for r in NO_REFURB_ROOTS) or bool(NO_REFURB.search(str(cat.get("label") or "")))
 
 
 def query_plan(need: Need, lane: str, depth: int = 2) -> list[tuple[str, str | None]]:
@@ -502,12 +571,16 @@ def query_plan(need: Need, lane: str, depth: int = 2) -> list[tuple[str, str | N
     where = need.where or ""
     cc = country_of(need)
     home = home_country() if cc is None else None
-    out: list[tuple[str, str | None]] = [(ENGLISH[lane].format(t=thing_q, where=where), cc)]
+    first = ENGLISH[lane].format(t=thing_q, where=where)
+    if lane == "service":
+        first = f"{thing_q} {price_words(need, None)} {where}"
+    out: list[tuple[str, str | None]] = [(first, cc)]
     lang = _lang(cc)
     if depth >= 2 and lane == "service" and lang_of(need, cc):
         out.append((local_service_query(need, lang_of(need, cc)), cc))    # 'schoonmaker Tilburg prijs per uur'
     elif depth >= 2 and lang in LOCAL:
-        out.append((f"{thing_q} {LOCAL[lang][lane]} {where if lane == 'service' else ''}", None))
+        words = price_words(need, lang) if lane == "service" else LOCAL[lang][lane]
+        out.append((f"{thing_q} {words} {where if lane == 'service' else ''}", None))
     elif depth >= 2 and lane == "used" and _lang(home) in LOCAL:
         out.append((f"{thing_q} {LOCAL[_lang(home)][lane]}", home))      # tori.fi & co, even without a city
     elif depth >= 2 and lane != "service":
@@ -590,6 +663,12 @@ def intent_plan(need: Need, cc: str | None) -> list[Any] | None:
     return out or None
 
 
+def _typed_country(need: Need) -> str | None:
+    """The country (LOCAL key) of the language the query is typed in, when its words tell (None = English)."""
+    from agora.need import LANG_COUNTRY, query_language
+    return LANG_COUNTRY.get(query_language(need.raw) or "")
+
+
 def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[str, str | None]]:
     """The live plan: one (query, country filter) per lane.
     new = the English buy query (asked-for country); refurbished = open to all of Europe (backmarket, refurbed,
@@ -605,11 +684,15 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
     if lane == "service":
         out_s: list[Any] = list(query_plan(need, lane, 2)[:2])
         home = home_country() if cc is None else None
+        if cc is None and home and out_s and out_s[0][1] is None:
+            # a local trade with no place asked is done near you: the English query searches the home country
+            # too (eval r1: 'plumbing price per hour' unfiltered read angi / homeadvisor cost guides)
+            out_s[0] = (out_s[0][0], home)
         if cc is None and home and (lang_h := _lang(home)) and len(out_s) < 2:
             # no place asked: the job in the home country's language, there ('aseseppä hinta' in Finland)
             words = local_words(need, lang_h)
             if words:
-                out_s.append((re.sub(r"\s+", " ", f"{words} {LOCAL[lang_h]['service']}").strip(), home))
+                out_s.append((re.sub(r"\s+", " ", f"{words} {price_words(need, lang_h)}").strip(), home))
         market = service_market_query(need, cc or home)
         if market is not None and avail >= MARKET_MIN_TOKENS:
             out_s.append(market)          # (query, country, include_domains)
@@ -623,7 +706,8 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
         lang = _lang(local)
         if lang in LOCAL and avail >= LOCAL_NEW_MIN_TOKENS:
             # the local shops (verkkokauppa, gigantti, bol.com ...) mostly carry JSON-LD: free offers
-            plan.append((re.sub(r"\s+", " ", f"{thing_q} {LOCAL[lang]['new']}").strip(), local))
+            words = market_thing(need, lang)
+            plan.append((re.sub(r"\s+", " ", f"{words} {LOCAL[lang]['new']}").strip(), local))
         return plan
     if lane != "used":
         return query_plan(need, lane, 1)
@@ -631,7 +715,12 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
     lang = _lang(cc) if cc else _lang(home)
     out: list[tuple[str, str | None]] = []
     if lang in LOCAL:
-        out.append((re.sub(r"\s+", " ", f"{thing_q} {LOCAL[lang]['used']}").strip(), cc or home))
+        words = market_thing(need, lang)
+        out.append((re.sub(r"\s+", " ", f"{words} {LOCAL[lang]['used']}").strip(), cc or home))
+        typed = _typed_country(need)
+        if typed and typed != (cc or home) and typed in LOCAL and not cc:
+            # typed in another country's language ('kinderwagen gebraucht' from Finland): its marketplaces too
+            out.append((re.sub(r"\s+", " ", f"{thing_q} {LOCAL[typed]['used']}").strip(), typed))
     else:
         out.append((ENGLISH["used"].format(t=thing_q, where=""), cc))
     if avail >= EXTRA_USED_MIN_TOKENS:
@@ -688,6 +777,56 @@ def rank_score(url: str, dom: str, cc: str | None, relevance: str | None) -> flo
     return eu_score(dom, cc, relevance) + (-1.5 if is_list_page(url) else 0.5)
 
 
+_LOCALE_PATH = re.compile(r"^/([a-z]{2})(?:[-_]([a-z]{2}))?(?:/|$)", re.I)
+
+
+def home_page(url: str, cc: str | None) -> bool:
+    """This page sells in country `cc`: its TLD, a /fi/ or /fi-fi/ locale path on a global site, a known
+    marketplace of that country, or a registry source that lists it."""
+    if not cc:
+        return True
+    cc = cc.lower()
+    dom = domain_of(url)
+    if tld(dom) == cc or (cc == "gb" and dom.endswith(".uk")):
+        return True
+    m = _LOCALE_PATH.match(urlsplit(url).path)
+    if m and cc in {(m.group(1) or "").lower(), (m.group(2) or "").lower()}:
+        return True
+    try:
+        from agora import marketplaces
+        site = marketplaces.site_for(url)
+        if site is not None:
+            return site.country == cc
+        from agora import sources
+        rec = sources.for_url(url)
+        if rec is not None:
+            return cc in [str(c).lower() for c in rec.get("countries") or []]
+    except Exception:
+        pass
+    return False
+
+
+# global shops with one store per country: a foreign store's page becomes the home store's
+IKEA_LOCALE = {"fi": "fi/fi", "se": "se/sv", "de": "de/de", "nl": "nl/nl", "dk": "dk/da", "no": "no/no",
+               "at": "at/de", "fr": "fr/fr", "es": "es/es", "it": "it/it", "pl": "pl/pl", "gb": "gb/en",
+               "ie": "ie/en", "be": "be/nl", "ch": "ch/de", "pt": "pt/pt", "cz": "cz/cs", "ee": "ee/et"}
+_IKEA_PATH = re.compile(r"^/([a-z]{2})/([a-z]{2})/(p/[^?#]+-s?\d{8}/?|search/?)(.*)$", re.I)
+
+
+def localize(url: str, cc: str | None) -> str:
+    """ikea.com/us/en/p/kivik-sofa-...-s69440510/ -> ikea.com/fi/fi/p/kivik-sofa-...-s69440510/ for a Finn
+    (eval r1: the US store was read for a sofa). Product pages (the article number decides) and search pages
+    only; anything else is returned unchanged."""
+    if not cc or cc.lower() not in IKEA_LOCALE or not dom_match(domain_of(url), "ikea.com"):
+        return url
+    parts = urlsplit(url)
+    m = _IKEA_PATH.match(parts.path)
+    if not m or m.group(1).lower() == cc.lower():
+        return url
+    path = f"/{IKEA_LOCALE[cc.lower()]}/{m.group(3)}{m.group(4)}"
+    return urlunsplit((parts.scheme or "https", parts.netloc, path, parts.query, ""))
+
+
 MARKETPLACES = ("tori.fi", "kleinanzeigen.", "vinted.", "blocket.se", "finn.no", "dba.dk", "olx.", "huuto.net",
                 "willhaben.at", "marktplaats.nl", "leboncoin.fr", "subito.it", "wallapop.com", "gumtree.",
                 "ebay.", "tradera.com", "jofogas.hu", "bazos.")
@@ -723,6 +862,48 @@ def direct_enabled() -> bool:
     return os.environ.get("AGORA_DIRECT", "1").strip().lower() not in ("0", "off", "false", "no")
 
 
+def need_bulky(need: Need) -> bool:
+    """Picked up near you (furniture, a bike, a car): the category says so, else the words."""
+    if need.kind != "product":
+        return False
+    if (need.category or {}).get("bulky"):
+        return True
+    try:
+        from agora import marketplaces
+        return marketplaces.is_bulky(_thing_q(need))
+    except Exception:
+        return False
+
+
+def market_thing(need: Need, lang: str | None) -> str:
+    """The words to type into a marketplace for this need: a generic vehicle in that language ('bright red
+    car' -> 'punainen auto' on tori), a generic thing typed in another language by its category's label in this
+    one ('kinderwagen' -> 'lastenrattaat' on tori), else the need's own words."""
+    from agora.need import vehicle_words
+    iso = ISO_OF_LOCAL.get(lang or "", lang)
+    if (v := vehicle_words(need, iso)) is not None:
+        return v
+    return translated_thing(need, iso) or _thing_q(need)
+
+
+def translated_thing(need: Need, iso: str | None) -> str | None:
+    """The category's label in language `iso` when the need is generic and was typed in another language."""
+    from agora.need import query_language
+    typed = query_language(need.raw)
+    if not iso or not typed or typed == iso:
+        return None
+    try:
+        from agora import resolve
+        if not resolve.is_generic(need):
+            return None
+    except Exception:
+        return None
+    label = ((need.category or {}).get("labels") or {}).get(iso)
+    if not label or len(label.split()) > 3 or re.search(r"[,&/]", label):
+        return None              # 'Autot, kuorma-autot ja pakettiautot' is a shelf name, not a search
+    return label.lower()
+
+
 def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int, pages: int = 1) -> dict[str, list[Any]]:
     """lane -> [marketplaces.Direct]: the marketplaces' own search pages, read without a web search. Used lane
     first (its pages yield the most), then refurbished, then new; a paid page only while the bucket has
@@ -747,7 +928,8 @@ def plan_direct(need: Need, lanes: list[str], tokens: float, n_searches: int, pa
     for lane in ("used", "refurbished", "new"):
         if lane not in lanes:
             continue
-        got = marketplaces.direct_pages(_thing_q(need), lane, cc, home, left, pages=pages, node=node,
+        thing = market_thing(need, _lang(cc or home))
+        got = marketplaces.direct_pages(thing, lane, cc, home, left, pages=pages, node=node,
                                         generic=generic, tree=tree)
         left -= sum(1 for d in got if d.paid)
         if got:
@@ -797,6 +979,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
     rank_cc = cc or home          # no place asked: the home market's shops float up
     plan: list[tuple[str, str, str | None, list[str] | None]] = []
     lanes = lanes_for(need)
+    bulky = need_bulky(need)
     if depth is None and tokens is None:
         tokens = tokens_available()
     plans = {lane: (lean_plan(need, lane, tokens) if depth is None else query_plan(need, lane, depth))
@@ -882,8 +1065,10 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
     def refuse(url: str, dom: str) -> str | None:
         """Why this page may not be emitted now (per-domain caps), else None."""
         if is_service(need) and any(dom_match(dom, d) for d in SERVICE_DIRECTORIES):
-            if items.get(dom, 0) + lists.get(dom, 0) >= PER_DOMAIN:
-                return f"already {PER_DOMAIN} pages from {dom}"
+            # one provider's profile on a directory is its own offer (urakkamaailma /urakoitsija/<firm>)
+            cap = DIRECTORY_PROFILES if PROFILE_PATH.search(urlsplit(url).path) else PER_DOMAIN
+            if items.get(dom, 0) + lists.get(dom, 0) >= cap:
+                return f"already {cap} pages from {dom}"
             return None
         if is_list_page(url):
             # a marketplace search page is kept even when item pages were found: it is up to 8 listings in one
@@ -958,6 +1143,9 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                     url = r.get("url") or ""
                     if not url.startswith("http"):
                         continue
+                    if need.kind == "product" and (local_url := localize(url, rank_cc)) != url:
+                        r = {**r, "url": local_url, "localized_from": url}
+                        url = local_url
                     key = normalize_url(url)
                     if key in seen:
                         old = pooled_in.get(key)
@@ -989,6 +1177,8 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                     if is_marketplace(dom) and not is_list_page(url):
                         item_domains.add(dom)
                     score = rank_score(url, dom, rank_cc, r.get("relevance"))
+                    if bulky and rank_cc and not home_page(url, rank_cc):
+                        score -= 3.0     # a sofa from abroad: home shops are read first (eval r1: US sofa sites)
                     if lane in ("used", "refurbished") and _second_hand(dom):
                         score += 1.0     # Robert's curated second-hand sources (agora.marketplaces.SECOND_HAND)
                     pool[lane].append((score, order, r, query))

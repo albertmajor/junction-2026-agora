@@ -45,6 +45,7 @@ DEFAULT_READ_TIMEOUT = 12.0  # seconds of page work (time queued for the shared 
 MAX_QUEUE_ALLOWANCE = 120.0  # never wait more than this for the rate limiter on one page
 DEFAULT_BUDGET_S = 24.0      # a live hunt stops waiting for pages after this (AGORA_HUNT_BUDGET_S; 0 = no cap)
 PROVISIONAL_AFTER = 8.0      # send a provisional verdict by this many seconds...
+FOREIGN_PRIO = 4             # paid-read priority penalty for a page abroad when the hunt is scoped home
 SIBLING_DEADLINE = 20.0      # the depreciation lane must be done this many seconds into the hunt
 STABLE_FOR = 3.0             # ...or as soon as the leaderboard has not moved for this long
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -435,6 +436,105 @@ def _persist(need: Need, offers: list[Offer], things: list[Thing]) -> None:
             continue
 
 
+# ---------- reading the need (vague words, home city, typed language) ----------
+
+AUTO_INTENT_MIN_CONF = 0.45
+_RECIPIENT = re.compile(r"^(?:for|to|för|für|voor|pour|til)\s+(?:my\s+|a\s+|the\s+)?[\w'-]+(?:\s+[\w'-]+)?$|^\w+lle$",
+                        re.I)
+
+
+def auto_intent_for(need: Need) -> str | None:
+    """The intent id to hunt for a bare vague word, or None. Only when the words are (almost) just a known
+    concept ('lunch', 'gift for mom') and its likeliest meaning is another KIND of thing than the literal parse
+    (a service for 'lunch', a product for a gift): a model, a brand or extra nouns keep the typed reading."""
+    try:
+        from agora import intent as intent_mod
+        key, _, rest = intent_mod.match_concept(need.raw)
+        if key is None or (rest and not _RECIPIENT.match(rest)):
+            return None
+        got = intent_mod.interpret(need.raw, llm=False)
+    except Exception:
+        return None
+    top = (got.get("intents") or [None])[0]
+    if not top or top.get("as_typed") or (top.get("confidence") or 0) < AUTO_INTENT_MIN_CONF:
+        return None
+    service_like = top.get("kind") in ("service", "digital")
+    if service_like == is_service(need):
+        return None               # the parse already reads it as that kind: nothing to fix
+    if need.conditions not in (["new", "refurbished", "used"], ["new"], ["service"]):
+        return None               # 'used ...' asked for a thing to buy
+    return str(top["id"])
+
+
+HOME_CITY = {"fi": "Helsinki", "se": "Stockholm", "de": "Berlin", "nl": "Amsterdam", "dk": "Copenhagen",
+             "no": "Oslo", "ee": "Tallinn", "at": "Vienna", "be": "Brussels", "fr": "Paris", "es": "Madrid",
+             "it": "Rome", "pl": "Warsaw", "pt": "Lisbon", "ie": "Dublin", "gb": "London", "cz": "Prague"}
+
+
+def home_city() -> str | None:
+    """AGORA_HOME_CITY, else the home country's capital (AGORA_COUNTRY, default fi -> Helsinki)."""
+    env = (os.environ.get("AGORA_HOME_CITY") or "").strip()
+    if env:
+        return None if env.lower() in ("none", "off", "-") else env[:60]
+    dv = _module("discover")
+    try:
+        cc = dv.home_country() if dv is not None else None
+    except Exception:
+        cc = None
+    return HOME_CITY.get(cc or "")
+
+
+def default_where(need: Need) -> str | None:
+    """A local trade with no place asked ('Plumbing' from the tree, 'plumber') is done where you live: set
+    need.where to the home city and return the note to show ('near Helsinki (your home city)'). Subscriptions,
+    B2B work and trips are bought from anywhere and keep no place."""
+    if need.where or not is_service(need):
+        return None
+    try:
+        from agora.need import priced_per_period
+        if priced_per_period(need):
+            return None
+    except Exception:
+        return None
+    it = (need.category or {}).get("intent") or {}
+    if it.get("travel"):
+        return None
+    city = home_city()
+    if not city:
+        return None
+    need.where = city
+    return f"near {city} (your home city)"
+
+
+def scope_question(need: Need) -> dict[str, Any] | None:
+    """Typed in another country's language with no place ('kinderwagen gebraucht' on a Finnish server): say
+    where we search and offer that country's market as one tap."""
+    if need.where or need.kind != "product":
+        return None
+    try:
+        from agora.need import LANG_COUNTRY, query_language
+        dv = _module("discover")
+        home = dv.home_country() if dv is not None else None
+        lang = query_language(need.raw)
+    except Exception:
+        return None
+    cc = LANG_COUNTRY.get(lang or "")
+    if not cc or not home or cc == home:
+        return None
+    names = {"de": ("Germany", "germany"), "se": ("Sweden", "sweden"), "nl": ("the Netherlands", "netherlands"),
+             "fi": ("Finland", "finland")}
+    if cc not in names:
+        return None
+    name, word = names[cc]
+    return {"lang": lang, "country": cc, "home": home,
+            "text": f"Typed in {_LANG_NAMES.get(lang or '', lang)}: searching near you in {home.upper()} first, "
+                    f"{name} shown as pickup abroad. Search {name} instead?",
+            "hunt": {"q": f"{need.raw} in {word}"}}
+
+
+_LANG_NAMES = {"de": "German", "sv": "Swedish", "nl": "Dutch", "fi": "Finnish"}
+
+
 # ---------- the hunt ----------
 
 @dataclass
@@ -601,6 +701,12 @@ async def hunt(
             cat_event = need_mod.categorize(need, category)
         except Exception as exc:
             yield ev("error", where="category", message=f"{type(exc).__name__}: {exc}"[:300])
+    auto_intent = False
+    if not intent and not category and real_parse:
+        # no meaning picked: a bare vague word ('lunch') takes its likeliest meaning when the literal reading is
+        # the wrong KIND of thing (eval r1: 'lunch' hunted fridge magnets and posters, not lunch places)
+        intent = auto_intent_for(need)
+        auto_intent = intent is not None
     if intent:
         # a meaning picked for vague words (agora.intent: 'lunch' -> lunch places near you): its category, kind,
         # lanes, local words and where-to-look sites replace the literal reading
@@ -609,10 +715,18 @@ async def hunt(
             ev_i = intent_mod.apply(need, intent)
             if ev_i is not None:
                 cat_event = ev_i
+                if auto_intent:
+                    cat_event["auto"] = True
         except Exception as exc:
             yield ev("error", where="intent", message=f"{type(exc).__name__}: {exc}"[:300])
+    where_note = default_where(need) if real_parse or category else None
     out.need = need
-    yield ev("need", need=to_dict(need), hunt_id=hunt_id)
+    extra_need: dict[str, Any] = {}
+    if where_note:
+        extra_need["where_default"] = where_note
+    if real_parse and (ask := scope_question(need)):
+        extra_need["ask_scope"] = ask
+    yield ev("need", need=to_dict(need), hunt_id=hunt_id, **extra_need)
     if cat_event is not None:
         yield ev("category", **cat_event)
 
@@ -756,6 +870,8 @@ async def hunt(
                 prio = dv.paid_priority(url, need.kind, lane_of.get(url, ""), h.get("title", ""), h.get("snippet", ""))
             except Exception:
                 prio = None
+        if prio is not None and abroad_last(url):
+            prio += FOREIGN_PRIO      # bulky, searched at home: the home shops get the paid reads first
         acquire = gate.acquire(lane_of.get(url, ""), listy, prio)
         await (asyncio.wait_for(acquire, timeout=left) if left is not None else acquire)
         waited = time.monotonic() - t
@@ -863,9 +979,23 @@ async def hunt(
     if depth > 1 and _accepts(discover, "pages"):
         disc_kw["pages"] = depth
 
+    scope_now: dict[str, Any] = {}
+
+    def abroad_last(url: str) -> bool:
+        """A page from abroad in a hunt scoped to the home country (a sofa, a bike, a car)."""
+        if scope_now.get("scope") != "home" or not scope_now.get("country"):
+            return False
+        fn = getattr(_module("discover"), "home_page", None)
+        try:
+            return fn is not None and not fn(url, str(scope_now["country"]).lower())
+        except Exception:
+            return False
+
     async def produce() -> None:
         try:
             async for e in discover(need, **disc_kw):
+                if e.type == "scope":
+                    scope_now.update(e.data)
                 if e.type == "source":
                     url = str(e.data.get("url") or "")
                     if not url or url in seen:

@@ -321,6 +321,16 @@ SPLIT_HEAD = re.compile(r"\s+(?:for|with|to|from|by|för|für|voor|pour|para)\s+
 TAXO_KIND_ROOTS = {"software": "digital", "professional": "service", "digital-services": "service",
                    "finance-insurance": "service", "utilities": "service", "education": "service"}
 TAXO_MIN_CONFIDENCE = 0.55
+# a gift is a thing to buy (eval r1: 'gift for mom' became a 'Financial, Tax & Accounting Software' need)
+GIFT_WORDS = re.compile(
+    r"^(?:\w+\s+){0,2}(?:gifts?|presents?|gift\s+ideas?|lahja\w*|lahjaidea\w*|geschenk\w*|geschenkidee\w*|"
+    r"present(?:er|idé\w*)?|gåva|gåvor|cadeau\w*|gave(?:r|idé\w*)?)\b", re.I)
+# the words that make a subscription software / a digital good, not a provider's work
+SOFTWARE_WORDS = re.compile(
+    r"\b(?:saas|software|apps?|licen[cs]es?|vpn|web\s?hosting|hosting|cloud\s+storage|streaming|ohjelm\w*|"
+    r"programm?e?s?|tool|tools|plugin|plugins|template|templates|fonts?)\b", re.I)
+PERIOD_WORDS = re.compile(r"\b(?:subscriptions?|unlimited|retainer|kuukausitilaus\w*|abo|abonnement\w*|abonnemang)\b",
+                          re.I)
 
 
 def product_head(thing: str) -> bool:
@@ -336,6 +346,8 @@ def detect_kind(text: str, thing: str | None = None) -> tuple[str | None, str]:
     thing = (thing or text).strip()
     if not thing or product_head(thing):
         return None, "object"
+    if GIFT_WORDS.search(thing) and not DIGITAL_WORDS.search(thing) and not ROLE_WORDS.search(thing):
+        return None, "gift"              # 'gift for mom', 'lahja äidille': things to buy, never software
     hay = f"{thing} {text}"
     if ROLE_WORDS.search(hay):
         return "service", "words"
@@ -349,11 +361,30 @@ def detect_kind(text: str, thing: str | None = None) -> tuple[str | None, str]:
     if SERVICE_HINTS.search(hay):
         return "service", "words"
     c = _classify(text)
-    if c and (c.get("confidence") or 0) >= TAXO_MIN_CONFIDENCE:
+    if c and (c.get("confidence") or 0) >= TAXO_MIN_CONFIDENCE and _names_node(thing, c):
         root = (c.get("path_ids") or [""])[0]
         if root in TAXO_KIND_ROOTS:
             return TAXO_KIND_ROOTS[root], "taxonomy"
     return None, "taxonomy"
+
+
+_STOP = {"for", "with", "and", "the", "a", "an", "my", "of", "to", "in", "on", "best", "cheap", "new", "used"}
+
+
+def _stem(w: str) -> str:
+    return re.sub(r"(?:ies|es|s)$", "", w.lower())[:6]
+
+
+def _names_node(thing: str, c: dict[str, Any]) -> bool:
+    """The classified node shares a word with the need (its label, synonyms or labels in any language): a
+    software / B2B root may only flip a need it actually names ('gift for mom' is no accounting software)."""
+    words = {_stem(w) for w in re.findall(r"[^\W\d_]{4,}", thing or "") if w.lower() not in _STOP}
+    if not words:
+        return False
+    names = [str(c.get("label") or "")] + [str(x) for x in (c.get("synonyms") or [])]
+    names += [str(v) for v in (c.get("labels") or {}).values() if isinstance(v, str)]
+    have = {_stem(w) for n in names for w in re.findall(r"[^\W\d_]{4,}", n)}
+    return bool(words & have)
 
 
 def _classify(text: str) -> dict[str, Any] | None:
@@ -373,6 +404,8 @@ def priced_per_period(need: Need) -> bool:
         return True
     if need.kind != "service":
         return False
+    if PERIOD_WORDS.search(f"{need.thing} {need.raw}"):
+        return True                  # 'unlimited graphic design subscription': plans per month, whatever the node
     cat = need.category or {}
     if cat.get("path_ids"):
         if cat.get("kind") == "digital" or cat["path_ids"][0] in TAXO_KIND_ROOTS:
@@ -427,6 +460,78 @@ def split_attributes(thing: str) -> tuple[str, list[str]]:
     attrs = [m.group(0) for m in ATTRIBUTE_WORDS.finditer(thing)]
     rest = re.sub(r"\s+", " ", ATTRIBUTE_WORDS.sub(" ", thing)).strip()
     return (rest, [" ".join(attrs).lower()]) if attrs and rest else (thing, [])
+
+
+# ---------------------------------------------------------------- the language a query is typed in
+# eval r1: 'kinderwagen gebraucht' was read as English and searched as 'kinderwagen käytetty myydään tori'.
+LANG_WORDS: dict[str, re.Pattern[str]] = {
+    "fi": re.compile(r"\b(?:käytetty\w*|kaytetty|uusi|myydään|ostetaan|halpa|hinta|lähellä|puhelin|pyörä|sohva|"
+                     r"rattaat|lastenrattaat|auto[nt]?|kahvinkeitin|pöytä|tuoli|hylly|takki|kengät|lahja\w*|äidille|"
+                     r"isälle|siivous|putkimies|parturi|kampaamo|helsingissä|espoossa|tampereella|turussa)\b", re.I),
+    "de": re.compile(r"\b(?:gebraucht\w*|neu|neue[rsn]?|günstig\w*|kaufen|für|mit|kinderwagen|fahrrad|handy|"
+                     r"waschmaschine|kühlschrank|tisch|stuhl|schrank|jacke|schuhe|geschenk\w*|mutter|mama|"
+                     r"klempner|friseur|reinigung|putzfrau|in der nähe|preis)\b", re.I),
+    "sv": re.compile(r"\b(?:begagnad\w*|ny|nya|billig\w*|köpa|cykel|barnvagn|soffa|bord|stol|jacka|skor|"
+                     r"present|mamma|rörmokare|frisör|städning|pris)\b", re.I),
+    "nl": re.compile(r"\b(?:tweedehands|gebruikt\w*|nieuw\w*|goedkoop|kopen|fiets|kinderwagen|bank|tafel|stoel|"
+                     r"jas|schoenen|cadeau\w*|moeder|loodgieter|kapper|schoonmaak\w*|prijs)\b", re.I),
+}
+LANG_COUNTRY = {"fi": "fi", "de": "de", "sv": "se", "nl": "nl"}
+# words several languages share do not decide alone ('kinderwagen' is Dutch and German, 'auto' half of Europe)
+SHARED_WORDS = {"kinderwagen", "auto", "autot", "bank", "present", "ny"}
+
+
+def query_language(text: str) -> str | None:
+    """ISO language the query is typed in when its words say so ('kinderwagen gebraucht' -> 'de', 'puhelin' ->
+    'fi'), else None (English, a brand or a model number: nothing to tell)."""
+    low = (text or "").lower()
+    scores: dict[str, float] = {}
+    for lang, rx in LANG_WORDS.items():
+        for m in rx.finditer(low):
+            w = m.group(0)
+            scores[lang] = scores.get(lang, 0.0) + (0.5 if w in SHARED_WORDS else 1.0)
+    if not scores:
+        return None
+    best = max(scores, key=lambda k: scores[k])
+    ranked = sorted(scores.values(), reverse=True)
+    if ranked[0] < 1.0 or (len(ranked) > 1 and ranked[0] - ranked[1] < 0.5):
+        return None
+    return best
+
+
+# ---------------------------------------------------------------- a generic vehicle, in the home language
+CAR_WORD = {"fi": "auto", "de": "auto", "sv": "bil", "nl": "auto", "da": "bil", "nb": "bil", "fr": "voiture",
+            "es": "coche", "it": "auto", "pl": "samochód", "cs": "auto"}
+COLOUR_WORDS: dict[str, dict[str, str]] = {
+    "red": {"fi": "punainen", "de": "rot", "sv": "röd", "nl": "rood", "da": "rød", "nb": "rød"},
+    "blue": {"fi": "sininen", "de": "blau", "sv": "blå", "nl": "blauw", "da": "blå", "nb": "blå"},
+    "black": {"fi": "musta", "de": "schwarz", "sv": "svart", "nl": "zwart", "da": "sort", "nb": "svart"},
+    "white": {"fi": "valkoinen", "de": "weiß", "sv": "vit", "nl": "wit", "da": "hvid", "nb": "hvit"},
+    "silver": {"fi": "hopea", "de": "silber", "sv": "silver", "nl": "zilver", "da": "sølv", "nb": "sølv"},
+    "grey": {"fi": "harmaa", "de": "grau", "sv": "grå", "nl": "grijs", "da": "grå", "nb": "grå"},
+    "gray": {"fi": "harmaa", "de": "grau", "sv": "grå", "nl": "grijs", "da": "grå", "nb": "grå"},
+    "green": {"fi": "vihreä", "de": "grün", "sv": "grön", "nl": "groen", "da": "grøn", "nb": "grønn"},
+    "yellow": {"fi": "keltainen", "de": "gelb", "sv": "gul", "nl": "geel", "da": "gul", "nb": "gul"},
+    "orange": {"fi": "oranssi", "de": "orange", "sv": "orange", "nl": "oranje", "da": "orange", "nb": "oransje"},
+    "brown": {"fi": "ruskea", "de": "braun", "sv": "brun", "nl": "bruin", "da": "brun", "nb": "brun"},
+}
+
+
+def vehicle_words(need: Need, lang: str | None) -> str | None:
+    """A generic vehicle need in the marketplace's language: 'bright red car' -> 'punainen auto' for tori
+    (eval r1: tori was searched for the English 'car' and returned 229 toys). None when the need names a make or
+    model (those words work in every language) or is no vehicle."""
+    if need.kind != "product" or not vehicle_need(need.thing) or CAR_MAKES.search(need.thing or ""):
+        return None
+    words = [w for w in re.findall(r"[\w-]+", need.thing.lower()) if not VEHICLE_NOUNS.match(w)
+             and not ATTRIBUTE_WORDS.fullmatch(w)]
+    if words:
+        return None                      # 'electric car', 'family car': keep the person's own words
+    lang = lang or "en"
+    colours = [COLOUR_WORDS[c].get(lang, c) if lang != "en" else c
+               for m in need.must_have for c in re.findall(r"[a-z]+", m.lower()) if c in COLOUR_WORDS]
+    noun = CAR_WORD.get(lang, "car") if lang != "en" else "car"
+    return " ".join(colours[:1] + [noun])
 
 
 def is_service(need: Need) -> bool:
@@ -538,6 +643,19 @@ def category_words(node: dict[str, Any]) -> dict[str, Any]:
     return {"labels": labels, "synonyms": list(node.get("synonyms") or [])[:12], "service": svc}
 
 
+def own_domains(node: dict[str, Any]) -> list[dict[str, Any]]:
+    """Where-to-look sites of a node. A service leaf two or more levels down does not inherit its ROOT's sites
+    when the node or a nearer parent has its own (eval r1: 'Wedding photographer' and 'School catering' got
+    lippu.fi / ticketmaster / eventim from 'Events, Tickets & Leisure')."""
+    doms = [w for w in node.get("where") or [] if w.get("lane") != "comparison"]
+    path = list(node.get("path_ids") or [])
+    if node.get("kind") not in ("service", "digital") or len(path) < 3:
+        return doms
+    root = path[0]
+    near = [w for w in doms if w.get("from") not in (None, root)]
+    return near if near else doms
+
+
 def category_info(node_id: str, *, source: str = "tree", confidence: float = 1.0) -> dict[str, Any] | None:
     """A taxonomy node as hunt context (None when the id is unknown or the tree is missing)."""
     tax = _taxonomy()
@@ -548,7 +666,7 @@ def category_info(node_id: str, *, source: str = "tree", confidence: float = 1.0
     if node is None:
         return None
     words = category_words(node)
-    domains = [w for w in node.get("where") or [] if w.get("lane") != "comparison"]
+    domains = own_domains(node)
     return {"id": node["id"], "label": node["label"], "path": node["path"], "path_ids": node["path_ids"],
             "kind": node["kind"], "lanes": node.get("lanes") or [], "size": node.get("size"),
             "bulky": bool(node.get("bulky")), "domains": domains[:12], "labels": words["labels"],
@@ -608,12 +726,28 @@ def categorize(need: Need, category: str | None = None) -> dict[str, Any] | None
         except Exception:
             c2 = None
         c = c2 if not weak(c2) else c
+    if need.kind == "product" and vehicle_need(need.thing) and (weak(c) or c.get("kind") != "vehicle"):
+        # 'volvo v70', 'bright red car': the tree files 'car' under toys and knows no model names; the rules
+        # know a vehicle (make + model, or a vehicle noun) -> Vehicles > Cars, so the car lanes switch on
+        cat = category_info(CARS_NODE, source="rules", confidence=0.9)
+        if cat is not None:
+            need.category = cat
+            return _cat_event(cat)
     if weak(c):
         return None
     cat = category_info(c["id"], source="classified", confidence=c.get("confidence") or 0)
     if cat is None:
         return None
     node_kind = TREE_KINDS.get(cat["kind"], "product")
+    if need.kind in ("service", "digital") and node_kind == "digital" and not SOFTWARE_WORDS.search(need.raw) \
+            and (need.kind == "service" or SERVICE_HINTS.search(need.raw)):
+        # the words named a provider's work ('unlimited graphic design subscription'): its service node, not the
+        # software one ('Graphic Design & Illustration Software' kept an App Store app and a marketing agency)
+        cat = _service_node(tax, need)
+        if cat is None:
+            return None
+        need.category = cat
+        return _cat_event(cat)
     if need.kind in ("service", "digital"):
         if node_kind == "product":
             return None                 # the rules' words beat a weak product guess
@@ -637,6 +771,22 @@ def categorize(need: Need, category: str | None = None) -> dict[str, Any] | None
         return None
     apply_category(need, cat)
     return _cat_event(cat)
+
+
+CARS_NODE = "sp:vp-2-2-1"         # Vehicles > Motor Vehicles > Cars, Trucks & Vans
+SERVICE_NODE_MIN_SCORE = 1.2
+
+
+def _service_node(tax: Any, need: Need) -> dict[str, Any] | None:
+    """The best service node for a service need's core words (subscription / plan words dropped)."""
+    core = re.sub(r"\s+", " ", PERIOD_WORDS.sub(" ", DIGITAL_WORDS.sub(" ", need.thing or need.raw))).strip()
+    try:
+        hits = tax.search(core or need.thing, limit=1, kind="service")
+    except Exception:
+        hits = []
+    if not hits or (hits[0].get("score") or 0) < SERVICE_NODE_MIN_SCORE:
+        return None
+    return category_info(hits[0]["id"], source="classified", confidence=min(1.0, hits[0]["score"] / 1.6))
 
 
 def _cat_event(cat: dict[str, Any]) -> dict[str, Any]:

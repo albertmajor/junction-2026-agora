@@ -108,6 +108,15 @@ def _taxonomy() -> Any | None:
         return None
 
 
+def _names(need: Need, c: dict[str, Any]) -> bool:
+    """The classified node shares a word with the need (agora.need._names_node); True when that check is gone."""
+    try:
+        from agora.need import _names_node
+    except ImportError:
+        return True
+    return _names_node(need.thing or need.raw, c)
+
+
 def classify(need: Need) -> dict[str, Any] | None:
     """-> {id, label, labels{lang: label}, synonyms, kind, path} when the need is a digital / B2B service or
     subscription the long tail can price, else None. Taxonomy first (guarded), then words."""
@@ -127,6 +136,12 @@ def classify(need: Need) -> dict[str, Any] | None:
         except Exception:
             pass
     words = bool(B2B_WORDS.search(text))
+    if cat.get("id") and cat.get("kind") in ("service", "digital"):
+        # the hunt already knows the node (from the tree, or need.categorize picked the service node for
+        # 'unlimited graphic design subscription'): never re-classify into a software shelf
+        return {"id": cat.get("id"), "label": cat.get("label") or need.thing, "labels": cat.get("labels") or {},
+                "synonyms": list(cat.get("synonyms") or [])[:12], "kind": cat.get("kind"),
+                "path": list(cat.get("path") or []), "via": "category"}
     tx = _taxonomy()
     c = None
     if tx is not None:
@@ -134,6 +149,8 @@ def classify(need: Need) -> dict[str, Any] | None:
             c = tx.classify(need.raw or need.thing)
         except Exception:
             c = None
+    if c and not _names(need, c) and not words:
+        c = None                 # eval r1: 'gift for mom' -> 'Financial, Tax & Accounting Software' (no shared word)
     if c and c.get("kind") in ("service", "digital") and (c.get("confidence") or 0) >= 0.3:
         root = " ".join(str(p) for p in c.get("path_ids") or c.get("path") or []).lower()
         local = bool(c.get("lanes")) and any(r in root for r in ("home-services", "trades", "beauty", "health"))

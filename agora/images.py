@@ -504,6 +504,207 @@ def pair_images(page_html: str, rows: list[dict], page_url: str = "", title_key:
     return out
 
 
+# ---------------------------------------------------------------- photos from the page's embedded state
+# Lazy-loaded cards (olx.pl: only the first ~4 of 50 cards carry an <img>, the rest "no_thumbnail.svg") still
+# ship every listing's photos in the page's app state: `window.__PRERENDERED_STATE__ = "<json>"`,
+# `<script id="__NEXT_DATA__" type="application/json">`, `window.__INITIAL_STATE__ = {...}`. A state object
+# whose own link is a row's listing URL carries that listing's photo: keyed by URL, so never a neighbour's.
+
+_STATE_ASSIGN = re.compile(r"window\.__[A-Za-z0-9_]+__\s*=\s*", re.S)
+_JSON_SCRIPT = re.compile(r"<script\b[^>]*type=[\"']application/json[\"'][^>]*>(.*?)</script>", re.S | re.I)
+STATE_MAX_CHARS = 8_000_000
+_LINK_KEYS = ("url", "urlPath", "url_path", "href", "link", "permalink", "path", "canonicalUrl", "canonical_url",
+              "shareUrl", "itemUrl", "item_url", "adUrl", "detailUrl", "webUrl", "web_url")
+_PHOTO_KEYS = ("photosSet", "srcset", "srcSet", "thumbnailUrl", "thumbnail", "thumb", "image", "imageUrl",
+               "image_url", "mainImage", "main_image", "primaryImage", "picture", "photo", "images", "photos",
+               "pictures", "imageUrls", "image_urls", "media", "gallery")
+
+
+def _state_blobs(page: str) -> list[Any]:
+    out: list[Any] = []
+    dec = json.JSONDecoder()
+    budget = STATE_MAX_CHARS
+    for m in _STATE_ASSIGN.finditer(page[:MAX_HTML * 4]):
+        if budget <= 0:
+            break
+        try:
+            val, end = dec.raw_decode(page, m.end())
+        except ValueError:
+            continue
+        budget -= end - m.end()
+        if isinstance(val, str) and val[:1] in "{[":
+            try:
+                val = json.loads(val)
+            except ValueError:
+                continue
+        if isinstance(val, (dict, list)):
+            out.append(val)
+    for m in _JSON_SCRIPT.finditer(page[:MAX_HTML * 4]):
+        body = m.group(1).strip()
+        if not body or body[:1] not in "{[" or len(body) > budget:
+            continue
+        budget -= len(body)
+        try:
+            out.append(json.loads(body))
+        except ValueError:
+            continue
+    return out
+
+
+def _srcset_pick(s: str) -> str | None:
+    """'u1 1x,u2 2x,u3 3x' -> u2 (sharp in a card, not a poster); 'u 320w, v 640w' -> the >= 480 px one."""
+    parts = [p.strip().split() for p in re.split(r",(?=\s*(?:https?:)?//|\s*/)", s) if p.strip()]
+    parts = [p for p in parts if p]
+    if not parts:
+        return None
+    if any(len(p) > 1 and p[1].endswith("w") for p in parts):
+        best, _ = _img_src({"srcset": ", ".join(" ".join(p) for p in parts)})
+        return best
+    for p in parts:
+        if len(p) > 1 and p[1] == "2x":
+            return p[0]
+    return parts[0][0]
+
+
+def _state_photo(v: Any, base: str, depth: int = 0) -> str | None:
+    if depth > 3 or v is None:
+        return None
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        if re.search(r"\s\d+(?:\.\d+)?[xw]\b", s):
+            s = _srcset_pick(s) or ""
+        return _good(s, base) if s else None
+    if isinstance(v, list):
+        for x in v[:3]:
+            got = _state_photo(x, base, depth + 1)
+            if got:
+                return got
+        return None
+    if isinstance(v, dict):
+        for k in ("srcset", "srcSet", "url", "src", "href", "uri", "link", "medium", "large", "full", "original",
+                  "contentUrl", "thumbnail"):
+            if k in v:
+                got = _state_photo(v[k], base, depth + 1)
+                if got:
+                    return got
+    return None
+
+
+def state_photos(page: str, base: str, paths: set[str] | None = None) -> dict[str, str]:
+    """{listing path: photo URL} from the page's embedded app state (only paths in `paths`, when given)."""
+    out: dict[str, str] = {}
+    if not page or (paths is not None and not paths):
+        return out
+    for blob in _state_blobs(page):
+        for node in _walk(blob):
+            link = None
+            for k in _LINK_KEYS:
+                v = node.get(k)
+                if isinstance(v, str) and len(v) > 5 and "/" in v:
+                    p = _norm_path(urljoin(base, v.strip()))
+                    if len(p) >= 6 and (paths is None or p in paths):
+                        link = p
+                        break
+            if link is None or link in out:
+                continue
+            for k in _PHOTO_KEYS:
+                if k in node:
+                    got = _state_photo(node[k], base)
+                    if got:
+                        out[link] = got
+                        break
+    return out
+
+
+def fill_from_state(rows: list[dict], page_html: str, page_url: str) -> list[dict]:
+    """Rows left without a photo get their own listing's photo from the embedded app state."""
+    rows = [dict(r) for r in rows]
+    missing = {_norm_path(urljoin(page_url or "", str(r.get("url") or ""))): i
+               for i, r in enumerate(rows) if not r.get("image") and r.get("url")}
+    missing.pop("", None)
+    if not missing or not page_html:
+        return rows
+    found = state_photos(page_html, page_url or str(rows[0].get("url") or ""), set(missing))
+    taken = {photo_key(r.get("image")) for r in rows if r.get("image")}
+    for p, i in missing.items():
+        u = found.get(p)
+        if u and photo_key(u) not in taken:
+            rows[i]["image"] = u
+            rows[i]["image_check"] = "state"
+            taken.add(photo_key(u))
+    return rows
+
+
+# ---------------------------------------------------------------- a service provider's picture
+# A plumber's / photographer's / accountant's page has no product photo, but it has a face: its og:image
+# (a team or work photo, often a brand card) or its JSON-LD LocalBusiness image / logo. Logos and brand
+# cards are fine here (they show WHO the provider is); favicons, 1x1 pixels and data: URIs are not.
+
+BUSINESS_HINT = ("business", "organization", "organisation", "service", "store", "professional", "contractor",
+                 "plumber", "electrician", "dentist", "agency", "office", "salon", "restaurant", "corporation",
+                 "photograph", "accounting", "insurance", "localbusiness", "homeandconstruction", "website",
+                 "webpage", "person")
+_NOT_A_FACE = re.compile(r"(^|[/_.-])(favicon|sprite|sprites|spacer|pixel|blank|transparent|loader|loading|"
+                         r"spinner|placeholder|1x1)([/_.-]|$)|\.ico(\?|$)", re.I)
+
+
+def _any_image(u: str | None, base: str) -> str | None:
+    if not u or not isinstance(u, str):
+        return None
+    u = _html.unescape(u.strip())
+    if u.startswith("//"):
+        u = "https:" + u
+    u = urljoin(base, u)
+    if not u.startswith(("https://", "http://")) or "#" in u:
+        return None                  # '#' = a JSON-LD @id reference (.../#/schema/logo/image/), not a file
+    try:
+        path = urlsplit(u).path
+    except ValueError:
+        return None
+    if not path.strip("/"):
+        return None
+    return None if _NOT_A_FACE.search(path) else u
+
+
+def service_image(page: str, url: str) -> str | None:
+    """og:image > JSON-LD business image > JSON-LD logo > a real product-style photo on the page."""
+    if not page:
+        return None
+    head = page[:400_000]
+    found: dict[str, str] = {}
+    for m in _META.finditer(head):
+        a = attrs(m.group(0))
+        k = (a.get("property") or a.get("name") or "").lower()
+        if k in ("og:image", "og:image:secure_url", "og:image:url", "twitter:image", "twitter:image:src") \
+                and a.get("content"):
+            found.setdefault(k, a["content"])
+    for k in ("og:image:secure_url", "og:image", "og:image:url", "twitter:image", "twitter:image:src"):
+        u = _any_image(found.get(k), url)
+        if u:
+            return u
+    logo = None
+    try:
+        for b in jsonld_blocks(page):
+            for node in _walk(b):
+                types = " ".join(_types(node))
+                if not any(h in types for h in BUSINESS_HINT):
+                    continue
+                u = _any_image(_img_value(node.get("image")), url)
+                if u:
+                    return u
+                logo = logo or _any_image(_img_value(node.get("logo")), url)
+    except Exception:
+        pass
+    if logo:
+        return logo
+    try:
+        return dom_image(page, url)
+    except Exception:
+        return None
+
+
 def pair_rows_for_reader(rows: list[dict], page_html: str, page_url: str) -> list[dict]:
     """Drop-in for reader.offers_from_split / marketplaces.split_rows callers:
         rows = marketplaces.split_rows(md, page_html, site)
@@ -511,7 +712,11 @@ def pair_rows_for_reader(rows: list[dict], page_html: str, page_url: str) -> lis
     Rows keep every field; `image` is re-paired and `image_check` says why. Rows that end without an image
     are what the front end backfills via /api/images. Never raises."""
     try:
-        return pair_images(page_html, rows, page_url)
+        rows = pair_images(page_html, rows, page_url)
+    except Exception:
+        pass
+    try:
+        return fill_from_state(rows, page_html, page_url)
     except Exception:
         return rows
 

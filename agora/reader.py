@@ -1133,6 +1133,24 @@ def _domain_is_slow(url: str) -> bool:
         return False
 
 
+def _fill_image(offer: Offer, html: str) -> None:
+    """An offer read from its own page but given no photo gets the page's: a provider's og:image / business
+    image / logo for a service, the product photo (JSON-LD, og:image, title-matching <img>) otherwise."""
+    try:
+        from agora import images as _images
+        if offer.condition == "service":
+            u = _images.service_image(html, offer.url)
+            via = "service_page"
+        else:
+            u = _images.image_from_html(html, offer.url).get("image")
+            via = "page"
+        if u and _images.public_url(u):
+            offer.image = u
+            offer.raw.setdefault("image_source", via)
+    except Exception:
+        pass
+
+
 def _annotate(offer: Offer, html: str, snippet: str, title: str = "") -> None:
     """Untrusted-text hygiene + coupon stack on every offer the reader returns."""
     offer.title = fence.clean_field(offer.title) or ""
@@ -1148,6 +1166,8 @@ def _annotate(offer: Offer, html: str, snippet: str, title: str = "") -> None:
     signals = sorted(set(fence.injection_signals(raw_text)) | set(fence.injection_signals(f"{title} {snippet}")))
     if signals:
         offer.raw["injection"] = signals
+    if html and not offer.image:
+        _fill_image(offer, html)
     found = coupons.find_coupons(page_text, "page", offer.price) if page_text else []
     seen = {c["code"] for c in found}
     found += [c for c in coupons.find_coupons(f"{title} {snippet}", "snippet", offer.price) if c["code"] not in seen]
