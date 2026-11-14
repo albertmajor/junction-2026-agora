@@ -1657,7 +1657,7 @@ def also_at_note(o: Offer) -> str | None:
             dear.setdefault(x["source"], x)
     if not dear:
         return None
-    return ("same place also listed at " + ", ".join(f"{x['source']} for {fmt(x['price_eur'])}"
+    return ("same place also listed at " + ", ".join(f"{x['source']} for {fmt_rate(x['price_eur'])}"
                                                      for x in list(dear.values())[:3]) + ": the lower price shown")
 
 

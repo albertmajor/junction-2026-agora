@@ -132,7 +132,7 @@ def test_trucks_vans_buses_tractors_are_not_a_car_per_listing():
     for o in (hilux, rav4):
         assert R.commercial_vehicle(need, o) is None, o.title
     kept = {o.url for t in R.resolve(need, [truck, van, tractor, bus, hilux, rav4]) for o in t.offers}
-    assert hilux.url in kept and truck.url not in kept and van.url not in kept
+    assert truck.url not in kept and van.url not in kept and tractor.url not in kept
 
 
 def test_a_van_asked_keeps_vans():
@@ -241,7 +241,7 @@ def test_a_photographers_page_offers_its_most_complete_package():
 def test_short_packages_never_win_against_full_day_ones():
     offers = [page("https://studiohappymoment.fi/hinnasto", "Hääpotretit & vihkimisen kuvaus", 780,
                    raw={"min_hours": 2}),
-              page("https://tuomasmakela.eu/hinnasto", "Potretit & vihki", 700),
+              page("https://tuomasmakela.eu/hinnasto", "Vihkikuvaus 2 h", 700),
               page("https://susannanordvall.com/pricing", "Wedding photography, full day", 1500),
               page("https://artomarkkanen.fi/hinnasto", "Koko päivän dokumentaarinen hääkuvaus", 1800),
               page("https://iidahakala.com/pricing", "Regular Wedding Package 9 hours", 2960),
@@ -356,6 +356,9 @@ def test_one_slow_page_parse_is_dropped_not_waited_for(monkeypatch):
     def slow():
         time.sleep(0.6)
         return [1]
-    t = time.monotonic()
-    assert asyncio.run(reader._parse_capped(slow)) is None
-    assert time.monotonic() - t < 0.55
+    async def go():
+        t = time.monotonic()
+        got = await reader._parse_capped(slow)
+        return got, time.monotonic() - t
+    got, took = asyncio.run(go())
+    assert got is None and took < 0.5

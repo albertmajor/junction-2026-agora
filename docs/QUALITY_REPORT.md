@@ -138,3 +138,29 @@ On 2026-11-14 the weak-area queries were rerun live on a fresh server (port 9150
 - Wedding packages need hours or coverage (full day, ceremony only) to normalise. Otherwise the cheapest short package wins and full-day packages are flagged as high.
 - The same restaurant or provider on two aggregators at different prices is not merged.
 - Hunts with large list pages (winter jacket women) run about 10 s over the 25 s budget.
+
+## Round 6: weak areas fixed
+
+On 2026-11-15 the six open items from round 5 were fixed offline (tests first, `tests/test_weak_r6.py`, 20 tests; `.venv/bin/pytest -q` gives **1828 passed**). Then four queries were rerun live on a fresh server (port 9160, 25 s hunt budget). Saved streams are in the session scratchpad `weak6/`.
+
+| Query | Time (r5 → r6) | Pick | Verdict |
+|---|---|---|---|
+| gunsmith | 7 s → 3.5 s | €75 at aseseppa.pro (€75/h × 1 h, standard workshop job) | Good. No call-out on any line. Threading €100, machining €230 and deactivation €450 are listed as "other prices", not ranked. aseteam.fi's flat €60 is "from €60" with a note and ranks after the hourly shops. |
+| wedding photographer helsinki | 6 s → 5.9 s | €1,700 "Klassinen" (full day, 8 h), aigulphotography.com | Good. Lines show coverage ("full day, 8 h"). Typical range per coverage: full day €1,845–2,424 (11 packages), coverage not stated €454–1,452, ceremony €550. The band is per coverage, so full-day packages are no longer "2.7x median". |
+| winter jacket women | 35 s → 25.8 s | €18 used "Naisten talvitakki", tori.fi | Good. 2,214 offers, 2,073 kept. The whole hunt now fits the budget. |
+| bright red car | 23 s → 15 s | €13,900 Skoda Yeti (2014, 120,000 km, automatic, red), nettiauto | Good. Every nettiauto car shows year, km, fuel, gearbox and colour. 8 cars now state red (r5: almost none). The Transit Custom, Sprinter, Boxer and Transporter were rejected as vans. autoline.info listings are judged one by one. |
+
+**What changed:**
+1. **Car facts (`agora/reader.py`, `agora/hunt.py`):** when nettiauto is read through the paid markdown split, the cars now come from the scrape's own HTML ItemList (year, km, fuel, gearbox, colour). Split rows and dealer titles get facts from their own text (`car_facts_from_text`). Each car gets `raw.subtitle`. The stream offer adds `subtitle` and `vehicle` fields and appends the facts to the shown `title`. The internal title used for matching is unchanged. The verdict adds a line "the car: …".
+2. **Commercial vehicles (`resolve.commercial_vehicle`):** for a passenger-car need, each listing is checked on its own. A truck, van, bus or tractor is rejected, whether its address path (autoline `/sale/trucks/`, `/vans/`, `/farm-tractors/`), its title words, its body type or a truck or tractor make shows it. A need that names such a vehicle ("sprinter van") keeps them. No site is blocked.
+3. **Workshop trades (`resolve.WORKSHOP_TRADES`, `judge.service_cost`):** a gunsmith is costed as hourly rate × 1 h (or the page's stated minimum). It never has a call-out fee. A line that names a specific job counts as a task: it is listed apart and never ranked. An unexplained flat price is a starting price: it has a note and ranks after the hourly offers.
+4. **Package coverage (`judge.package_coverage`, `_rank_by_coverage`, `coverage_lines`):** coverage is read from the line itself (hours, full day, short day, ceremony only, portraits only). A photographer's page offers its most complete package (`reader.best_service_offer`). Price bands and the "x median" check are per coverage. Stated shorter packages rank after full-day ones. An unstated package priced under 60% of the full-day median does too. Each package shows its price per covered hour. The verdict shows the typical range per coverage group.
+5. **Aggregator duplicates (`judge._dedupe_service`):** the same place on several aggregators (matched by name, unit and town) becomes one offer. It keeps the lower price, lists the other sites in `raw.also_at` and `merged_sources`, and gets the flag and verdict line "same place also listed at lunchmenu.fi for €9.80: the lower price shown". The same chain in two towns stays as two offers. Lunch was not rerun live (the fix is covered offline).
+6. **Hunt deadline (`hunt.finish_reserve`, `reader.HUNT_DEADLINE`):** reads now stop before the budget ends. The time saved is reserved for resolving, judging and checking the pick: 1 s plus 2.5 ms per offer, at most 6 s and at most 25% of the budget. Free result pages stop starting new batches 3 s before the reads end, and a batch in flight is dropped at that point. Each page after the first is parsed in a worker thread, capped at 2.5 s. The trust wait, the model relevance check and the pick check get only what is left of the budget. The price-history write runs after the stream ends.
+
+**Tests changed:** two older expectations no longer hold under the new rule and were updated (`test_relevance_r2::test_wedding_portraits_only_package_is_not_the_pick`, `test_service_pricing_r5::test_wedding_packages_are_never_ranked_against_hourly_rates`). Before, a ceremony-only or 4 h package won against full-day ones.
+
+**Still open:**
+- Dealer list reads through the paid JSON schema (auto1.fi, carvago, rintajouppi) carry only what their titles say, so most of them still have no km or year.
+- Many autoline.info "cars" rows without a year or km are still dropped by the existing "no evidence" rule. That rule predates this round.
+- Wedding pages read before this round have no stated hours, so 4 packages are still "coverage not stated".
