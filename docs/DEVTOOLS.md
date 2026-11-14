@@ -133,3 +133,80 @@ Limits:
   remove the `text-transform` declarations already written; remove them by hand or from git.
 - Some literal `font-variation-settings` are written for Fraunces only, such as the logo's
   `SOFT`/`WONK` and a few landing italics. A family without those axes ignores them.
+
+# Dev logo panel
+
+A second, separate local-only panel for the header logo: the monkey mark plus the "price**monkey**" wordmark.
+It changes the logo only. The wordmark keeps the applied display font (Fraunces); to change the font itself, use
+the type panel above.
+
+- Code: `agora/web/js/logodev.js`, `agora/web/css/logodev.css`. `main.js` imports them through one line, only on
+  `localhost`, `127.0.0.1` or `[::1]`.
+- Apply script: `scripts/apply_logo.py`
+- Tests: `tests/test_logodev.py`, which runs `tests/web/logodev.test.mjs` in node.
+
+## Open it
+
+- open `http://localhost:8765/?logodev=1` (`?logodev=0` keeps it closed)
+- press **Ctrl+Shift+L** or **Cmd+Shift+L** to toggle the panel
+
+Drag the header to move the panel. **–** collapses it and **×** closes it. When custom settings are active and the
+panel is closed, a "custom logo" pill appears in the bottom left; click it to reopen. Settings and the panel
+position are kept in `localStorage`.
+
+## What you can set
+
+| Group | Controls | Token(s) in `base.css` `:root` |
+|---|---|---|
+| Mark | image size (width in px; height = width × 0.85), gap to the text, tilt, hover wiggle on/off + hover tilt | `--logo-mark-w`, `--logo-gap`, `--logo-tilt`, `--logo-hover-tilt` (0deg = no wiggle) |
+| Vertical centring | centre on the x-height or cap-height middle (or a custom em value), fine nudge in px or em (+ = text lower), guides | `--logo-center`, `--logo-nudge` |
+| Wordmark | size, weight and hover weight (the `wght` axis of the same font), letter-spacing (em), case, italic for "price" and "monkey" separately | `--logo-size`, `--logo-weight`, `--logo-hover-weight`, `--logo-tracking`, `--logo-case`, `--logo-price-style`, `--logo-monkey-style` |
+| Colours | "price" and "monkey", light and dark separately; a preview switch (auto / light / dark) | `--logo-price-light`, `--logo-monkey-light`, `--logo-price-dark`, `--logo-monkey-dark` |
+| Footer mark | size and nudge of the small mark before the footer line | `--logo-foot-w`, `--logo-foot-nudge` |
+
+Colours take `#rrggbb` (from the picker or typed) or a token such as `var(--ink)`.
+
+**A / B** compares versions. **A** is the logo in the code now and **B** is your settings. **Reset** goes back to A.
+
+### How the centring works
+
+The logo is a single line of inline content. The mark has
+`vertical-align: calc(var(--logo-center) - var(--logo-mark-w) * 0.425 + var(--logo-nudge))`, which puts the middle of
+the mark exactly `--logo-center` above the text baseline. `--logo-center` is half of the wordmark's x-height
+(`0.2325em`, measured from rendered pixels of Fraunces italic at opsz 48) or half its cap-height (`0.35em`, which
+the panel picks when you choose UPPERCASE). Because the value is in em, it holds at any wordmark size, on desktop
+and phone. The footer mark uses `vertical-align: middle`, which is the middle of the text's x-height for whatever
+font the footer uses.
+
+**guides** draws a red line through the middle of the mark and a blue band over the x-height or cap-height. When
+the logo is centred, the red line runs through the middle of the band.
+
+## Export → apply
+
+**Export JSON** copies the JSON to the clipboard and downloads `pricemonkey-logo.json`:
+
+```json
+{
+  "version": 1,
+  "logo": { "markWidth": 40, "gap": 8, "tilt": 0, "hoverTilt": -7, "size": 26.31, "weight": 400, "hoverWeight": 500,
+            "tracking": -0.007, "center": 0.2325, "nudge": 0, "nudgeUnit": "px", "footerWidth": 19, "footerNudge": 0,
+            "wiggle": true, "case": "lowercase", "priceItalic": true, "monkeyItalic": true,
+            "colors": { "light": { "price": "var(--ink)", "monkey": "#4E3818" },
+                        "dark":  { "price": "var(--ink)", "monkey": "#D9B98C" } } },
+  "vars": { "--logo-mark-w": "40px", "...": "..." }
+}
+```
+
+`vars` is for reading only. The script works from `logo` and checks it the same way the panel's Import does:
+numbers are clamped to the slider ranges, and unknown values keep the current ones.
+
+```sh
+.venv/bin/python scripts/apply_logo.py pricemonkey-logo.json --dry-run   # list the token changes + a diff
+.venv/bin/python scripts/apply_logo.py pricemonkey-logo.json             # write them
+```
+
+The script changes only the `--logo-*` values in the first `:root` block of `agora/web/css/base.css`, and only the
+values that differ. Running it again with the same file changes nothing. After a run, the panel's A is the new logo.
+
+Note: the logo's size, weight and tracking are now `--logo-*` tokens, so `apply_fonts.py` no longer rescales the
+logo with the display role. The logo panel controls them.

@@ -3,6 +3,7 @@ import { S, bus, emit, on, eur, domainOf, resetStore, allIn, isJobItem, pickUrl,
 import * as stream from './stream.js';
 import { mountMascot, setDeciding } from './mascot.js';
 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) import('./devtools.js').then(m => m.init()).catch(e => console.warn('[agora] devtools', e)); // dev type panel: local only (?dev=1, Ctrl/Cmd+Shift+D)
+if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) import('./logodev.js').then(m => m.init()).catch(e => console.warn('[agora] logodev', e)); // dev logo panel: local only (?logodev=1, Ctrl/Cmd+Shift+L)
 
 const $ = id => document.getElementById(id);
 const app = $('app'), bar = $('bar'), ask = $('ask'), qIn = $('q'), start = $('start'), h1 = start.querySelector('h1');

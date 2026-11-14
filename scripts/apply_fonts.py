@@ -427,7 +427,7 @@ def apply(data: dict, web: pathlib.Path = WEB, dry_run: bool = False, out=sys.st
     plan = make_plan(base, s)
     changed = []
     for p in sorted((web / "css").glob("*.css")):
-        if p.name == "devtools.css":
+        if p.name in ("devtools.css", "logodev.css"):
             continue
         src = base_css if p == base_css_p else p.read_text()
         dst = transform_css(src, plan)

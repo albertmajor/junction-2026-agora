@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "tool": "PriceMonkey monkey placement",
+  "anchor": "search box (#ask): dx from its right edge, dy from its bottom",
+  "dx": 69,
+  "dy": 62,
+  "w": 157,
+  "flip": false,
+  "rot": 3
+}

@@ -167,7 +167,7 @@ export function mountMascot() {
 /** Where the start-screen monkey stands, relative to the search box (#ask): his left edge `dx` px right of the
  *  box's right edge, his feet `dy` px below the box's bottom; `w` = width in px; `flip` mirrors him; `rot` tilts.
  *  The owner sets these with the monkey devtool (?monkeydev=1 or Ctrl+Shift+M on localhost) and exports JSON. */
-export const MONKEY_PLACE = { dx: 22, dy: 0, w: 75, flip: false, rot: 0 };
+export const MONKEY_PLACE = { dx: 69, dy: 62, w: 157, flip: false, rot: 3 };
 const LOCAL = () => typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 export function monkeyPlace() {
   if (LOCAL()) {
@@ -189,6 +189,15 @@ export function placeStartMonkey(cfg = monkeyPlace()) {
   m.style.left = `${Math.round(a.right - s.left + cfg.dx)}px`;
   m.style.top = `${Math.round(a.bottom - s.top - h + cfg.dy)}px`;
   if (img) img.style.transform = `${cfg.flip ? 'scaleX(-1) ' : ''}rotate(${cfg.rot || 0}deg)`;
+  // the banana mirrors him on the left of the box: same gap, feet on the same line, opposite tilt
+  const ban = document.querySelector('#start .start-banana');
+  if (ban) {
+    const bw = Math.round(cfg.w * 0.55), bh = Math.round(bw * 45 / 72);
+    ban.style.width = `${bw}px`;
+    ban.style.left = `${Math.round(a.left - s.left - cfg.dx - bw)}px`;
+    ban.style.top = `${Math.round(a.bottom - s.top + cfg.dy - bh)}px`;
+    ban.style.transform = `rotate(${-(cfg.rot || 0) - 18}deg)`;
+  }
 }
 if (typeof window !== 'undefined') {
   const go = () => requestAnimationFrame(() => placeStartMonkey());

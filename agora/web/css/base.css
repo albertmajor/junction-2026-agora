@@ -32,6 +32,16 @@
   --mono-weight: 400; --mono-size: 12px; --mono-ratio: 1.25; --mono-lh: 1.5; --mono-tracking: normal;
   --mono-features: normal; --mono-vs: normal;
   --logo-vs:    "opsz" 48, "SOFT" 100, "WONK" 1;
+  /* the logo (monkey mark + "price|monkey" wordmark). The anchors the logo dev panel (web/js/logodev.js, localhost
+     only) and scripts/apply_logo.py read and write; the family stays --serif. --logo-center is the wordmark's optical
+     middle above its baseline: half of Fraunces' x-height (0.2325em, measured on the italic at opsz 48) or half its
+     cap-height (0.35em). The mark's middle sits on it; --logo-nudge (+ = text lower) is the fine adjustment. */
+  --logo-mark-w: 40px; --logo-gap: 8px; --logo-size: 26.31px; --logo-weight: 400; --logo-hover-weight: 500;
+  --logo-tracking: -0.007em; --logo-case: lowercase; --logo-price-style: italic; --logo-monkey-style: italic;
+  --logo-center: 0.2325em; --logo-nudge: 0px; --logo-tilt: 0deg; --logo-hover-tilt: -7deg;
+  --logo-price-light: var(--ink); --logo-monkey-light: #4E3818; --logo-price-dark: var(--ink); --logo-monkey-dark: #D9B98C;
+  --logo-foot-w: 19px; --logo-foot-nudge: 0px;
+  --logo-price: var(--logo-price-light); --logo-monkey: var(--logo-monkey-light);
   --ease:  cubic-bezier(.2,.7,.2,1);
   --t-ui: 160ms; --t-drop: 450ms; --t-turn: 900ms;
   --r-sheet: 12px; --r-pill: 999px;
@@ -49,6 +59,7 @@
     --field:#1E1C19; --shadow-sheet: 0 8px 24px rgba(0,0,0,.4);
     --flag:#D9774E; --ok:#5FA683; --alarm:#E5594F;
     --live:#FF7A45; --ink-blue:#9DB8E8; --paper-2:#1D1B18; --brown:#D9B98C;
+    --logo-price: var(--logo-price-dark); --logo-monkey: var(--logo-monkey-dark);
     color-scheme: dark;
   }
 }
@@ -58,6 +69,7 @@
   --field:#1E1C19; --shadow-sheet: 0 8px 24px rgba(0,0,0,.4);
   --flag:#D9774E; --ok:#5FA683; --alarm:#E5594F;
   --live:#FF7A45; --ink-blue:#9DB8E8; --paper-2:#1D1B18; --brown:#D9B98C;
+  --logo-price: var(--logo-price-dark); --logo-monkey: var(--logo-monkey-dark);
   color-scheme: dark;
 }
 @media (max-width: 640px) { :root { --gutter: 16px; --line-h: auto; } }
@@ -101,21 +113,31 @@ button { cursor: pointer; }
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px;
   padding: 22px 0 0; min-height: 64px;
 }
-.logo { display: inline-flex; align-items: flex-end; gap: 8px; text-decoration: none; }
-.logo span {
-  font: italic 340 26.31px/0.951 var(--serif); letter-spacing: -0.007em; text-transform: lowercase;
-  font-variation-settings: var(--logo-vs), "wght" 400;
+/* the logo: one line of inline content, so the mark can sit on the wordmark's baseline. vertical-align raises the
+   mark's bottom to baseline + (optical middle - half its height): its middle lands on the middle of the x-height
+   (or cap-height), not on the line box. All values are the --logo-* tokens in :root. */
+.logo {
+  display: inline-block; white-space: nowrap; text-decoration: none;
+  font: var(--logo-price-style) var(--logo-weight) var(--logo-size)/0.951 var(--serif);
+}
+.logo .brand {
+  font-family: var(--serif); font-style: var(--logo-price-style); color: var(--logo-price);
+  letter-spacing: var(--logo-tracking); text-transform: var(--logo-case);
+  font-variation-settings: var(--logo-vs), "wght" var(--logo-weight);
   transition: font-variation-settings 300ms var(--ease);
-  padding-bottom: 3px;
 }
 /* the second half of the wordmark in the monkey's brown (tan at night) */
-.logo span b { font-weight: inherit; color: var(--brown); }
-/* hover: the soft italic firms up (variable-font morph: SOFT 100 -> 0, wght 400 -> 500) */
-.logo:hover span, .logo:focus-visible span { font-variation-settings: "opsz" 48, "SOFT" 0, "WONK" 1, "wght" 500; }
-/* the monkey head: flat, hand-drawn; on hover it cocks its head */
-.logo-mark { width: 40px; height: 34px; display: block; flex: none; transform-origin: 50% 100%; transition: transform 300ms var(--ease); }
-.logo:hover .logo-mark, .logo:focus-visible .logo-mark { transform: rotate(-7deg); }
-@media (prefers-reduced-motion: reduce) { .logo-mark { transition: none; } .logo:hover .logo-mark { transform: none; } }
+.logo .brand b { font-weight: inherit; font-style: var(--logo-monkey-style); color: var(--logo-monkey); }
+/* hover: the soft italic firms up (variable-font morph: SOFT 100 -> 0, wght -> --logo-hover-weight) */
+.logo:hover .brand, .logo:focus-visible .brand { font-variation-settings: "opsz" 48, "SOFT" 0, "WONK" 1, "wght" var(--logo-hover-weight); }
+/* the monkey head: flat, hand-drawn; on hover it cocks its head (--logo-hover-tilt; 0deg = no wiggle) */
+.logo-mark {
+  width: var(--logo-mark-w); height: calc(var(--logo-mark-w) * 0.85); margin-right: var(--logo-gap);
+  vertical-align: calc(var(--logo-center) - var(--logo-mark-w) * 0.425 + var(--logo-nudge));
+  transform: rotate(var(--logo-tilt)); transform-origin: 50% 100%; transition: transform 300ms var(--ease);
+}
+.logo:hover .logo-mark, .logo:focus-visible .logo-mark { transform: rotate(calc(var(--logo-tilt) + var(--logo-hover-tilt))); }
+@media (prefers-reduced-motion: reduce) { .logo-mark { transition: none; } .logo:hover .logo-mark { transform: rotate(var(--logo-tilt)); } }
 #links { display: flex; gap: 20px; font-size: 13px; color: var(--ink-2); justify-self: end; }
 #links a { text-decoration: none; }
 #links a:hover { color: var(--ink); }
@@ -166,7 +188,10 @@ button { cursor: pointer; }
   position: absolute; left: calc(50% + 344px); top: 30px; width: 75px; height: auto;
   animation: rise 700ms 180ms var(--ease) both; pointer-events: none;
 }
-@media (max-width: 1000px) { .start-monkey { display: none; } }
+/* a banana on the other side of the box, mirroring the monkey (placed by mascot.js placeStartMonkey) */
+.start-banana { position: absolute; width: 72px; height: auto; pointer-events: none; animation: rise 700ms 240ms var(--ease) both; }
+@media (max-width: 1000px) { .start-monkey, .start-banana { display: none; } }
+#start:has(#status.none) .start-banana { display: none; }
 /* one monkey at a time: the found-nothing one replaces him */
 #start:has(#status.none) .start-monkey { display: none; }
 /* the start screen's big question only: its own line height (owner, pricemonkey-fonts (7).json) */
@@ -333,7 +358,8 @@ button { cursor: pointer; }
 #rule p { margin: 0; }
 #rule .say { text-wrap: balance; }
 #rule .soft { color: var(--ink-3); }
-.rule-mark { width: 19px; height: 16px; margin-right: 8px; vertical-align: -3px; }
+/* the small mark before the footer line: its middle on the middle of the text's x-height (vertical-align: middle) */
+.rule-mark { width: var(--logo-foot-w); height: calc(var(--logo-foot-w) * 0.85); margin-right: 8px; vertical-align: middle; position: relative; top: calc(0px - var(--logo-foot-nudge)); }
 .foot-links { display: flex; gap: 18px; }
 .foot-links a { text-decoration: none; color: var(--ink-3); }
 .foot-links a:hover { color: var(--ink); }
