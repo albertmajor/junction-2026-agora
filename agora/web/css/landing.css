@@ -517,8 +517,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ld-js .ld-rv { transform: none; }
-  .ld-js .ld-rv.in { transition: opacity 300ms linear; }
+  /* no motion at all: everything is simply there */
+  .ld-js .ld-rv, .ld-js .ld-rv.in { opacity: 1; transform: none; transition: none; }
   .ld-pulse::after { animation: none; opacity: 0; }
   .mk-box i { animation: none; }
 }
@@ -530,3 +530,33 @@
 #landing > section.ld-band:nth-of-type(even) { --ld-bg: color-mix(in srgb, var(--paper) 95%, var(--ink) 5%); }
 /* the closing band just continues the two-tone rhythm (owner: no olive/banana slab) */
 #landing > section.ld-band#ld-close { --ld-acc: var(--ld-acc-sun); }
+
+/* ---------- restrained accents (owner: closer to our site, a few touches only) ----------
+   one italic tan word per headline; at most one thin, static hand-drawn mark per section; one tilted receipt pair. */
+.ld-h:not(.ld-h-pull) em { font-style: italic; color: var(--ld-acc, var(--ink-2)); }
+.ld-close-h em { font-style: italic; color: var(--ld-acc-sand); }
+.ld-mk { position: relative; display: inline-block; white-space: nowrap; }
+.ld-mk-s { position: absolute; pointer-events: none; overflow: visible; fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; }
+.ld-mk.mk-under .ld-mk-s { left: -2%; width: 104%; bottom: -0.16em; height: 0.26em; stroke-width: 2.5px; }
+.ld-mk.mk-oval .ld-mk-s { left: -0.22em; right: -0.22em; width: calc(100% + 0.44em); top: -0.08em; height: calc(100% + 0.12em); stroke-width: 2px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ld-mk-s { stroke: color-mix(in srgb, var(--accent) 80%, var(--tan)); } }
+:root[data-theme="dark"] .ld-mk-s { stroke: color-mix(in srgb, var(--accent) 80%, var(--tan)); }
+
+/* 04: the two receipts, lightly tilted like cards on a counter, each with small label pills on its edge */
+.ld-rcs.ld-fan { gap: 28px 12px; padding-top: 14px; }
+.ld-fan .ld-rc { position: relative; box-shadow: 0 1px 0 var(--hair), 0 10px 24px -18px color-mix(in srgb, var(--ink) 45%, transparent); }
+.ld-fan .ld-rc:nth-child(1) { rotate: -2deg; }
+.ld-fan .ld-rc:nth-child(2) { rotate: 1.6deg; translate: 0 18px; z-index: 1; }
+.rc-pill {
+  position: absolute; top: -12px; z-index: 2; padding: 5px 10px; border-radius: var(--r-pill); white-space: nowrap;
+  font: 500 12px/1 var(--mono); color: #1C1B18; background: var(--tan); box-shadow: 0 0 0 1px color-mix(in srgb, #1C1B18 12%, transparent);
+}
+.rc-pill.p-tag { left: 14px; background: var(--receipt); color: var(--ink-2); box-shadow: 0 0 0 1px var(--hair); }
+.rc-pill.p-vat { right: 14px; }
+.rc-pill.p-pick { right: 14px; background: var(--accent); }
+/* 06: the odd price's verdict, as a small label */
+.ld-flag { display: block; width: max-content; margin: 0 auto 8px; padding: 5px 10px; border-radius: var(--r-pill); font: 500 12px/1 var(--mono); font-style: normal; color: #1C1B18; background: var(--tan); }
+@media (max-width: 640px) {
+  .ld-fan .ld-rc:nth-child(1) { rotate: -1.2deg; }
+  .ld-fan .ld-rc:nth-child(2) { rotate: 1deg; translate: none; }
+}
