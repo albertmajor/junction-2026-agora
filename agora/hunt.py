@@ -77,6 +77,8 @@ def offer_payload(offer: Offer) -> dict[str, Any]:
             d["vehicle"] = dict(raw["vehicle"])
     if raw.get("posted_at"):
         d["posted_at"] = str(raw["posted_at"])     # when the listing went up, ISO (the card's own date)
+    if raw.get("matches"):
+        d["matches"] = list(raw["matches"])        # the wishes this listing states ('purple', '44'): chips
     d["origin"] = _origin(offer)
     return d
 
@@ -1044,6 +1046,12 @@ async def hunt(
             return
         offer_keys[key] = url
         out.offers.append(offer)
+        if getattr(need, "prefs", None):
+            try:
+                from agora import prefs as prefs_mod
+                prefs_mod.mark(need, offer)       # 'matches: purple, 44' on the card as it streams in
+            except Exception:
+                pass
         await queue.put(ev("offer", offer=offer_payload(offer)))
         rank = board.update(out.offers)
         if rank is not None:

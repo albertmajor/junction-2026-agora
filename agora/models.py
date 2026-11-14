@@ -29,6 +29,9 @@ class Need:
     for_platform: str | None = None
     item_kind: str | None = None
     prefer: list[str] = field(default_factory=list)   # soft wishes: 'disc' | 'digital'
+    # soft preferences from a chatty request (agora.prefs): [{kind: size|colour|area|feature|word, value, label}].
+    # They rank listings that state them higher ('matches: purple, 44'), never filter.
+    prefs: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass

@@ -1426,6 +1426,21 @@ def ask_card(out: dict[str, Any], lang: str) -> dict[str, Any]:
     return card
 
 
+def core_item(text: str) -> str | None:
+    """The core item of a chatty or detailed request (agora.need + agora.prefs: 'i want to buy some hawaianas,
+    size 44 1/3 purple color' -> 'havaianas'), None when the words are the item already. Its meanings are what
+    is asked about: a clear core never asks, an ambiguous one ('i need a charger, black colour') still does."""
+    try:
+        from agora import need as _N
+        n = _N.parse_need_rules(text)
+    except Exception:
+        return None
+    thing = (n.thing or "").strip()
+    if not thing or fold(thing) == fold(text) or not (n.prefs or _N.CHATTY.search(text)):
+        return None
+    return thing
+
+
 def interpret(q: str, country: str | None = None, lang: str | None = None, category: str | None = None, *,
               near: str | None = None, llm: bool = True) -> dict[str, Any]:
     """q -> {q, country, lang, place, concept, dominant, intents: [...2-5], next: [...]}. Intents are ranked,
@@ -1434,6 +1449,9 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
     cc, lang = _cc(country), _lang(lang)
     T = _tax()
     place, place_cc, core = find_place(q)
+    item = core_item(core or q)
+    if item:
+        core = item          # 'i want to find a roomba that covers 55 m², ...': the meanings of 'roomba'
     if place_cc and not country:
         cc = place_cc
     near = (near or "").strip()[:60] or None
@@ -1515,7 +1533,7 @@ def interpret(q: str, country: str | None = None, lang: str | None = None, categ
     for it in ranked:
         # this meaning is what a plain hunt for the typed words already does: the viewer runs it unchanged
         it["as_typed"] = it["source"] == "as-typed" or (
-            it["kind"] in ("product", "vehicle", "food") and fold(it["hunt"]["q"]) == fold(q))
+            it["kind"] in ("product", "vehicle", "food") and fold(it["hunt"]["q"]) in (fold(q), fold(item or q)))
         if it["as_typed"]:
             it["hunt"] = {"q": q, "cat": None, "intent": it["id"]}
     out["intents"] = ranked

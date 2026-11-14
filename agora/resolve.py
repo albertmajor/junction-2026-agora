@@ -10,6 +10,8 @@ and `relevance(need, offer)` scores 0..1 how well an offer answers the need.
 """
 from __future__ import annotations
 
+import contextvars
+import dataclasses
 import functools
 import re
 import unicodedata
@@ -3400,7 +3402,32 @@ def resolve(need: Need, offers: list[Offer], threshold: float = 0.5) -> list[Thi
     for t in things:
         for o in t.offers:
             o.thing_id = t.id
+    if getattr(need, "prefs", None):
+        from agora import prefs
+        if not things and len((need.thing or "").split()) > 1 and not _relaxing.get():
+            # a chatty need is never left with nothing while listings of its core item exist: drop the item's last
+            # words one by one ('havaianas flip flops' -> 'havaianas'); the wishes still rank what is found
+            words = need.thing.split()
+            token = _relaxing.set(True)
+            try:
+                for n in range(len(words) - 1, 0, -1):
+                    core = " ".join(words[:n])
+                    if len(core) < 3:
+                        break
+                    looser = dataclasses.replace(need, thing=core)
+                    things = resolve(looser, offers, threshold)
+                    if things:
+                        for o in (o for t in things for o in t.offers):
+                            o.raw["relaxed_to"] = core
+                        break
+            finally:
+                _relaxing.reset(token)
+        for o in (o for t in things for o in t.offers):
+            prefs.mark(need, o)          # raw['matches'] ('purple', '44'), raw['pref_score']
     return things
+
+
+_relaxing: contextvars.ContextVar[bool] = contextvars.ContextVar("resolve_relaxing", default=False)
 
 
 GENERIC_MIN_THING = 5

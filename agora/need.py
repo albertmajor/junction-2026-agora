@@ -120,8 +120,11 @@ COUNTRIES: dict[str, str] = {
 }
 
 FILLER = re.compile(
-    r"\b(i\s+(?:want|need|would like)(?:\s+to\s+(?:buy|get|find|rent|hire|book))?|looking\s+for|"
-    r"searching\s+for|find\s+me|get\s+me|show\s+me|please|pls|cheap(?:est)?|best|good|a\s+good|"
+    r"\b((?:i\s+(?:am|'m)\s+|i'm\s+|im\s+|we\s+(?:are|'re)\s+)?looking\s+(?:to\s+(?:buy|get|find)|for)|"
+    r"(?:can|could|would)\s+you\s+(?:please\s+)?(?:find|get|search|show)(?:\s+me)?|help\s+me\s+(?:to\s+)?find|"
+    r"where\s+(?:can|do)\s+i\s+(?:buy|get|find)|i(?:'d|\s+would)\s+like(?:\s+to\s+(?:buy|get|find|have))?|"
+    r"(?:i|we)\s+(?:want|need|wanna)(?:\s+to\s+(?:buy|get|find|rent|hire|book|purchase|order))?|"
+    r"do\s+you\s+(?:have|sell)|searching\s+for|find\s+me|get\s+me|show\s+me|please|pls|cheap(?:est)?|best|good|a\s+good|"
     r"buy|purchase|deal|deals|price|prices|budget|for\s+sale|myydään|ostetaan|halpa)\b",
     re.I,
 )
@@ -775,7 +778,12 @@ BRAND_NAMES = (
     "volkswagen", "mercedes", "hyundai", "porsche", "peugeot", "renault", "citroen", "polestar", "makita",
     "dewalt", "husqvarna", "karcher", "roomba", "nespresso", "delonghi", "thinkpad", "chromebook", "sennheiser",
     "marshall", "panasonic", "olympus", "toshiba", "gigabyte", "corsair", "razer", "steelseries", "playstation",
-    "ikea", "dyson", "bosch", "siemens", "miele", "whirlpool", "jabra", "gopro", "hasselblad", "pixel")
+    "ikea", "dyson", "bosch", "siemens", "miele", "whirlpool", "jabra", "gopro", "hasselblad", "pixel",
+    # owner 15 Nov: 'hawaianas' searched every marketplace for a word nobody sells
+    # (never a name one edit from a common word: 'shark'/'share', 'braun'/'brain', 'dreame'/'dreams')
+    "havaianas", "birkenstock", "reebok", "timberland", "ecovacs", "roborock", "irobot", "rowenta", "fiskars",
+    "marimekko", "iittala", "patagonia", "fjällräven", "haglöfs", "playmobil", "brompton", "shimano", "bugaboo",
+    "breville", "vileda")
 _NOT_TYPOS = {"phone", "phones", "galaxie", "pixels", "razor", "razors", "racer", "racers", "marshal", "phillips"}
 
 
@@ -814,6 +822,29 @@ def correct_spelling(text: str) -> tuple[str, list[tuple[str, str]]]:
     return out, fixes
 
 
+# a request typed as a sentence ('i want to buy some ...', 'looking for a ...'): its colour words are wishes too
+CHATTY = re.compile(r"^\s*(?:hi|hey|hello|please|pls)?[\s,]*(?:(?:i|we)\s+(?:want|need|wanna|would\s+like|'d\s+like)|"
+                    r"i'd\s+like|(?:i\s+am\s+|i'm\s+|im\s+)?looking\s+(?:for|to)|can\s+you|could\s+you|"
+                    r"help\s+me|where\s+can\s+i|searching\s+for|find\s+me|get\s+me)\b", re.I)
+
+
+def split_wishes(raw: str, text: str, thing: str) -> tuple[str, list[dict[str, Any]]]:
+    """A chatty or detailed product request -> (core item, soft wishes) via agora.prefs: 'i want to buy some
+    havaianas, size 44 1/3 purple color' -> ('havaianas', [size 44 1/3, purple]). A vehicle keeps its own colour
+    handling ('bright red car'); a request with no wish comes back unchanged."""
+    if not thing or vehicle_need(thing):
+        return thing, []
+    from agora import prefs
+    chatty = bool(CHATTY.search(raw)) or len(re.findall(r"[^\W\d_]+", raw)) >= 8
+    core_text, wishes, _ = prefs.split(text, chatty=chatty)
+    if not wishes:
+        return thing, []
+    core = clean_thing(core_text)
+    if not core or vehicle_need(core):
+        return thing, []
+    return core, wishes
+
+
 def parse_need_rules(text: str) -> Need:
     raw = correct_spelling(_norm(text))[0]
     work = raw
@@ -830,8 +861,11 @@ def parse_need_rules(text: str) -> Need:
     must, mspans = detect_must_have(_cut(work, spans + wspans))
     spans += cspans + wspans + mspans
     thing = clean_thing(_cut(work, spans))
+    wishes: list[dict[str, Any]] = []
+    if not service:
+        thing, wishes = split_wishes(raw, _cut(work, spans), thing)
     need = Need(raw=raw, thing=thing or raw.lower(), budget=budget, currency=currency or "EUR", where=where,
-                must_have=must, must_not=must_not)
+                must_have=must, must_not=must_not, prefs=wishes)
     if service:
         need.kind = "service"
         need.conditions = ["service"]
@@ -1209,7 +1243,9 @@ def _gemini(text: str, timeout: float = 6.0) -> dict[str, Any] | None:
 def _merge(rules: Need, llm: dict[str, Any]) -> Need:
     valid_conds = set(get_args(Condition))
     thing = llm.get("thing")
-    if isinstance(thing, str) and 1 < len(thing) < 120 and not rules.for_platform:
+    # a chatty need's core item came from the rules (agora.prefs): the model's longer item would make every wish a
+    # word each listing must carry again
+    if isinstance(thing, str) and 1 < len(thing) < 120 and not rules.for_platform and not rules.prefs:
         rules.thing = thing.strip().lower()
     if llm.get("kind") in ("product", "service") and rules.kind == "product" and not product_head(rules.thing):
         rules.kind = llm["kind"]

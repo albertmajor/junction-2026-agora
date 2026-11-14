@@ -245,7 +245,7 @@ JUNK_PATH = re.compile(   # whole path segments
 JUNK_URL = re.compile(r"/y\.js\b|[?&]ad_domain=|/aclk\?|/pagead/", re.I)   # ad click redirects
 JUNK_SLUG = re.compile(r"/(review|reviews|how-to|howto|guide|best|top-\d+|vs)-|-vs-|-review(/|$|\.html)", re.I)
 JUNK_TITLE = re.compile(
-    r"\b(review|reviewed|vs\.?|versus|how to|guide|best \w+ (of|in) 20\d\d|top \d+|(?:the )?best \d+|news|price history|"
+    r"\b(review|reviewed|vs\.?|versus|how to|guide|best \w+ (of|in) 20\d\d|top \d+(?!\d|\s*/\s*\d)|(?:the )?best \d+|news|price history|"
     r"specs and price|announced|rumou?rs?|forum|q&a|what you should pay|arvostelu|testi|"
     r"is on sale|on sale for|price drops?|price cut|deal alert|drops? (?:its |the )?price)\b", re.I)
 
@@ -664,7 +664,8 @@ NO_REFURB = re.compile(
     r"\b(shel(?:f|ves)|shelving|hylly\w*|kallax|billy|sofas?|couch(?:es)?|sohv\w*|tables?|pöytä|pöydät|chairs?|"
     r"tuol\w*|desks?|beds?|sänky|sängyt|wardrobes?|dressers?|lipasto\w*|cabinets?|kaappi|kaapit|rugs?|mat(?:to|ot)|"
     r"curtains?|jackets?|takki|takit|coats?|shoes|kengät|dress(?:es)?|shirts?|jeans|books?|kirja\w*|"
-    r"strollers?|rattaat|prams?|kinderwagen)\b", re.I)
+    r"strollers?|rattaat|prams?|kinderwagen|flip[- ]?flops?|sandals?|sandaal\w*|varvassandaal\w*|slippers?|"
+    r"havaianas|birkenstocks?|crocs|sneakers?|trainers)\b", re.I)
 NO_REFURB_ROOTS = ("furniture", "apparel", "clothing", "books", "fashion")
 
 
@@ -840,6 +841,11 @@ def lean_plan(need: Need, lane: str, tokens: float | None = None) -> list[tuple[
         if lang in LOCAL and avail >= LOCAL_NEW_MIN_TOKENS:
             # the local shops (verkkokauppa, gigantti, bol.com ...) mostly carry JSON-LD: free offers
             words = market_thing(need, lang, "new")
+            if need.prefs:
+                # a chatty need's strongest wishes in the shop language ('roomba combo itsetyhjentävä',
+                # 'havaianas 44 violetti'): the English query keeps the core item alone
+                from agora import prefs as prefs_mod
+                words = f"{words} {prefs_mod.query_words(need, ISO_OF_LOCAL.get(lang, lang))}"
             plan.append((re.sub(r"\s+", " ", f"{words} {LOCAL[lang]['new']}").strip(), local))
         return plan
     if lane != "used":

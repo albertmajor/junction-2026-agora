@@ -2315,6 +2315,39 @@ def _colour_pick(need: Need, pool: list[Offer]) -> tuple[str | None, bool]:
             f"sites, check the photos"), True
 
 
+def _pref_best(pool: list[Offer]) -> list[Offer]:
+    from agora import prefs
+    return prefs.best(pool)
+
+
+def _prefs_pick(need: Need, pool: list[Offer]) -> str | None:
+    """The line for a need with soft wishes (agora.prefs), else None: how many listings state which wishes, and
+    that the pick is the cheapest of the best-matching ones."""
+    wishes = getattr(need, "prefs", None) or []
+    if not wishes or not pool:
+        return None
+    from agora import prefs
+    for o in pool:
+        if "pref_score" not in o.raw:
+            prefs.mark(need, o)
+    labels = ", ".join(str(p.get("label")) for p in wishes if p.get("kind") != "word")
+    top = _pref_best(pool)
+    if not top:
+        return (f"none of the {len(pool)} found states {labels or 'what you described'}: shown by price, "
+                f"check the listings") if labels else None
+    got = ", ".join(top[0].raw.get("matches") or [])
+    named = [p for p in wishes if p.get("kind") != "word"]
+    count = {str(p.get("label")): sum(1 for o in pool if str(p.get("label")) in (o.raw.get("matches") or []))
+             for p in named}
+    unstated = [k for k, n in count.items() if n == 0]
+    tail = f" (no listing states {', '.join(unstated)})" if unstated else ""
+    if len(top[0].raw.get("matches") or []) >= len(named) - len(unstated):
+        return (f"{len(top)} of {len(pool)} state {got}; the pick is the cheapest of those (the rest may still "
+                f"fit: they do not say){tail}")
+    per = ", ".join(f"{n} {k}" for k, n in count.items() if n)
+    return (f"none of the {len(pool)} states every wish ({per}); the pick is the cheapest that states {got}{tail}")
+
+
 def _vehicle(need: Need) -> bool:
     try:
         from agora.resolve import _is_vehicle_need
@@ -3201,6 +3234,13 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
             in_colour = [o for o in (sure or good) if o.raw.get("colour_match") is True]
             if in_colour:
                 best_all = min(in_colour, key=_landed)
+        # soft wishes of a chatty need (agora.prefs: size 44, purple, mop, self-empty): the listing that states the
+        # most of them is the pick, the cheapest of those; nothing is dropped for not stating them
+        pref_line = _prefs_pick(need, sure or good)
+        if pref_line is not None:
+            pref_best = _pref_best(sure or good)
+            if pref_best:
+                best_all = min(pref_best, key=_landed)
         for o in good:
             extras = _landed(o) - (o.price_eur or 0)
             beat = round(_landed(best_all) - extras, 2)
@@ -3212,6 +3252,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
         lines[0:0] = skipped_lines(priced)
         if colour_line:
             lines.insert(0, colour_line)
+        if pref_line:
+            lines.insert(0, pref_line)
         if _vehicle(need) and best_all.raw.get("subtitle"):
             # which car the price buys: year, km, fuel, gearbox, colour (eval r5: a bare 'Subaru Outback')
             lines.insert(0, f"the car: {best_all.title} · {best_all.raw['subtitle']}")
