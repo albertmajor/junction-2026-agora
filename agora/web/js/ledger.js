@@ -31,7 +31,7 @@ const cache = new Map();              // url -> {sig, li}
 const dismissed = new Map();          // url -> Item the shopper took out ("not this"); out of S.offers until put back
 
 let mids = {};                        // middle price per condition, for the value icons (set each render)
-let sortMode = 'value';               // 'value': best price value first · 'price': what you pay
+let sortMode = 'best';               // one of SORTS (set from the URL / storage on mount) (the "Sort" menu); 'best' = the pick and the better ones first
 let view = savedView();               // 'list' | 'grid'
 let menuOpen = false;                 // the Filters panel opens only on a click
 
@@ -41,6 +41,40 @@ const VIEW_KEY = 'pricemonkey.listings.view';
 function savedView() { try { return globalThis.localStorage && localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list'; } catch { return 'list'; } }
 function saveView(v) { try { if (globalThis.localStorage) localStorage.setItem(VIEW_KEY, v); } catch { /* private mode: the view lasts this visit */ } }
 
+// ---------- sort (owner: "sort by things. definitely by price. also maybe when it was posted") ----------
+// The order of the main list (and the folded EU group); the set-aside ones stay at the bottom whatever it is.
+// Remembered in localStorage, shared in the URL (?sort=price), so a link opens in the same order.
+export const SORTS = [
+  ['best', 'Best match', 'best match first'],
+  ['price', 'Price: low → high', 'cheapest first'],
+  ['price-desc', 'Price: high → low', 'dearest first'],
+  ['newest', 'Newest first', 'newest first'],
+  ['near', 'Closest to you', 'closest to you first'],
+  ['condition', 'Best condition', 'best condition first'],
+  ['rating', 'Seller rating', 'best-rated sellers first'],
+];
+const SORT_KEY = 'pricemonkey.listings.sort';
+const SORT_ALIAS = { value: 'best', cheapest: 'price', 'price-asc': 'price', dearest: 'price-desc', new: 'newest', date: 'newest',
+  closest: 'near', cond: 'condition', trust: 'rating', reviews: 'rating' };
+/** A sort name from the URL / storage, or null when it is not one we know. */
+export function sortName(v) {
+  const k = String(v || '').trim().toLowerCase();
+  const n = SORT_ALIAS[k] || k;
+  return SORTS.some(([id]) => id === n) ? n : null;
+}
+function savedSort() {
+  try { const u = typeof location !== 'undefined' && new URLSearchParams(location.search).get('sort'); const n = sortName(u); if (n) return n; } catch { /* no URL: tests */ }
+  try { return sortName(globalThis.localStorage && localStorage.getItem(SORT_KEY)) || 'best'; } catch { return 'best'; }
+}
+function saveSort(v) {
+  try { if (globalThis.localStorage) localStorage.setItem(SORT_KEY, v); } catch { /* private mode: lasts this visit */ }
+  try {   // the URL says it too (replace, not push: back still goes to the previous search)
+    const u = new URL(location.href);
+    if (v === 'best') u.searchParams.delete('sort'); else u.searchParams.set('sort', v);
+    if (u.href !== location.href) history.replaceState(history.state, '', u);
+  } catch { /* no history: fine */ }
+}
+
 // icons: Lucide (lucide.dev, ISC licence), inline so they take the text colour
 const svg = body => `<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 const IC = {
@@ -48,6 +82,7 @@ const IC = {
   value: '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m15 9-6 6"/><path d="M9 9h.01"/><path d="M15 15h.01"/>',
   filters: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
   list: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
+  sort: '<path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>',
   grid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
 };
 
@@ -157,10 +192,108 @@ export function valueOf(it, m = mids) {
   const under = (mid - v) / mid;
   return { under, tier: valueTier(under), mid };
 }
-/** The list in this order: 'value' (most value icons, then the biggest share under, then the cheapest) or 'price'. */
-export function sortBy(list, mode, m = mids) {
+// ---------- the sort keys ----------
+/** When the listing went up (ms since 1970), from the card's own date (offer.posted_at, ISO); null when not said. */
+export function postedMs(it) {
+  const p = it && it.offer && it.offer.posted_at;
+  if (!p) return null;
+  const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(p) ? p + 'T12:00:00' : p);   // a day only: its middle, local
+  return isFinite(t) ? t : null;
+}
+/** "just now" · "3 h ago" · "yesterday" · "4 days ago" · "12 Nov" (older than three weeks) · "12 Nov 2025". */
+export function postedAgo(it, now = Date.now()) {
+  const t = postedMs(it);
+  if (t == null) return '';
+  const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(it.offer.posted_at);
+  const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+  const d1 = new Date(t); d1.setHours(0, 0, 0, 0);
+  const days = Math.round((d0 - d1) / 864e5);
+  if (days < 0 || (!dayOnly && t > now + 36e5)) return '';
+  if (days === 0) {
+    if (dayOnly) return 'today';
+    const h = Math.floor((now - t) / 36e5);
+    return h < 1 ? 'just now' : `${h} h ago`;
+  }
+  if (days === 1) return 'yesterday';
+  if (days < 21) return `${days} days ago`;
+  const dt = new Date(t);
+  return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(dt.getFullYear() !== new Date(now).getFullYear() ? { year: 'numeric' } : {}) });
+}
+// condition, best first: new, then like new / an excellent refurb, then the used grades the seller wrote
+const GRADE_WORDS = [
+  [/like new|as new|mint|wie neu|neuwertig|uudenveroinen|kuin uusi|jak nowy|nieużywan|zo goed als nieuw|nyskick|som ny|som nyt|comme neuf|come nuovo|como nuevo|excellent|erinomainen|stan idealny/i, 0.95],
+  [/very good|sehr gut|erittäin hyvä|bardzo dobry|zeer goed|mycket bra|meget god|très bon|ottimo|muy bueno|premium/i, 0.8],
+  [/good|gut|hyvä|dobry|goed|bra\b|\bgod\b|bon état|buono|bueno/i, 0.6],
+  [/fair|acceptable|ok\b|tyydyttävä|kohtalainen|akzeptabel|dostateczny|redelijk|okej|correct/i, 0.4],
+  [/for parts|defekt|defective|broken|rikki|uszkodzon|kapot|trasig|pour pièces/i, 0.05],
+];
+/** 0..1: new 1, refurbished ~0.85, used by its grade (grade_score from the engine, else the grade's words). */
+export function conditionScore(it) {
+  const o = (it && it.offer) || {};
+  const c = condWord(o.condition);
+  const gs = typeof o.grade_score === 'number' && isFinite(o.grade_score) ? Math.max(0, Math.min(1, o.grade_score)) : null;
+  const words = `${o.grade || ''}`;
+  const g = gs != null ? gs : (GRADE_WORDS.find(([re]) => re.test(words)) || [null, null])[1];
+  if (c === 'new') return 1;
+  if (c === 'refurbished') return 0.8 + 0.1 * (g ?? 0.5);
+  if (c === 'used') return 0.2 + 0.55 * (g ?? 0.5);
+  return 0.2;
+}
+/** 0 in your town · 1 in your country · 2 ships to you · 2.5 shipping not stated · 3 pickup only abroad. */
+export function nearRank(it, home = homeCc(), where = (S.need && S.need.where ? String(S.need.where) : '')) {
+  const o = originFor(it) || {};
+  const cc = o.country_code ? String(o.country_code).toUpperCase().replace(/^UK$/, 'GB') : '';
+  const w = String(where || '').toLowerCase().trim();
+  if (cc === home && w && o.city && String(o.city).toLowerCase().includes(w)) return 0;
+  if (cc === home) return 1;
+  if (isPickupOnly(it)) return 3;
+  return o.ships_to_fi === true ? 2 : 2.5;      // says it ships to you, then probably does (not stated)
+}
+/** Higher = a better-rated seller: solid reviews by their stars, then the judge's trust; red flags and an eaten
+ *  banana last. */
+export function ratingScore(it) {
+  const b = bananasOf(it);
+  if (b && b.eaten) return -1;
+  return trustScore(it) + (b ? b.n * 0.01 : 0);
+}
+
+/** The list in this order. 'value': most value icons, then the biggest share under, then the cheapest.
+ *  'best': the pick and the better ones first (`first`: their URLs, in order), then 'value'. 'price' /
+ *  'price-desc': what you pay (all in, else the tag), unpriced last. 'newest': the card's own date, undated last.
+ *  'near': your town, your country, ships to you, the rest. 'condition': new, like new, … 'rating': the seller's
+ *  reviews / trust. Ties: the cheapest first. Keys are worked out once per row (2,000 rows sort in a few ms). */
+export function sortBy(list, mode, m = mids, { first = [] } = {}) {
   const byPrice = (a, b) => (val(a) ?? Infinity) - (val(b) ?? Infinity);
-  if (mode !== 'value') return list.slice().sort(byPrice);
+  if (mode === 'value' || mode === 'best') return bestOrder(list, mode, m, first, byPrice);
+  // the price sorts: the costed ones by what you pay all in, then the ones still costing by their tag, unpriced last
+  const costed = new Map(list.map(it => [it, allIn(it) != null ? 0 : val(it) != null ? 1 : 2]));
+  const byPay = (a, b) => (costed.get(a) - costed.get(b)) || byPrice(a, b);
+  const keyed = (fn, dir = 1) => {
+    const k = new Map(list.map(it => [it, fn(it)]));
+    return list.slice().sort((a, b) => {
+      const x = k.get(a), y = k.get(b);
+      if (x == null || y == null) return x == null && y == null ? byPay(a, b) : x == null ? 1 : -1;
+      return (x === y ? 0 : dir * (x < y ? -1 : 1)) || byPay(a, b);
+    });
+  };
+  if (mode === 'price') return list.slice().sort(byPay);
+  if (mode === 'price-desc') return list.slice().sort((a, b) => (costed.get(a) - costed.get(b)) || ((val(b) ?? -Infinity) - (val(a) ?? -Infinity)));
+  if (mode === 'newest') return keyed(postedMs, -1);
+  if (mode === 'near') return keyed(it => nearRank(it));
+  if (mode === 'condition') return keyed(conditionScore, -1);
+  if (mode === 'rating') return keyed(ratingScore, -1);
+  return bestOrder(list, 'value', m, first, byPrice);
+}
+/** 'value': most value icons, then the biggest share under the middle, then the cheapest. 'best': the same, with
+ *  the pick and the better ones (`first`, URLs in order) on top. */
+function bestOrder(list, mode, m, first, byPrice) {
+  if (mode === 'best') {
+    const rest = bestOrder(list, 'value', m, [], byPrice);
+    if (!first.length) return rest;
+    const at = new Map(first.map((u, i) => [u, i]));
+    const top = rest.filter(it => at.has(it.url)).sort((a, b) => at.get(a.url) - at.get(b.url));
+    return top.concat(rest.filter(it => !at.has(it.url)));
+  }
   const key = new Map(list.map(it => {
     const v = valueOf(it, m);
     return [it, [v.tier, v.under == null || v.under > TOO_GOOD ? -Infinity : v.under]];
@@ -320,7 +453,7 @@ function noteFor(it, kind, pick) {
 function rowSig(it, i, kind, pick) {
   const tm = trustMark(it);
   return [i, kind, val(it), tagEur(it), it.url === pick, !!it.tc, it.late, tm && tm.text, ccOf(it), isPickupOnly(it),
-    it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to, valueHtml(it, kind), JSON.stringify(bananasOf(it)), !!it.userOut].join('|');
+    it.tc && isUnsure(it), S.turned, S.recheck && S.recheck.to, valueHtml(it, kind), JSON.stringify(bananasOf(it)), !!it.userOut, postedAgo(it)].join('|');
 }
 // no photo (yet): a calm tile with the shop's own mark over its initial, so it reads as "from this shop", not broken
 const shopIcon = d => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
@@ -348,6 +481,13 @@ function bananaHtml(it) {
   const tip = b.eaten ? `Do not trust it${b.why ? ': ' + b.why : ''}` : `${b.n} banana${b.n > 1 ? 's' : ''}${b.why ? ': ' + b.why : ''}`;
   return `<span class="lg-bn${b.eaten ? ' eaten' : ''}" title="${esc(tip)}">${svg(IC.banana).repeat(b.eaten ? 1 : b.n)}<span class="sr">${esc(tip)}</span></span>`;
 }
+// when it went up, quietly: "2 days ago" (the full date in the tooltip)
+function ageHtml(it) {
+  const a = postedAgo(it);
+  if (!a) return '';
+  const d = new Date(postedMs(it));
+  return `<span class="lg-age" title="${esc('Posted ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}">${esc(a)}</span>`;
+}
 function rowHtml(it, i, kind, pick) {
   const raw = it.offer.image || '';
   const src = cutSrc(it) || (isProductPhoto(raw) ? raw : '');
@@ -370,7 +510,7 @@ function rowHtml(it, i, kind, pick) {
   return `<button type="button" class="${cls}" data-url="${esc(it.url)}"${fx ? ` title="${esc(fxTip(fx))}"` : ''}>
     <span class="lg-n">${i + 1}</span><span class="lg-pic">${pic}</span>
     <span class="lg-main"><span class="lg-ti">${esc(title || site)}</span>
-      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${fx ? `<span class="lg-fxm">${esc(fx.orig)} on the page</span>` : ''}${bananaHtml(it)}${mark}</span></span>
+      <span class="lg-t"><span class="lg-s">${flagHtml(it, { noFi: true, unknown: true })}<span class="lg-d">${esc(site)}</span></span><span class="lg-cm">${esc(condWord(it.offer.condition))}</span>${fx ? `<span class="lg-fxm">${esc(fx.orig)} on the page</span>` : ''}${ageHtml(it)}${bananaHtml(it)}${mark}</span></span>
     <span class="lg-v">${valueHtml(it, kind)}</span>
     <span class="lg-c">${esc(condWord(it.offer.condition))}</span>
     <span class="lg-tag">${esc(eur(tagEur(it), { dp: 0 }))}${fxS}</span>
@@ -456,7 +596,7 @@ function scaffold() {
     <ol class="lg-hl" aria-label="The better ones"></ol>
     <div class="lg-tb">
       <button type="button" class="lg-fbtn" aria-expanded="false" aria-controls="lg-fp">${svg(IC.filters)}Filters<span class="lg-fn"></span><i aria-hidden="true">▾</i></button>
-      <span class="lg-f lg-sort" role="group" aria-label="Order"><button type="button" data-sort="value" aria-pressed="true">${svg(IC.value)}best value</button><button type="button" data-sort="price" aria-pressed="false">cheapest</button></span>
+      <label class="lg-sortw">${svg(IC.sort)}<span class="lg-sortl">Sort</span><select class="lg-sort" aria-label="Sort the listings">${SORTS.map(([id, label]) => `<option value="${id}">${esc(label)}</option>`).join('')}</select><i aria-hidden="true">▾</i></label>
       <button type="button" class="lg-clear" hidden>clear filters</button>
       <span class="lg-f lg-view" role="group" aria-label="View"><button type="button" data-view="list" aria-pressed="true" title="List">${svg(IC.list)}<span class="sr">list</span></button><button type="button" data-view="grid" aria-pressed="false" title="Grid">${svg(IC.grid)}<span class="sr">grid</span></button></span>
     </div>
@@ -478,6 +618,7 @@ function scaffold() {
   els = {
     h: root.querySelector('.lg-h'), cnt: root.querySelector('.lg-cnt'), hl: root.querySelector('.lg-hl'), fb: root.querySelector('.lg-fb'),
     fbtn: root.querySelector('.lg-fbtn'), fn: root.querySelector('.lg-fn'), clear: root.querySelector('.lg-tb .lg-clear'),
+    sort: root.querySelector('select.lg-sort'),
     head: root.querySelector('.lg-head'),
     list: { main: root.querySelector('ol[data-g=main]'), eu: root.querySelector('ol[data-g=eu]'), risky: root.querySelector('ol[data-g=risky]') },
     more: { main: root.querySelector('.lg-more[data-g=main]'), eu: root.querySelector('.lg-more[data-g=eu]'), risky: root.querySelector('.lg-more[data-g=risky]') },
@@ -503,10 +644,19 @@ function toolbar() {
   els.fn.textContent = k ? ` · ${k}` : '';
   els.fb.hidden = !menuOpen || !els.fb.innerHTML.trim();
   els.clear.hidden = !filtering();
-  root.querySelectorAll('[data-sort]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sort === sortMode)));
+  // "Newest first" only when listings carry the date they went up
+  const nw = els.sort.querySelector('option[value=newest]');
+  if (nw.hidden === hasDates) { nw.hidden = !hasDates; nw.disabled = !hasDates; }
+  const eff = effSort();
+  if (els.sort.value !== eff) els.sort.value = eff;
+  els.sort.parentElement.classList.toggle('on', eff !== 'best');
   root.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
   root.classList.toggle('is-grid', view === 'grid');
 }
+
+let hasDates = false;                 // any listing with offer.posted_at: "Newest first" is offered
+/** The order in use: the chosen one, but 'best' while "Newest first" has no dates to go by. */
+const effSort = () => (sortMode === 'newest' && !hasDates ? 'best' : sortMode);
 
 let hlKey = '', fbKey = '';
 function render() {
@@ -527,6 +677,7 @@ function render() {
   // filters (built from every listing, so the counts say what each filter would show); value against the comparable ones
   mids = middles(g.main.concat(g.costing, g.eu));
   const all = g.main.concat(g.costing, g.eu, g.risky);
+  hasDates = all.some(it => it.offer && it.offer.posted_at);
   const fc = facets(all);
   const fk = JSON.stringify([[...fc.cond], [...fc.cc], fc.ships, fc.pickup, fc.bn, fc.vt, mids.all != null, Math.floor(fc.lo || 0), Math.ceil(fc.hi || 0),
     filt.ship, [...filt.cond], [...filt.cc], filt.min, filt.max, filt.bn, filt.vt]);
@@ -535,9 +686,12 @@ function render() {
   }
   toolbar();
 
-  const main = sortBy(g.main.concat(g.costing).filter(passes), sortMode), eu = sortBy(g.eu.filter(passes), sortMode), risky = g.risky.filter(passes);
+  const mode = effSort();
+  const first = mode === 'best' ? [pick].concat(hls.map(h => h.it.url)).filter(Boolean) : [];
+  const main = sortBy(g.main.concat(g.costing).filter(passes), mode, mids, { first }), eu = sortBy(g.eu.filter(passes), mode, mids), risky = g.risky.filter(passes);
   const shown = main.length + eu.length + risky.length;
-  const order = sortMode === 'value' ? 'best value first' : S.turned ? 'by what you pay, all in' : 'by the price on the tag';
+  const order = mode === 'price' ? (S.turned ? 'cheapest first, all in' : 'cheapest first, by the tag')
+    : (SORTS.find(([id]) => id === mode) || SORTS[0])[2];
   els.h.innerHTML = `${n === 1 ? 'The one listing' : `All ${n0(n)} listings`}, <span>${order}</span>`;
   els.cnt.innerHTML = filtering() ? `showing ${n0(shown)} of ${n0(n)}` : (g.risky.length ? `${n0(n - g.risky.length)} compared · ${n0(g.risky.length)} not counted` : '');
 
@@ -613,6 +767,7 @@ export function mountLedger(el) {
   if (!el) return;
   root = el;
   root.classList.add('ledger');
+  sortMode = savedSort();
   root.hidden = true;
   scaffold();
   root.addEventListener('click', e => {
@@ -641,8 +796,6 @@ export function mountLedger(el) {
       if (menuOpen) { const f = els.fb.querySelector('button, input'); if (f) f.focus({ preventScroll: true }); }
       return;
     }
-    const so = e.target.closest('[data-sort]');
-    if (so) { sortMode = so.dataset.sort === 'price' ? 'price' : 'value'; limits.eu = STEP; render(); return; }
     const vw = e.target.closest('[data-view]');
     if (vw) { view = vw.dataset.view === 'grid' ? 'grid' : 'list'; saveView(view); render(); return; }
     const st = e.target.closest('[data-bn], [data-vt]');
@@ -665,6 +818,12 @@ export function mountLedger(el) {
     }
     const b = e.target.closest('.lg-r, .lg-hc');
     if (b && b.dataset.url) emit('select', b.dataset.url);
+  });
+  root.addEventListener('change', e => {
+    if (!e.target.matches || !e.target.matches('select.lg-sort')) return;
+    sortMode = sortName(e.target.value) || 'best';
+    saveSort(sortMode);
+    limits.eu = STEP; render();
   });
   root.addEventListener('input', e => {
     const p = e.target.closest('input[data-p]');
@@ -731,4 +890,4 @@ function notOrBack(b) {
 }
 function refocus(sel) { const b = root.querySelector(sel); if (b) b.focus({ preventScroll: true }); }
 
-export const _test = { groups, highlights, rows, passes, notThis, putBack, origPrice, setFilter(f) { filt = Object.assign(freshFilter(), f); }, setMids(m) { mids = m || {}; } };
+export const _test = { groups, highlights, rows, passes, notThis, putBack, origPrice, effSort, setSort(v) { sortMode = sortName(v) || 'best'; }, setFilter(f) { filt = Object.assign(freshFilter(), f); }, setMids(m) { mids = m || {}; } };

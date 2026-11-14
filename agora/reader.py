@@ -1608,6 +1608,10 @@ def offers_from_itemlist(data: dict[str, Any], page_url: str, need: Need, hint: 
                     said_cond=None, image=_image(item.get("image")), location=None, via="jsonld",
                     step="jsonld_itemlist", brand=_text(item.get("brand")),
                     in_stock=("instock" in avail or "limitedavailability" in avail) if avail else None))
+                posted = next((p for p in (iso_posted(item.get(k) or o.get(k) or el.get(k))
+                                           for k in ("datePosted", "datePublished", "dateCreated")) if p), None)
+                if posted:
+                    out[-1].raw["posted_at"] = posted                   # the site's own date (sort: newest)
     return _keep_best(out, need, limit)
 
 
@@ -2152,6 +2156,8 @@ def offers_from_split(md: str, page_html: str, page_url: str, site: Any, need: N
             o.location = fence.clean_field(str(row["location"]))[:80] or None
         if row.get("price_with_fee"):
             o.raw["price_with_buyer_fee"] = row["price_with_fee"]     # vinted's buyer protection, as shown
+        if row.get("posted"):
+            o.raw["posted_at"] = row["posted"]                          # the card's own date (sort: newest)
         if row.get("text"):
             o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
         if getattr(site, "vehicle", False):
@@ -2237,8 +2243,45 @@ def _rows_to_offers(rows: list[dict], page_url: str, need: Need, hint: str | Non
                 o.brand = fence.clean_field(str(b))[:40] if b else None
         if row.get("text"):
             o.raw["row_text"] = fence.clean_field(str(row["text"])[:200])
+        posted = row.get("posted") or _row_posted(row, site)
+        if posted:
+            o.raw["posted_at"] = posted                                 # the card's own date (sort: newest)
         out.append(o)
     return out
+
+
+def _row_posted(row: dict, site: Any) -> str | None:
+    """The date on a plainly fetched card ('Heute, 14:12', 'Dzisiaj o 14:12', '14 listopada 2026'), never fatal."""
+    try:
+        from agora import marketplaces
+        key = getattr(site, "key", "") or ""
+        if not key:
+            host = _site(domain_of(str(row.get("url") or "")))
+            key = next((k for k, st in marketplaces.SITES.items() if _site(st.domain) == host), "")
+        return marketplaces.posted_at(str(row.get("text") or ""), key)
+    except Exception:
+        return None
+
+
+def iso_posted(v: Any) -> str | None:
+    """schema.org datePosted / datePublished / dateCreated -> ISO ('2026-11-12' or '2026-11-12T14:12:00+01:00');
+    None for anything that is not a real past date."""
+    from datetime import datetime, timedelta, timezone
+    s = str(_first(v) or "").strip()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}", s):
+        return None
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            dt = datetime.fromisoformat(s[:10])
+        except ValueError:
+            return None
+    now = datetime.now(timezone.utc)
+    cmp = dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    if not (now - timedelta(days=3 * 366) <= cmp <= now + timedelta(days=1)):
+        return None
+    return dt.isoformat() if (dt.tzinfo or dt.hour or dt.minute) and len(s) > 10 else dt.date().isoformat()
 
 
 async def read_free_source(url: str, site: Any, rec: dict, need: Need, hint: str | None) -> tuple[list[Offer], int]:

@@ -1049,6 +1049,121 @@ def row_location(text: str) -> str | None:
     return None
 
 
+# ------------------------------------------------------------------ when a listing was posted (sort: newest first)
+# A result card says when it went up in the site's own words: kleinanzeigen 'Heute, 14:12' / 'Gestern, 09:30' /
+# '12.11.2026', olx 'Wrocław - Dzisiaj o 14:12' / '14 listopada 2026' / 'Odświeżono dzisiaj o 07:36' (olx shows
+# the bump date as the listing's date), marktplaats 'Vandaag' / '12 nov 26', the Nordic 'i dag 14:12' / 'igår',
+# tori 'tänään 14:12' / 'eilen'. Read with code from the card's first few hundred characters (where the date sits,
+# before any description), in the site's own time zone, and kept only when it is not in the future and not years old.
+
+POSTED_TZ = {"fi": "Europe/Helsinki", "se": "Europe/Stockholm", "no": "Europe/Oslo", "dk": "Europe/Copenhagen",
+             "de": "Europe/Berlin", "at": "Europe/Vienna", "ch": "Europe/Zurich", "nl": "Europe/Amsterdam",
+             "be": "Europe/Brussels", "pl": "Europe/Warsaw", "fr": "Europe/Paris", "es": "Europe/Madrid",
+             "it": "Europe/Rome", "pt": "Europe/Lisbon", "cz": "Europe/Prague", "gb": "Europe/London",
+             "ie": "Europe/Dublin", "lt": "Europe/Vilnius", "ee": "Europe/Tallinn", "lv": "Europe/Riga"}
+_MONTHS = {}
+for _i, _names in enumerate((
+        "january jan januar jänner stycznia styczeń styczen januari tammikuuta janvier enero gennaio",
+        "february feb februar lutego luty februari helmikuuta février fevrier febrero febbraio",
+        "march mar märz maerz mrz marca marzec maart maaliskuuta mars marzo",
+        "april apr kwietnia kwiecień kwiecien huhtikuuta avril abril aprile",
+        "may mai maja maj mei toukokuuta mayo maggio",
+        "june jun juni czerwca czerwiec kesäkuuta juin junio giugno",
+        "july jul juli lipca lipiec heinäkuuta juillet julio luglio",
+        "august aug sierpnia sierpień sierpien augustus elokuuta août aout agosto",
+        "september sep sept września wrzesień wrzesien syyskuuta septembre septiembre settembre",
+        "october oct okt oktober października październik pazdziernika oktober lokakuuta octobre octubre ottobre",
+        "november nov listopada listopad marraskuuta novembre noviembre",
+        "december dec dez dezember grudnia grudzień grudzien joulukuuta décembre decembre diciembre dicembre"), 1):
+    for _w in _names.split():
+        _MONTHS[_w] = _i
+_TODAY = r"heute|dzisiaj|vandaag|i\s*dag|tänään|tanaan|today|aujourd'hui|hoy|oggi"
+_YESTERDAY = r"gestern|wczoraj|gisteren|i\s*går|i\s*gar|eilen|yesterday|ayer|ieri"
+_DAY_REL = re.compile(rf"(?<![\w-])(?:odświeżono\s+)?(?:(?P<t>{_TODAY})|(?P<y>{_YESTERDAY})|(?P<yy>vorgestern|eergisteren))"
+                      r"(?:\s*,?\s*(?:o|om|um|at|à|klo\.?|kl\.?)?\s*(?P<h>[0-2]?\d)[:.](?P<m>[0-5]\d))?(?![\w])", re.I)
+_DMY = re.compile(r"(?<![\d.])(?P<d>[0-3]?\d)\.(?P<mo>[01]?\d)\.(?P<y>20\d\d|\d\d)(?![\d.])"
+                  r"(?:\s*,?\s*(?:um\s+|klo\s+|kl\.?\s*)?(?P<h>[0-2]?\d)[:.](?P<m>[0-5]\d))?")
+_D_MON_Y = re.compile(r"(?<![\w])(?P<d>[0-3]?\d)\.?\s+(?P<mon>[^\W\d_]{3,13})\.?\s+(?P<y>20\d\d|\d\d)(?![\d])", re.I)
+_AGO = re.compile(r"(?:vor|for|för)?\s*(?P<n>\d{1,3})\s*(?P<u>min(?:ute[ns]?|uter|utter|uuttia|s)?|minuten|"
+                  r"h|hrs?|hours?|stunden?|timmar|timer|tuntia|tunti|days?|tag(?:e|en)?|dagar|dage|dager|päivää|pv|"
+                  r"weeks?|wochen?|veckor|uger|uker|viikkoa)\s*(?:ago|sedan|siden|sitten)?(?![\w])", re.I)
+
+
+def posted_at(text: str | None, site_key: str = "", now=None) -> str | None:
+    """When the card says the listing went up -> ISO: '2026-11-15T14:12:00+01:00' (a time given) or
+    '2026-11-12' (a day only); None when the card does not say (or says something we cannot trust)."""
+    from datetime import datetime, timedelta
+    if not text:
+        return None
+    cc = SITES[site_key].country if site_key in SITES else (site_key.split("_")[1] if "_" in (site_key or "") else "")
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(POSTED_TZ.get(cc, "Europe/Helsinki"))
+    except Exception:            # no tz database: UTC is a day off at most
+        from datetime import timezone
+        tz = timezone.utc
+    now = (now or datetime.now(tz)).astimezone(tz)
+    head = " ".join(str(text).split())[:300]
+    found: list[tuple[int, str]] = []        # (where in the card, iso)
+
+    def ok(dt) -> bool:
+        return now - timedelta(days=3 * 366) <= dt <= now + timedelta(hours=26)
+
+    m = _DAY_REL.search(head)
+    if m and not m.group("h") and site_key not in ("marktplaats", "2dehands"):
+        m = None             # a bare 'heute' / 'i dag' can be the seller's words; the card's own stamp has a time
+    if m:
+        day = now - timedelta(days=0 if m.group("t") else 1 if m.group("y") else 2)
+        if m.group("h") and int(m.group("h")) < 24:
+            dt = day.replace(hour=int(m.group("h")), minute=int(m.group("m")), second=0, microsecond=0)
+            found.append((m.start(), dt.isoformat()))
+        else:
+            found.append((m.start(), day.date().isoformat()))
+    m = _DMY.search(head)
+    if m:
+        y = int(m.group("y")) + (2000 if len(m.group("y")) == 2 else 0)
+        try:
+            dt = datetime(y, int(m.group("mo")), int(m.group("d")), tzinfo=tz)
+            if m.group("h") and int(m.group("h")) < 24:
+                dt = dt.replace(hour=int(m.group("h")), minute=int(m.group("m")))
+                iso = dt.isoformat()
+            else:
+                iso = dt.date().isoformat()
+            if ok(dt):
+                found.append((m.start(), iso))
+        except ValueError:
+            pass
+    for m in _D_MON_Y.finditer(head):
+        mon = _MONTHS.get(m.group("mon").lower())
+        if not mon:
+            continue
+        y = int(m.group("y")) + (2000 if len(m.group("y")) == 2 else 0)
+        try:
+            dt = datetime(y, mon, int(m.group("d")), tzinfo=tz)
+        except ValueError:
+            continue
+        if ok(dt):
+            found.append((m.start(), dt.date().isoformat()))
+        break
+    m = _AGO.search(head)
+    if m and (m.group(0).lower().startswith(("vor", "for", "för")) or
+              re.search(r"ago|sedan|siden|sitten", m.group(0), re.I)):
+        n, u = int(m.group("n")), m.group("u").lower()
+        if u.startswith("min"):
+            d = timedelta(minutes=n)
+        elif u.startswith(("day", "tag", "dag", "päi", "pv")):
+            d = timedelta(days=n)
+        elif u.startswith(("w", "v", "u")):
+            d = timedelta(weeks=n)
+        else:
+            d = timedelta(hours=n)
+        dt = now - d
+        if ok(dt):
+            found.append((m.start(), dt.replace(second=0, microsecond=0).isoformat() if d < timedelta(days=1)
+                          else dt.date().isoformat()))
+    return min(found)[1] if found else None
+
+
 def market_summary(pages: list[dict]) -> dict:
     """Per-page market records (reader.MARKET values) -> the hunt's `market` event body:
     {sources: [{domain, country, total, at_least, read, pages, extra}], total, read}. One record per domain
@@ -1187,6 +1302,9 @@ def split_rows(md: str, page_html: str, site: Site, max_rows: int | None = MAX_R
             row = {"title": title, "price": price, "currency": site.currency, "url": url,
                    "text": flat[:200], "image": find_image(page_html, url),
                    "delivery": delivery_of(f"{title} {flat}", site.key), "location": loc}
+            posted = posted_at(flat, site.key)
+            if posted:
+                row["posted"] = posted
             if site.key.startswith("vinted"):
                 # vinted's link label: 'title, brand: x, condition: y, 41.34 €, 44.11 €' = price, price + buyer fee
                 both = [to_number(a or b) for a, b in PRICE.findall(label)]

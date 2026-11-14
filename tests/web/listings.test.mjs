@@ -126,6 +126,61 @@ test('filters: bananas (trust, from the truecost) and value', () => {
   ledger._test.setFilter({}); ledger._test.setMids({});
 });
 
+// sort (owner: "sort by things. definitely by price. also maybe when it was posted")
+const so = (url, o = {}, tc) => ({ url, offer: { title: url, condition: 'used', ...o }, ...(tc ? { tc } : {}) });
+test('sort: price both ways (all in, else the tag), unpriced last; ties by price', () => {
+  const list = [so('a', { price_eur: 50 }), so('b', { price_eur: 20 }), so('c', {}), so('d', { price_eur: 80 })];
+  assert.deepEqual(ledger.sortBy(list, 'price').map(x => x.url), ['b', 'a', 'd', 'c']);
+  assert.deepEqual(ledger.sortBy(list, 'price-desc').map(x => x.url), ['d', 'a', 'b', 'c']);
+  assert.equal(ledger.sortName('cheapest'), 'price');
+  assert.equal(ledger.sortName('value'), 'best');
+  assert.equal(ledger.sortName('nonsense'), null);
+});
+test('sort: newest first by the card date, undated last; "2 days ago" in the row', () => {
+  const now = Date.parse('2026-11-15T16:00:00+01:00');
+  const list = [so('old', { price_eur: 10, posted_at: '2026-11-01' }), so('none', { price_eur: 5 }),
+    so('today', { price_eur: 30, posted_at: '2026-11-15T14:12:00+01:00' }), so('mid', { price_eur: 20, posted_at: '2026-11-13' })];
+  assert.deepEqual(ledger.sortBy(list, 'newest').map(x => x.url), ['today', 'mid', 'old', 'none']);
+  assert.equal(ledger.postedAgo(list[2], now), '1 h ago');
+  assert.equal(ledger.postedAgo(list[3], now), '2 days ago');
+  assert.equal(ledger.postedAgo(so('y', { posted_at: '2026-11-14' }), now), 'yesterday');
+  assert.equal(ledger.postedAgo(list[1], now), '');
+  assert.match(ledger.postedAgo(so('long', { posted_at: '2026-09-02' }), now), /^2 Sep/);
+});
+test('sort: closest (your country, ships to you, the rest), condition, seller rating', () => {
+  const fi = so('fi', { price_eur: 90, origin: { country_code: 'FI', ships_to_fi: true } });
+  const se = so('se', { price_eur: 40, origin: { country_code: 'SE', ships_to_fi: true } });
+  const de = so('de', { price_eur: 30, origin: { country_code: 'DE', ships_to_fi: false } });
+  const xx = so('xx', { price_eur: 35, origin: { country_code: 'NL' } });
+  assert.deepEqual(ledger.sortBy([de, se, xx, fi], 'near').map(x => x.url), ['fi', 'se', 'xx', 'de']);
+  const nw = so('new', { price_eur: 300, condition: 'new' }), rf = so('rf', { price_eur: 200, condition: 'refurbished' });
+  const ln = so('ln', { price_eur: 150, grade: 'Like new' }), fair = so('fair', { price_eur: 90, grade: 'Fair' });
+  const u = so('u', { price_eur: 100 }), g9 = so('g9', { price_eur: 120, grade: 'Excellent (9)', grade_score: 0.9 });
+  assert.deepEqual(ledger.sortBy([fair, u, ln, nw, g9, rf], 'condition').map(x => x.url), ['new', 'rf', 'ln', 'g9', 'u', 'fair']);
+  const good = so('good', { price_eur: 60 }, { trust: 0.9 }), meh = so('meh', { price_eur: 50 }, { trust: 0.5 });
+  const eaten = so('eaten', { price_eur: 10 }, { trust: 0.8, bananas: { state: 'eaten', n: 0 } });
+  assert.deepEqual(ledger.sortBy([eaten, meh, good], 'rating').map(x => x.url), ['good', 'meh', 'eaten']);
+});
+test('sort: best match puts the pick and the better ones first, then best value; on the recorded hunt too', () => {
+  const list = [so('a', { price_eur: 100 }), so('b', { price_eur: 70 }), so('c', { price_eur: 60 }), so('d', { price_eur: 90 })];
+  assert.deepEqual(ledger.sortBy(list, 'best', ledger.middles(list), { first: ['d', 'a'] }).map(x => x.url), ['d', 'a', 'c', 'b']);
+  const g = ledger.groups();
+  const main = g.main.concat(g.costing);
+  const t0 = performance.now();
+  for (const m of ledger.SORTS.map(s => s[0])) {
+    const out = ledger.sortBy(main, m);
+    assert.equal(out.length, main.length, m);
+    assert.equal(new Set(out).size, main.length, m);
+  }
+  const big = Array.from({ length: 2000 }, (_, i) => so('u' + i, { price_eur: (i * 7919) % 997, posted_at: `2026-1${i % 2}-0${1 + (i % 9)}`, condition: ['new', 'used', 'refurbished'][i % 3] }));
+  for (const m of ledger.SORTS.map(s => s[0])) ledger.sortBy(big, m);
+  assert.ok(performance.now() - t0 < 400, `seven sorts of 2,000 rows took ${performance.now() - t0} ms`);
+  // no dates on the recorded hunt: "Newest first" falls back to best match
+  ledger._test.setSort('newest');
+  assert.equal(ledger._test.effSort(), 'best');
+  ledger._test.setSort('best');
+});
+
 test('the summary credits Context.dev for search too (never "0 via Context.dev")', () => {
   const st = livelog._test.cdStats();
   assert.equal(st.searches, 4);

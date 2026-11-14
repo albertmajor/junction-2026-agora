@@ -75,6 +75,8 @@ def offer_payload(offer: Offer) -> dict[str, Any]:
         d["title"] = f"{offer.title} · {d['subtitle']}"
         if isinstance(raw.get("vehicle"), dict):
             d["vehicle"] = dict(raw["vehicle"])
+    if raw.get("posted_at"):
+        d["posted_at"] = str(raw["posted_at"])     # when the listing went up, ISO (the card's own date)
     d["origin"] = _origin(offer)
     return d
 
