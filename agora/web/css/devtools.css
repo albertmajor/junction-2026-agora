@@ -1,0 +1,128 @@
+/* Dev type panel (web/js/devtools.js): localhost only, never loaded for real visitors.
+   The panel wears a fixed system face so the fonts it previews never change the panel itself. */
+.pm-dt, .pm-dt-pill {
+  --dt-bg: #FFFDF8; --dt-ink: #1C1B18; --dt-ink-2: #5E5A52; --dt-ink-3: #9A948A; --dt-hair: rgba(28,27,24,.14);
+  --dt-on: #1C1B18; --dt-on-ink: #FFFDF8; --dt-accent: #F0D435; --dt-field: #F4F1EA;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pm-dt, :root:not([data-theme="light"]) .pm-dt-pill {
+    --dt-bg: #1E1C19; --dt-ink: #EEEAE1; --dt-ink-2: #B5AFA4; --dt-ink-3: #8A8478; --dt-hair: rgba(238,234,225,.16);
+    --dt-on: #EEEAE1; --dt-on-ink: #1E1C19; --dt-field: #161513;
+  }
+}
+:root[data-theme="dark"] .pm-dt, :root[data-theme="dark"] .pm-dt-pill {
+  --dt-bg: #1E1C19; --dt-ink: #EEEAE1; --dt-ink-2: #B5AFA4; --dt-ink-3: #8A8478; --dt-hair: rgba(238,234,225,.16);
+  --dt-on: #EEEAE1; --dt-on-ink: #1E1C19; --dt-field: #161513;
+}
+.pm-dt, .pm-dt :is(button, input, select, textarea, label, small, code, p, b, i, abbr, nav, header, footer, div, span) {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: normal; text-transform: none; font-variant-caps: normal;
+  font-feature-settings: normal; font-variation-settings: normal;
+}
+.pm-dt {
+  position: fixed; top: 72px; right: 16px; z-index: 2147483000;
+  width: 380px; max-width: calc(100vw - 16px); max-height: calc(100vh - 88px);
+  display: flex; flex-direction: column;
+  background: var(--dt-bg); color: var(--dt-ink);
+  border: 1px solid var(--dt-hair); border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08);
+  font-size: 12px; line-height: 1.35;
+}
+.pm-dt.collapsed { max-height: none; }
+.pm-dt.collapsed .dt-body { display: none; }
+.pm-dt button, .pm-dt input, .pm-dt select, .pm-dt textarea { font-size: 12px; color: inherit; }
+.pm-dt code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; background: var(--dt-field); padding: 0 3px; border-radius: 3px; overflow-wrap: anywhere; }
+
+.dt-head {
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--dt-hair); cursor: grab; user-select: none; touch-action: none;
+}
+.dt-head:active { cursor: grabbing; }
+.dt-head b { font-size: 13px; font-weight: 600; }
+.dt-sub { color: var(--dt-ink-3); font-size: 11px; margin-right: auto; }
+.dt-ab { display: inline-flex; border: 1px solid var(--dt-hair); border-radius: 999px; overflow: hidden; }
+.dt-ab button { border: 0; background: none; padding: 2px 10px; cursor: pointer; font-weight: 600; color: var(--dt-ink-2); }
+.dt-ab button[aria-pressed="true"] { background: var(--dt-on); color: var(--dt-on-ink); }
+.dt-ico { border: 0; background: none; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1; color: var(--dt-ink-2); }
+.dt-ico:hover { background: var(--dt-field); color: var(--dt-ink); }
+
+.dt-body { overflow: auto; padding: 0 12px 12px; overscroll-behavior: contain; }
+.dt-tabs { display: flex; gap: 4px; padding: 10px 0 8px; position: sticky; top: 0; background: var(--dt-bg); z-index: 1; }
+.dt-tabs button { flex: 1; border: 1px solid var(--dt-hair); background: none; border-radius: 8px; padding: 5px 4px; cursor: pointer; color: var(--dt-ink-2); white-space: nowrap; font-size: 11.5px; }
+.dt-tabs button[aria-selected="true"] { background: var(--dt-on); color: var(--dt-on-ink); border-color: var(--dt-on); }
+
+.dt-pick { border: 1px solid var(--dt-hair); border-radius: 8px; overflow: hidden; }
+.dt-q { width: 100%; border: 0; border-bottom: 1px solid var(--dt-hair); background: var(--dt-field); padding: 6px 8px; outline: none; }
+.dt-list { max-height: 196px; overflow: auto; overscroll-behavior: contain; }
+.dt-grp { position: sticky; top: 0; background: var(--dt-bg); color: var(--dt-ink-3); font-size: 10.5px; padding: 6px 8px 3px; border-bottom: 1px solid var(--dt-hair); }
+.dt-font { display: flex; width: 100%; align-items: baseline; justify-content: space-between; gap: 8px; border: 0; background: none; text-align: left; padding: 4px 8px; cursor: pointer; }
+.pm-dt .dt-font span { font-size: 17px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-font small { color: var(--dt-ink-3); font-size: 10.5px; white-space: nowrap; }
+.dt-font small i { font-style: normal; background: var(--dt-accent); color: #1C1B18; border-radius: 3px; padding: 0 3px; margin-left: 3px; }
+.dt-font:hover { background: var(--dt-field); }
+.dt-font.on { background: var(--dt-on); color: var(--dt-on-ink); }
+.dt-font.on small { color: inherit; opacity: .7; }
+.dt-empty { margin: 0; padding: 10px 8px; color: var(--dt-ink-3); }
+.dt-custom { display: grid; grid-template-columns: 1fr 1fr auto; gap: 4px; padding: 6px; border-top: 1px solid var(--dt-hair); }
+.dt-custom input { min-width: 0; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 4px 6px; }
+.dt-msg { color: var(--dt-ink-2); font-size: 11px; padding: 0 8px; }
+.dt-msg:not(:empty) { padding: 0 8px 6px; }
+
+.dt-cur { margin: 10px 0 4px; font-weight: 600; font-size: 12.5px; }
+.dt-cur small { font-weight: 400; color: var(--dt-ink-3); }
+.dt-row { display: grid; grid-template-columns: 82px 1fr 64px 18px; align-items: center; gap: 6px; min-height: 26px; }
+.dt-row > label, .dt-row > span:first-child { color: var(--dt-ink-2); }
+.dt-row abbr { text-decoration: none; font-family: ui-monospace, Menlo, monospace; }
+.dt-row input[type="range"] { width: 100%; accent-color: var(--dt-on); }
+.dt-num { width: 64px; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 2px 4px; text-align: right; }
+.dt-lmax { width: 44px; margin: 0 2px; }
+.dt-row .dt-lmax + * { margin-left: 2px; }
+.dt-unit { color: var(--dt-ink-3); font-size: 10.5px; }
+.dt-row select { grid-column: 2 / 5; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 2px 4px; }
+.dt-row #dt-weight-s { grid-column: 2; }
+.dt-row .dt-ratio-s { grid-column: 3 / 5; }
+.dt-ws { grid-column: 3 / 5; display: flex; flex-wrap: wrap; gap: 2px 6px; color: var(--dt-ink-2); font-size: 10.5px; }
+.dt-ws label { display: inline-flex; align-items: center; gap: 2px; }
+.dt-hint { grid-template-columns: 1fr; color: var(--dt-ink-3); font-size: 10.5px; min-height: 18px; }
+.dt-link { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; }
+.dt-feat { align-items: start; padding-top: 4px; }
+.dt-chips { grid-column: 2 / 5; display: flex; flex-wrap: wrap; gap: 3px; }
+.dt-chip { border: 1px solid var(--dt-hair); background: none; border-radius: 999px; padding: 1px 7px; cursor: pointer; font-family: ui-monospace, Menlo, monospace !important; font-size: 10.5px !important; color: var(--dt-ink-2); }
+.dt-chip.on { background: var(--dt-on); color: var(--dt-on-ink); border-color: var(--dt-on); }
+.dt-chip.off { text-decoration: line-through; color: var(--dt-ink); border-color: var(--dt-ink-3); }
+.dt-wide { grid-column: 2 / 5; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 3px 6px; font-family: ui-monospace, Menlo, monospace !important; font-size: 11px !important; }
+
+.dt-spec { margin-top: 12px; border: 1px solid var(--dt-hair); border-radius: 8px; overflow: hidden; }
+.pm-dt .dt-spec-page { position: relative; padding: 12px 12px 10px; background: #F4F1EA; color: #1C1B18; }
+.pm-dt .dt-spec-page.is-a { background: #ECE7DC; }
+.pm-dt .dt-spec-page > div:first-child { margin-bottom: 6px; }
+.pm-dt .dt-spec-page p { margin: 0 0 8px; }
+.pm-dt .dt-spec-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pm-dt .dt-spec-row span:last-child { margin-left: auto; }
+.pm-dt .dt-tag { position: absolute; top: 6px; right: 8px; font-size: 9.5px; color: #9A948A; }
+.pm-dt .dt-spec-page *:not(.dt-tag) { font-family: inherit; }
+.dt-steps { padding: 6px 10px 8px; max-height: 190px; overflow: hidden; }
+.dt-step { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; overflow: hidden; }
+.dt-px { flex: none; width: 34px; text-align: right; color: var(--dt-ink-3); font-size: 10px; font-family: ui-monospace, Menlo, monospace !important; }
+.dt-status { margin: 8px 0 0; color: var(--dt-ink-2); font-size: 11px; min-height: 15px; }
+
+.dt-foot { margin-top: 8px; border-top: 1px solid var(--dt-hair); padding-top: 8px; }
+.dt-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dt-btns button, .dt-custom button { border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.dt-btns button[data-act="export"] { background: var(--dt-on); color: var(--dt-on-ink); border-color: var(--dt-on); }
+.dt-btns button:hover, .dt-custom button:hover { border-color: var(--dt-ink-3); }
+.dt-import { margin-top: 8px; }
+.dt-import textarea { width: 100%; border: 1px solid var(--dt-hair); background: var(--dt-field); border-radius: 6px; padding: 6px; font-family: ui-monospace, Menlo, monospace !important; font-size: 11px; resize: vertical; margin-bottom: 6px; }
+.dt-file { color: var(--dt-ink-2); font-size: 11px; }
+.dt-file input { font-size: 11px; max-width: 180px; }
+.dt-help { margin: 8px 0 0; color: var(--dt-ink-3); font-size: 10.5px; line-height: 1.45; }
+
+.pm-dt-pill {
+  position: fixed; right: 12px; bottom: 12px; z-index: 2147483000;
+  border: 1px solid var(--dt-hair); background: var(--dt-bg); color: var(--dt-ink);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+  font: 600 11px/1.2 ui-sans-serif, system-ui, -apple-system, sans-serif; letter-spacing: normal; text-transform: none;
+}
+@media (max-width: 480px) {
+  .pm-dt { left: 8px !important; right: 8px !important; top: auto !important; bottom: 8px; width: auto; max-height: 70vh; }
+}

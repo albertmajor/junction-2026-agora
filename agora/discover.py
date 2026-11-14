@@ -758,7 +758,7 @@ def product_intent_plan(need: Need, cc: str | None, avail: float) -> list[tuple[
     out: list[tuple[str, str | None]] = []
     if local:
         out.append((local[0], home))
-    out += [(q, cc) for q in (qs.get("en") or [])[:1]]
+    out += [(q, home) for q in (qs.get("en") or [])[:1]]     # bought here: never glamour.com galleries
     extra = 1 if avail >= LOCAL_NEW_MIN_TOKENS else 0
     extra += 1 if avail >= EXTRA_USED_MIN_TOKENS else 0
     out += [(q, home) for q in local[2:2 + extra]]
@@ -1048,7 +1048,8 @@ _ITEM_ID = re.compile(r"\d{5,}")
 CARS_ABROAD = ("carfax.com", "cars.com", "edmunds.com", "jdpower.com", "carsandbids.com", "carmax.com",
                "cargurus.com", "carsforsale.com", "kbb.com", "autotrader.com", "truecar.com", "carvana.com",
                "capitalone.com", "classic.com", "bringatrailer.com", "ebay.com", "autolist.com", "iseecars.com",
-               "carpricetracker.com", "carprice.com")
+               "carpricetracker.com", "carprice.com", "carsdirect.com", "autobytel.com", "motortrend.com",
+               "caranddriver.com", "carsoup.com", "hemmings.com")
 _LIST_HINTS: set[str] = set()       # pages discovery found to be lists by their title (auto1.fi/volvo/v70)
 
 
@@ -1060,6 +1061,16 @@ def car_list_page(url: str, title: str = "") -> bool:
     if any(_CAR_LIST_SEG.match(p) for p in parts):
         return True
     return bool(title and _CAR_LIST_TITLE.search(title))
+
+
+def used_car_page(need: Need, url: str, title: str) -> bool:
+    """A page of used cars: its words say so, it is a marketplace (tori, kleinanzeigen), or a used-car site of
+    the need's category (nettiauto.com, autotalli.com, mobile.de)."""
+    dom = domain_of(url)
+    if _CAR_USED_WORDS.search(f"{urlsplit(url).path} {title}") or is_marketplace(dom):
+        return True
+    return any(d.get("lane") == "used" and dom_match(dom, str(d.get("domain") or "x"))
+               for d in (need.category or {}).get("domains") or [])
 
 
 def car_abroad(dom: str, title: str = "") -> bool:
@@ -1223,7 +1234,8 @@ def place_hit(need: Need, url: str, title: str) -> bool:
     if not need.where:
         return False
     from agora import places
-    hay = re.sub(r"[-_/.?=&+]", " ", urlsplit(url).path) + " | " + (title or "")
+    parts = urlsplit(url)
+    hay = re.sub(r"[-_/.?=&+]", " ", f"{parts.netloc} {parts.path}") + " | " + (title or "")
     return any(places.same_area(need.where, c) for c, _cc in places.cities_in(hay))
 
 
@@ -1235,11 +1247,14 @@ def service_fit(need: Need, url: str, title: str) -> float:
         s += 1.0
     if place_hit(need, url, title):
         s += 0.8
-    dom = domain_of(url)
-    cc = country_of(need) or home_country()
-    if _local_service(need) and cc and cc != "gb" and not is_eu(dom) and not dom.endswith(".uk"):
+    elif _local_service(need) and _foreign_generic(domain_of(url)):
         s -= 1.5
     return s
+
+
+def _foreign_generic(dom: str) -> bool:
+    """A .com / .net / .org site for a local job in Europe (westcoastarmory.com for a Helsinki gunsmith)."""
+    return tld(dom) in ("com", "net", "org", "us", "io", "co") and not is_eu(dom)
 
 
 APP_STORES = ("apps.apple.com", "play.google.com", "itunes.apple.com", "apps.microsoft.com", "chromewebstore.google.com")
@@ -1252,12 +1267,35 @@ def service_skip(need: Need, url: str, title: str) -> str | None:
     if any(dom_match(dom, d) for d in APP_STORES):
         return "an app store page, not a provider"
     cc = country_of(need) or home_country()
-    if _local_service(need) and cc and cc != "gb" and not is_eu(dom) and not dom.endswith(".uk") \
+    if _local_service(need) and cc and cc not in ("gb", "ie") and _foreign_generic(dom) \
             and (cost_guide(url, title) or _COST_WORDS.search(f"{urlsplit(url).path.replace('-', ' ')} {title}")):
         return "a cost guide from abroad (foreign prices), not a provider near you"
     if city := other_city(need, url, title):
         return f"another city ({city}), not {need.where}"
+    if _local_service(need) and need.where and _foreign_generic(dom) and english_hit(need, url, title) \
+            and not place_hit(need, url, title) and not local_hit(need, url, title) \
+            and not any(dom_match(dom, d) for d in SERVICE_DIRECTORIES):
+        # 'gunsmithing services' at a US gun shop for a Helsinki gunsmith: priced in USD, rejected after a read
+        return f"a provider abroad, not near {need.where}"
     return None
+
+
+def english_hit(need: Need, url: str, title: str) -> bool:
+    """The page names the job in English ('gunsmithing', 'plumbing'): an English-language provider."""
+    stems = {x for x in _stems(need.thing or "") if x not in _TRADE_STOP}
+    hay = f"{url} {title}".lower()
+    return bool(stems) and any(x in hay for x in stems)
+
+
+def local_hit(need: Need, url: str, title: str) -> bool:
+    """The page names the job in the local language ('aseseppä', 'Klempner'): a local provider on a .com."""
+    cc = country_of(need) or home_country()
+    lang = _lang(cc)
+    if not lang or lang == "en":
+        return True                      # an English-speaking place: an English page may be local
+    stems = {x for x in _stems(local_words(need, lang) or "") if x not in _TRADE_STOP}
+    hay = f"{url} {title}".lower()
+    return bool(stems) and any(x in hay for x in stems)
 
 
 # --------------------------------------------------------------------------- eval r2: bought at home (insurance)
@@ -1534,7 +1572,9 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                     key = normalize_url(url)
                     if key in seen:
                         old = pooled_in.get(key)
-                        if old and old != lane and fit(lane, r.get("title") or "") > fit(old, r.get("title") or ""):
+                        used_car = car and lane == "new" and used_car_page(need, url, r.get("title") or "")
+                        if old and old != lane and not used_car \
+                                and fit(lane, r.get("title") or "") > fit(old, r.get("title") or ""):
                             for i, cand in enumerate(pool[old]):
                                 if normalize_url(cand[2]["url"]) == key:
                                     moved = pool[old].pop(i)
@@ -1556,7 +1596,7 @@ async def discover(need: Need, *, depth: int | None = None, max_sources: int = 4
                         else:
                             reason = colour_clash(need, url, title)
                     if not reason and car:
-                        if lane == "new" and "used" in pool and _CAR_USED_WORDS.search(f"{urlsplit(url).path} {title}"):
+                        if lane == "new" and "used" in pool and used_car_page(need, url, title):
                             lane = "used"      # a used-car dealer / aggregator page is no new car (eval r2)
                         if car_list_page(url, title) and not is_list_page(url):
                             if len(_LIST_HINTS) > 5000:

@@ -288,6 +288,7 @@ class Signature:
 _ORDINAL_WORDS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7, "eighth": 8}
 
 
+@functools.lru_cache(maxsize=65536)
 def _fold(text: str) -> str:
     # ™ / ® first: NFKD turns '™' into 'TM' ('M Cut™' was 'm cuttm', no haircut)
     t = unicodedata.normalize("NFKD", text.lower().replace("™", " ").replace("®", " "))
@@ -477,6 +478,12 @@ def _compat_list(low: str, asked: str) -> bool:
     return False
 
 
+# one family, several generations in a row: 'iPhone 13/14/15', 'Galaxy S21 / S22', 'iPad 7/8/9': fits them all
+_FAMILY_RANGE = re.compile(r"\b(?:iphone|ipad|galaxy\s+[asz]|pixel|airpods|macbook\s+(?:air|pro))\s?\d{1,2}"
+                           r"(?:\s*(?:pro|max|plus|mini))?\s*(?:/|&)\s*(?:[a-z]\s?)?\d{1,2}\b"
+                           r"(?!\s*(?:kk|gb|gt|tb|%|mo|months?|kuukau\w*|v\b|€|e\b|eur))")
+
+
 @functools.lru_cache(maxsize=256)
 def _kind_rx(words: frozenset[str]) -> re.Pattern[str] | None:
     single = sorted((w for w in words if " " not in w and len(w) >= 3), key=len, reverse=True)
@@ -563,8 +570,8 @@ def is_accessory(title: str, need: Need | None = None) -> bool:
     if any(w in asked and re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", asked)
            for w in (*ACCESSORY_WORDS, *PART_WORDS)):
         return False   # they asked for the accessory itself ("battery for sony a7 iii")
-    if _compat_list(low, asked):
-        return True
+    if _compat_list(low, asked) or (_FAMILY_RANGE.search(low) and not _FAMILY_RANGE.search(asked)):
+        return True        # 'Tech21 Evo Sparkle MagSafe iPhone 13/14/15' (proshop): a case that fits three phones
     # the condition ('god stand') and repair notes ('akku ja näyttö vaihdettu') name no accessory for sale
     low = re.sub(r"\b(?:god|flot|pæn|paen|fin|fint|perfekt|super|ok|okay|nydelig|normal|brugbar|kanon|velholdt|"
                  r"fejlfri|pen|bra|ny|nyvaerdi|nyværdi|meget|rigtig|særdeles|saerdeles|helt|middel|rimelig|god brugt)\s+"
@@ -1241,6 +1248,14 @@ def other_kind(need: Need, offer: Offer) -> str | None:
     return None
 
 
+@functools.lru_cache(maxsize=64)
+def _narrow_broad(noun: str) -> tuple[frozenset[str], frozenset[str]]:
+    from agora import marketplaces as M
+    head = noun.split()[-1]
+    return (_fold_words({w for w in M.translations(noun) if len(w) >= 4}),
+            _fold_words(SYNONYMS.get(head, set()) | set(M.translations(head))))
+
+
 def _only_broad(need: Need, offer: Offer, toks: set[str]) -> bool:
     """A narrower kind was asked ('road bike'), the title names only the broad one ('Polkupyörä', 'pyörä') and no
     maker of the narrower kind: tori's road-bike page is its whole bicycle category searched for the word."""
@@ -1248,11 +1263,9 @@ def _only_broad(need: Need, offer: Offer, toks: set[str]) -> bool:
     if not noun or " " not in noun or noun.split()[0] in ("baby", "kids", "women", "men") or noun in KIND_ALSO \
             or noun not in SUBKINDS:
         return False              # 'Pöytä ja tuolit' is a kitchen table (sellers say the broad word for it)
-    from agora import marketplaces as M
-    narrow = _fold_words({w for w in M.translations(noun) if len(w) >= 4})
+    narrow, broad = _narrow_broad(noun)
     if not narrow or _hits(narrow, frozenset(toks)):
         return False
-    broad = _fold_words(SYNONYMS.get(noun.split()[-1], set()) | set(M.translations(noun.split()[-1])))
     if not broad or not _hits(broad, frozenset(toks)):
         return False
     maker = KIND_MAKERS.get(noun)
@@ -1702,6 +1715,12 @@ CLEANING_GROUP, PLUMBER_GROUP, ELECTRICIAN_GROUP, HANDYMAN_GROUP = (SERVICE_NOUN
                                                                     SERVICE_NOUNS[5], SERVICE_NOUNS[6])
 # open-ended trades: the job is unknown until they come, so the fair comparison is a standard call
 OPEN_TRADES = (PLUMBER_GROUP, ELECTRICIAN_GROUP, HANDYMAN_GROUP)
+# a trade's stem, at the start of a word: firm names ('24 Sähkö Oy', 'Putkihuolto Arina Oy') and domains name the job
+TRADE_STEMS: dict[frozenset[str], tuple[str, ...]] = {
+    ELECTRICIAN_GROUP: ("sahko", "elektro", "elektri", "electric", "elinstall", "elfirma", "elservice"),
+    PLUMBER_GROUP: ("putki", "lvi", "plumb", "sanitar", "loodgiet", "klempner", "rormok", "vvs", "installat"),
+    CLEANING_GROUP: ("siivo", "clean", "schoonm", "reinig", "stadning", "stadfirma"),
+}
 TRADE_HOURS = 1.0     # a standard call: 1 h of labour (+ call-out fee), shown as an estimate
 
 # a line on a price list that is not a price for the job at all: an admin fee, a surcharge, materials, parking
@@ -1720,6 +1739,28 @@ CALLOUT_LINE = re.compile(
 PREMIUM_LINE = re.compile(
     r"notdienst|notfall|emergency|urgent|spoed|noodgeval|paivystys|\bkiire|weekend|wochenende|sonntag|sunday|"
     r"feiertag|holiday|\bnacht|\bnight|after[- ]hours|\babend", re.I)
+# an add-on line on an event service's price list: never the base package (live: 'Koko galleria' €100 was the
+# wedding-photographer pick; 'Lisätunti' €180 x 8 h became a €1,440 'package'; 'Live Stream' kept as an offer)
+EXTRA_LINE = re.compile(
+    r"lisatunti\w*|lisa\s*tunti|extra\s+(?:hour|time)|additional\s+hours?|each\s+additional|following\s+hours?|"
+    r"seuraava\w*\s+tunni\w*|jokainen\s+alkava|zusatz(?:liche)?\s*stunde\w*|weitere\s+stunde\w*|extra\s+uur|"
+    r"\bgalleria\w*|\bgallery\b|album\w*|valokuvakirja\w*|kuvakirja\w*|photo\s?book\w*|fotobuch|"
+    r"live\s?-?stream\w*|striimau\w*|lisapalvelu\w*|lisakuva\w*|extra\s+photos?|\badd-?ons?\b|"
+    r"second\s+(?:photographer|shooter)|toinen\s+kuvaaja|kakkoskuvaaja|drone\w*|drooni\w*|"
+    r"matkakulu\w*|matkakorvau\w*|travel\s+(?:fee|cost|expenses)|kilometrikorvau\w*", re.I)
+EVENT_NEED = re.compile(r"wedding|haa|hochzeit|bruiloft|bryllup|brollop|photograph|kuvaaja|kuvaus|fotogra|video\w*|"
+                        r"\bdj\b|band|bandi|juhla|event|tapahtuma|party", re.I)
+# a weekday daytime 'päivystys' slot is a standard rate (live, lvirundstrom.fi 'Päivystys – arkisin klo 7–17' €55/h)
+WEEKDAY_LINE = re.compile(r"arkisin|arkipaiv\w*|ma\s*-\s*pe|mon(?:day)?\s*-\s*fri(?:day)?|weekdays?|werktags|"
+                          r"maandag\s*(?:t/m|-)\s*vrijdag|vardagar|hverdag\w*", re.I)
+_OFF_HOURS = re.compile(r"\bnacht|\bnight|weekend|wochenende|sunday|sonntag|holiday|feiertag|\bilta|\byo\b|yolla|"
+                        r"viikonlop\w*|pyha\w*|lauantai|sunnuntai|klo\s*(?:1[7-9]|2\d)\s*-", re.I)
+# one figure for a whole market, not a provider ('Average price of women haircut' at finlandprices.com,
+# 'Putkimiehen tuntihinta 2026 — mediaani 62,75 €/h (45 yritystä)'): a reference, never an offer
+MARKET_STAT = re.compile(r"\baverage\s+(?:price|cost|rate|hourly)|\bmedian\b|\bmediaani\w*|\bkeskihin\w*|"
+                         r"\bkeskimaar\w*|\bdurchschnitt\w*|\bgemiddeld\w*|\bgenomsnitt\w*|\bgjennomsnitt\w*|"
+                         r"\bprice\s+index\b|\bhintataso\w*|\(\s*\d+\s+(?:yritys\w*|companies|firms|providers|"
+                         r"betriebe|bedrijven)\s*\)|\bhow\s+much\s+(?:does|do|is)\b", re.I)
 # a different service than the one asked (sofa cleaning is not home cleaning), per service group
 OFF_TOPIC: dict[frozenset[str], re.Pattern[str]] = {
     CLEANING_GROUP: re.compile(
@@ -1771,9 +1812,12 @@ def service_line_kind(need: Need, title: str, unit: str | None) -> str:
         return "fee"
     if (off := OFF_TOPIC.get(g)) is not None and (m := off.search(t)) and not off.search(asked):
         return "off_topic"
+    if EXTRA_LINE.search(t) and not EXTRA_LINE.search(asked) and EVENT_NEED.search(asked):
+        return "extra"
     if CALLOUT_LINE.search(t) or (unit or "") == "visit" and g in OPEN_TRADES:
         return "callout"
-    if PREMIUM_LINE.search(t) and not PREMIUM_LINE.search(asked):
+    if PREMIUM_LINE.search(t) and not PREMIUM_LINE.search(asked) \
+            and not (WEEKDAY_LINE.search(t) and not _OFF_HOURS.search(t)):
         return "premium"
     if g in OPEN_TRADES and (unit or "") in ("job", "m2"):
         tw = _task_words(need)
@@ -1820,6 +1864,10 @@ def off_topic_reason(need: Need, offer: Offer) -> str | None:
     kind = (offer.raw or {}).get("line_kind") or service_line_kind(need, offer.title or "", offer.unit)
     if kind == "fee":
         return "a fee or surcharge, not a price for the job"
+    if kind == "extra":
+        return "an add-on line (extra hour, gallery, album, stream), not the package"
+    if MARKET_STAT.search(offer.title or ""):
+        return "a market statistic (an average of many providers), not one provider's price"
     if kind == "off_topic":
         g = service_group(need)
         m = OFF_TOPIC[g].search(_fold(offer.title or "")) if g in OFF_TOPIC else None
@@ -2015,15 +2063,18 @@ def _service_relevance(need: Need, offer: Offer) -> float:
         return any(a in words or (len(a) >= 4 and a in text) for a in alts)
 
     svc = [m for m in need.must_have if m.lower() in text] + [w for w in thing_words if hit(w)]
+    host = _host(offer.url or "")
     def named(g: frozenset[str]) -> bool:
-        """The page names the job: a word of the group, or a long one inside a compound ('Schoonmaakbedrijf')."""
-        return any(x in words or (len(x) >= 6 and x in text) for x in g)
+        """The page names the job: a word of the group, or a long one inside a compound ('Schoonmaakbedrijf'),
+        or the trade's stem in the firm's name or address ('SähköHessu Oy', 'SK-Putki Oy', normiputki.fi)."""
+        return any(x in words or (len(x) >= 6 and x in text) for x in g) or any(
+            re.search(rf"(?<![a-z]){st}", text) or st in host for st in TRADE_STEMS.get(g, ()))
 
     for g in groups:   # the job named in another language / form ('huollon' for 'repair') covers that word
         if any(w in g for w in thing_words if not hit(w)) and named(g):
             svc.append(next(w for w in thing_words if w in g and not hit(w)))
     score = 0.4 + 0.6 * min(1.0, len(set(svc)) / max(1, len(thing_words)))
-    if groups and not any(any(x in words or (len(x) >= 5 and x in text) for x in g) for g in groups):
+    if groups and not any(named(g) or any(x in words or (len(x) >= 5 and x in text) for x in g) for g in groups):
         score *= 0.3       # 'bike repair' asked, a €6,400 e-bike product page offered
     for w, clash in _SERVICE_CLASH.items():
         if w in thing_words and clash.search(text) and not clash.search(need.thing):
@@ -2101,13 +2152,13 @@ def explain(need: Need, offer: Offer, threshold: float = 0.5) -> tuple[float, st
         return r, why
     if is_generic(need) and (other := other_kind(need, offer)):
         return r, f"another kind of thing ({other}), not a {_need_noun(need)}"
-    if is_generic(need) and _only_broad(need, offer, set(tokenize(offer.title or ""))):
-        noun = _kind_noun(need) or _need_noun(need)
-        return r, f"any {noun.split()[-1]}: the listing does not say it is a {noun}"
     if is_accessory(offer.title or "", need):
         return r, "accessory, not the item"
     if why := product_clash(need, offer):
         return r, why
+    if is_generic(need) and _only_broad(need, offer, set(tokenize(offer.title or ""))):
+        noun = _kind_noun(need) or _need_noun(need)
+        return r, f"any {noun.split()[-1]}: the listing does not say it is a {noun}"
     if bad := [f for f in title_red_flags(offer, need) if f[0] in RED_REJECT]:
         k, what, phrase = bad[0]
         return r, (f"not an offer: {red_flag_text(k, what, phrase)}" if k == "wanted"

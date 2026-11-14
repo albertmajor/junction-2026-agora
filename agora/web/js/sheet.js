@@ -1,11 +1,14 @@
-// sheet.js (B3): the receipt for one object on the line, where it ships from, and the details under it.
-// Right sheet on desktop, bottom sheet on mobile. Every line opens to its source.
-import { S, on, emit, eur, cutSrc, goHref, domainOf, isSetAside, allIn, netAfterResale, shippingUnknown, shipsUnconfirmed, beatAllIn, pickUrl, reviewFor, trustMark, fmtCount } from './core.js';
+// sheet.js (B3): the listing, opened big. A centered dialog on a dimmed page (a bottom sheet on phones):
+// the photo on the left, on the right what it is, what you pay all in (the receipt), why, the seller, the details.
+// ← / → step through the list in its current order. Every receipt line opens to its source.
+import { S, on, emit, eur, cutSrc, goHref, domainOf, isSetAside, allIn, netAfterResale, shippingUnknown, shipsUnconfirmed, beatAllIn, pickUrl, reviewFor, trustMark, fmtCount,
+  isRisky, riskWhy, isUnsure, unsureWhy } from './core.js';
 import { flagHtml, originFor, basisWords, countryName } from './flags.js';
 
-let root, panel, body, lastFocus = null, openUrl = null;
-let line = null;
+let root, panel, body, foot, navEl, lastFocus = null, openUrl = null, hideT = 0;
+let line = null, ledger = null;
 import('./line.js').then(m => { line = m.line || null; }).catch(() => {});
+import('./ledger.js').then(m => { ledger = m; }).catch(() => {});
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const m2 = n => eur(n, { dp: 2 });
@@ -182,7 +185,7 @@ function render(url) {
   const flagsHtml = flags.length ? `<ul class="flags">${flags.map(f => `<li data-tone="${flagTone(f)}"><span class="dot" aria-hidden="true"></span>${esc(flagText(f))}</li>`).join('')}</ul>` : '';
 
   const band = (t && t.band) || tc.band;
-  const bandHtml = band && band.label ? `<p class="band">${esc(eur(o.price_eur, { dp: 0 }))} is ${esc(band.label)} for ${esc(band.what || cond)}${band.p25 != null ? ` · usual ${eur(band.p25, { dp: 0 })}–${eur(band.p75, { dp: 0 })}` : ''}</p>` : '';
+  const bandHtml = band && band.label ? `<span class="band">${esc(eur(o.price_eur, { dp: 0 }))} is ${esc(band.label)} for ${esc(band.what || cond)}${band.p25 != null ? ` · usual ${eur(band.p25, { dp: 0 })}–${eur(band.p75, { dp: 0 })}` : ''}</span>` : '';
 
   const folds = [];
   if (tc.haggle) {
@@ -221,29 +224,52 @@ function render(url) {
       ${isJob ? '' : `<div><dt>Ships to Finland</dt><dd class="${fi === false ? 'no' : fi === true ? 'yes' : 'muted'}">${esc((org && org.ships_text) || 'not stated')}</dd></div>`}
     </dl>`;
 
+  // why: what makes it stand out (the list's own reasons), whether it can win, what holds it back
+  const hl = highlightWhy(url);
+  const risky = !!(it.tc && isRisky(it));
+  const unsure = !risky && isUnsure(it) ? unsureWhy(it) : '';
+  const holdBack = risky ? `<p class="m-hold" data-tone="warn"><b>${aside ? 'Set aside' : 'Risky'}:</b> ${esc(riskWhy(it))}.${aside ? ' It is not ranked.' : ''}</p>`
+    : unsure ? `<p class="m-hold"><b>Not the pick:</b> ${esc(/[.?!]$/.test(unsure) ? unsure : unsure + '.')}</p>` : '';
+  const whyBody = (hl.length ? `<ul class="m-chips">${hl.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '') + holdBack + beatNote + flagsHtml;
+  const whyHtml = whyBody ? `<section class="m-sec m-why" aria-labelledby="m-why-h"><h3 class="m-h" id="m-why-h">Why</h3>${whyBody}</section>` : '';
+
   const details = resaleOpt + reviewHtml(it) + folds.join('');
-  const img = cutSrc(url);
+  const pics = gallery(it);
+  const img = pics[0] || '';
   const mono = (dom || '?')[0].toUpperCase();
+  const thumbs = pics.length > 1 ? `<div class="m-thumbs" role="group" aria-label="Photos">${pics.map((p, i) =>
+    `<button type="button" class="m-thumb" data-src="${esc(p)}" aria-label="Photo ${i + 1} of ${pics.length}" aria-pressed="${i === 0}"><img alt="" src="${esc(p)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></button>`).join('')}</div>` : '';
+  const condHtml = cond ? `<span class="m-cond" data-c="${esc(cond)}">${esc(cond)}</span>` : '';
+  const tm = trustMark(it);
+  const trustHtml = tm ? `<span class="tmark" data-state="${esc(tm.state)}" data-label="${esc(tm.label)}">${esc(tm.text)}</span>` : '';
   body.innerHTML = `
-    <div class="paper-wrap"><article class="paper">
-      <figure class="stage${img || o.image ? '' : ' is-mono'}" data-mono="${esc(mono)}">
-        ${img || o.image ? `<img alt="${esc(o.title || dom)}" src="${esc(img || o.image)}" data-fallback="${esc(o.image || '')}" decoding="async">` : ''}
-      </figure>
-      <h2 class="s-title" id="sheet-title">${esc(o.title || dom)}</h2>
-      <p class="s-meta">${flagHtml(it, { size: 14, origin: org, noFi: true, unknown: true })}<span>${esc([cname, org && org.city, dom, cond].filter(Boolean).join(' · '))}${o.unit ? ` · priced per ${esc(o.unit)}` : ''}</span></p>
-      ${bandHtml}
-      <ol class="receipt">${rows}</ol>
-      <div class="sum">${total}</div>
-      ${originHtml}
-      ${flagsHtml}
-      ${beatNote}
-      ${details ? `<section class="s-details" aria-label="Details"><h3 class="s-dh">Details</h3>${details}</section>` : ''}
-      <div class="acts">
-        <a class="btn primary" href="${esc(goHref(url))}" target="_blank" rel="noopener">Open listing</a>
-        ${watchAt != null ? `<button type="button" class="btn watch" data-beat="${watchAt}">Watch at ${eur(watchAt, { dp: 0 })}</button>` : ''}
+    <div class="m-grid">
+      <div class="m-media">
+        <figure class="stage${img ? '' : ' is-mono'}" data-mono="${esc(mono)}" data-url="${esc(url)}">
+          ${img ? `<img alt="${esc(o.title || dom)}" src="${esc(img)}" data-fallback="${esc(o.image || '')}" decoding="async">` : ''}
+        </figure>
+        ${thumbs}
       </div>
-      <p class="aff">We may earn a fee if you buy. It never changes the order.</p>
-    </article></div>`;
+      <div class="m-info">
+        <h2 class="s-title" id="sheet-title">${esc(o.title || dom)}</h2>
+        <p class="s-meta">${flagHtml(it, { size: 14, origin: org, noFi: true, unknown: true })}<span>${esc([cname, org && org.city, dom].filter(Boolean).join(' · '))}</span>${trustHtml ? `<span class="m-dot" aria-hidden="true">·</span>${trustHtml}` : ''}</p>
+        <p class="m-sub">${condHtml}${o.unit ? `<span>priced per ${esc(o.unit)}</span>` : ''}${bandHtml}</p>
+        <section class="m-price" aria-label="What you pay">
+          <div class="sum">${total}</div>
+          <ol class="receipt">${rows}</ol>
+        </section>
+        ${whyHtml}
+        ${originHtml}
+        ${details ? `<section class="m-sec s-details" aria-labelledby="m-det-h"><h3 class="m-h s-dh" id="m-det-h">Details</h3>${details}</section>` : ''}
+        <p class="aff">We may earn a fee if you buy. It never changes the order.</p>
+      </div>
+    </div>`;
+  foot.innerHTML = `
+      <a class="btn primary" href="${esc(goHref(url))}" target="_blank" rel="noopener">Open listing <span aria-hidden="true">↗</span></a>
+      ${watchAt != null ? `<button type="button" class="btn watch" data-beat="${watchAt}">Watch at ${eur(watchAt, { dp: 0 })}</button>` : ''}
+      <button type="button" class="btn ghost-btn share" data-share>Share</button>`;
+  panel.dataset.url = url;
+  navState();
 
   const im = body.querySelector('.stage img');
   if (im) im.addEventListener('error', () => {
@@ -251,41 +277,131 @@ function render(url) {
     if (fb && im.getAttribute('src') !== fb) im.src = fb;
     else { im.remove(); body.querySelector('.stage').classList.add('is-mono'); }
   });
+  for (const t of body.querySelectorAll('.m-thumb img')) t.addEventListener('error', () => t.closest('.m-thumb').remove(), { once: true });
   return true;
+}
+
+// ---------- photos ----------
+/** The offer's photos: the main one first, then any extra ones the listing gave (deduped, at most 8). */
+export function gallery(it) {
+  const o = (it && it.offer) || {};
+  const main = cutSrc(it) || o.image || '';
+  const pick = x => typeof x === 'string' ? x : (x && (x.url || x.src)) || '';
+  const extra = [].concat(o.images || [], o.gallery || [], o.photos || []).map(pick)
+    .filter(u => /^(https?:)?\/\//i.test(u) || u.startsWith('/'));
+  return [...new Set([main, ...extra].filter(Boolean))].slice(0, 8);
+}
+
+// ---------- the list order (← / →) ----------
+/** The listing urls in the order the list shows them: main, also in the EU, still costing, set aside. */
+export function listOrder() {
+  try {
+    if (ledger && ledger.groups) {
+      const g = ledger.groups();
+      return [].concat(g.main, g.eu, g.costing, g.risky).map(it => it.url);
+    }
+  } catch {}
+  return [...S.offers.values()].filter(it => allIn(it) != null || (it.offer && it.offer.price_eur != null))
+    .sort((a, b) => (allIn(a) ?? Infinity) - (allIn(b) ?? Infinity)).map(it => it.url);
+}
+function neighbours(url) {
+  const ord = listOrder();
+  const i = ord.indexOf(url);
+  return { i, n: ord.length, prev: i > 0 ? ord[i - 1] : null, next: i >= 0 && i < ord.length - 1 ? ord[i + 1] : null };
+}
+/** The list's own reasons for this one ("cheapest all-in", "cheapest new", …), or []. */
+function highlightWhy(url) {
+  try { const h = ledger && ledger.highlights ? ledger.highlights().find(x => x.it.url === url) : null; return h ? h.why : []; }
+  catch { return []; }
+}
+function navState() {
+  if (!navEl || !openUrl) return;
+  const nb = neighbours(openUrl);
+  const [pv, nx] = navEl.querySelectorAll('.m-step');
+  pv.disabled = !nb.prev; nx.disabled = !nb.next;
+  pv.dataset.url = nb.prev || ''; nx.dataset.url = nb.next || '';
+  navEl.querySelector('.m-count').textContent = nb.i >= 0 && nb.n > 1 ? `${nb.i + 1} of ${nb.n}` : '';
+}
+function step(dir) {
+  if (!openUrl) return;
+  const nb = neighbours(openUrl);
+  const to = dir < 0 ? nb.prev : nb.next;
+  if (to) emit('select', to);   // the line moves its notch too; openSheet re-renders in place
 }
 
 function focusables() {
   return [...panel.querySelectorAll('a[href],button:not([disabled]),summary,[tabindex]:not([tabindex="-1"])')].filter(e => e.offsetParent !== null || e === document.activeElement);
 }
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function openSheet(url) {
   if (!root || !url) return;
-  if (!render(url)) return;
-  if (!openUrl) lastFocus = document.activeElement;
+  const was = openUrl;
   openUrl = url;
-  root.hidden = false;
-  root.setAttribute('aria-hidden', 'false');
-  document.documentElement.classList.add('sheet-open');
-  requestAnimationFrame(() => { root.classList.add('open'); });
-  body.scrollTop = 0;
+  if (!render(url)) { openUrl = was; return; }
+  clearTimeout(hideT);
+  if (!was) {
+    lastFocus = document.activeElement;
+    const sbw = innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--sbw', Math.max(0, sbw) + 'px');
+    root.hidden = false;
+    root.setAttribute('aria-hidden', 'false');
+    document.documentElement.classList.add('sheet-open');
+    void root.offsetWidth;   // start the scale/fade from the closed state
+    requestAnimationFrame(() => { root.classList.add('open'); });
+    setTimeout(() => { const f = panel.querySelector('.close'); f && f.focus({ preventScroll: true }); }, 30);
+  } else if (was !== url) {
+    // stepped: keep the focus on whatever stepped (or the dialog), show the new one from the top
+    if (!panel.contains(document.activeElement)) panel.focus({ preventScroll: true });
+    if (!reduced()) { panel.classList.remove('stepped'); void panel.offsetWidth; panel.classList.add('stepped'); }
+  }
+  if (was !== url) body.scrollTop = 0;
   const it = S.offers.get(url);
   const lead = (pickUrl() || S.leader) === url;
   const bw = it && !isSetAside(it) ? beatAllIn(it) : null;
   try { line && line.ghostNotch && line.ghostNotch(lead || !bw || !(bw.gap > 0) ? null : bw.beat); } catch {}
-  setTimeout(() => { const f = panel.querySelector('.close'); f && f.focus({ preventScroll: true }); }, 30);
+}
+
+function returnFocus(url) {
+  let t = lastFocus && document.contains(lastFocus) ? lastFocus : null;
+  if (!t && url) {
+    const q = CSS.escape(url);
+    t = document.querySelector(`.lg-r[data-url="${q}"], .lg-hc[data-url="${q}"], .ln-o[data-key="${q}"] button, .ln-o[data-key="${q}"]`);
+  }
+  if (t && t.focus) t.focus({ preventScroll: true });
 }
 
 export function closeSheet() {
   if (!root || !openUrl) return;
+  const url = openUrl;
   openUrl = null;
   root.classList.remove('open');
   root.setAttribute('aria-hidden', 'true');
-  document.documentElement.classList.remove('sheet-open');
   try { line && line.ghostNotch && line.ghostNotch(null); } catch {}
-  const done = () => { if (!openUrl) root.hidden = true; };
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  setTimeout(done, reduce ? 0 : 320);
-  if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+  const done = () => {
+    if (openUrl) return;
+    root.hidden = true;
+    document.documentElement.classList.remove('sheet-open');
+    document.documentElement.style.removeProperty('--sbw');
+  };
+  clearTimeout(hideT);
+  hideT = setTimeout(done, reduced() ? 0 : 220);
+  returnFocus(url);
+}
+
+async function share(btn) {
+  const it = openUrl && S.offers.get(openUrl);
+  if (!it) return;
+  const o = it.offer || {};
+  const a = allIn(it);
+  const text = `${o.title || domainOf(it.url)}${a != null ? ` · ${eur(Math.round(a), { dp: 0 })} all in` : ''}`;
+  const link = it.url;
+  const say = w => { const t = btn.textContent; btn.textContent = w; setTimeout(() => { btn.textContent = t; }, 1400); };
+  try {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: o.title || '', text, url: link }); return; }
+    await navigator.clipboard.writeText(`${text}\n${link}`);
+    say('Link copied');
+  } catch (e) { if (!e || e.name !== 'AbortError') say('Could not copy'); }
 }
 
 export function mountSheet(el) {
@@ -294,17 +410,39 @@ export function mountSheet(el) {
   el.hidden = true;
   el.setAttribute('aria-hidden', 'true');
   el.innerHTML = `<div class="backdrop" data-close></div>
-    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-      <div class="grab" aria-hidden="true"></div>
-      <div class="s-bar"><span class="s-bar-k">Receipt</span>
-        <button type="button" class="close" data-close aria-label="Close receipt"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div>
-      <div class="body"></div>
+    <div class="m-wrap" data-close>
+      <div class="panel paper" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
+        <div class="grab" aria-hidden="true"></div>
+        <div class="s-bar">
+          <div class="m-nav" role="group" aria-label="Step through the list">
+            <button type="button" class="m-step" data-dir="-1" aria-label="Previous listing" title="Previous (←)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg></button>
+            <span class="m-count" aria-live="polite"></span>
+            <button type="button" class="m-step" data-dir="1" aria-label="Next listing" title="Next (→)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg></button>
+          </div>
+          <button type="button" class="close" data-close aria-label="Close listing"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button>
+        </div>
+        <div class="body"></div>
+        <div class="acts m-foot"></div>
+      </div>
     </div>`;
   panel = el.querySelector('.panel');
   body = el.querySelector('.body');
+  foot = el.querySelector('.m-foot');
+  navEl = el.querySelector('.m-nav');
 
   el.addEventListener('click', e => {
-    if (e.target.closest('[data-close]')) { closeSheet(); return; }
+    // the empty space around the card closes it; clicks inside the card never do (only its close button)
+    const c0 = e.target.closest('[data-close]');
+    if (c0 && (c0.classList.contains('close') || e.target === c0)) { closeSheet(); return; }
+    const st = e.target.closest('.m-step');
+    if (st) { step(Number(st.dataset.dir)); return; }
+    const th = e.target.closest('.m-thumb');
+    if (th) {
+      const im = body.querySelector('.stage img');
+      if (im) { im.src = th.dataset.src; im.dataset.fallback = th.dataset.src; }
+      for (const b of body.querySelectorAll('.m-thumb')) b.setAttribute('aria-pressed', String(b === th));
+      return;
+    }
     const b = e.target.closest('.rbtn');
     if (b && b.tagName === 'BUTTON') {
       const ev = document.getElementById(b.getAttribute('aria-controls'));
@@ -327,6 +465,8 @@ export function mountSheet(el) {
       }, 600);
       return;
     }
+    const sh = e.target.closest('[data-share]');
+    if (sh) { share(sh); return; }
     const c = e.target.closest('.copy');
     if (c) {
       navigator.clipboard && navigator.clipboard.writeText(c.dataset.copy).then(() => {
@@ -338,18 +478,28 @@ export function mountSheet(el) {
   document.addEventListener('keydown', e => {
     if (!openUrl) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSheet(); return; }
+    const t = e.target;
+    const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !typing && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      e.preventDefault(); e.stopPropagation(); step(e.key === 'ArrowLeft' ? -1 : 1); return;
+    }
+    if (e.key === '/' && !typing) { e.stopPropagation(); return; }   // the search box sits under the dimmed page
     if (e.key === 'Tab') {
       const f = focusables();
-      if (!f.length) return;
+      if (!f.length) { e.preventDefault(); panel.focus(); return; }
       const first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement) || document.activeElement === panel)) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
     }
   }, true);
+  // focus never wanders behind the dialog (a click on the dimmed page, a screen reader's virtual cursor)
+  document.addEventListener('focusin', e => {
+    if (openUrl && !panel.contains(e.target) && !e.target.closest('.flag-tip')) panel.focus({ preventScroll: true });
+  });
 
-  // Swipe down to close on mobile.
+  // Phones: swipe the sheet down to close it.
   let y0 = null;
-  panel.addEventListener('touchstart', e => { if (body.scrollTop <= 0) y0 = e.touches[0].clientY; }, { passive: true });
+  panel.addEventListener('touchstart', e => { if (body.scrollTop <= 0 && matchMedia('(max-width: 640px)').matches) y0 = e.touches[0].clientY; }, { passive: true });
   panel.addEventListener('touchmove', e => {
     if (y0 == null) return;
     const dy = e.touches[0].clientY - y0;
@@ -364,11 +514,29 @@ export function mountSheet(el) {
 
   on('select', d => openSheet(typeof d === 'string' ? d : d && d.url));
   on('reset', () => closeSheet());
-  on('truecost', item => { if (openUrl && item && item.url === openUrl) { render(openUrl); } });
-  // reviews land after the hunt: refresh the open receipt's seller section (keeps the scroll position)
-  const rerender = () => { if (!openUrl) return; const y = body.scrollTop; render(openUrl); body.scrollTop = y; };
+  // the list changes under an open dialog: re-render in place (keeps the scroll position and open receipt lines)
+  const rerender = () => {
+    if (!openUrl) return;
+    const y = body.scrollTop;
+    const openRows = [...body.querySelectorAll('.rbtn[aria-expanded="true"]')].map(b => b.getAttribute('aria-controls'));
+    const openFolds = [...body.querySelectorAll('details[open] > summary')].map(s => s.textContent);
+    if (!render(openUrl)) return;
+    for (const id of openRows) { const b = body.querySelector(`.rbtn[aria-controls="${id}"]`); const ev = document.getElementById(id); if (b && ev) { b.setAttribute('aria-expanded', 'true'); ev.hidden = false; } }
+    for (const s of body.querySelectorAll('details > summary')) if (openFolds.includes(s.textContent)) s.parentElement.open = true;
+    body.scrollTop = y;
+  };
+  on('truecost', item => { if (openUrl && item && item.url === openUrl) rerender(); });
   on('review', d => { const it = openUrl && S.offers.get(openUrl); if (it && reviewFor(it) === d) rerender(); });
   on('reviews', () => { const it = openUrl && S.offers.get(openUrl); const tm = it && trustMark(it);
     if (it && (!tm || tm.state !== 'done')) rerender(); });
+  // a photo arrives later (imagefill swaps the big one in place): keep the first thumbnail in step
+  on('image', d => {
+    if (!openUrl || !d || d.url !== openUrl) return;
+    const th = body.querySelector('.m-thumb');
+    if (th) { th.dataset.src = d.image; const i = th.querySelector('img'); if (i) i.src = d.image; }
+    const stg = body.querySelector('.stage');
+    if (stg && !stg.querySelector('img')) rerender();
+  });
+  for (const t of ['offer', 'offer-removed', 'rank', 'verdict']) on(t, () => { if (openUrl) navState(); });
   on('agent', () => closeSheet());
 }

@@ -224,7 +224,12 @@ def intent_queries(need: Need, cat: dict[str, Any] | None = None) -> list[tuple[
         # price'); the country's own providers in its language, and a comparison article to mine
         label = (cat.get("labels") or {}).get(lang or "") or ""
         out = [(f"{label} {LOCAL_PRICE.get(lang or '', 'price')}".strip(), cc, "local")] if label else []
-        out.append((f"{core} price {need.where or cc.upper()}", cc, "provider"))
+        try:
+            from agora.marketplaces import NAMES
+            country = NAMES.get(cc, cc.upper())
+        except ImportError:
+            country = cc.upper()
+        out.append((f"{core} price {need.where or country}", cc, "provider"))
         if label:
             out.append((f"{label} vertailu" if lang == "fi" else f"{label} compare", cc, "listicle"))
         return [(re.sub(r"\s+", " ", q).strip(), c, p) for q, c, p in out]

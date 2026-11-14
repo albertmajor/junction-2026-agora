@@ -451,6 +451,11 @@ def reference_price(offers: list[Offer], cat: Category, need: Need | None = None
         elif o.condition == "refurbished":
             shop_ref.append((p, o.source))
     market_ref = _upper_median(market) if len(market) >= MIN_MARKET_REF else None
+    if market_ref is not None:
+        # a 'new' shop price at a fraction of what private sellers ask is an add-on that slipped through (live,
+        # ps5: a €20 headset at proshop.fi made every €367 console 'priced 17x'): it never sets the reference
+        shop_new = [x for x in shop_new if x[0] >= 0.5 * market_ref]
+        shop_ref = [x for x in shop_ref if x[0] >= 0.4 * market_ref]
 
     def shops(xs: list[tuple[float, str]]) -> str:
         names = list(dict.fromkeys(s for _, s in sorted(xs, reverse=True)))
@@ -481,6 +486,20 @@ def _what_junk(cat: Category) -> str:
             else "a part, broken, locked or a fake")
 
 
+MODEL_CODE = re.compile(r"\b(?:A[1-3]\d{3}|SM-[A-Z]\d{3}[A-Z]?|ILCE-?\d{1,4}[A-Z]*|WH-1000XM\d|WF-1000XM\d)\b")
+NEAR_FLOOR = 0.85
+
+
+def near_floor_with_model_code(o: Offer, ref: Reference) -> bool:
+    """A home-country private listing a little under the floor that names the maker's model code ('Apple AirPods
+    pro 2 (A2698)' at €80 vs an €83 floor, live): plausible, so flagged for a check instead of thrown out."""
+    p = price_of(o)
+    if p is None or not ref.floor_eur or p < NEAR_FLOOR * ref.floor_eur or not MODEL_CODE.search(o.title or ""):
+        return False
+    home = (_home() or "fi").lower()
+    return _host(o.url).rsplit(".", 1)[-1] == home
+
+
 def reference_flag(o: Offer, ref: Reference | None, cat: Category) -> str | None:
     """'too good to be true: ...' for a used-like listing far under the reference new price."""
     p = price_of(o)
@@ -489,6 +508,8 @@ def reference_flag(o: Offer, ref: Reference | None, cat: Category) -> str | None
     if not (o.condition in ("used", "refurbished") or private_new(o)):
         return None
     if p >= ref.floor_eur:
+        return None
+    if near_floor_with_model_code(o, ref):
         return None
     what = PRIVATE_NEW if private_new(o) else o.condition
     return (f"too good to be true: {what} {fmt(p)} is {1 - p / ref.new_eur:.0%} under the new price "
@@ -718,6 +739,13 @@ def _assess_trust(o: Offer, peers: list[Offer], *, photos: dict[int, list[Offer]
     if not mixed and (ref_flag := reference_flag(o, ref, cat or DEFAULT_CATEGORY)):
         score -= 0.6
         flags.append(ref_flag)
+    o.raw.pop("near_floor", None)
+    if not mixed and ref is not None and p and ref.floor_eur and p < ref.floor_eur \
+            and near_floor_with_model_code(o, ref):
+        o.raw["near_floor"] = True       # costed and shown, never the pick
+        score -= 0.15
+        flags.append(f"a little under the usual floor ({fmt(ref.floor_eur)}) but names its model code "
+                     f"({MODEL_CODE.search(o.title or '').group(0)}): check the listing")  # type: ignore[union-attr]
 
     pool = peers if any(x is o for x in peers) else peers + [o]
     floor = max(floor, market_floor(pool))
@@ -1445,6 +1473,21 @@ def _gross_up(o: Offer, need: Need, rate: float | None = None) -> None:
         o.price_eur = round(o.price_eur / (1 - r), 2)
 
 
+def _dedupe_service(offers: list[Offer]) -> list[Offer]:
+    """One provider's same plan read twice (adcount.fi/en/prices and /en/prices.html, 'EU Sales' €50 both): one
+    vote in the median and in 'N plans compared'."""
+    seen: set[tuple[str, str, float]] = set()
+    out: list[Offer] = []
+    for o in offers:
+        key = (_host(o.url).removeprefix("www."), re.sub(r"\W+", " ", (o.title or "").lower()).strip(),
+               round(o.price_eur or o.price or 0, 2))
+        if key in seen and key[2]:
+            continue
+        seen.add(key)
+        out.append(o)
+    return out
+
+
 def _merge_net_gross(offers: list[Offer]) -> list[Offer]:
     """A page that shows both a gross and an after-deduction price is ONE provider: keep the gross one,
     and remember the deduction rate that page itself implies."""
@@ -1493,7 +1536,27 @@ NOT_COMPARABLE = {"fee": "a fee or surcharge, not a price for the job",
                   "off_topic": "a different service",
                   "task": "price for one specific task, not a standard call",
                   "callout": "call-out / visit fee only, labour extra",
-                  "premium": "emergency / urgent / weekend rate, not the standard price"}
+                  "premium": "emergency / urgent / weekend rate, not the standard price",
+                  "extra": "an add-on line (extra hour, gallery, album), not the package"}
+# 'documentary style wedding photography: 1st hour' €450: the first hour, the following ones cost less
+FIRST_HOUR = re.compile(r"\b(?:1st|first)\s+hour|ensimmäinen\s+tunti|ensimmainen\s+tunti|eka\s+tunti|"
+                        r"erste\s+stunde|eerste\s+uur|första\s+timmen|forsta\s+timmen", re.I)
+FOLLOWING_HOUR = re.compile(r"following\s+hours?|additional\s+hours?|extra\s+hours?|each\s+additional|lisätunti\w*|"
+                            r"lisatunti\w*|seuraava\w*\s+tun\w*|weitere\s+stunde\w*|extra\s+uur", re.I)
+# a portrait session is not the wedding day (live: 'hääpotrettikuvaus miljöössä — 20 kpl' €460 was the pick)
+PORTRAIT_ONLY = re.compile(r"potret\w*|muotokuv\w*|portrait\w*|portret\w*|porträt\w*|engagement|kihla\w*|"
+                           r"couple\s+(?:shoot|session)|pariskuva\w*", re.I)
+DAY_COVERAGE = re.compile(r"vihki\w*|ceremony|seremonia|dokumentaar\w*|documentary|koko\s+päivä\w*|full\s+day|"
+                          r"\d+\s*(?:h|t|tuntia|tunnin|hours?|stunden|uur)\b|juhla\w*|reception|trauung|"
+                          r"paketti|package|basic|perus|klassinen|premium", re.I)
+TRAVEL_PER_KM = re.compile(r"(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)\s*/\s*km|(?:km|kilometri)\w*\s*(?:korvaus|fee|charge)?"
+                           r"\s*:?\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)", re.I)
+
+
+def portrait_only(o: Offer, need: Need) -> bool:
+    """A wedding asked, a portraits-only package offered (no ceremony, no hours of coverage)."""
+    t = o.title or ""
+    return bool(JOB_HOURS[0][0].search(need.thing or "") and PORTRAIT_ONLY.search(t) and not DAY_COVERAGE.search(t))
 # a business rate without VAT ('ALV 0 %', 'zzgl. MwSt.', 'excl. btw'): a household pays it with VAT
 EX_VAT = re.compile(r"alv\s*0|veroton|\b(?:excl?|exkl?|ohne|zzgl|plus|\+)\.?\s*(?:vat|mwst|ust|btw|moms|alv|tva|iva)\b|"
                     r"\b(?:vat|alv|mwst|btw)\s*0\s*%|excluding vat|exclusief btw", re.I)
@@ -1545,7 +1608,7 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
     from agora import resolve
     kind = o.raw.get("line_kind") or resolve.service_line_kind(need, o.title or "", o.unit)
     trade = resolve.is_open_trade(need)
-    if kind in ("fee", "off_topic", "premium") or (trade and kind in ("task", "callout")):
+    if kind in ("fee", "off_topic", "premium", "extra") or (trade and kind in ("task", "callout")):
         # not a price for the asked job: shown as 'other prices', never compared
         o.raw["not_comparable"] = NOT_COMPARABLE.get(kind, kind)
         return None
@@ -1571,6 +1634,11 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         floor = float(mh) if isinstance(mh, (int, float)) and 0.5 <= mh <= 12 else default   # page's minimum
         if trade and not isinstance(mh, (int, float)) and isinstance(est_mh, (int, float)) and est_mh > floor:
             floor = float(est_mh)
+        first = FIRST_HOUR.search(o.title or "")
+        nxt = None
+        if first:
+            nxt = next((float(x["price_eur"]) for x in o.raw.get("other_prices") or []
+                        if x.get("price_eur") and FOLLOWING_HOUR.search(x.get("title") or "")), None)
         if trade:
             hours = floor
             conf = "low"
@@ -1597,6 +1665,22 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
             label += f", page minimum {floor:g} h"
         sticker = rate * hours
         calc = f"{fmt_rate(rate)}/h × {hours:g} h"
+        if first and hours > 1:
+            if nxt is not None:
+                # 'first hour 450€, following hours á 175€' (nooiko.com): not 8 x the first hour
+                sticker = rate + nxt * (hours - 1)
+                label = f"{fmt(rate)} first hour + {fmt(nxt)}/h x {hours - 1:g} h ({o.raw.get('job_what') or 'est.'})"
+                calc = f"{fmt_rate(rate)} first hour + {fmt_rate(nxt)}/h × {hours - 1:g} h"
+            else:
+                sticker, hours = rate, 1.0
+                conf = "low"
+                label = f"{fmt(rate)} for the first hour (more hours extra, rate not stated)"
+                calc = f"{fmt_rate(rate)} first hour"
+                basis.append("only the first hour's price is stated: the full job costs more")
+                o.raw["job_hours"] = 1.0
+                o.raw["partial_job"] = True       # never the pick over a priced full job
+                if "first hour only" not in " ".join(o.flags):
+                    o.flags.append("first hour only: the whole job costs more (rate for further hours not stated)")
         o.raw["job_hours"] = hours
         if typical and not size and not trade:
             o.raw["job_what"] = typical[1]
@@ -1620,6 +1704,12 @@ def service_cost(o: Offer, need: Need) -> TrueCost | None:
         extras = float(est_callout)
         receipt.append(("call-out fee (est.: the others' usual, this page states none)", round(extras, 2)))
         calc += f" + {fmt(extras)} call-out (est.)"
+    km = TRAVEL_PER_KM.search(" ".join(str(x) for x in (o.title, o.raw.get("search_text"), o.raw.get("description"),
+                                                         o.raw.get("snippet")) if x))
+    if km and not extras:
+        rate_km = (km.group(1) or km.group(2) or "").replace(",", ".")
+        basis.append(f"plus travel {rate_km} €/km (stated, not in the total)")
+        o.raw["travel_per_km"] = float(rate_km) if rate_km else None
     if resolve.is_deal(o):
         o.raw["deal"] = True
         basis.append("deal / voucher price: check its conditions (often first booking only)")
@@ -1909,6 +1999,24 @@ def _with_lens(o: Offer) -> bool:
         return False
 
 
+def _main_model_ids(need: Need, things: list[Thing]) -> set[str]:
+    """Ids of the Things that are exactly the asked model (same model codes), when the need names one."""
+    try:
+        from agora.resolve import signature
+    except Exception:
+        return set()
+    want = signature(need.thing).models
+    if not want:
+        return set()
+    out = set()
+    for t in things:
+        sigs = [signature(o.title or "", o.brand).models for o in t.offers[:15]]
+        exact = sum(1 for m in sigs if set(m) == set(want))
+        if sigs and exact * 2 >= len(sigs):
+            out.add(t.id)
+    return out
+
+
 def _need_brand(need: Need) -> str | None:
     """The maker named in a need for a product line ('ikea kallax shelf' -> ikea). None when a model is named:
     'AirPods Pro 2 Ear Tips' at apple.com are still not AirPods."""
@@ -1929,7 +2037,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
     for o in t.offers:
         price_of(o)
     if is_service(need):
-        t.offers[:] = _merge_net_gross(t.offers)
+        t.offers[:] = _dedupe_service(_merge_net_gross(t.offers))
         for o in t.offers:
             _gross_up(o, need, o.raw.get("page_deduction_rate"))
         _estimate_missing_minimums(need, t.offers)
@@ -1961,6 +2069,17 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
             o.raw["seen_hunts"] = n        # kept for the record; not a flag a shopper needs to read
         if not is_service(need) and not is_periodic(o):
             _shipping_flags(o, need)
+        if is_service(need):
+            o.raw.pop("partial_job", None)
+            if portrait_only(o, need):
+                o.raw["partial_job"] = True
+                o.flags.append("portraits only, not the wedding day: ranked after full-day / ceremony packages")
+            if (o.currency or "").upper() in ("USD", "CAD", "AUD") and need.where and o.location \
+                    and need.where.lower() in o.location.lower() and (_home() or "fi") != "us":
+                # wezoree.com: a Helsinki photographer 'priced' $15,000, the directory's figure, not theirs
+                o.trust = round(max(0.0, (o.trust or 1.0) - 0.5), 2)
+                o.flags.append(f"price in {o.currency} on a local provider's page in {need.where}: probably a "
+                               "directory's figure, not this provider's; ask them")
     for o in t.offers:
         if priced_per_period(need):
             o.true_cost = period_cost(o, months)
@@ -1987,6 +2106,28 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
         return _judge(need, things, months, history=history, depreciation=depreciation)
     finally:
         _MEMO.reset(token)
+
+
+PUBLIC_NOTES = {
+    # cpv:55524 school catering (live: 15 articles about free school meals, then 'Set a watch')
+    "cpv:55524": "In Finland school meals are free for pupils and run by the municipality (or its caterer). "
+                 "For your own event or business, ask caterers for a per-portion price instead.",
+}
+
+
+def public_service_note(need: Need) -> str | None:
+    """A public-procurement service (CPV node) with no price found: say why, instead of 'set a watch'."""
+    cat = need.category or {}
+    cid = str(cat.get("id") or "")
+    if not cid.startswith("cpv:"):
+        return None
+    if cid in PUBLIC_NOTES:
+        return "No public price list found. " + PUBLIC_NOTES[cid]
+    if is_service(need) and re.search(r"catering|school|hospital|public|municipal|kunta|julkinen",
+                                      f"{cat.get('label') or ''} {need.thing}", re.I):
+        return ("No public price list found: this service is usually bought by municipalities and companies "
+                "through tenders. Ask providers for a quote (per portion, per hour or per contract).")
+    return None
 
 
 def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
@@ -2037,6 +2178,8 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
 
     priced = [o for o in all_offers if o.price_eur is not None]
     if not priced:
+        if public := public_service_note(need):
+            return Verdict(public, None, None, None, [f"{len(all_offers)} offers found, none with a readable price"])
         return Verdict("No priced offers yet. Set a watch and Agora keeps looking.", None, None, None,
                        [f"{len(all_offers)} offers found, none with a readable price"])
     good = [o for o in priced if not _risky(o) and o.in_stock is not False and ships_to_fi(o) is not False
@@ -2044,6 +2187,11 @@ def _judge(need: Need, things: list[Thing], months: int, *, history: bool,
     # never crowned while a checked one exists: a giveaway-priced one of a mixed bag ('far_under'), or a used
     # listing far under its band whose page told us nothing (pick check: no description to read)
     good = [o for o in good if not o.raw.get("far_under") and not _unchecked_bargain(o, band_of)] or good
+    good = [o for o in good if not o.raw.get("partial_job") and not o.raw.get("near_floor")] or good
+    # a model asked ('dyson v15'): the pick comes from that model's own group, never from a small group of
+    # titles naming several models ('Dyson V11 V15': batteries and docks that fit both, live pick €56)
+    if not is_service(need) and (main := _main_model_ids(need, things)):
+        good = [o for o in good if o.thing_id in main] or good
     # a kind of thing ('road bike', 'puhelin', 'sofa'): the pick is a sensibly priced one, not the €35 frame or
     # the €19 diaper bag at the bottom of the bag (live): shown, but crowned only when nothing else is left
     good = [o for o in good if (o.raw.get("mixed_ratio") or 1.0) >= MIXED_PICK_MIN] or good
