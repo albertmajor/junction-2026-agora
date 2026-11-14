@@ -567,3 +567,15 @@
 :root[data-theme="dark"] .ld-value b { color: var(--tan, #D9B98C); }
 :root[data-theme="light"] .ld-value b, :root:not([data-theme]) .ld-value b { color: var(--brown, #6B4A1E); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme]) .ld-value b { color: var(--tan, #D9B98C); } }
+/* "A few places we've read": bigger group labels and logos so the rows don't feel empty */
+.ld-group { grid-template-columns: 210px minmax(0, 1fr); gap: 20px; padding: 18px 0; }
+.ld-gl { margin: 10px 0 0; font: italic 340 28px/1.05 var(--serif); font-variation-settings: var(--display-vs); letter-spacing: -0.012em; color: var(--ld-acc, var(--ink)); }
+.ld-group li { width: 104px; padding: 10px 4px; gap: 8px; }
+.ld-logo { height: 44px; min-width: 44px; }
+.ld-logo img, .ld-logo i { width: 38px; height: 38px; border-radius: 9px; }
+.ld-bn { font-size: 13px; }
+@media (max-width: 640px) {
+  .ld-group { grid-template-columns: 1fr; gap: 6px; }
+  .ld-gl { font-size: 24px; margin: 0; }
+  .ld-group li { width: 84px; }
+}
