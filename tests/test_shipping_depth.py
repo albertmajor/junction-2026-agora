@@ -217,3 +217,35 @@ def test_kleinanzeigen_citybike_rows_carry_pickup_only_and_the_place():
     rose = next(r for r in rows if r["title"].startswith("ROSE Sneak Citybike"))
     assert rose["delivery"] == "ships" and rose["location"] == "42655 Solingen"
     assert all(r["location"] for r in rows[:6])
+
+
+def test_a_listing_alone_in_its_thing_is_still_judged_against_the_hunts_market():
+    peers = [_listing(f"https://www.tori.fi/recommerce/forsale/item/{i}", "tori.fi", p, "tori", title="AirPods Pro 2")
+             for i, p in enumerate([150, 160, 170, 180, 140])]
+    lone = _listing("https://www.marktplaats.nl/v/x/m1-airpods", "marktplaats.nl", 25, "marktplaats",
+                    title="Apple Airpods pro 2e generatie nieuw ook partijhandel", delivery="ships")
+    v = judge(AIRPODS, [Thing(id="a", name="AirPods Pro 2", offers=peers),
+                        Thing(id="b", name="AirPods Pro 2 2E", offers=[lone])], history=False)
+    assert any(f.startswith("too good to be true") for f in lone.flags)
+    assert v.best_offer_url != lone.url
+
+
+@pytest.mark.parametrize("thing,title,acc", [
+    ("city bike", "Kaupunkipyörä ohjaustanko 44cm.", True),            # live: a €25 handlebar won 'city bike'
+    ("city bike", 'Tunturi naisten kaupunkipyörä 28" M valkoinen', False),
+    ("ikea kallax shelf", "IKEA DRÖNA säilytyslaatikot 4 kpl (sopii Kallax-hyllyyn)", True),
+    ("ikea kallax shelf", "Ikean Kallaxiin sopiva laatikosto", True),
+    ("ikea kallax shelf", "IKEA lemmikkipeti KALLAX hyllykköön", True),
+    ("ikea kallax shelf", "Kallax 4x4 hylly + 4 laatikkoa", False),
+    ("ikea kallax shelf", "IKEA hyllykaappi Kallax", False),
+])
+def test_parts_and_inserts_sold_alone_are_accessories(thing, title, acc):
+    from agora import resolve
+    assert resolve.is_accessory(title, Need(raw=thing, thing=thing)) is acc
+
+
+def test_city_bike_matches_in_other_languages():
+    from agora import resolve
+    for t in ("Gazelle Esprit 49cm heren stadsfiets", "Damenfahrrad Citybike grau 26 Zoll", "Stadscykel 24 tum röd"):
+        assert resolve.explain(BIKE, Offer(url="https://x/1", source="x", title=t, price=100, currency="EUR",
+                                           condition="used"))[1] is None

@@ -1281,9 +1281,22 @@ def _shipping_line(o: Offer) -> str:
     return "shipping / fees"
 
 
+THIN_PEERS = 3     # a Thing with fewer same-condition prices than this borrows the whole hunt's market
+
+
+def _peers_for(o: Offer, peers: list[Offer], everyone: list[Offer]) -> list[Offer]:
+    """Trust peers: the offer's own Thing, or, when that Thing is too thin to have a market (a listing whose
+    title split it off: 'AirPods Pro 2e generatie ... partijhandel' at €25 alone), every offer of the hunt
+    so a far-too-cheap one is still called out."""
+    if not everyone or len(market_prices(peers, o.condition)) >= THIN_PEERS:
+        return peers
+    return everyone
+
+
 def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
                   depreciation: dict[str, Any] | None = None, *, history: bool = False,
-                  photos: dict[int, list[Offer]] | None = None, floor: float = 0.0) -> None:
+                  photos: dict[int, list[Offer]] | None = None, floor: float = 0.0,
+                  everyone: list[Offer] | None = None) -> None:
     cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                             depreciation)
     for o in t.offers:
@@ -1296,7 +1309,7 @@ def _judge_offers(need: Need, t: Thing, months: int, seen: dict[str, int],
         t.offers[:] = _merge_same_page(t.offers)
     for o in t.offers:
         discount = discount_check(o, t.offers, history=history)
-        o.trust, new_flags = assess_trust(o, t.offers, photos=photos, discount=discount,
+        o.trust, new_flags = assess_trust(o, _peers_for(o, t.offers, everyone or []), photos=photos, discount=discount,
                                           floor=0.0 if need.kind == "service" else floor)
         o.flags = [f for f in o.flags if f in ("bundle",)] + new_flags
         if note := _two_prices_note(o):
@@ -1342,7 +1355,8 @@ def judge(need: Need, things: list[Thing], months: int = DEFAULT_MONTHS, *, hist
     band_of: dict[int, dict[str, Any]] = {}
     floor = market_floor(everyone) if need.kind != "service" else 0.0   # across Things: a lone part is its own Thing
     for t in things:
-        _judge_offers(need, t, months, seen, depreciation, history=history, photos=photos, floor=floor)
+        _judge_offers(need, t, months, seen, depreciation, history=history, photos=photos, floor=floor,
+                      everyone=everyone if need.kind != "service" else None)
         cat = measured_category(category_for(" ".join([need.thing, t.name] + [o.title for o in t.offers[:5]])),
                                 depreciation)
         bands = price_band(t, history=history)

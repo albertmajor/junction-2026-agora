@@ -69,6 +69,12 @@ ACCESSORY_WORDS = {
     # bike parts sold on their own (live: a €25 'Kaupunkipyörä ohjaustanko' handlebar won 'city bike')
     "ohjaustanko", "sisärengas", "cykelslang", "slang", "fahrradschlauch", "schlauch", "montageständer",
     "kaasukahva", "binnenband", "dętka",
+    # shelf inserts and add-ons sold alone (live: 'IKEA DRÖNA säilytyslaatikot (sopii Kallax-hyllyyn)' at €8
+    # won 'ikea kallax shelf')
+    "insert", "inserts", "upotettava", "lokerikko", "säilytyslaatikot", "säilytyslaatikko", "hyllynjakaja",
+    "jakaja", "somiste", "pulloteline", "viinipulloteline", "jalat", "einsatz", "einsätze", "drahtkorb",
+    "förvaringslåda", "förvaringslådor", "laatikosto", "lasihylly", "lasihyllyt", "kello-ovi", "liitoshela",
+    "säilytyskori", "ritiläkori", "teline", "jalusta", "ovi", "ovet", "latikosto", "lemmikkipeti",
 }
 # words that name a part of the item: an accessory when they come *before* the item's name
 # ("OLED Display for Nintendo Switch OLED"), not after ("MacBook Air with 15.3" display")
@@ -80,6 +86,11 @@ ACCESSORY_PATTERNS = [
     re.compile(rf"\b{_FOR}\s+(?:the\s+)?(?:sony|canon|nikon|apple|iphone|samsung|galaxy|fuji|a\d|ilce|eos|pixel|macbook|ipad"
                r"|nintendo|switch|playstation|ps[45]|xbox|dyson|airpods|garmin|kindle|bose|gopro|dji)\b", re.I),
     re.compile(r"\b(?:replacement|spare)\b", re.I),
+    # Finnish 'fits into X': 'Kallaxiin sopiva laatikosto', 'sopii Kallax-hyllyyn'
+    re.compile(r"\w+(?:iin|aan|ään|hin|yyn)\s+sopiva\b|\bsopii\s+[\w-]+(?:iin|aan|ään|hin|yyn)\b", re.I),
+    re.compile(r"\bhyll\w*(?:yyn|köön|yihin|ykköihin)\b", re.I),     # 'into a shelf' (Finnish illative): an insert
+    re.compile(r"\b(?:till|in)\s+(?:ikea\s+)?kallax\b", re.I),
+    re.compile(rf"\b{_FOR}\s+(?:the\s+)?(?:ikea\s+)?(?:kallax|billy|pax|hemnes|malm|expedit)\b", re.I),
 ]
 BUNDLE_PATTERNS = [
     re.compile(r"\bbundle\b|\bkit\b|\bcombo\b|\bpaketti\b|\bset\b", re.I),

@@ -42,7 +42,7 @@ SIBLING_MIN_TOKENS = 9.0     # the depreciation lane's 2 searches only when the 
 DEFAULT_MAX_SOURCES = 32      # free reads are cheap; the paid ones are ordered by expected yield (LaneGate)
 DEFAULT_READ_TIMEOUT = 12.0  # seconds of page work (time queued for the shared rate limit does not count)
 MAX_QUEUE_ALLOWANCE = 120.0  # never wait more than this for the rate limiter on one page
-DEFAULT_BUDGET_S = 20.0      # a live hunt stops waiting for pages after this (AGORA_HUNT_BUDGET_S; 0 = no cap)
+DEFAULT_BUDGET_S = 24.0      # a live hunt stops waiting for pages after this (AGORA_HUNT_BUDGET_S; 0 = no cap)
 PROVISIONAL_AFTER = 8.0      # send a provisional verdict by this many seconds...
 SIBLING_DEADLINE = 20.0      # the depreciation lane must be done this many seconds into the hunt
 STABLE_FOR = 3.0             # ...or as soon as the leaderboard has not moved for this long
@@ -318,11 +318,16 @@ class Leaderboard:
     def __init__(self, need: Need, resolve: Resolve, size: int = 3) -> None:
         self.need, self.resolve, self.size = need, resolve, size
         self.top: list[dict[str, Any]] = []
+        self._last = 0.0
 
     def update(self, offers: list[Offer]) -> dict[str, Any] | None:
         judge_mod = _module("judge")
         if judge_mod is None or not offers:
             return None
+        now = time.monotonic()
+        if len(offers) > 40 and now - self._last < 1.0:   # hundreds of offers: re-rank at most once a second
+            return None
+        self._last = now
         twins = copy.deepcopy(offers)
         try:
             things = self.resolve(self.need, twins)
@@ -734,7 +739,12 @@ async def hunt(
         """A page that landed after the provisional verdict: did it change the call (vs the latest one)?"""
         o = item.data.get("offer") or {}
         before = latest.get("v") or provisional
-        now, twins = snapshot(need, out.offers, resolve, judge)
+        t_now = time.monotonic()
+        if len(out.offers) > 40 and t_now - latest.get("t", 0.0) < 1.0 and "v" in latest:
+            now, twins = None, latest.get("twins")          # re-judged under a second ago: reuse it
+        else:
+            now, twins = snapshot(need, out.offers, resolve, judge)
+            latest["t"] = t_now
         latest["twins"] = twins
         after = to_dict(now) if now is not None else before
         latest["v"] = after
@@ -843,6 +853,16 @@ async def hunt(
             await asyncio.wait_for(asyncio.gather(*trust_tasks, return_exceptions=True), timeout=3.5)
         except TimeoutError:
             pass                   # late lookups keep filling the cache in their threads
+
+    rd = _module("reader")
+    if rd is not None and getattr(rd, "market_for", None) is not None:
+        try:
+            body = rd.market_for(seen)
+        except Exception:
+            body = None
+        scope = next((e.data for e in out.events if e.type == "scope"), None)
+        if body and (body["sources"] or scope):
+            yield ev("market", **body, scope=scope)
 
     # 4 RESOLVE (the optional model relevance check runs first: one batched call, <=2.5 s, never raises)
     rel_mod = _module("relevance")
