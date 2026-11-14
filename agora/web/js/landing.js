@@ -228,7 +228,7 @@ function specificHtml() {
       <div class="ld-ask ld-rv">
         <p class="ld-ask-k">If it could mean a few things, we ask:</p>
         <p class="ld-pull ld-pull-c">“That could be a few things. Which one?”</p>
-        <p class="ld-ask-s">and keep hunting the likeliest one while you decide.</p>
+        <p class="ld-ask-s">or you just search exactly what you typed.</p>
       </div>
     </div>`);
 }
@@ -254,7 +254,7 @@ function priceHtml() {
   return band('ld-price', 'green', `<div class="ld-in ld-split ld-flip">
       <div class="ld-rcs ld-fan">${[us, fi].map(receipt).join('')}</div>
       <header class="ld-head ld-rv">
-        ${head('04', 'The sticker is not the price', `<s>${eur(us.tag, 0)} on the tag.</s> <em>${eur(us.all, 0)}+ at your door.</em>`, 'ld-price-h', 'ld-h-pull')}
+        ${head('04', 'The sticker is not the price', `The tag says ${eur(us.tag, 0)}. <em>It really costs ${eur(us.all, 0)}+.</em>`, 'ld-price-h', 'ld-h-pull')}
         <p class="ld-sub">Shipping, import VAT and fees turn up at checkout, after you’ve already decided. We add them before you look, say where each number came from, and mark anything a shop won’t confirm.</p>
         <p class="ld-gap"><b>${eur(fi.tag - us.tag, 0)}</b> cheaper on the sticker. At most <b>${eur(fi.all - us.all, 0)}</b> cheaper at your door, and only if it ships to Finland at all, which the shop never said. So the pick is ${esc(fi.dom)}, ${eur(fi.all, 0)}, no surprises.</p>
         <p class="ld-fx">Every price converted to euros at the day’s ECB reference rate (or our last saved rate if that can’t be reached), with the shop’s own price kept: ${esc(us.orig)} here.</p>
