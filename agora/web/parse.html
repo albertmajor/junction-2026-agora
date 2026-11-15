@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How PriceMonkey reads a search</title>
+<link rel="icon" href="/web/assets/brand/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* One 16:9 stage (1280×720 design px, scaled to fit) so it can be screen-recorded straight into the video.
+   Every colour stands for one kind of thing PriceMonkey pulls out of the sentence. */
+:root {
+  --bg: #161513; --stage: #1D1B18; --field: #24221E; --line: rgba(238,234,225,.12);
+  --ink: #EEEAE1; --ink2: #B5AFA4; --ink3: #7E786E;
+  --item: #F0D435;      /* the thing itself */
+  --cond: #7FD6A8;      /* used / new / refurbished */
+  --budget: #8DBEFF;    /* your price */
+  --not: #FF7A66;       /* must not */
+  --pref: #D2A6FF;      /* nice to have: colour, size */
+  --place: #FFB86B;     /* where */
+  --fix: #5FE0D6;       /* spelling fixed */
+  --plat: #8DBEFF;      /* for which console */
+  --disp: "Fraunces", Georgia, serif; --sans: "Instrument Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+body { display: grid; grid-template-rows: 1fr auto; }
+#wrap { display: grid; place-items: center; overflow: hidden; padding: 16px; }
+#stage {
+  position: relative; width: 1280px; height: 720px; flex: none; transform-origin: center center;
+  background: radial-gradient(1200px 600px at 50% 0%, #23201B 0%, var(--stage) 60%); border-radius: 18px; overflow: hidden;
+}
+.clean #wrap { padding: 0; } .clean #stage { border-radius: 0; } .clean #bar { display: none; }
+
+/* header */
+.brand { position: absolute; left: 56px; top: 40px; display: flex; align-items: center; gap: 12px; opacity: .9; }
+.brand img { width: 40px; height: 40px; }
+.brand b { font: 400 24px/1 var(--disp); } .brand i { font: italic 400 24px/1 var(--disp); color: #D9B98C; }
+.step { position: absolute; right: 56px; top: 48px; font: 500 14px/1 var(--mono); color: var(--ink3); letter-spacing: .04em; }
+h1#title { position: absolute; left: 0; right: 0; top: 112px; margin: 0; text-align: center; font: 300 46px/1.1 var(--disp); letter-spacing: -.01em; }
+h1#title em { font-style: italic; color: var(--item); }
+
+/* the search box */
+#box {
+  position: absolute; left: 48px; right: 48px; top: 214px; min-height: 92px; padding: 26px 30px; white-space: nowrap;
+  background: var(--field); border: 1.5px solid var(--line); border-radius: 22px;
+  font: 400 31px/1.45 var(--sans); letter-spacing: -.005em; transition: border-color .5s, box-shadow .5s;
+}
+#box.scan { border-color: rgba(240,212,53,.5); box-shadow: 0 0 0 6px rgba(240,212,53,.06); }
+#q { white-space: pre; }
+.caret { display: inline-block; width: 2px; height: 1.05em; background: var(--ink); vertical-align: -.15em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.caret[hidden] { display: none; }
+#scanline { position: absolute; top: 10px; bottom: 10px; width: 120px; left: -140px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(240,212,53,.16), transparent); }
+
+/* segments */
+.seg { position: relative; border-radius: 7px; padding: 0 2px; margin: 0 -2px; transition: color .45s, background-color .45s; }
+.seg::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: -3px; height: 3px; border-radius: 2px; background: var(--c);
+  transform: scaleX(0); transform-origin: left; transition: transform .55s cubic-bezier(.2,.8,.2,1); }
+.seg.on { color: var(--c); background: color-mix(in srgb, var(--c) 13%, transparent); }
+.seg.on::after { transform: scaleX(1); }
+.seg.filler.on { color: var(--ink3); background: none; }
+.seg.filler.on::after { display: none; }
+.seg.not.on .strike { position: absolute; left: 0; right: 0; top: 52%; height: 2.5px; background: var(--not); transform: scaleX(0); transform-origin: left; animation: strike .5s .25s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes strike { to { transform: scaleX(1); } }
+.seg.dim { opacity: .35; }
+
+/* labels that pop above the words */
+.lab { position: absolute; transform: translate(-50%, 0); white-space: nowrap; pointer-events: none;
+  font: 500 13px/1 var(--mono); letter-spacing: .03em; color: #161513; background: var(--c); padding: 6px 9px 5px; border-radius: 999px;
+  opacity: 0; translate: 0 8px; transition: opacity .35s, translate .45s cubic-bezier(.2,.9,.25,1.3); }
+.lab.on { opacity: 1; translate: 0 0; }
+.lab::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 9px; height: 9px; background: var(--c); transform: translateX(-50%) rotate(45deg); border-radius: 1px; }
+.lab.below { }
+.lab.below::after { bottom: auto; top: -5px; }
+
+/* the structured result */
+#card {
+  position: absolute; left: 80px; right: 80px; top: 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.row { border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px 15px; background: rgba(255,255,255,.015);
+  display: grid; gap: 7px; opacity: 0; transform: translateY(14px); transition: opacity .4s, transform .5s cubic-bezier(.2,.8,.2,1), border-color .4s; }
+.row.on { opacity: 1; transform: none; border-color: color-mix(in srgb, var(--c) 45%, transparent); }
+.row .k { font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--c); display: flex; gap: 8px; align-items: center; }
+.row .k::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.row .v { font: 400 24px/1.2 var(--disp); }
+.row .h { font: 400 14px/1.35 var(--sans); color: var(--ink2); }
+.row.wide { grid-column: 1 / -1; }
+
+.fly { position: absolute; z-index: 5; pointer-events: none; font: 500 13px/1 var(--mono); color: #161513; background: var(--c); padding: 6px 9px 5px; border-radius: 999px; white-space: nowrap; }
+
+/* bottom line: what goes to the shops */
+#out { position: absolute; left: 80px; right: 190px; bottom: 44px; display: flex; align-items: center; gap: 16px; opacity: 0; transform: translateY(10px);
+  transition: opacity .5s, transform .6s cubic-bezier(.2,.8,.2,1); }
+#out.on { opacity: 1; transform: none; }
+#out .arrow { font: 400 28px/1 var(--disp); color: var(--item); }
+#out .send { font: 400 22px/1.3 var(--sans); color: var(--ink2); }
+#out .send b { font-weight: 500; color: var(--ink); font-family: var(--mono); font-size: 20px; background: rgba(240,212,53,.12); padding: 3px 8px; border-radius: 6px; }
+#out .sites { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+#out .sites span { font: 500 13px/1 var(--mono); color: var(--ink2); border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .4s; }
+#out .sites span.on { opacity: 1; transform: none; }
+
+/* the question (scene 3) */
+#ask { position: absolute; left: 50%; top: 360px; width: 760px; transform: translateX(-50%) translateY(16px); opacity: 0;
+  border: 1px solid var(--line); border-radius: 18px; padding: 24px 28px; background: #211F1B; transition: opacity .5s, transform .6s cubic-bezier(.2,.8,.2,1); }
+#ask.on { opacity: 1; transform: translateX(-50%); }
+#ask .qq { font: 400 28px/1.2 var(--disp); margin-bottom: 18px; }
+#ask .qq em { color: var(--item); font-style: italic; }
+.opt { display: grid; grid-template-columns: 1fr 200px 52px; align-items: center; gap: 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); margin-top: 9px;
+  opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .45s, background .3s, border-color .3s; }
+.opt.on { opacity: 1; transform: none; }
+.opt.best { border-color: rgba(240,212,53,.55); background: rgba(240,212,53,.06); }
+.opt .t { font: 500 19px/1.2 var(--sans); } .opt .s { font: 400 14px/1.3 var(--sans); color: var(--ink2); }
+.opt .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; }
+.opt .bar i { display: block; height: 100%; width: 0; background: var(--item); border-radius: 4px; transition: width .9s cubic-bezier(.2,.8,.2,1); }
+.opt .pc { font: 500 15px/1 var(--mono); color: var(--ink2); text-align: right; }
+#ask .typed { margin-top: 14px; font: 400 15px/1.3 var(--sans); color: var(--ink3); opacity: 0; transition: opacity .4s; }
+#ask .typed.on { opacity: 1; }
+
+/* the monkey, small, once */
+#mk { position: absolute; right: 64px; bottom: 0; width: 92px; transform: translateY(110%); transition: transform .7s cubic-bezier(.2,.9,.25,1.2); }
+#mk.on { transform: translateY(18%); }
+
+/* controls, outside the recorded frame */
+#bar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 10px 16px 16px; }
+#bar button { font: 500 14px/1 var(--sans); color: var(--ink); background: #24221E; border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; cursor: pointer; }
+#bar button[aria-pressed="true"] { border-color: var(--item); color: var(--item); }
+#bar button:focus-visible { outline: 2px solid var(--item); outline-offset: 2px; }
+#bar .hint { font: 400 13px/1.3 var(--sans); color: var(--ink3); align-self: center; }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage" aria-live="polite">
+    <div class="brand"><img src="/web/assets/brand/logo-64.png" alt=""><span><b>Price</b><i>Monkey</i></span></div>
+    <div class="step" id="step"></div>
+    <h1 id="title"></h1>
+    <div id="box"><span id="q"></span><span class="caret" id="caret"></span><div id="scanline"></div></div>
+    <div id="card"></div>
+    <div id="ask"></div>
+    <div id="out"><span class="arrow">→</span><span class="send" id="send"></span><span class="sites" id="sites"></span></div>
+    <img id="mk" src="/web/assets/brand/mascot-160.png" alt="">
+  </div>
+</div>
+<div id="bar">
+  <button data-s="0">1 · A hard search</button>
+  <button data-s="1">2 · A typo</button>
+  <button data-s="2">3 · A real question</button>
+  <button data-s="all">Play all</button>
+  <span class="hint">Add <code>?clean=1</code> for a frame with no buttons (screen-record it) · <code>?s=1</code> starts on one scene</span>
+</div>
+<script>
+// Every segment, value and option below is what PriceMonkey's own parser returns for these sentences
+// (agora/need.py parse_need_rules + apply_platform, agora/prefs.py split, agora/platforms.py split, /api/intent), run 15 Nov 2026.
+const C = k => `var(--${k})`;
+const SCENES = [
+  {
+    step: '1 / 3', title: 'You type it <em>like you’d say it</em>.',
+    q: 'looking for a used ps5 pro under 500€, no gta bundle, disc edition, white, near Helsinki',
+    segs: [
+      ['looking for a', 'filler', ''],
+      ['used', 'cond', 'condition'],
+      ['ps5 pro', 'item', 'the thing'],
+      ['under 500€', 'budget', 'your price'],
+      ['no gta bundle', 'not', 'must not'],
+      ['disc edition', 'item', 'the thing'],
+      ['white', 'pref', 'nice to have'],
+      ['near Helsinki', 'place', 'where'],
+    ],
+    rows: [
+      ['item', 'Looking for', 'PS5 Pro disc edition', 'one product, two phrases joined'],
+      ['cond', 'Condition', 'Used', 'only second-hand listings'],
+      ['budget', 'Your price', '≤ €500', 'all in: shipping and fees counted'],
+      ['not', 'Must not', 'GTA bundle', 'checked on every listing, one by one'],
+      ['pref', 'Nice to have', 'White', 'ranks higher, never hides others'],
+      ['place', 'Where', 'Helsinki', 'pickup distance and shipping to you'],
+    ],
+    send: 'ps5 pro disc edition', sites: ['tori.fi', 'olx.pl', 'kleinanzeigen.de', 'marktplaats.nl', 'blocket.se', 'vinted', '+ shops'],
+  },
+  {
+    step: '2 / 3', title: 'It forgives <em>your typing</em>.',
+    q: 'i want to buy some hawaianas, size 44 1/3 purple color',
+    segs: [
+      ['i want to buy some', 'filler', ''],
+      ['hawaianas', 'fix', 'spelling fixed', 'havaianas'],
+      ['size 44 1/3', 'pref', 'size'],
+      ['purple', 'pref', 'colour'],
+      ['color', 'filler', ''],
+    ],
+    rows: [
+      ['item', 'Looking for', 'Havaianas', '“hawaianas” → the brand you meant'],
+      ['pref', 'Size', '44 1/3', 'read as 44.33, matched in each listing'],
+      ['pref', 'Colour', 'Purple', 'ranks higher, never hides others'],
+      ['cond', 'Condition', 'Any', 'new, refurbished and used'],
+    ],
+    send: 'havaianas', sites: ['zalando', 'vinted', 'tori.fi', 'ebay', '+ shops'],
+  },
+  {
+    step: '3 / 3', title: 'When it can’t know, <em>it asks</em>.',
+    q: 'gta 6 ps5',
+    segs: [['gta 6', 'item', 'a game'], ['ps5', 'plat', 'for this console']],
+    ask: {
+      q: 'GTA 6 for PS5: <em>which do you mean?</em>',
+      opts: [
+        ['Just the game (disc)', 'The game on its own, new or used.', 55],
+        ['A PS5 with GTA 6 bundled', 'The console with the game included.', 30],
+        ['A digital code', 'A download code, no disc.', 15],
+      ],
+      typed: 'or search exactly “gta 6 ps5”',
+    },
+  },
+];
+
+const $ = id => document.getElementById(id);
+const stage = $('stage'), qEl = $('q');
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let token = 0;
+const sleep = ms => new Promise((res, rej) => { const t = token; setTimeout(() => t === token ? res() : rej('stop'), RM ? Math.min(ms, 60) : ms); });
+
+function fit() {
+  const w = $('wrap').clientWidth - (document.body.classList.contains('clean') ? 0 : 32);
+  const h = $('wrap').clientHeight - (document.body.classList.contains('clean') ? 0 : 32);
+  const s = Math.min(w / 1280, h / 720, 1.6);
+  stage.style.transform = `scale(${s})`; stage.dataset.s = s;
+}
+const scale = () => Number(stage.dataset.s) || 1;
+function rel(el) {           // an element's box in stage design pixels
+  const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect(), k = scale();
+  return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k };
+}
+
+function reset(sc) {
+  stage.querySelectorAll('.lab,.fly').forEach(e => e.remove());
+  $('card').innerHTML = ''; $('ask').innerHTML = ''; $('ask').classList.remove('on');
+  $('out').classList.remove('on'); $('sites').innerHTML = ''; $('send').innerHTML = '';
+  $('box').classList.remove('scan'); $('mk').classList.remove('on');
+  qEl.textContent = ''; $('caret').hidden = false;
+  $('step').textContent = sc.step; $('title').innerHTML = sc.title;
+  $('box').style.top = sc.ask ? '230px' : '214px'; $('box').style.fontSize = '';
+}
+
+// one line, always: labels sit above and below it, so a wrap would make them collide
+function fitLine() {
+  const box = $('box'); let fs = 31;
+  box.style.fontSize = fs + 'px';
+  while (box.scrollWidth > box.clientWidth + 1 && fs > 18) { fs -= 1; box.style.fontSize = fs + 'px'; }
+}
+
+async function typeIn(text) {
+  for (let i = 1; i <= text.length; i++) {
+    qEl.textContent = text.slice(0, i);
+    if ($('box').scrollWidth > $('box').clientWidth + 1) fitLine();
+    const ch = text[i - 1];
+    await sleep(ch === ',' ? 150 : ch === ' ' ? 55 : 34 + (i % 3) * 10);
+  }
+}
+
+// split the sentence into segment spans, in sentence order, gaps kept as plain text
+function segment(sc) {
+  const q = sc.q, found = [];
+  let from = 0;
+  sc.segs.forEach((s, i) => { const at = q.indexOf(s[0], from); if (at >= 0) { found.push({ i, at, end: at + s[0].length, s }); from = at + s[0].length; } });
+  qEl.textContent = '';
+  let pos = 0; const els = [];
+  for (const f of found) {
+    if (f.at > pos) qEl.append(q.slice(pos, f.at));
+    const sp = document.createElement('span');
+    const kind = f.s[1];
+    sp.className = 'seg ' + (kind === 'filler' ? 'filler' : kind === 'not' ? 'not' : '');
+    sp.style.setProperty('--c', kind === 'filler' ? 'var(--ink3)' : C(kind));
+    sp.textContent = f.s[0];
+    if (kind === 'not') { const st = document.createElement('span'); st.className = 'strike'; sp.append(st); }
+    qEl.append(sp); els[f.i] = sp; pos = f.end;
+  }
+  if (pos < q.length) qEl.append(q.slice(pos));
+  return els;
+}
+
+function label(el, text, kind, below) {
+  const b = rel(el), l = document.createElement('div');
+  l.className = 'lab' + (below ? ' below' : ''); l.style.setProperty('--c', C(kind)); l.textContent = text;
+  stage.append(l);
+  l.style.left = (b.x + b.w / 2) + 'px';
+  l.style.top = below ? (b.y + b.h + 12) + 'px' : (b.y - 34) + 'px';
+  requestAnimationFrame(() => l.classList.add('on'));
+  return l;
+}
+
+async function scan() {
+  const sl = $('scanline'); $('box').classList.add('scan');
+  if (RM) return;
+  sl.style.opacity = 1;
+  await sl.animate([{ left: '-140px' }, { left: 'calc(100% + 20px)' }], { duration: 900, easing: 'cubic-bezier(.4,0,.2,1)' }).finished;
+  sl.style.opacity = 0;
+}
+
+async function flyTo(fromEl, toEl, text, kind) {
+  const a = rel(fromEl), b = rel(toEl);
+  const f = document.createElement('div'); f.className = 'fly'; f.style.setProperty('--c', C(kind)); f.textContent = text;
+  stage.append(f);
+  const fw = f.offsetWidth;
+  f.style.left = (a.x + a.w / 2 - fw / 2) + 'px'; f.style.top = a.y + 'px';
+  if (!RM) await f.animate([
+    { transform: 'translate(0,0) scale(1)', opacity: 1 },
+    { transform: `translate(${b.x + 18 - (a.x + a.w / 2 - fw / 2)}px, ${b.y + 14 - a.y}px) scale(.9)`, opacity: .0 },
+  ], { duration: 620, easing: 'cubic-bezier(.5,0,.2,1)' }).finished;
+  f.remove();
+}
+
+async function play(i) {
+  const sc = SCENES[i];
+  reset(sc);
+  await sleep(600);
+  await typeIn(sc.q);
+  await sleep(500);
+  $('caret').hidden = true;
+  fitLine();
+  await scan();
+  const els = segment(sc);
+  const labs = [];
+  // highlight each part, in the order a person would notice them: the thing first, the talk last
+  const order = sc.segs.map((s, k) => k).sort((a, b) => (sc.segs[a][1] === 'filler') - (sc.segs[b][1] === 'filler'));
+  const below = {}; let n = 0;
+  sc.segs.forEach((s, k) => { if (s[1] !== 'filler' && els[k]) below[k] = (n++ % 2) === 1; });
+  for (const k of order) {
+    const el = els[k]; if (!el) continue;
+    const [, kind, text, fixed] = sc.segs[k];
+    el.classList.add('on');
+    if (text) labs[k] = label(el, text, kind, !!below[k]);
+    if (fixed) {
+      await sleep(700);
+      // the typo turns into the brand: letters cross-fade
+      if (!RM) await el.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(3px)' }], { duration: 260 }).finished;
+      el.firstChild.textContent = fixed;
+      if (!RM) el.animate([{ opacity: 0, filter: 'blur(3px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: 320 });
+    }
+    await sleep(kind === 'filler' ? 450 : 620);
+  }
+  await sleep(900);
+
+  if (sc.ask) {
+    // the parts it found, then the honest question with its own odds
+    const a = $('ask');
+    a.innerHTML = `<div class="qq">${sc.ask.q}</div>` + sc.ask.opts.map((o, j) =>
+      `<div class="opt${j === 0 ? ' best' : ''}"><div><div class="t">${o[0]}</div><div class="s">${o[1]}</div></div><div class="bar"><i></i></div><div class="pc">${o[2]}%</div></div>`).join('')
+      + `<div class="typed">${sc.ask.typed}</div>`;
+    a.classList.add('on');
+    await sleep(500);
+    const opts = [...a.querySelectorAll('.opt')];
+    for (let j = 0; j < opts.length; j++) { opts[j].classList.add('on'); await sleep(260); opts[j].querySelector('.bar i').style.width = sc.ask.opts[j][2] + '%'; await sleep(240); }
+    await sleep(500); a.querySelector('.typed').classList.add('on');
+    $('mk').classList.add('on');
+    await sleep(4200);
+    return;
+  }
+
+  // the parts become a search: each label flies into its row
+  const card = $('card');
+  const bx = rel($('box')); card.style.top = Math.round(bx.y + bx.h + 64) + 'px';
+  sc.rows.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'row' + (sc.rows.length === 4 && r === sc.rows[0] ? '' : '');
+    d.style.setProperty('--c', C(r[0]));
+    d.innerHTML = `<div class="k">${r[1]}</div><div class="v">${r[2]}</div><div class="h">${r[3]}</div>`;
+    card.append(d);
+  });
+  card.style.gridTemplateColumns = sc.rows.length === 4 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+  const rows = [...card.children];
+  for (let j = 0; j < rows.length; j++) {
+    const kind = sc.rows[j][0];
+    const src = labs.find((l, k) => l && sc.segs[k][1] === kind && !l.dataset.used) || els.find((e, k) => e && sc.segs[k][1] === kind);
+    if (src) { if (src.classList.contains('lab')) src.dataset.used = '1'; flyTo(src, rows[j], sc.rows[j][1].toLowerCase(), kind); await sleep(380); }
+    rows[j].classList.add('on');
+    await sleep(320);
+  }
+  stage.querySelectorAll('.lab').forEach(l => l.classList.remove('on'));
+  els.forEach((e, k) => e && sc.segs[k][1] === 'filler' && e.classList.add('dim'));
+  await sleep(700);
+
+  // what actually goes to the shops: only the thing; the rest is checked on every listing
+  $('send').innerHTML = `Shops get <b>${sc.send}</b>. Everything else is checked on each listing.`;
+  $('out').classList.add('on');
+  await sleep(500);
+  for (const s of sc.sites) { const sp = document.createElement('span'); sp.textContent = s; $('sites').append(sp); requestAnimationFrame(() => sp.classList.add('on')); await sleep(140); }
+  $('mk').classList.add('on');
+  await sleep(4200);
+}
+
+async function run(which) {
+  token++;
+  document.querySelectorAll('#bar button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === String(which))));
+  try {
+    if (which === 'all') { for (let i = 0; i < SCENES.length; i++) await play(i); }
+    else await play(which);
+  } catch (e) { if (e !== 'stop') console.error(e); }
+}
+
+const P = new URLSearchParams(location.search);
+if (P.get('clean') === '1') document.body.classList.add('clean');
+addEventListener('resize', fit);
+document.querySelectorAll('#bar button').forEach(b => b.addEventListener('click', () => run(b.dataset.s === 'all' ? 'all' : Number(b.dataset.s))));
+fit();
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
+  fit();
+  const s = P.get('s');
+  run(s != null && SCENES[Number(s) - 1] ? Number(s) - 1 : 'all');
+});
+</script>
+</body>
+</html>
