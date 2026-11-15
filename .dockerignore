@@ -1,7 +1,10 @@
 .venv
 .cache
 *.db
-tests
+tests/*
+!tests/fixtures/
+tests/fixtures/*
+!tests/fixtures/live_*.jsonl
 .env
 .env.*
 .git

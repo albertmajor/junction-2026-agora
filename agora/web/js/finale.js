@@ -3,7 +3,7 @@
 // a new one the recorded new-body story. We turn three story lines into typed captions, move the
 // pick's object across your tag, drop a torn receipt and let you break the log on purpose.
 import { S, on, emit, eur, cutSrc, condLetter, domainOf, allIn, isJobItem, pickUrl as corePick, BRAND } from './core.js';
-import { setTag, checked, pulse, railExtra, clearGhosts, nightClock } from './tag.js';
+import { setTag, checked, pulse, railExtra, clearGhosts, nightClock, restoreTag, state as tagState } from './tag.js';
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)');
 const NEW_STORY_EUR = 1030;   // the new-body story is recorded at this price (agora/demo_buy.py TARGET)
@@ -328,6 +328,10 @@ export async function runFinale(d = {}) {
   const P = me.plan = await plan(d || {});
   if (me.dead || run !== me) return;
   const TARGET = P.target;
+  // what the viewer had before the night took over: their price and their view come back afterwards
+  let before = { v: null, mode: S.mode };
+  try { before = { v: tagState().v, mode: S.mode }; } catch (e) { /* tag not mounted */ }
+  me.before = before;
   clearGhosts();
   el.classList.add('is-on');
   document.documentElement.classList.add('night');
@@ -383,7 +387,7 @@ export async function runFinale(d = {}) {
         return;
       }
       await sleep(RM.matches ? 0 : 500);
-      end();
+      end(true);
       receipt({
         paid: rec.paid_eur ?? d.paid_eur ?? me.paid, target: TARGET, asked: me.asked,
         mandateId: rec.closed_mandate_id || me.mandate, rows: p.rows, chainOk: p.chain_ok !== false,
@@ -405,10 +409,17 @@ export async function runFinale(d = {}) {
   };
   };
   // night is over: the page's own light comes back, the line steps back out
-  const end = () => {
+  const end = (bought = false) => {
     emit('finale:end', {});
     document.documentElement.classList.remove('night');
     if (line && typeof line.focus === 'function') { try { line.focus(null); } catch (e) { /* ignore */ } }
+    // no buy, or a recorded story told over someone else's hunt: hand back their price, view and offers
+    if (!bought || P.recorded) {
+      if (!bought && me.shop) { try { me.shop.remove(); } catch (e) { /* ignore */ } me.shop = null; }
+      try { restoreTag(me.before.v); } catch (e) { /* ignore */ }
+      if (line && typeof line.highlightBelow === 'function') { try { line.highlightBelow(me.before.v); } catch (e) { /* ignore */ } }
+      if (me.before.mode && line && typeof line.setMode === 'function') { try { line.setMode(me.before.mode, { calm: true }); } catch (e) { /* ignore */ } }
+    }
   };
   open();
 }

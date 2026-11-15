@@ -581,6 +581,16 @@ export function setTag(v, { silent = false, arm: doArm = false, buy = null } = {
   if (doArm) setTimeout(() => { leaveTagMode(); arm(); }, RM.matches ? 200 : 1300);
 }
 
+/** The finale is over without a buy (or it told someone else's story): give the viewer back their own price
+ *  (or none), so the line and the list light up again exactly as they were before. */
+export function restoreTag(v) {
+  st.silent = false; st.guardV = null; st.clock = null;
+  st.v = v == null || !isFinite(v) ? null : snap(v);
+  if (ui.guard) ui.guard.hidden = true;
+  el && el.classList.remove('is-armed');
+  paint();
+}
+
 /** The finale's night clock ('23:40'); null goes back to "checked N s ago". */
 export function nightClock(t) { st.clock = t || null; ui.guardT && tickClock(); }
 
