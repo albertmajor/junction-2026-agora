@@ -6,6 +6,7 @@
   --pf-label: var(--accent, #F0D435); --pf-monkey: #D9B98C;
   position: relative; display: block; margin: 0; padding: 44px 0 0;
   color: var(--pf-ink); border: 0; font-size: 14px;
+  isolation: isolate;   /* the slab (::before, z-index -1) stays in front of the page background in light mode too */
 }
 /* full-bleed slab behind the centred column */
 #rule.pf::before {
@@ -33,7 +34,7 @@
 .pf-name {
   margin-top: -0.08em;
   font: 400 clamp(60px, 13.2vw, 212px)/.8 var(--serif); font-variation-settings: var(--display-vs);
-  letter-spacing: -0.035em; color: var(--pf-ink); white-space: nowrap; padding-bottom: .2em;
+  letter-spacing: -0.035em; color: var(--pf-ink); white-space: nowrap; padding-bottom: .3em;
 }
 .pf-name em { font-style: italic; color: var(--pf-monkey); }
 .pf-mascot { height: clamp(80px, 12vw, 190px); width: auto; flex: none; margin-bottom: .2em;
